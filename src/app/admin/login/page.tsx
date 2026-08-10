@@ -67,7 +67,7 @@ export default function AdminLoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
               />
             </div>
           </div>
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
               />
             </div>
           </div>
@@ -90,14 +90,14 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2.5 rounded-lg transition duration-200 text-sm"
+            className="w-full bg-rose-600 hover:bg-rose-700 text-black font-bold py-2.5 rounded-lg transition duration-200 text-sm"
           >
             {loading ? "Authenticating..." : "Login to Dashboard"}
           </button>
         </form>
 
         <div className="text-center">
-          <a href="/" className="text-xs text-gray-500 hover:text-amber-500 transition">
+          <a href="/" className="text-xs text-gray-500 hover:text-rose-600 transition">
             &larr; Back to public site
           </a>
         </div>

@@ -70,14 +70,14 @@ export default function AdminClientsPage() {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-wider text-amber-500 uppercase">
+          <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
             Client Directory
           </h1>
           <p className="text-gray-400 text-sm mt-1">Manage hospitality clients, hotels, and resort partners</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
+          className="bg-rose-600 hover:bg-rose-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>{showAddForm ? "Close Form" : "Add Client Partner"}</span>
@@ -96,7 +96,7 @@ export default function AdminClientsPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Grand Regency Resort"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -108,7 +108,7 @@ export default function AdminClientsPage() {
                 value={contactPerson}
                 onChange={(e) => setContactPerson(e.target.value)}
                 placeholder="Rajesh Sharma"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
               />
             </div>
             <div>
@@ -119,7 +119,7 @@ export default function AdminClientsPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
               />
             </div>
           </div>
@@ -131,7 +131,7 @@ export default function AdminClientsPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="events@grandregency.com"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
             />
           </div>
           <div>
@@ -142,7 +142,7 @@ export default function AdminClientsPage() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Sector 17, Chandigarh, India"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
             />
           </div>
           <div>
@@ -151,12 +151,12 @@ export default function AdminClientsPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any details, payment preferences, or special rules..."
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm h-20"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-20"
             ></textarea>
           </div>
           <button
             type="submit"
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded-lg transition"
+            className="w-full bg-rose-600 hover:bg-rose-700 text-black font-bold py-2 rounded-lg transition"
           >
             Create Partner Profile
           </button>
@@ -175,9 +175,9 @@ export default function AdminClientsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {clients.map((c) => (
-            <div key={c._id} className="bg-[#0c0d12] rounded-xl border border-gray-800 p-6 space-y-4 hover:border-amber-500/20 transition duration-300">
+            <div key={c._id} className="bg-[#0c0d12] rounded-xl border border-gray-800 p-6 space-y-4 hover:border-rose-600/20 transition duration-300">
               <div className="flex items-center space-x-3 border-b border-gray-850 pb-3">
-                <div className="w-10 h-10 bg-amber-500/10 rounded-lg border border-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0">
+                <div className="w-10 h-10 bg-rose-600/10 rounded-lg border border-rose-600/20 flex items-center justify-center text-rose-600 flex-shrink-0">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -188,19 +188,19 @@ export default function AdminClientsPage() {
 
               <div className="space-y-2 text-xs text-gray-300">
                 <div className="flex items-center space-x-2">
-                  <User className="w-4 h-4 text-amber-500" />
+                  <User className="w-4 h-4 text-rose-600" />
                   <span>Contact: {c.contactPerson}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Phone className="w-4 h-4 text-amber-500" />
+                  <Phone className="w-4 h-4 text-rose-600" />
                   <span>Phone: {c.phone}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Mail className="w-4 h-4 text-amber-500" />
+                  <Mail className="w-4 h-4 text-rose-600" />
                   <span>Email: {c.email}</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <MapPin className="w-4 h-4 text-amber-500 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-rose-600 mt-0.5" />
                   <span>Address: {c.address}</span>
                 </div>
               </div>

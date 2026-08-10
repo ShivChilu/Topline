@@ -59,7 +59,7 @@ export default function AdminStudentsPage() {
     <div className="space-y-6 text-white">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-amber-500 uppercase">
+        <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
           Student Database
         </h1>
         <p className="text-gray-400 text-sm mt-1">Monitor, query, and verify student applicant reliability profiles</p>
@@ -74,14 +74,14 @@ export default function AdminStudentsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, phone, university ID..."
-            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600"
           />
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setStatusFilter("")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition uppercase tracking-wider ${
-              statusFilter === "" ? "bg-amber-500 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
+              statusFilter === "" ? "bg-rose-600 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
             }`}
           >
             All
@@ -151,7 +151,7 @@ export default function AdminStudentsPage() {
                     <td className="p-4 text-center font-semibold text-emerald-450">{student.selectedCount}</td>
                     <td className="p-4 text-center font-semibold text-emerald-400">{student.attendedCount}</td>
                     <td className="p-4 text-center font-semibold text-rose-400">{student.cancelledCount}</td>
-                    <td className="p-4 font-bold text-amber-500">₹{student.totalEarnings.toLocaleString()}</td>
+                    <td className="p-4 font-bold text-rose-600">₹{student.totalEarnings.toLocaleString()}</td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button
@@ -201,7 +201,7 @@ export default function AdminStudentsPage() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-gray-850/20 border border-gray-850 rounded">
                 <span className="text-gray-500 block text-xs">Total Earnings</span>
-                <span className="font-bold text-amber-500 text-lg">₹{activeStudent.totalEarnings}</span>
+                <span className="font-bold text-rose-600 text-lg">₹{activeStudent.totalEarnings}</span>
               </div>
               <div className="p-3 bg-gray-850/20 border border-gray-850 rounded">
                 <span className="text-gray-500 block text-xs">Events Attended</span>

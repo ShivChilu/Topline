@@ -65,7 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
                   isActive
-                    ? "bg-amber-500 text-black"
+                    ? "bg-rose-600 text-black"
                     : "text-gray-400 hover:text-white hover:bg-gray-800/40"
                 }`}
               >
@@ -123,7 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       onClick={() => setIsOpen(false)}
                       className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition ${
                         isActive
-                          ? "bg-amber-500 text-black"
+                          ? "bg-rose-600 text-black"
                           : "text-gray-400 hover:text-white hover:bg-gray-800/40"
                       }`}
                     >

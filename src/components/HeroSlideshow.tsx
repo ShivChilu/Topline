@@ -56,7 +56,7 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
       {/* Hero Content Layer */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
         <div className="bg-white/95 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
-          <span className="inline-flex items-center text-amber-700 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20 mb-2">
+          <span className="inline-flex items-center text-rose-800 font-extrabold tracking-widest text-xs uppercase bg-rose-600/10 px-4 py-2 rounded-full border border-rose-600/20 mb-2">
             TOPLINE Staffing Solutions
           </span>
           <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight leading-tight text-slate-900">
@@ -94,7 +94,7 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
             key={idx}
             onClick={() => setCurrentIndex(idx)}
             className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-              idx === currentIndex ? "bg-amber-600 w-6" : "bg-slate-400/50 hover:bg-slate-500"
+              idx === currentIndex ? "bg-rose-700 w-6" : "bg-slate-400/50 hover:bg-slate-500"
             }`}
             aria-label={`Go to slide ${idx + 1}`}
           ></button>

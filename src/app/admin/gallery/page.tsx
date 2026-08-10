@@ -98,14 +98,14 @@ export default function AdminGalleryPage() {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-wider text-amber-500 uppercase">
+          <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
             Manage Gallery
           </h1>
           <p className="text-gray-400 text-sm mt-1">Upload and organize photographs for the public home slider and folder gallery</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
+          className="bg-rose-600 hover:bg-rose-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>{showAddForm ? "Close Form" : "Upload Event Image"}</span>
@@ -124,7 +124,7 @@ export default function AdminGalleryPage() {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://images.unsplash.com/..."
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
             />
           </div>
           <div>
@@ -135,7 +135,7 @@ export default function AdminGalleryPage() {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Buffet service operations setup"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -144,7 +144,7 @@ export default function AdminGalleryPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
               >
                 <option value="Catering Setup">Catering Setup</option>
                 <option value="Banquets">Banquets</option>
@@ -158,14 +158,14 @@ export default function AdminGalleryPage() {
                 id="publish_img"
                 checked={published}
                 onChange={(e) => setPublished(e.target.checked)}
-                className="rounded border-gray-800 text-amber-500 focus:ring-amber-500"
+                className="rounded border-gray-800 text-rose-600 focus:ring-rose-600"
               />
               <label htmlFor="publish_img" className="text-sm font-semibold text-gray-300">Publish Immediately</label>
             </div>
           </div>
           <button
             type="submit"
-            className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded-lg transition"
+            className="w-full bg-rose-600 hover:bg-rose-700 text-black font-bold py-2 rounded-lg transition"
           >
             Upload and Publish Image
           </button>
@@ -187,7 +187,7 @@ export default function AdminGalleryPage() {
             <div key={img._id} className="bg-[#0c0d12] rounded-xl border border-gray-800 overflow-hidden flex flex-col justify-between group">
               <div className="relative h-48 w-full bg-gray-900 overflow-hidden">
                 <img src={img.imageUrl} alt={img.caption} className="object-cover w-full h-full" />
-                <span className="absolute top-2 left-2 bg-amber-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                <span className="absolute top-2 left-2 bg-rose-600 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">
                   {img.category}
                 </span>
               </div>

@@ -36,7 +36,7 @@ export default async function DosDontsPage() {
     <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
       <Navbar />
       <main className="flex-grow max-w-5xl mx-auto px-4 py-16 w-full">
-        <h1 className="text-4xl font-extrabold text-amber-500 mb-4 uppercase tracking-wider text-center">
+        <h1 className="text-4xl font-extrabold text-rose-600 mb-4 uppercase tracking-wider text-center">
           Workforce Do's & Don'ts
         </h1>
         <p className="text-gray-400 text-center max-w-xl mx-auto mb-16">

@@ -219,8 +219,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-3xl font-extrabold tracking-wider text-amber-500 uppercase">{event.name}</h1>
-          <p className="text-gray-400 text-sm mt-1">Status: <span className="text-amber-500 font-bold">{event.status}</span></p>
+          <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">{event.name}</h1>
+          <p className="text-gray-400 text-sm mt-1">Status: <span className="text-rose-600 font-bold">{event.status}</span></p>
         </div>
       </div>
 
@@ -232,19 +232,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           <h2 className="text-lg font-bold border-b border-gray-850 pb-2">Event Logistics</h2>
           <div className="space-y-3 text-sm text-gray-300">
             <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-amber-500" />
+              <Calendar className="w-4 h-4 text-rose-600" />
               <span>Date: {new Date(event.date).toLocaleDateString("en-GB")}</span>
             </div>
             <div className="flex items-start space-x-2">
-              <MapPin className="w-4 h-4 text-amber-500 mt-0.5" />
+              <MapPin className="w-4 h-4 text-rose-600 mt-0.5" />
               <span>Location: {event.location}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-amber-500" />
+              <Clock className="w-4 h-4 text-rose-600" />
               <span>Reporting: {event.reportingTime}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-amber-500" />
+              <Users className="w-4 h-4 text-rose-600" />
               <span>Workers Required: {event.workersRequired} candidates</span>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 </button>
                 <button
                   onClick={() => handleUpdateEventStatus("FULL")}
-                  className="bg-amber-600 text-white px-4 py-2 rounded text-xs font-bold transition"
+                  className="bg-rose-700 text-white px-4 py-2 rounded text-xs font-bold transition"
                 >
                   Mark FULL
                 </button>
@@ -318,7 +318,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
         {/* Financials details - admin only */}
         <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold text-amber-500 border-b border-gray-850 pb-2 uppercase tracking-wide">Event Financials</h2>
+          <h2 className="text-lg font-bold text-rose-600 border-b border-gray-850 pb-2 uppercase tracking-wide">Event Financials</h2>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-gray-400">Client Revenue:</span>
@@ -350,7 +350,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleBulkStatusChange("selected")}
-            className="bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black border border-amber-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-black border border-rose-600/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Selected
           </button>
@@ -390,7 +390,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       type="checkbox"
                       checked={selectedIds.length === applications.length}
                       onChange={handleSelectAll}
-                      className="rounded border-gray-800 text-amber-500 focus:ring-amber-500"
+                      className="rounded border-gray-800 text-rose-600 focus:ring-rose-600"
                     />
                   </th>
                   <th className="pb-3 pl-3">Student Name</th>
@@ -412,7 +412,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           type="checkbox"
                           checked={selectedIds.includes(app._id)}
                           onChange={() => handleToggleSelect(app._id)}
-                          className="rounded border-gray-850 text-amber-500 focus:ring-amber-500"
+                          className="rounded border-gray-850 text-rose-600 focus:ring-rose-600"
                         />
                       </td>
                       <td className="py-4 pl-3 font-bold text-white">{s.name}</td>
@@ -422,7 +422,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <span className="text-xs text-gray-500">{s.universityId}</span>
                       </td>
                       <td className="py-4">
-                        <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
+                        <span className="bg-rose-600/10 text-rose-600 border border-rose-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
                           {app.status}
                         </span>
                       </td>
@@ -444,7 +444,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           />
                           <button
                             onClick={() => handleSavePayoutOverride(app._id)}
-                            className="bg-gray-800 hover:bg-amber-500 hover:text-black text-gray-300 text-xs px-2 py-1 rounded transition"
+                            className="bg-gray-800 hover:bg-rose-600 hover:text-black text-gray-300 text-xs px-2 py-1 rounded transition"
                           >
                             Set
                           </button>

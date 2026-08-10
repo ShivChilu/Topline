@@ -7,7 +7,7 @@ export default function ContactPage() {
     <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
       <Navbar />
       <main className="flex-grow max-w-5xl mx-auto px-4 py-16 w-full">
-        <h1 className="text-4xl font-extrabold text-amber-500 mb-4 uppercase tracking-wider text-center">
+        <h1 className="text-4xl font-extrabold text-rose-600 mb-4 uppercase tracking-wider text-center">
           Contact Us
         </h1>
         <p className="text-gray-400 text-center max-w-xl mx-auto mb-12">
@@ -19,7 +19,7 @@ export default function ContactPage() {
           <div className="space-y-8 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
             <h2 className="text-2xl font-bold text-white mb-6">TOPLINE ODC</h2>
             <div className="flex items-start space-x-4">
-              <Phone className="text-amber-500 mt-1" />
+              <Phone className="text-rose-600 mt-1" />
               <div>
                 <h4 className="font-semibold text-white">Phone Support</h4>
                 <p className="text-gray-400">+91 79869 55634, +91 93810 39799</p>
@@ -27,7 +27,7 @@ export default function ContactPage() {
             </div>
 
             <div className="flex items-start space-x-4">
-              <Mail className="text-amber-500 mt-1" />
+              <Mail className="text-rose-600 mt-1" />
               <div>
                 <h4 className="font-semibold text-white">Email Address</h4>
                 <p className="text-gray-400">contact@toplineodc.co.in</p>
@@ -54,7 +54,7 @@ export default function ContactPage() {
                 <label className="block text-sm font-medium text-gray-300 mb-1">Your Name</label>
                 <input
                   type="text"
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
                   placeholder="Rahul Kumar / Rajesh Sharma"
                 />
               </div>
@@ -62,20 +62,20 @@ export default function ContactPage() {
                 <label className="block text-sm font-medium text-gray-300 mb-1">Email / Phone</label>
                 <input
                   type="text"
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
                   placeholder="yourname@gmail.com"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Message</label>
                 <textarea
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500 h-28"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600 h-28"
                   placeholder="How can we help you?"
                 ></textarea>
               </div>
               <button
                 type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold py-2 rounded transition"
+                className="w-full bg-rose-600 hover:bg-rose-700 text-black font-semibold py-2 rounded transition"
               >
                 Send Message
               </button>

@@ -115,7 +115,7 @@ export default function AdminApplicationsPage() {
     <div className="space-y-6 text-white">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-amber-500 uppercase">
+        <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
           Review Applications
         </h1>
         <p className="text-gray-400 text-sm mt-1">Audit student registrations across all active events</p>
@@ -131,13 +131,13 @@ export default function AdminApplicationsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search candidate name / phone..."
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600"
             />
           </div>
           <select
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
-            className="bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600"
           >
             <option value="">All Events...</option>
             {events.map((e) => (
@@ -149,7 +149,7 @@ export default function AdminApplicationsPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600"
           >
             <option value="">All Statuses...</option>
             {["applied", "under_review", "selected", "confirmed", "cancelled", "attended", "absent", "paid"].map((st) => (
@@ -163,11 +163,11 @@ export default function AdminApplicationsPage() {
 
       {/* Bulk action buttons */}
       {selectedIds.length > 0 && (
-        <div className="bg-amber-500/10 p-3 rounded-lg border border-amber-500/20 flex gap-2 items-center">
-          <span className="text-xs font-bold text-amber-500 mr-2 uppercase">Bulk Selection:</span>
+        <div className="bg-rose-600/10 p-3 rounded-lg border border-rose-600/20 flex gap-2 items-center">
+          <span className="text-xs font-bold text-rose-600 mr-2 uppercase">Bulk Selection:</span>
           <button
             onClick={() => handleBulkStatusChange("selected")}
-            className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-3 py-1.5 rounded transition"
+            className="bg-rose-600 hover:bg-rose-700 text-black text-xs font-bold px-3 py-1.5 rounded transition"
           >
             Select ({selectedIds.length})
           </button>
@@ -206,7 +206,7 @@ export default function AdminApplicationsPage() {
                       type="checkbox"
                       checked={selectedIds.length === applications.length}
                       onChange={handleSelectAll}
-                      className="rounded border-gray-800 text-amber-500 focus:ring-amber-500"
+                      className="rounded border-gray-800 text-rose-600 focus:ring-rose-600"
                     />
                   </th>
                   <th className="p-4">Candidate</th>
@@ -228,7 +228,7 @@ export default function AdminApplicationsPage() {
                           type="checkbox"
                           checked={selectedIds.includes(app._id)}
                           onChange={() => handleToggleSelect(app._id)}
-                          className="rounded border-gray-850 text-amber-500 focus:ring-amber-500"
+                          className="rounded border-gray-850 text-rose-600 focus:ring-rose-600"
                         />
                       </td>
                       <td className="p-4 font-bold text-white">
@@ -241,7 +241,7 @@ export default function AdminApplicationsPage() {
                         <div className="text-xs text-gray-500">{new Date(ev.date).toLocaleDateString("en-GB")}</div>
                       </td>
                       <td className="p-4">
-                        <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
+                        <span className="bg-rose-600/10 text-rose-600 border border-rose-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
                           {app.status}
                         </span>
                       </td>
@@ -249,7 +249,7 @@ export default function AdminApplicationsPage() {
                       <td className="p-4 text-right">
                         <Link
                           href={`/admin/events/${ev._id}`}
-                          className="text-amber-500 hover:underline text-xs flex items-center justify-end space-x-1"
+                          className="text-rose-600 hover:underline text-xs flex items-center justify-end space-x-1"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Review</span>

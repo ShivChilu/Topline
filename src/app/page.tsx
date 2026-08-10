@@ -55,12 +55,12 @@ export default async function HomePage() {
   }
 
   const defaultServices = [
-    { name: "Catering Staff", desc: "Expert food handlers and buffet counter management.", icon: <Utensils className="text-amber-500 w-6 h-6" /> },
-    { name: "Hospitality Staff", desc: "Front-desk, guest hospitality coordinators, and hostesses.", icon: <Gem className="text-amber-500 w-6 h-6" /> },
-    { name: "Service Staff", desc: "Professional food and beverage server crews.", icon: <Users className="text-amber-500 w-6 h-6" /> },
-    { name: "Banquet Staff", desc: "Table operation specialists for weddings and corporate galas.", icon: <Briefcase className="text-amber-500 w-6 h-6" /> },
-    { name: "Event Staff", desc: "Setup crews, coordinators, and logistics support teams.", icon: <Award className="text-amber-500 w-6 h-6" /> },
-    { name: "Temporary Workforce", desc: "On-demand teams for high-capacity hospitality demands.", icon: <Clock className="text-amber-500 w-6 h-6" /> },
+    { name: "Catering Staff", desc: "Expert food handlers and buffet counter management.", icon: <Utensils className="text-rose-600 w-6 h-6" /> },
+    { name: "Hospitality Staff", desc: "Front-desk, guest hospitality coordinators, and hostesses.", icon: <Gem className="text-rose-600 w-6 h-6" /> },
+    { name: "Service Staff", desc: "Professional food and beverage server crews.", icon: <Users className="text-rose-600 w-6 h-6" /> },
+    { name: "Banquet Staff", desc: "Table operation specialists for weddings and corporate galas.", icon: <Briefcase className="text-rose-600 w-6 h-6" /> },
+    { name: "Event Staff", desc: "Setup crews, coordinators, and logistics support teams.", icon: <Award className="text-rose-600 w-6 h-6" /> },
+    { name: "Temporary Workforce", desc: "On-demand teams for high-capacity hospitality demands.", icon: <Clock className="text-rose-600 w-6 h-6" /> },
   ];
 
   return (
@@ -72,7 +72,7 @@ export default async function HomePage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/opportunities"
-            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+            className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
           >
             <span>View Opportunities</span>
             <ArrowRight className="w-5 h-5" />
@@ -90,7 +90,7 @@ export default async function HomePage() {
       <section className="py-24 border-t border-slate-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-amber-600 uppercase">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-rose-700 uppercase">
               What We Provide
             </h2>
             <p className="mt-4 text-slate-500 max-w-2xl mx-auto text-lg font-sans">
@@ -103,7 +103,7 @@ export default async function HomePage() {
                 key={idx}
                 className="light-panel p-8 rounded-2xl flex flex-col"
               >
-                <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20 mb-6">
+                <div className="w-12 h-12 bg-rose-600/10 rounded-xl flex items-center justify-center border border-rose-600/20 mb-6">
                   {service.icon}
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">{service.name}</h3>
@@ -128,7 +128,7 @@ export default async function HomePage() {
             </div>
             <Link
               href="/opportunities"
-              className="mt-4 md:mt-0 flex items-center space-x-2 text-amber-600 hover:text-amber-700 font-bold transition duration-300"
+              className="mt-4 md:mt-0 flex items-center space-x-2 text-rose-700 hover:text-rose-800 font-bold transition duration-300"
             >
               <span>See All Opportunities</span>
               <ArrowRight className="w-4 h-4" />
@@ -151,21 +151,21 @@ export default async function HomePage() {
                     <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-250 uppercase tracking-widest">
                       {event.status}
                     </span>
-                    <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-amber-600 transition duration-300">
+                    <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-rose-700 transition duration-300">
                       <Link href={`/events/${event._id}`}>{event.name}</Link>
                     </h3>
                     <p className="mt-2 text-sm text-slate-500 line-clamp-2">{event.description}</p>
                     <div className="mt-6 space-y-3.5 text-sm text-slate-600">
                       <div className="flex items-center space-x-2.5">
-                        <Calendar className="w-4 h-4 text-amber-600" />
+                        <Calendar className="w-4 h-4 text-rose-700" />
                         <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <MapPin className="w-4 h-4 text-amber-600" />
+                        <MapPin className="w-4 h-4 text-rose-700" />
                         <span>{event.location}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <Clock className="w-4 h-4 text-amber-600" />
+                        <Clock className="w-4 h-4 text-rose-700" />
                         <span>Reporting: {event.reportingTime}</span>
                       </div>
                     </div>
@@ -173,11 +173,11 @@ export default async function HomePage() {
                   <div className="bg-slate-50/50 px-6 py-5 flex items-center justify-between border-t border-slate-100">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider">Payout</p>
-                      <p className="text-xl font-extrabold text-amber-600">₹{event.paymentPerStudent}</p>
+                      <p className="text-xl font-extrabold text-rose-700">₹{event.paymentPerStudent}</p>
                     </div>
                     <Link
                       href={`/events/${event._id}`}
-                      className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition duration-300"
+                      className="bg-rose-600 hover:bg-rose-700 text-black text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition duration-300"
                     >
                       Apply Now
                     </Link>
@@ -192,7 +192,7 @@ export default async function HomePage() {
       {/* How it Works Summary */}
       <section className="py-24 border-t border-slate-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-amber-600 uppercase mb-16">
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-rose-700 uppercase mb-16">
             Process For Students
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -203,7 +203,7 @@ export default async function HomePage() {
               { title: "4. Fast Payout", desc: "Complete work shifts, verify checkout, and get paid." },
             ].map((step, idx) => (
               <div key={idx} className="light-panel p-6 rounded-2xl flex flex-col items-center text-center">
-                <h3 className="text-amber-600 font-extrabold text-lg mb-2">{step.title}</h3>
+                <h3 className="text-rose-700 font-extrabold text-lg mb-2">{step.title}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
               </div>
             ))}
@@ -215,7 +215,7 @@ export default async function HomePage() {
       <section className="py-24 border-t border-slate-100 bg-slate-50/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-amber-700 text-sm font-extrabold tracking-widest uppercase">
+            <span className="text-rose-800 text-sm font-extrabold tracking-widest uppercase">
               Partnership & Quality
             </span>
             <h2 className="mt-2 text-3xl sm:text-4xl font-display font-extrabold tracking-wider text-slate-900 uppercase">
@@ -231,7 +231,7 @@ export default async function HomePage() {
                 { title: "Automated Attendance & Payments", desc: "Digital check-in tracking prevents payroll errors and time theft." },
               ].map((item, idx) => (
                 <div key={idx} className="flex items-start space-x-3">
-                  <Shield className="text-amber-600 w-5 h-5 mt-1 flex-shrink-0" />
+                  <Shield className="text-rose-700 w-5 h-5 mt-1 flex-shrink-0" />
                   <div>
                     <h4 className="font-bold text-slate-900">{item.title}</h4>
                     <p className="text-sm text-slate-500">{item.desc}</p>
@@ -279,7 +279,7 @@ export default async function HomePage() {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/contact"
-              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-black px-8 py-3.5 rounded-lg text-lg font-bold shadow-sm transition"
+              className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-black px-8 py-3.5 rounded-lg text-lg font-bold shadow-sm transition"
             >
               Get in Touch
             </Link>

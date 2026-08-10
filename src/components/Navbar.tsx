@@ -24,8 +24,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3 group">
-              <BrandLogo width={40} height={40} className="overflow-hidden rounded-lg border border-slate-200/80 group-hover:border-amber-500/50 transition duration-300 bg-white" />
-              <span className="text-xl font-display font-extrabold tracking-widest text-amber-600 uppercase hidden sm:inline transition-colors duration-300">
+              <BrandLogo width={40} height={40} className="overflow-hidden rounded-lg border border-slate-200/80 group-hover:border-rose-600/50 transition duration-300 bg-white" />
+              <span className="text-xl font-display font-extrabold tracking-widest text-rose-700 uppercase hidden sm:inline transition-colors duration-300">
                 TOPLINE
               </span>
             </Link>
@@ -36,14 +36,14 @@ export default function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="text-slate-600 hover:text-amber-600 text-sm font-medium tracking-wide transition duration-300 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-amber-500 after:transition-all after:duration-300 hover:after:w-full"
+                  className="text-slate-600 hover:text-rose-700 text-sm font-medium tracking-wide transition duration-300 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-rose-600 after:transition-all after:duration-300 hover:after:w-full"
                 >
                   {link.name}
                 </Link>
               ))}
               <Link
                 href="/admin/dashboard"
-                className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all duration-300 flex items-center space-x-1.5"
+                className="bg-rose-600 hover:bg-rose-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all duration-300 flex items-center space-x-1.5"
               >
                 <ShieldAlert className="w-4 h-4" />
                 <span>Admin Panel</span>
@@ -70,7 +70,7 @@ export default function Navbar() {
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="text-slate-600 hover:text-amber-600 block px-3 py-2 rounded-lg text-base font-semibold tracking-wide transition duration-300"
+                className="text-slate-600 hover:text-rose-700 block px-3 py-2 rounded-lg text-base font-semibold tracking-wide transition duration-300"
               >
                 {link.name}
               </Link>
@@ -79,7 +79,7 @@ export default function Navbar() {
               <Link
                 href="/admin/dashboard"
                 onClick={() => setIsOpen(false)}
-                className="bg-amber-500 text-black block px-4 py-3 rounded-lg text-base font-bold text-center shadow-sm"
+                className="bg-rose-600 text-black block px-4 py-3 rounded-lg text-base font-bold text-center shadow-sm"
               >
                 Admin Panel
               </Link>

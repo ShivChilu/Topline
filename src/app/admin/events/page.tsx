@@ -85,14 +85,14 @@ export default function AdminEventsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-wider text-amber-500 uppercase">
+          <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
             Manage Events
           </h1>
           <p className="text-gray-400 text-sm mt-1">Create, publish, and monitor catering schedules</p>
         </div>
         <Link
           href="/admin/events/create"
-          className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
+          className="bg-rose-600 hover:bg-rose-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           <span>Create Event</span>
@@ -108,7 +108,7 @@ export default function AdminEventsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events..."
-            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600"
           />
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto justify-start">
@@ -117,7 +117,7 @@ export default function AdminEventsPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-3 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition ${
-                tab === t ? "bg-amber-500 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
+                tab === t ? "bg-rose-600 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
               }`}
             >
               {t}
@@ -140,25 +140,25 @@ export default function AdminEventsPage() {
           {filteredEvents.map((event) => (
             <div
               key={event._id}
-              className="bg-[#0c0d12] rounded-xl border border-gray-800 flex flex-col justify-between overflow-hidden group hover:border-amber-500/30 transition duration-300"
+              className="bg-[#0c0d12] rounded-xl border border-gray-800 flex flex-col justify-between overflow-hidden group hover:border-rose-600/30 transition duration-300"
             >
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500 font-semibold uppercase">{event.workType}</span>
-                  <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                  <span className="bg-rose-600/10 text-rose-600 border border-rose-600/20 px-2 py-0.5 rounded text-xs font-bold uppercase">
                     {event.status}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold hover:text-amber-500 transition">
+                <h3 className="text-xl font-bold hover:text-rose-600 transition">
                   <Link href={`/admin/events/${event._id}`}>{event.name}</Link>
                 </h3>
                 <div className="space-y-2 text-sm text-gray-400">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-amber-500" />
+                    <Calendar className="w-4 h-4 text-rose-600" />
                     <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <MapPin className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <MapPin className="w-4 h-4 text-rose-600 mt-0.5 flex-shrink-0" />
                     <span className="line-clamp-1">{event.location}</span>
                   </div>
                 </div>

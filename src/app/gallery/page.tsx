@@ -49,7 +49,7 @@ export default async function GalleryPage() {
     <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
       <Navbar />
       <main className="flex-grow max-w-7xl mx-auto px-4 py-16 w-full">
-        <h1 className="text-4xl font-extrabold text-amber-500 mb-4 uppercase tracking-wider text-center">
+        <h1 className="text-4xl font-extrabold text-rose-600 mb-4 uppercase tracking-wider text-center">
           Event Gallery
         </h1>
         <p className="text-gray-400 text-center max-w-xl mx-auto mb-12">
@@ -60,7 +60,7 @@ export default async function GalleryPage() {
           {displayImages.map((img: any) => (
             <div
               key={img._id.toString()}
-              className="group relative overflow-hidden bg-[#0c0d12] rounded-xl border border-gray-800 hover:border-amber-500/50 transition duration-300 flex flex-col"
+              className="group relative overflow-hidden bg-[#0c0d12] rounded-xl border border-gray-800 hover:border-rose-600/50 transition duration-300 flex flex-col"
             >
               <div className="relative h-60 w-full overflow-hidden">
                 <img
@@ -68,7 +68,7 @@ export default async function GalleryPage() {
                   alt={img.caption}
                   className="object-cover w-full h-full group-hover:scale-110 transition duration-500"
                 />
-                <span className="absolute top-3 left-3 bg-amber-500 text-black text-xs font-semibold px-2 py-1 rounded uppercase tracking-wider">
+                <span className="absolute top-3 left-3 bg-rose-600 text-black text-xs font-semibold px-2 py-1 rounded uppercase tracking-wider">
                   {img.category}
                 </span>
               </div>

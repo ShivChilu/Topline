@@ -96,7 +96,7 @@ export default function EventApplicationForm({
             setFormData({ name: "", phone: "", email: "", university: "", universityId: "", profilePhotoUrl: "" });
             setCustomData({});
           }}
-          className="mt-4 bg-amber-500 hover:bg-amber-600 text-black font-bold px-6 py-2 rounded transition"
+          className="mt-4 bg-rose-600 hover:bg-rose-700 text-black font-bold px-6 py-2 rounded transition"
         >
           Submit Another Application
         </button>
@@ -126,7 +126,7 @@ export default function EventApplicationForm({
             value={formData.name}
             onChange={handleProfileChange}
             placeholder="Rahul Kumar"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
           />
         </div>
         <div>
@@ -138,7 +138,7 @@ export default function EventApplicationForm({
             value={formData.phone}
             onChange={handleProfileChange}
             placeholder="9876543210"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
           />
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function EventApplicationForm({
             value={formData.email}
             onChange={handleProfileChange}
             placeholder="rahul@university.edu"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
           />
         </div>
         <div>
@@ -165,7 +165,7 @@ export default function EventApplicationForm({
             value={formData.university}
             onChange={handleProfileChange}
             placeholder="Panjab University"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
           />
         </div>
       </div>
@@ -179,14 +179,14 @@ export default function EventApplicationForm({
           value={formData.universityId}
           onChange={handleProfileChange}
           placeholder="PU-2024-887"
-          className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+          className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
         />
       </div>
 
       {/* Dynamic Fields */}
       {customFields.length > 0 && (
         <div className="pt-6 border-t border-gray-800 space-y-4">
-          <h4 className="text-sm font-semibold text-amber-500 uppercase tracking-wider">Additional Questionnaire</h4>
+          <h4 className="text-sm font-semibold text-rose-600 uppercase tracking-wider">Additional Questionnaire</h4>
           {customFields.map((field) => (
             <div key={field.id}>
               <label className="block text-xs font-semibold text-gray-300 mb-1">
@@ -203,7 +203,7 @@ export default function EventApplicationForm({
                         name={field.id}
                         required={field.required}
                         onChange={() => handleCustomChange(field.id, opt)}
-                        className="text-amber-500 focus:ring-amber-500"
+                        className="text-rose-600 focus:ring-rose-600"
                       />
                       <span>{opt}</span>
                     </label>
@@ -215,7 +215,7 @@ export default function EventApplicationForm({
                 <select
                   required={field.required}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
                 >
                   <option value="">Choose an option...</option>
                   {field.options?.map((opt) => (
@@ -232,7 +232,7 @@ export default function EventApplicationForm({
                   required={field.required}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
                 />
               )}
 
@@ -244,7 +244,7 @@ export default function EventApplicationForm({
                   max={field.max}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600"
                 />
               )}
 
@@ -253,7 +253,7 @@ export default function EventApplicationForm({
                   required={field.required}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-amber-500 h-24"
+                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-rose-600 h-24"
                 ></textarea>
               )}
             </div>
@@ -264,7 +264,7 @@ export default function EventApplicationForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 rounded transition duration-200"
+        className="w-full bg-rose-600 hover:bg-rose-700 text-black font-bold py-3 rounded transition duration-200"
       >
         {isSubmitting ? "Submitting Application..." : "Submit Recruitment Application"}
       </button>
