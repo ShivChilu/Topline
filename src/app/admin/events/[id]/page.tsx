@@ -92,39 +92,52 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     }
   };
 
-  // Bulk status update
-  const handleBulkStatusChange = async (targetStatus: string) => {
+  // Bulk update applications (status, payment, message)
+  const handleBulkUpdate = async (updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number }) => {
     if (selectedIds.length === 0) {
       alert("No student applications selected.");
       return;
     }
 
-    if (!confirm(`Mark ${selectedIds.length} candidates as ${targetStatus.toUpperCase()}?`)) return;
+    let confirmationMsg = "Update selected applications?";
+    if (updatePayload.status) {
+      confirmationMsg = `Update status to ${updatePayload.status.toUpperCase()} for ${selectedIds.length} students?`;
+    } else if (updatePayload.paymentStatus) {
+      confirmationMsg = `Mark ${selectedIds.length} selected students as ${updatePayload.paymentStatus.toUpperCase()}?`;
+    } else if (updatePayload.messageStatus) {
+      confirmationMsg = `Send message to ${selectedIds.length} selected students?`;
+    } else if (updatePayload.paymentOverride) {
+      confirmationMsg = `Apply payment of ₹${updatePayload.paymentOverride} to ${selectedIds.length} selected students?`;
+    }
+
+    if (!confirm(confirmationMsg)) return;
 
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedIds, status: targetStatus }),
+        body: JSON.stringify({ ids: selectedIds, ...updatePayload }),
       });
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        alert(data.message || "Successfully updated applications!");
         setSelectedIds([]);
         fetchEventData();
+      } else {
+        alert(data.message || "Failed to update applications.");
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Single application status change
-  const handleSingleStatusChange = async (id: string, targetStatus: string) => {
+  // Single update application
+  const handleSingleUpdate = async (id: string, updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number }) => {
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [id], status: targetStatus }),
+        body: JSON.stringify({ ids: [id], ...updatePayload }),
       });
       const data = await res.json();
       if (data.success) {
@@ -139,21 +152,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const handleSavePayoutOverride = async (appId: string) => {
     const amt = tempPayouts[appId];
     if (amt === undefined || isNaN(amt)) return;
-
-    try {
-      const res = await fetch("/api/admin/applications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [appId], status: "attended", paymentOverride: amt }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Payment override saved!");
-        fetchEventData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    await handleSingleUpdate(appId, { paymentOverride: amt });
+    alert("Payment override saved!");
   };
 
   // Change Event status
@@ -353,125 +353,275 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
       </div>
 
-      {/* Bulk actions header */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div>
-          <span className="text-sm font-semibold text-slate-500">Selected: {selectedIds.length} students</span>
+      {/* Helper function to get custom fields values dynamically */}
+      {(() => {
+        (globalThis as any).getCustomValue = (app: any, fieldId: string) => {
+          if (!app.customFieldsData) return "";
+          const data = app.customFieldsData;
+          // Plain object or Map lookup
+          let val = typeof data.get === 'function' ? data.get(fieldId) : data[fieldId];
+          if (val === undefined) {
+            // Also try resolving by lowercased field label mapping to cover cases where keys are labels
+            const fieldObj = event.customFormFields?.find((f: any) => f.id === fieldId);
+            if (fieldObj) {
+              val = typeof data.get === 'function' ? data.get(fieldObj.label) : data[fieldObj.label];
+            }
+          }
+          return val !== undefined ? String(val) : "";
+        };
+        return null;
+      })()}
+
+      {/* Bulk actions toolbar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between animate-fade-in shadow-sm">
+          <div>
+            <span className="text-sm font-semibold text-slate-600">
+              Selected: <span className="text-red-650 font-extrabold">{selectedIds.length}</span> students
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={() => handleBulkUpdate({ status: "confirmed" })}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Confirm Selected
+            </button>
+            <button
+              onClick={() => handleBulkUpdate({ messageStatus: "SENT" })}
+              className="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Send Selected
+            </button>
+            <button
+              onClick={() => handleBulkUpdate({ paymentStatus: "PAID" })}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Mark Paid
+            </button>
+            <button
+              onClick={() => handleBulkUpdate({ status: "attended" })}
+              className="bg-purple-650 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Mark Attended
+            </button>
+            <button
+              onClick={() => handleBulkUpdate({ status: "absent" })}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Mark Absent
+            </button>
+            <button
+              onClick={() => handleBulkUpdate({ status: "cancelled" })}
+              className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Cancel Selected
+            </button>
+            
+            {/* Bulk Payment Apply */}
+            <div className="flex items-center space-x-1 border border-slate-200 rounded-lg p-1 bg-white text-xs">
+              <input
+                type="number"
+                placeholder="₹800"
+                id="bulk_pay_val"
+                className="w-14 bg-slate-50 border border-slate-100 rounded px-1 py-0.5 text-center focus:outline-none focus:border-red-600"
+              />
+              <button
+                onClick={() => {
+                  const val = Number((document.getElementById("bulk_pay_val") as HTMLInputElement)?.value);
+                  if (isNaN(val) || val <= 0) {
+                    alert("Please enter a valid payment amount.");
+                    return;
+                  }
+                  handleBulkUpdate({ paymentOverride: val });
+                }}
+                className="bg-slate-900 hover:bg-slate-800 text-white px-2 py-0.5 rounded transition font-bold"
+              >
+                Apply Pay
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => handleBulkStatusChange("selected")}
-            className="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-600/30 px-3 py-1.5 rounded text-xs font-bold transition"
-          >
-            Mark Selected
-          </button>
-          <button
-            onClick={() => handleBulkStatusChange("confirmed")}
-            className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
-          >
-            Mark Confirmed
-          </button>
-          <button
-            onClick={() => handleBulkStatusChange("attended")}
-            className="bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-slate-800 border border-purple-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
-          >
-            Mark Attended
-          </button>
-          <button
-            onClick={() => handleBulkStatusChange("cancelled")}
-            className="bg-red-500/20 text-red-450 hover:bg-red-500 hover:text-slate-800 border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
-          >
-            Mark Cancelled
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Applications list table */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200">
-        <h2 className="text-lg font-bold uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Registered Applicants ({totalApps})</h2>
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <h2 className="text-lg font-bold uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">
+          Registered Applicants ({totalApps})
+        </h2>
         {applications.length === 0 ? (
           <p className="text-slate-450 text-center py-6 text-sm">No applications submitted yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
+          <div className="overflow-x-auto max-w-full">
+            <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
               <thead>
-                <tr className="text-slate-450 border-b border-slate-200 uppercase text-xs">
-                  <th className="pb-3 text-center">
+                <tr className="text-slate-400 border-b border-slate-200 uppercase text-xs">
+                  <th className="pb-3 text-center w-10">
                     <input
                       type="checkbox"
-                      checked={selectedIds.length === applications.length}
+                      checked={selectedIds.length === applications.length && applications.length > 0}
                       onChange={handleSelectAll}
-                      className="rounded border-slate-200 text-red-600 focus:ring-red-600"
+                      className="rounded border-slate-200 text-red-655 focus:ring-red-655"
                     />
                   </th>
-                  <th className="pb-3 pl-3">Student Name</th>
-                  <th className="pb-3">Phone</th>
-                  <th className="pb-3">University</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3">Custom Fields</th>
-                  <th className="pb-3">Payment (₹)</th>
+                  <th className="pb-3 pl-3">Registration No.</th>
+
+                  {/* Dynamic Header Columns from Form Schema */}
+                  {event.customFormFields?.map((field: any) => (
+                    <th key={field.id} className="pb-3 px-3">{field.label}</th>
+                  ))}
+
+                  <th className="pb-3 px-3">Status</th>
+                  <th className="pb-3 px-3">WhatsApp Message</th>
+                  <th className="pb-3 px-3">Payment</th>
                   <th className="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-850">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {applications.map((app) => {
                   const s = app.studentId || {};
                   return (
-                    <tr key={app._id} className="hover:bg-gray-850/20 transition">
+                    <tr key={app._id} className="hover:bg-slate-50/50 transition">
                       <td className="py-4 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(app._id)}
                           onChange={() => handleToggleSelect(app._id)}
-                          className="rounded border-slate-200 text-red-600 focus:ring-red-600"
+                          className="rounded border-slate-200 text-red-655 focus:ring-red-655"
                         />
                       </td>
-                      <td className="py-4 pl-3 font-bold text-slate-900">{s.name}</td>
-                      <td className="py-4 text-slate-500">{s.phone}</td>
-                      <td className="py-4 text-slate-500">
-                        <span className="block font-medium">{s.university}</span>
-                        <span className="text-xs text-slate-450">{s.universityId}</span>
+                      <td className="py-4 pl-3 font-mono font-bold text-slate-800">
+                        {s.universityId || app.registrationNumber || "N/A"}
                       </td>
-                      <td className="py-4">
-                        <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
+
+                      {/* Dynamic Field Values */}
+                      {event.customFormFields?.map((field: any) => {
+                        const val = (globalThis as any).getCustomValue(app, field.id);
+                        return (
+                          <td key={field.id} className="py-4 px-3 font-medium text-slate-800">
+                            {val || "-"}
+                          </td>
+                        );
+                      })}
+
+                      {/* Status badge */}
+                      <td className="py-4 px-3">
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                            app.status === "confirmed"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : app.status === "attended"
+                              ? "bg-purple-50 text-purple-700 border-purple-200"
+                              : app.status === "absent"
+                              ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : app.status === "cancelled"
+                              ? "bg-slate-100 text-slate-600 border-slate-200"
+                              : "bg-red-50 text-red-655 border-red-200"
+                          }`}
+                        >
                           {app.status}
                         </span>
                       </td>
-                      <td className="py-4 text-xs text-slate-500 max-w-xs truncate">
-                        {Object.entries(app.customFieldsData || {}).map(([k, v]) => (
-                          <div key={k}>
-                            <span className="font-semibold text-slate-450">{k}:</span> {String(v)}
-                          </div>
-                        ))}
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="number"
-                            placeholder={event.paymentPerStudent}
-                            value={tempPayouts[app._id] !== undefined ? tempPayouts[app._id] : (app.paymentOverride ?? "")}
-                            onChange={(e) => setTempPayouts({ ...tempPayouts, [app._id]: Number(e.target.value) })}
-                            className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-900 text-xs text-center focus:outline-none"
-                          />
-                          <button
-                            onClick={() => handleSavePayoutOverride(app._id)}
-                            className="bg-slate-100 hover:bg-red-600 hover:text-white text-slate-650 text-xs px-2 py-1 rounded transition"
-                          >
-                            Set
-                          </button>
+
+                      {/* WhatsApp Sent Action */}
+                      <td className="py-4 px-3">
+                        <div className="flex items-center space-x-1 text-xs">
+                          {app.messageStatus === "SENT" ? (
+                            <span className="text-emerald-600 font-bold flex items-center space-x-1">
+                              <span>✓ Sent</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSingleUpdate(app._id, { messageStatus: "SENT" })}
+                              className="text-red-650 hover:text-red-750 font-bold border border-red-200 hover:bg-red-50 px-2 py-1 rounded text-[11px] transition"
+                            >
+                              Send
+                            </button>
+                          )}
                         </div>
                       </td>
+
+                      {/* Payment Status & Override */}
+                      <td className="py-4 px-3">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                              app.paymentStatus === "PAID"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-slate-100 text-slate-500 border-slate-200"
+                            }`}>
+                              {app.paymentStatus === "PAID" ? "✓ PAID" : "UNPAID"}
+                            </span>
+                            {app.paymentStatus === "PAID" ? (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Revert payment status for ${s.name || "student"}?`)) {
+                                    handleSingleUpdate(app._id, { paymentStatus: "UNPAID" });
+                                  }
+                                }}
+                                className="text-[10px] text-slate-400 hover:text-slate-600 underline"
+                              >
+                                Revert
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleSingleUpdate(app._id, { paymentStatus: "PAID" })}
+                                className="text-[10px] text-red-650 hover:text-red-750 font-bold"
+                              >
+                                Mark Paid
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center space-x-1.5">
+                            <input
+                              type="number"
+                              placeholder={event.paymentPerStudent}
+                              value={tempPayouts[app._id] !== undefined ? tempPayouts[app._id] : (app.paymentOverride ?? "")}
+                              onChange={(e) => setTempPayouts({ ...tempPayouts, [app._id]: Number(e.target.value) })}
+                              className="w-16 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-slate-900 text-xs text-center focus:outline-none"
+                            />
+                            <button
+                              onClick={() => handleSavePayoutOverride(app._id)}
+                              className="bg-slate-150 hover:bg-slate-250 text-slate-650 text-[10px] px-1.5 py-0.5 rounded transition"
+                            >
+                              Set
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Row actions */}
                       <td className="py-4 text-right">
                         <div className="flex justify-end gap-1.5">
+                          {app.status !== "confirmed" ? (
+                            <button
+                              onClick={() => handleSingleUpdate(app._id, { status: "confirmed" })}
+                              className="px-2 py-1 bg-red-655/10 hover:bg-red-600 hover:text-white border border-red-600/20 rounded text-red-655 text-xs font-bold transition"
+                            >
+                              Confirm
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Revert status to applied for ${s.name || "student"}?`)) {
+                                  handleSingleUpdate(app._id, { status: "applied" });
+                                }
+                              }}
+                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 text-xs font-bold transition border border-slate-200"
+                            >
+                              Revert
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleSingleStatusChange(app._id, "attended")}
-                            className="px-2 py-1 bg-emerald-600/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 rounded text-emerald-400 text-xs font-bold transition"
+                            onClick={() => handleSingleUpdate(app._id, { status: "attended" })}
+                            className="px-2 py-1 bg-purple-50 hover:bg-purple-650 hover:text-white border border-purple-200 rounded text-purple-750 text-xs font-bold transition"
                           >
                             Attended
                           </button>
                           <button
-                            onClick={() => handleSingleStatusChange(app._id, "absent")}
-                            className="px-2 py-1 bg-red-500/10 hover:bg-red-500 hover:text-slate-800 border border-red-500/20 rounded text-red-400 text-xs font-bold transition"
+                            onClick={() => handleSingleUpdate(app._id, { status: "absent" })}
+                            className="px-2 py-1 bg-rose-50 hover:bg-rose-650 hover:text-white border border-rose-200 rounded text-rose-700 text-xs font-bold transition"
                           >
                             Absent
                           </button>

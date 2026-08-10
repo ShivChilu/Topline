@@ -165,6 +165,8 @@ export interface IApplication extends Document {
   checkInTime?: Date;
   checkOutTime?: Date;
   registrationNumber?: string;
+  paymentStatus?: 'UNPAID' | 'PAID';
+  messageStatus?: 'NOT_SENT' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
   createdAt: Date;
 }
 const ApplicationSchema = new Schema<IApplication>({
@@ -176,6 +178,8 @@ const ApplicationSchema = new Schema<IApplication>({
   checkInTime: { type: Date },
   checkOutTime: { type: Date },
   registrationNumber: { type: String },
+  paymentStatus: { type: String, enum: ['UNPAID', 'PAID'], default: 'UNPAID' },
+  messageStatus: { type: String, enum: ['NOT_SENT', 'SENT', 'DELIVERED', 'READ', 'FAILED'], default: 'NOT_SENT' },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -28,10 +28,10 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await connectToDatabase();
-    const { ids, status, paymentOverride } = await request.json();
+    const { ids, status, paymentStatus, messageStatus, paymentOverride } = await request.json();
 
-    if (!ids || !Array.isArray(ids) || ids.length === 0 || !status) {
-      return NextResponse.json({ success: false, message: "Missing application IDs or target status." }, { status: 400 });
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ success: false, message: "Missing application IDs." }, { status: 400 });
     }
 
     // Process status updates and update student statistics dynamically
@@ -40,7 +40,15 @@ export async function PATCH(request: Request) {
       if (!app) continue;
 
       const oldStatus = app.status;
-      app.status = status;
+      if (status !== undefined) {
+        app.status = status;
+      }
+      if (paymentStatus !== undefined) {
+        app.paymentStatus = paymentStatus;
+      }
+      if (messageStatus !== undefined) {
+        app.messageStatus = messageStatus;
+      }
       if (paymentOverride !== undefined) {
         app.paymentOverride = Number(paymentOverride);
       }
@@ -51,7 +59,7 @@ export async function PATCH(request: Request) {
       const student: any = app.studentId;
       const event: any = app.eventId;
 
-      if (student && event) {
+      if (student && event && status !== undefined) {
         // Selection count
         if (status === "selected" && oldStatus !== "selected") {
           student.selectedCount += 1;
@@ -73,7 +81,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, message: `Successfully updated ${ids.length} applications to ${status}.` });
+    return NextResponse.json({ success: true, message: `Successfully updated ${ids.length} applications.` });
   } catch (error: any) {
     console.error("Bulk Application Update Error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
