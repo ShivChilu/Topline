@@ -33,10 +33,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const fetchEventData = async () => {
     try {
       setLoading(true);
-      const eventRes = await fetch(`/api/admin/events/${eventId}`);
+      const eventRes = await fetch(`/api/admin/events/${eventId}?t=${Date.now()}`, { cache: "no-store" });
       const eventData = await eventRes.json();
       
-      const appRes = await fetch(`/api/admin/applications?eventId=${eventId}`);
+      const appRes = await fetch(`/api/admin/applications?eventId=${eventId}&t=${Date.now()}`, { cache: "no-store" });
       const appData = await appRes.json();
 
       if (eventData.success) setEvent(eventData.event);

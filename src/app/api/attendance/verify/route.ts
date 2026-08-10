@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Event, Application, Attendance, Student } from "@/models";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     await connectToDatabase();

@@ -3,6 +3,8 @@ import { connectToDatabase } from "@/lib/db";
 import { Event } from "@/models";
 import crypto from "crypto";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
   request: Request,
   props: { params: Promise<{ id: string }> }

@@ -41,7 +41,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const fetchAttendance = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/events/${eventId}/attendance`);
+      const res = await fetch(`/api/admin/events/${eventId}/attendance?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setAttendance(data.attendance);

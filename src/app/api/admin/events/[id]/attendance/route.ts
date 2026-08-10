@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Event, Application, Attendance, Student } from "@/models";
 
+export const dynamic = "force-dynamic";
+
 // GET all eligible applicants and their attendance status for an event
 export async function GET(
   request: Request,
@@ -36,7 +38,7 @@ export async function GET(
         studentId: student?._id,
         studentName: student?.name || "N/A",
         phone: student?.phone || "N/A",
-        registrationNumber: app.registrationNumber || "N/A",
+        registrationNumber: student?.universityId || app.registrationNumber || "N/A",
         status: att ? att.attendanceStatus : "ABSENT",
         checkInTime: att ? att.checkInTime : null,
         manualRemarks: att ? att.manualRemarks : "",
@@ -75,13 +77,15 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Application not found" }, { status: 404 });
     }
 
+    const studentObj = await Student.findById(studentId);
+
     // Update or create attendance record
     const attendance = await Attendance.findOneAndUpdate(
       { eventId, studentId },
       {
         $set: {
           applicationId,
-          registrationNumber: app.registrationNumber || "N/A",
+          registrationNumber: studentObj?.universityId || app.registrationNumber || "N/A",
           attendanceStatus: status,
           checkInTime: new Date(),
           manualRemarks: remarks || "Admin Override",
