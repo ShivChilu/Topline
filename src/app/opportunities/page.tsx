@@ -34,11 +34,11 @@ export default async function OpportunitiesPage(props: {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700">
       <Navbar />
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-amber-500 uppercase tracking-wider">
+          <h1 className="text-4xl font-extrabold text-slate-900 uppercase tracking-wider">
             Hospitality Opportunities
           </h1>
         </div>
@@ -106,62 +106,62 @@ export default async function OpportunitiesPage(props: {
               const isFull = event.status === "FULL";
               const isClosed = event.status === "CLOSED" || event.status === "COMPLETED";
 
-              let statusBadgeColor = "bg-gray-800 text-gray-400 border-gray-700";
-              if (isOpen) statusBadgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-              if (isFull) statusBadgeColor = "bg-amber-500/10 text-amber-500 border-amber-500/20";
-              if (isClosed) statusBadgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+              let statusBadgeColor = "bg-slate-100 text-slate-500 border-slate-200";
+              if (isOpen) statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-250";
+              if (isFull) statusBadgeColor = "bg-amber-50 text-amber-700 border-amber-250";
+              if (isClosed) statusBadgeColor = "bg-rose-50 text-rose-700 border-rose-250";
 
               return (
                 <div
                   key={event._id.toString()}
-                  className="glass-panel rounded-2xl hover-glow overflow-hidden flex flex-col justify-between"
+                  className="light-panel rounded-2xl overflow-hidden flex flex-col justify-between"
                 >
                   <div className="p-6">
                     <div className="flex items-center justify-between">
                       <span className={`text-xs font-extrabold px-3 py-1 rounded-full border uppercase tracking-widest ${statusBadgeColor}`}>
                         {event.status}
                       </span>
-                      <span className="text-xs text-gray-500 uppercase font-semibold">
+                      <span className="text-xs text-slate-500 uppercase font-semibold">
                         {event.workType}
                       </span>
                     </div>
 
-                    <h3 className="mt-4 text-xl font-bold text-white hover:text-amber-500 transition duration-300">
+                    <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-amber-600 transition duration-300">
                       <Link href={`/events/${event._id}`}>{event.name}</Link>
                     </h3>
 
-                    <div className="mt-6 space-y-3.5 text-sm text-gray-300">
+                    <div className="mt-6 space-y-3.5 text-sm text-slate-600">
                       <div className="flex items-center space-x-2.5">
-                        <Calendar className="w-4 h-4 text-amber-500/80" />
+                        <Calendar className="w-4 h-4 text-amber-600" />
                         <span>Date: {new Date(event.date).toLocaleDateString("en-GB")}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <MapPin className="w-4 h-4 text-amber-500/80" />
+                        <MapPin className="w-4 h-4 text-amber-600" />
                         <span className="truncate">Location: {event.location}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <Clock className="w-4 h-4 text-amber-500/80" />
+                        <Clock className="w-4 h-4 text-amber-600" />
                         <span>Reporting: {event.reportingTime}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <Users className="w-4 h-4 text-amber-500/80" />
+                        <Users className="w-4 h-4 text-amber-600" />
                         <span>Required: {event.workersRequired} candidates</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/[0.01] px-6 py-5 flex items-center justify-between border-t border-white/[0.04]">
+                  <div className="bg-slate-50/50 px-6 py-5 flex items-center justify-between border-t border-slate-100">
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">Payment</p>
-                      <p className="text-xl font-extrabold text-amber-500">₹{event.paymentPerStudent}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Payment</p>
+                      <p className="text-xl font-extrabold text-amber-600">₹{event.paymentPerStudent}</p>
                     </div>
 
                     <Link
                       href={`/events/${event._id}`}
                       className={`text-xs font-bold px-4 py-2.5 rounded-lg transition duration-300 flex items-center space-x-1.5 ${
                         isOpen
-                          ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-lg shadow-amber-500/5 hover:shadow-amber-500/15"
-                          : "bg-white/[0.02] border border-white/[0.04] text-gray-400 hover:bg-white/[0.04] hover:text-white"
+                          ? "bg-amber-500 hover:bg-amber-600 text-black shadow-sm"
+                          : "bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-200"
                       }`}
                     >
                       <span>{isOpen ? "Apply Now" : "View Details"}</span>

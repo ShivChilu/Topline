@@ -19,13 +19,13 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#06070a]/70 backdrop-blur-xl border-b border-white/[0.04] text-white">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80 text-slate-850">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3 group">
-              <BrandLogo width={40} height={40} className="overflow-hidden rounded-lg border border-white/10 group-hover:border-amber-500/50 transition duration-300 bg-[#090a0f]" />
-              <span className="text-xl font-display font-extrabold tracking-widest text-amber-500 uppercase hidden sm:inline transition-colors duration-300">
+              <BrandLogo width={40} height={40} className="overflow-hidden rounded-lg border border-slate-200/80 group-hover:border-amber-500/50 transition duration-300 bg-white" />
+              <span className="text-xl font-display font-extrabold tracking-widest text-amber-600 uppercase hidden sm:inline transition-colors duration-300">
                 TOPLINE
               </span>
             </Link>
@@ -36,14 +36,14 @@ export default function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="text-gray-300 hover:text-amber-500 text-sm font-medium tracking-wide transition duration-300 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-amber-500 after:transition-all after:duration-300 hover:after:w-full"
+                  className="text-slate-600 hover:text-amber-600 text-sm font-medium tracking-wide transition duration-300 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-amber-500 after:transition-all after:duration-300 hover:after:w-full"
                 >
                   {link.name}
                 </Link>
               ))}
               <Link
                 href="/admin/dashboard"
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black px-5 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-amber-500/10 hover:shadow-amber-500/20 transition-all duration-300 flex items-center space-x-1.5"
+                className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all duration-300 flex items-center space-x-1.5"
               >
                 <ShieldAlert className="w-4 h-4" />
                 <span>Admin Panel</span>
@@ -53,7 +53,7 @@ export default function Navbar() {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none"
+              className="inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 focus:outline-none"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -63,23 +63,23 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-[#06070a]/95 backdrop-blur-xl border-b border-white/[0.04]">
+        <div className="md:hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80">
           <div className="px-4 pt-3 pb-6 space-y-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="text-gray-300 hover:text-amber-500 block px-3 py-2 rounded-lg text-base font-semibold tracking-wide transition duration-300"
+                className="text-slate-600 hover:text-amber-600 block px-3 py-2 rounded-lg text-base font-semibold tracking-wide transition duration-300"
               >
                 {link.name}
               </Link>
             ))}
-            <div className="pt-4 border-t border-white/[0.04]">
+            <div className="pt-4 border-t border-slate-200/80">
               <Link
                 href="/admin/dashboard"
                 onClick={() => setIsOpen(false)}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 text-black block px-4 py-3 rounded-lg text-base font-bold text-center shadow-lg shadow-amber-500/10"
+                className="bg-amber-500 text-black block px-4 py-3 rounded-lg text-base font-bold text-center shadow-sm"
               >
                 Admin Panel
               </Link>
