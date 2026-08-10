@@ -14,7 +14,8 @@ import {
   MessageSquare,
   Share2,
   DollarSign,
-  Briefcase
+  Briefcase,
+  QrCode
 } from "lucide-react";
 
 export default function AdminEventDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -308,11 +309,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             {["OPEN", "FULL", "CLOSED"].includes(event.status) && (
               <button
                 onClick={() => handleUpdateEventStatus("COMPLETED")}
-                className="bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold transition w-full"
+                className="bg-purple-650 text-white px-4 py-2 rounded text-xs font-bold transition w-full"
               >
                 Mark Event as COMPLETED
               </button>
             )}
+
+            <div className="pt-4 border-t border-slate-200 w-full">
+              <Link
+                href={`/admin/events/${eventId}/attendance`}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 w-full shadow-sm"
+              >
+                <QrCode className="w-4 h-4" />
+                <span>Open Attendance QR & Tracker</span>
+              </Link>
+            </div>
           </div>
         </div>
 

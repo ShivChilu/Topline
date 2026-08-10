@@ -70,6 +70,12 @@ export interface IEvent extends Document {
   visibility: 'VISIBLE' | 'HIDDEN';
   clientId?: mongoose.Types.ObjectId;
   customFormFields: IFormField[];
+  attendanceToken?: string;
+  attendanceTokenEnabled?: boolean;
+  attendanceVerificationField?: string;
+  attendanceWindowStart?: Date;
+  attendanceWindowEnd?: Date;
+  gracePeriod?: number;
   createdAt: Date;
 }
 
@@ -108,6 +114,12 @@ const EventSchema = new Schema<IEvent>({
   visibility: { type: String, enum: ['VISIBLE', 'HIDDEN'], default: 'VISIBLE' },
   clientId: { type: Schema.Types.ObjectId, ref: 'Client' },
   customFormFields: { type: [FormFieldSchema], default: [] },
+  attendanceToken: { type: String },
+  attendanceTokenEnabled: { type: Boolean, default: false },
+  attendanceVerificationField: { type: String, default: "registrationNumber" },
+  attendanceWindowStart: { type: Date },
+  attendanceWindowEnd: { type: Date },
+  gracePeriod: { type: Number, default: 15 },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -152,6 +164,7 @@ export interface IApplication extends Document {
   paymentOverride?: number;
   checkInTime?: Date;
   checkOutTime?: Date;
+  registrationNumber?: string;
   createdAt: Date;
 }
 const ApplicationSchema = new Schema<IApplication>({
@@ -162,11 +175,41 @@ const ApplicationSchema = new Schema<IApplication>({
   paymentOverride: { type: Number },
   checkInTime: { type: Date },
   checkOutTime: { type: Date },
+  registrationNumber: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 
-// Create unique compound index to prevent duplicate applications
+// Create unique compound indexes
 ApplicationSchema.index({ eventId: 1, studentId: 1 }, { unique: true });
+ApplicationSchema.index({ eventId: 1, registrationNumber: 1 }, { unique: true, sparse: true });
+
+// --- ATTENDANCE SCHEMA ---
+export interface IAttendance extends Document {
+  eventId: mongoose.Types.ObjectId;
+  studentId: mongoose.Types.ObjectId;
+  applicationId: mongoose.Types.ObjectId;
+  registrationNumber: string;
+  checkInTime: Date;
+  attendanceStatus: 'PRESENT' | 'LATE' | 'ABSENT' | 'CANCELLED';
+  deviceMetadata?: string;
+  manualRemarks?: string;
+  adminId?: mongoose.Types.ObjectId;
+  createdAt: Date;
+}
+const AttendanceSchema = new Schema<IAttendance>({
+  eventId: { type: Schema.Types.ObjectId, ref: 'Event', required: true },
+  studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  applicationId: { type: Schema.Types.ObjectId, ref: 'Application', required: true },
+  registrationNumber: { type: String, required: true },
+  checkInTime: { type: Date, default: Date.now },
+  attendanceStatus: { type: String, enum: ['PRESENT', 'LATE', 'ABSENT', 'CANCELLED'], default: 'PRESENT' },
+  deviceMetadata: { type: String },
+  manualRemarks: { type: String },
+  adminId: { type: Schema.Types.ObjectId, ref: 'Admin' },
+  createdAt: { type: Date, default: Date.now },
+});
+
+AttendanceSchema.index({ eventId: 1, studentId: 1 }, { unique: true });
 
 // --- SYSTEM SETTING / WEBSITE CONTENT SCHEMA ---
 export interface ISetting extends Document {
@@ -204,5 +247,6 @@ export const Client: Model<IClient> = mongoose.models.Client || mongoose.model<I
 export const Event: Model<IEvent> = mongoose.models.Event || mongoose.model<IEvent>('Event', EventSchema);
 export const Student: Model<IStudent> = mongoose.models.Student || mongoose.model<IStudent>('Student', StudentSchema);
 export const Application: Model<IApplication> = mongoose.models.Application || mongoose.model<IApplication>('Application', ApplicationSchema);
+export const Attendance: Model<IAttendance> = mongoose.models.Attendance || mongoose.model<IAttendance>('Attendance', AttendanceSchema);
 export const Setting: Model<ISetting> = mongoose.models.Setting || mongoose.model<ISetting>('Setting', SettingSchema);
 export const Gallery: Model<IGallery> = mongoose.models.Gallery || mongoose.model<IGallery>('Gallery', GallerySchema);

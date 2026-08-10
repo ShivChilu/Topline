@@ -84,12 +84,18 @@ export async function POST(
       await updatedEvent.save();
     }
 
+    // Generate unique event-specific registration number
+    const year = new Date().getFullYear();
+    const randNum = Math.floor(10000 + Math.random() * 90000);
+    const regNo = `TL-${year}-${randNum}`;
+
     // 6. Create the Application Record
     const application = await Application.create({
       eventId: event._id,
       studentId: student._id,
       status: "applied",
       customFieldsData: customFields || {},
+      registrationNumber: regNo,
     });
 
     // 7. Update Student Metrics
