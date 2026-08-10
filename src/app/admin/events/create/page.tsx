@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, Eye, Shield, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import TimePicker12Hour from "@/components/TimePicker12Hour";
 
 interface FormField {
   id: string;
@@ -213,29 +214,23 @@ export default function CreateEventPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Reporting Time (Optional)</label>
-                <input
-                  type="time"
+                <TimePicker12Hour
                   value={reportingTime}
-                  onChange={(e) => setReportingTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
+                  onChange={setReportingTime}
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty Start Time (Optional)</label>
-                <input
-                  type="time"
+                <TimePicker12Hour
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
+                  onChange={setStartTime}
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty End Time (Optional)</label>
-                <input
-                  type="time"
+                <TimePicker12Hour
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
+                  onChange={setEndTime}
                 />
               </div>
             </div>
