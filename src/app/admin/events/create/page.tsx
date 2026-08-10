@@ -110,24 +110,25 @@ export default function CreateEventPage() {
       ? dosAndDontsText.split("\n").map((line) => line.trim()).filter((line) => line.length > 0)
       : [];
 
+    const defaultDate = date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const eventPayload = {
-      name,
-      date,
-      location,
+      name: name.trim() || "Draft Event",
+      date: defaultDate,
+      location: location.trim() || "TBD",
       googleMapsUrl,
-      reportingTime,
-      startTime,
-      endTime,
-      workType,
-      description,
-      instructions,
-      dressCode,
+      reportingTime: reportingTime || "00:00",
+      startTime: startTime || "00:00",
+      endTime: endTime || "00:00",
+      workType: workType.trim() || "Catering Staff",
+      description: description.trim() || "No description provided.",
+      instructions: instructions.trim() || "",
+      dressCode: dressCode.trim() || "",
       dosAndDonts,
-      workersRequired: Number(workersRequired),
-      maxApplications: Number(maxApplications),
-      paymentPerStudent: Number(paymentPerStudent),
-      clientRevenue: Number(clientRevenue),
-      otherExpenses: Number(otherExpenses),
+      workersRequired: Number(workersRequired) || 15,
+      maxApplications: Number(maxApplications) || 25,
+      paymentPerStudent: Number(paymentPerStudent) || 800,
+      clientRevenue: Number(clientRevenue) || 0,
+      otherExpenses: Number(otherExpenses) || 0,
       clientId: clientId || null,
       customFormFields: customFields,
       visibility,
@@ -177,10 +178,9 @@ export default function CreateEventPage() {
             <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">General Details</h2>
             
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Name *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Name (Optional)</label>
               <input
                 type="text"
-                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Grand Corporate Buffet Coordination"
@@ -190,20 +190,18 @@ export default function CreateEventPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Date *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Date (Optional)</label>
                 <input
                   type="date"
-                  required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Type / Category *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Type / Category (Optional)</label>
                 <input
                   type="text"
-                  required
                   value={workType}
                   onChange={(e) => setWorkType(e.target.value)}
                   placeholder="Catering Staff / Banquet Host"
@@ -214,30 +212,27 @@ export default function CreateEventPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Reporting Time *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Reporting Time (Optional)</label>
                 <input
                   type="time"
-                  required
                   value={reportingTime}
                   onChange={(e) => setReportingTime(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty Start Time *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty Start Time (Optional)</label>
                 <input
                   type="time"
-                  required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty End Time *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty End Time (Optional)</label>
                 <input
                   type="time"
-                  required
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
@@ -246,10 +241,9 @@ export default function CreateEventPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Location Details *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Location Details (Optional)</label>
               <input
                 type="text"
-                required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Aura Resort, Chandigarh-Ambala Highway"
@@ -269,9 +263,8 @@ export default function CreateEventPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Description *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Description (Optional)</label>
               <textarea
-                required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide a summary of the duties and event settings..."
@@ -375,7 +368,6 @@ export default function CreateEventPage() {
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Required Workers</label>
                 <input
                   type="number"
-                  required
                   value={workersRequired}
                   onChange={(e) => setWorkersRequired(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
@@ -385,7 +377,6 @@ export default function CreateEventPage() {
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Max Applications</label>
                 <input
                   type="number"
-                  required
                   value={maxApplications}
                   onChange={(e) => setMaxApplications(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
@@ -397,7 +388,6 @@ export default function CreateEventPage() {
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Student Payment (₹ / candidate)</label>
               <input
                 type="number"
-                required
                 value={paymentPerStudent}
                 onChange={(e) => setPaymentPerStudent(Number(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
