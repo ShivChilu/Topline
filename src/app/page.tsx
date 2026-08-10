@@ -91,11 +91,11 @@ export default async function HomePage() {
       </HeroSlideshow>
 
       {/* What We Provide Section */}
-      <section className="py-24 border-t border-slate-100 bg-white">
+      <section className="py-24 border-t border-slate-100 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-red-700 uppercase">
-              What We Provide
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider uppercase">
+              <span className="gradient-text">What We Provide</span>
             </h2>
             <p className="mt-4 text-slate-500 max-w-2xl mx-auto text-lg font-sans">
               Tailored event crew staffing solutions built on professional standard criteria.
@@ -105,13 +105,17 @@ export default async function HomePage() {
             {defaultServices.map((service, idx) => (
               <div
                 key={idx}
-                className="light-panel p-8 rounded-2xl flex flex-col"
+                className="light-panel p-8 rounded-2xl flex flex-col relative overflow-hidden group"
               >
-                <div className="w-12 h-12 bg-red-600/10 rounded-xl flex items-center justify-center border border-red-600/20 mb-6">
+                {/* Accent line & soft glow */}
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
+                <div className="absolute -top-10 -right-10 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition-colors duration-300"></div>
+
+                <div className="w-12 h-12 bg-red-650/10 rounded-xl flex items-center justify-center border border-red-600/20 mb-6 relative z-10">
                   {service.icon}
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{service.name}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed flex-grow font-sans">{service.desc}</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 relative z-10">{service.name}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed flex-grow font-sans relative z-10">{service.desc}</p>
               </div>
             ))}
           </div>
@@ -119,12 +123,12 @@ export default async function HomePage() {
       </section>
 
       {/* Latest Opportunities Section */}
-      <section className="py-24 bg-slate-50 border-t border-slate-150">
+      <section className="py-24 bg-slate-50 border-t border-slate-150 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-slate-900 uppercase">
-                Active Opportunities
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider uppercase">
+                <span className="gradient-text">Active Opportunities</span>
               </h2>
               <p className="mt-2 text-slate-500 text-lg">
                 High-paying catering and hospitality slots currently recruiting students.
@@ -132,7 +136,7 @@ export default async function HomePage() {
             </div>
             <Link
               href="/opportunities"
-              className="mt-4 md:mt-0 flex items-center space-x-2 text-red-700 hover:text-red-800 font-bold transition duration-300"
+              className="mt-4 md:mt-0 flex items-center space-x-2 text-red-600 hover:text-red-700 font-bold transition duration-300"
             >
               <span>See All Opportunities</span>
               <ArrowRight className="w-4 h-4" />
@@ -149,9 +153,13 @@ export default async function HomePage() {
               {activeEvents.map((event: any) => (
                 <div
                   key={event._id.toString()}
-                  className="light-panel rounded-2xl overflow-hidden flex flex-col justify-between"
+                  className="light-panel rounded-2xl overflow-hidden flex flex-col justify-between relative group"
                 >
-                  <div className="p-6">
+                  {/* Left accent bar on hover */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
+                  <div className="absolute -top-10 -right-10 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition-colors duration-300"></div>
+
+                  <div className="p-6 relative z-10">
                     <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-250 uppercase tracking-widest">
                       {event.status}
                     </span>
@@ -174,7 +182,7 @@ export default async function HomePage() {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-slate-50/50 px-6 py-5 flex items-center justify-between border-t border-slate-100">
+                  <div className="bg-slate-50/50 px-6 py-5 flex items-center justify-between border-t border-slate-100 relative z-10">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider">Payout</p>
                       <p className="text-xl font-extrabold text-red-700">₹{event.paymentPerStudent}</p>
