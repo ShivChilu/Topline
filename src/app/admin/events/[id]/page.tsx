@@ -216,7 +216,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     <div className="space-y-8 text-slate-900">
       {/* Title block */}
       <div className="flex items-center space-x-3">
-        <Link href="/admin/events" className="p-2 hover:bg-gray-800 rounded-lg text-slate-500 hover:text-slate-900 transition">
+        <Link href="/admin/events" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
@@ -277,7 +277,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             {event.status === "DRAFT" && (
               <button
                 onClick={() => handleUpdateEventStatus("OPEN")}
-                className="bg-emerald-500 text-black px-4 py-2 rounded text-xs font-bold transition"
+                className="bg-emerald-600 text-white px-4 py-2 rounded text-xs font-bold transition"
               >
                 Publish Form (OPEN)
               </button>
@@ -301,7 +301,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             {event.status === "FULL" && (
               <button
                 onClick={() => handleUpdateEventStatus("OPEN")}
-                className="bg-emerald-500 text-black px-4 py-2 rounded text-xs font-bold transition"
+                className="bg-emerald-600 text-white px-4 py-2 rounded text-xs font-bold transition"
               >
                 Reopen applications
               </button>
@@ -361,25 +361,25 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleBulkStatusChange("selected")}
-            className="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-black border border-red-600/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-600/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Selected
           </button>
           <button
             onClick={() => handleBulkStatusChange("confirmed")}
-            className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Confirmed
           </button>
           <button
             onClick={() => handleBulkStatusChange("attended")}
-            className="bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-slate-900 border border-purple-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-slate-800 border border-purple-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Attended
           </button>
           <button
             onClick={() => handleBulkStatusChange("cancelled")}
-            className="bg-red-500/20 text-red-450 hover:bg-red-500 hover:text-slate-900 border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-red-500/20 text-red-450 hover:bg-red-500 hover:text-slate-800 border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Cancelled
           </button>
@@ -455,7 +455,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           />
                           <button
                             onClick={() => handleSavePayoutOverride(app._id)}
-                            className="bg-gray-800 hover:bg-red-600 hover:text-black text-slate-650 text-xs px-2 py-1 rounded transition"
+                            className="bg-slate-100 hover:bg-red-600 hover:text-white text-slate-650 text-xs px-2 py-1 rounded transition"
                           >
                             Set
                           </button>
@@ -465,13 +465,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <div className="flex justify-end gap-1.5">
                           <button
                             onClick={() => handleSingleStatusChange(app._id, "attended")}
-                            className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500 hover:text-black border border-emerald-500/20 rounded text-emerald-400 text-xs font-bold transition"
+                            className="px-2 py-1 bg-emerald-600/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 rounded text-emerald-400 text-xs font-bold transition"
                           >
                             Attended
                           </button>
                           <button
                             onClick={() => handleSingleStatusChange(app._id, "absent")}
-                            className="px-2 py-1 bg-red-500/10 hover:bg-red-500 hover:text-slate-900 border border-red-500/20 rounded text-red-400 text-xs font-bold transition"
+                            className="px-2 py-1 bg-red-500/10 hover:bg-red-500 hover:text-slate-800 border border-red-500/20 rounded text-red-400 text-xs font-bold transition"
                           >
                             Absent
                           </button>

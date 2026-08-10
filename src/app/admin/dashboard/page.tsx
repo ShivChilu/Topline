@@ -108,7 +108,7 @@ export default async function AdminDashboardPage() {
               <p className="text-xs text-slate-450 font-semibold uppercase tracking-wider">{kpi.name}</p>
               <h3 className="text-3xl font-bold mt-2">{kpi.value}</h3>
             </div>
-            <div className="w-10 h-10 bg-gray-800/50 rounded-lg flex items-center justify-center border border-slate-200">
+            <div className="w-10 h-10 bg-slate-100/50 rounded-lg flex items-center justify-center border border-slate-200">
               {kpi.icon}
             </div>
           </div>
@@ -173,7 +173,7 @@ export default async function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-850">
                   {upcomingEvents.map((ev) => (
-                    <tr key={ev._id.toString()} className="hover:bg-gray-800/20 transition">
+                    <tr key={ev._id.toString()} className="hover:bg-slate-100/20 transition">
                       <td className="py-3 font-bold text-slate-900">
                         <Link href={`/admin/events/${ev._id}`} className="hover:text-red-600">
                           {ev.name}
@@ -203,19 +203,19 @@ export default async function AdminDashboardPage() {
           <div className="grid grid-cols-1 gap-3">
             <Link
               href="/admin/events/create"
-              className="bg-red-600 hover:bg-red-700 text-black font-bold p-3 rounded-lg text-center text-sm transition"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg text-center text-sm transition"
             >
               Create New Event
             </Link>
             <Link
               href="/admin/applications"
-              className="bg-slate-50 hover:bg-gray-800 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
+              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
             >
               Review Pending Applications
             </Link>
             <Link
               href="/admin/students"
-              className="bg-slate-50 hover:bg-gray-800 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
+              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
             >
               Search Student Profiles
             </Link>

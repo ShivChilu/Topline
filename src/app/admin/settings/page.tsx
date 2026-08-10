@@ -259,7 +259,7 @@ export default function AdminSettingsPage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-red-600 hover:bg-red-700 text-black font-extrabold py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
+          className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
         >
           <Save className="w-5 h-5" />
           <span>{saving ? "Saving Changes..." : "Save Website Settings"}</span>
@@ -298,7 +298,7 @@ export default function AdminSettingsPage() {
             </div>
             <button
               type="submit"
-              className="w-full bg-transparent hover:bg-red-600 hover:text-black border border-red-600/30 text-red-600 font-bold py-2 rounded-lg transition text-sm"
+              className="w-full bg-transparent hover:bg-red-600 hover:text-white border border-red-600/30 text-red-600 font-bold py-2 rounded-lg transition text-sm"
             >
               Update Credentials
             </button>
@@ -347,7 +347,7 @@ export default function AdminSettingsPage() {
             </div>
             <button
               type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-2 rounded-lg transition text-sm"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition text-sm"
             >
               Register New Admin
             </button>
@@ -376,7 +376,7 @@ export default function AdminSettingsPage() {
                 <tr key={adm._id} className="hover:bg-gray-850/10">
                   <td className="py-3 font-semibold text-slate-900">{adm.username}</td>
                   <td className="py-3 uppercase text-xs">
-                    <span className={`px-2 py-0.5 rounded ${adm.role === "superadmin" ? "bg-red-600/10 text-red-600 border border-red-600/20" : "bg-gray-800 text-slate-500"}`}>
+                    <span className={`px-2 py-0.5 rounded ${adm.role === "superadmin" ? "bg-red-600/10 text-red-600 border border-red-600/20" : "bg-slate-100 text-slate-500"}`}>
                       {adm.role}
                     </span>
                   </td>

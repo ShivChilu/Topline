@@ -105,7 +105,7 @@ export default function AdminGalleryPage() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-red-600 hover:bg-red-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>{showAddForm ? "Close Form" : "Upload Event Image"}</span>
@@ -165,7 +165,7 @@ export default function AdminGalleryPage() {
           </div>
           <button
             type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-2 rounded-lg transition"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition"
           >
             Upload and Publish Image
           </button>
@@ -187,7 +187,7 @@ export default function AdminGalleryPage() {
             <div key={img._id} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between group">
               <div className="relative h-48 w-full bg-gray-900 overflow-hidden">
                 <img src={img.imageUrl} alt={img.caption} className="object-cover w-full h-full" />
-                <span className="absolute top-2 left-2 bg-red-600 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">
                   {img.category}
                 </span>
               </div>
@@ -205,7 +205,7 @@ export default function AdminGalleryPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(img._id)}
-                    className="p-1.5 bg-red-950/20 text-red-400 hover:bg-red-500 hover:text-black rounded transition"
+                    className="p-1.5 bg-red-950/20 text-red-400 hover:bg-red-650 hover:text-white rounded transition"
                     title="Delete permanently"
                   >
                     <Trash2 className="w-4 h-4" />

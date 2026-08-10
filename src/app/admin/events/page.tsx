@@ -92,7 +92,7 @@ export default function AdminEventsPage() {
         </div>
         <Link
           href="/admin/events/create"
-          className="bg-red-600 hover:bg-red-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           <span>Create Event</span>
@@ -117,7 +117,7 @@ export default function AdminEventsPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-3 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition ${
-                tab === t ? "bg-red-600 text-black" : "bg-gray-800/60 text-slate-500 hover:text-slate-900"
+                tab === t ? "bg-red-600 text-white" : "bg-slate-100 text-slate-500 hover:text-slate-800"
               }`}
             >
               {t}
@@ -169,7 +169,7 @@ export default function AdminEventsPage() {
                 <div className="flex gap-2">
                   <Link
                     href={`/admin/events/${event._id}`}
-                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-slate-650 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
                     title="View & Manage"
                   >
                     <Eye className="w-4 h-4" />
@@ -177,7 +177,7 @@ export default function AdminEventsPage() {
                   <Link
                     href={`/events/${event._id}`}
                     target="_blank"
-                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-slate-650 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
                     title="Preview Public Page"
                   >
                     <Edit className="w-4 h-4" />
@@ -187,7 +187,7 @@ export default function AdminEventsPage() {
                   {event.status === "DRAFT" && (
                     <button
                       onClick={() => handleUpdateStatus(event._id, "OPEN")}
-                      className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition"
+                      className="bg-emerald-600/10 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition"
                     >
                       Publish
                     </button>
@@ -195,7 +195,7 @@ export default function AdminEventsPage() {
                   {event.status === "OPEN" && (
                     <button
                       onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                      className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-slate-900 border border-red-500/20 px-3 py-1 rounded text-xs font-bold transition"
+                      className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-slate-800 border border-red-500/20 px-3 py-1 rounded text-xs font-bold transition"
                     >
                       Close Form
                     </button>
@@ -203,7 +203,7 @@ export default function AdminEventsPage() {
                   {event.status !== "ARCHIVED" && (
                     <button
                       onClick={() => handleArchive(event._id)}
-                      className="p-2 bg-red-950/20 hover:bg-red-500 hover:text-black border border-red-900/30 rounded text-red-400 transition"
+                      className="p-2 bg-red-950/20 hover:bg-red-650 hover:text-white border border-red-900/30 rounded text-red-400 transition"
                       title="Archive"
                     >
                       <Trash2 className="w-4 h-4" />

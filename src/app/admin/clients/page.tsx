@@ -77,7 +77,7 @@ export default function AdminClientsPage() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-red-600 hover:bg-red-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>{showAddForm ? "Close Form" : "Add Client Partner"}</span>
@@ -156,7 +156,7 @@ export default function AdminClientsPage() {
           </div>
           <button
             type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-2 rounded-lg transition"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition"
           >
             Create Partner Profile
           </button>

@@ -167,13 +167,13 @@ export default function AdminApplicationsPage() {
           <span className="text-xs font-bold text-red-600 mr-2 uppercase">Bulk Selection:</span>
           <button
             onClick={() => handleBulkStatusChange("selected")}
-            className="bg-red-600 hover:bg-red-700 text-black text-xs font-bold px-3 py-1.5 rounded transition"
+            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded transition"
           >
             Select ({selectedIds.length})
           </button>
           <button
             onClick={() => handleBulkStatusChange("confirmed")}
-            className="bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold px-3 py-1.5 rounded transition"
+            className="bg-emerald-600 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded transition"
           >
             Confirm
           </button>
@@ -222,7 +222,7 @@ export default function AdminApplicationsPage() {
                   const s = app.studentId || {};
                   const ev = app.eventId || {};
                   return (
-                    <tr key={app._id} className="hover:bg-gray-800/10 transition">
+                    <tr key={app._id} className="hover:bg-slate-100/10 transition">
                       <td className="p-4 text-center">
                         <input
                           type="checkbox"

@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-2.5 rounded-lg transition duration-200 text-sm"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition duration-200 text-sm"
           >
             {loading ? "Authenticating..." : "Login to Dashboard"}
           </button>

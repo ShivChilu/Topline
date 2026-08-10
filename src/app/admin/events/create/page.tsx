@@ -156,7 +156,7 @@ export default function CreateEventPage() {
     <div className="space-y-6 text-slate-900 max-w-5xl mx-auto pb-12">
       {/* Title */}
       <div className="flex items-center space-x-3">
-        <Link href="/admin/events" className="p-2 hover:bg-gray-800 rounded-lg text-slate-500 hover:text-slate-900 transition">
+        <Link href="/admin/events" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
@@ -505,7 +505,7 @@ export default function CreateEventPage() {
             <button
               type="button"
               onClick={handleAddField}
-              className="w-full bg-transparent hover:bg-red-600 hover:text-black border border-red-600/30 text-red-600 font-bold py-2 rounded transition text-sm flex items-center justify-center space-x-1"
+              className="w-full bg-transparent hover:bg-red-600 hover:text-white border border-red-600/30 text-red-600 font-bold py-2 rounded transition text-sm flex items-center justify-center space-x-1"
             >
               <Plus className="w-4 h-4" />
               <span>Insert Field</span>
@@ -515,7 +515,7 @@ export default function CreateEventPage() {
           {/* Submit Action */}
           <button
             type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-black font-extrabold py-3.5 rounded-xl transition duration-200"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3.5 rounded-xl transition duration-200"
           >
             Save Event Draft
           </button>

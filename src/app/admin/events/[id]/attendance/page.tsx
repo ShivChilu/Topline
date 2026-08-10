@@ -357,7 +357,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                     <button
                       onClick={() => handleToggleQR(!qrEnabled)}
                       className={`flex-grow py-2 rounded-xl text-xs font-bold transition ${
-                        qrEnabled ? "bg-amber-500 text-black" : "bg-emerald-555 text-white"
+                        qrEnabled ? "bg-amber-500 text-white" : "bg-emerald-555 text-white"
                       }`}
                     >
                       {qrEnabled ? "Disable Session" : "Enable Session"}

@@ -65,8 +65,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
                   isActive
-                    ? "bg-red-600 text-black"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-gray-800/40"
+                    ? "bg-red-600 text-white"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/40"
                 }`}
               >
                 {item.icon}
@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-4 border-t border-slate-200">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold text-red-400 hover:text-slate-900 hover:bg-red-950/20 transition"
+            className="flex w-full items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold text-red-400 hover:text-slate-800 hover:bg-red-950/20 transition"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
@@ -96,7 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 rounded text-slate-500 hover:text-slate-900 focus:outline-none"
+            className="p-1 rounded text-slate-500 hover:text-slate-800 focus:outline-none"
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -123,8 +123,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       onClick={() => setIsOpen(false)}
                       className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition ${
                         isActive
-                          ? "bg-red-600 text-black"
-                          : "text-slate-500 hover:text-slate-900 hover:bg-gray-800/40"
+                          ? "bg-red-600 text-white"
+                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/40"
                       }`}
                     >
                       {item.icon}
@@ -138,7 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   setIsOpen(false);
                   handleLogout();
                 }}
-                className="flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-400 hover:text-slate-900 hover:bg-red-950/20 transition w-full"
+                className="flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-400 hover:text-slate-800 hover:bg-red-950/20 transition w-full"
               >
                 <LogOut className="w-5 h-5" />
                 <span>Logout</span>

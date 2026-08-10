@@ -81,7 +81,7 @@ export default function AdminStudentsPage() {
           <button
             onClick={() => setStatusFilter("")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition uppercase tracking-wider ${
-              statusFilter === "" ? "bg-red-600 text-black" : "bg-gray-800/60 text-slate-500 hover:text-slate-900"
+              statusFilter === "" ? "bg-red-600 text-white" : "bg-slate-100 text-slate-500 hover:text-slate-800"
             }`}
           >
             All
@@ -89,7 +89,7 @@ export default function AdminStudentsPage() {
           <button
             onClick={() => setStatusFilter("active")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition uppercase tracking-wider ${
-              statusFilter === "active" ? "bg-emerald-500 text-black" : "bg-gray-800/60 text-slate-500 hover:text-slate-900"
+              statusFilter === "active" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 hover:text-slate-800"
             }`}
           >
             Active Only
@@ -97,7 +97,7 @@ export default function AdminStudentsPage() {
           <button
             onClick={() => setStatusFilter("blocked")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition uppercase tracking-wider ${
-              statusFilter === "blocked" ? "bg-red-650 text-slate-900" : "bg-gray-800/60 text-slate-500 hover:text-slate-900"
+              statusFilter === "blocked" ? "bg-red-650 text-slate-900" : "bg-slate-100 text-slate-500 hover:text-slate-800"
             }`}
           >
             Blocked
@@ -133,7 +133,7 @@ export default function AdminStudentsPage() {
               </thead>
               <tbody className="divide-y divide-gray-850">
                 {students.map((student) => (
-                  <tr key={student._id} className="hover:bg-gray-800/10 transition">
+                  <tr key={student._id} className="hover:bg-slate-100/10 transition">
                     <td className="p-4 font-bold text-slate-900 flex items-center space-x-2">
                       <span>{student.name}</span>
                       {student.status === "blocked" && (
@@ -156,7 +156,7 @@ export default function AdminStudentsPage() {
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => setActiveStudent(student)}
-                          className="p-1 bg-gray-800 hover:bg-gray-700 text-slate-650 rounded"
+                          className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-650 rounded"
                           title="View History"
                         >
                           <History className="w-4 h-4" />
@@ -165,8 +165,8 @@ export default function AdminStudentsPage() {
                           onClick={() => handleToggleBlock(student._id, student.status)}
                           className={`p-1 rounded ${
                             student.status === "active"
-                              ? "bg-red-950/20 text-red-400 hover:bg-red-500 hover:text-black border border-red-900/30"
-                              : "bg-emerald-950/20 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-900/30"
+                              ? "bg-red-950/20 text-red-400 hover:bg-red-650 hover:text-white border border-red-900/30"
+                              : "bg-emerald-950/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-900/30"
                           }`}
                           title={student.status === "active" ? "Block Candidate" : "Activate Profile"}
                         >
@@ -218,7 +218,7 @@ export default function AdminStudentsPage() {
 
             <button
               onClick={() => setActiveStudent(null)}
-              className="w-full bg-gray-800 hover:bg-gray-700 text-slate-900 font-bold py-2 rounded text-sm transition"
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-2 rounded text-sm transition"
             >
               Close Window
             </button>
