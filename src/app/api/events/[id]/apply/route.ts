@@ -70,32 +70,17 @@ export async function POST(
         return NextResponse.json({ success: false, message: "Your profile has been restricted by administrators." }, { status: 403 });
       }
 
+      // Overwrite existing record with new submission data to ensure fresh rendering
+      student.name = finalName;
+      student.phone = finalPhone;
+      student.email = finalEmail;
+      student.university = finalUniversity;
+      await student.save();
+
       // 4. Duplicate Check (Event ID + Student ID)
       const existingApplication = await Application.findOne({ eventId, studentId: student._id });
       if (existingApplication) {
         return NextResponse.json({ success: false, message: "You have already applied for this opportunity." }, { status: 409 });
-      }
-
-      // Update student profile with new details if they are provided and not fallbacks
-      let profileUpdated = false;
-      if (finalName && !finalName.startsWith("Student ") && student.name !== finalName) {
-        student.name = finalName;
-        profileUpdated = true;
-      }
-      if (finalPhone && finalPhone !== cleanUniId && student.phone !== finalPhone) {
-        student.phone = finalPhone;
-        profileUpdated = true;
-      }
-      if (finalEmail && !finalEmail.endsWith("@topline.co.in") && student.email !== finalEmail) {
-        student.email = finalEmail;
-        profileUpdated = true;
-      }
-      if (finalUniversity && finalUniversity !== "N/A" && student.university !== finalUniversity) {
-        student.university = finalUniversity;
-        profileUpdated = true;
-      }
-      if (profileUpdated) {
-        await student.save();
       }
     } else {
       // Create new student profile
