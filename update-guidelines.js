@@ -24,8 +24,8 @@ const eliteProtocol = {
     "Maintain a welcoming smile and confident posture.",
     "Greet guests politely and serve with attention to detail.",
     "Use both hands while serving when appropriate.",
-    "Report all issues and complaints only to Captain Balaji.",
-    "Return every item (cap, mask, uniform set) to Captain Balaji at the end of the event.",
+    "Report all issues and complaints only to Captain.",
+    "Return every item (cap, mask, uniform set) to Captain at the end of the event.",
     "Listen carefully to manager briefings and answer questions confidently."
   ],
   donts: [
