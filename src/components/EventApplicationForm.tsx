@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 interface FormField {
   id: string;
@@ -105,7 +106,8 @@ export default function EventApplicationForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
-      <h3 className="text-xl font-bold text-white mb-6 border-b border-gray-800 pb-3">Student Recruitment Form</h3>
+      <BrandLogo width={80} height={80} className="mx-auto overflow-hidden rounded border border-gray-800 bg-[#07080b] p-1" />
+      <h3 className="text-xl font-bold text-white text-center mb-6 border-b border-gray-800 pb-3">Student Recruitment Form</h3>
 
       {message && (
         <div className="bg-rose-950/20 text-rose-400 border border-rose-900/30 p-3 rounded text-sm text-center">

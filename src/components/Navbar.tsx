@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X, ShieldAlert } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,9 +23,10 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="text-xl font-bold tracking-wider text-amber-500 uppercase">
-                Top Line Catering
+            <Link href="/" className="flex items-center space-x-3">
+              <BrandLogo width={36} height={36} className="overflow-hidden rounded border border-gray-850" />
+              <span className="text-lg font-bold tracking-wider text-amber-500 uppercase hidden sm:inline">
+                Top Line
               </span>
             </Link>
           </div>

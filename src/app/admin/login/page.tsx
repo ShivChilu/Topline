@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, User, AlertCircle } from "lucide-react";
+import { Lock, User, AlertCircle } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState("");
@@ -42,9 +43,7 @@ export default function AdminLoginPage() {
         
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
+          <BrandLogo width={90} height={90} className="mx-auto mb-4 overflow-hidden rounded border border-gray-800 bg-[#07080b] p-1.5" />
           <h2 className="text-2xl font-bold uppercase tracking-wider text-white">Top Line Admin</h2>
           <p className="text-gray-400 text-sm">Please sign in to access control management</p>
         </div>
