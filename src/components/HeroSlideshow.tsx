@@ -55,7 +55,7 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
 
       {/* Hero Content Layer */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
-        <div className="bg-white/95 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
+        <div className="bg-white/70 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
           <span className="inline-flex items-center text-rose-800 font-extrabold tracking-widest text-xs uppercase bg-rose-600/10 px-4 py-2 rounded-full border border-rose-600/20 mb-2">
             TOPLINE Staffing Solutions
           </span>
