@@ -17,12 +17,12 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Contact Details */}
           <div className="space-y-8 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
-            <h2 className="text-2xl font-bold text-white mb-6">TOPLINE ODC Headquarters</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">TOPLINE ODC</h2>
             <div className="flex items-start space-x-4">
               <Phone className="text-amber-500 mt-1" />
               <div>
                 <h4 className="font-semibold text-white">Phone Support</h4>
-                <p className="text-gray-400">+91 98765 43210</p>
+                <p className="text-gray-400">+91 79869 55634, +91 93810 39799</p>
               </div>
             </div>
 
@@ -30,7 +30,7 @@ export default function ContactPage() {
               <Mail className="text-amber-500 mt-1" />
               <div>
                 <h4 className="font-semibold text-white">Email Address</h4>
-                <p className="text-gray-400">info@toplinecatering.com</p>
+                <p className="text-gray-400">contact@toplineodc.co.in</p>
               </div>
             </div>
 
@@ -40,6 +40,17 @@ export default function ContactPage() {
                 <h4 className="font-semibold text-white">Location</h4>
                 <p className="text-gray-400">Sector 17, Chandigarh, India</p>
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-800">
+              <a
+                href="https://wa.me/917986955634?text=I%20would%20like%20to%20contact%20TOPLINE%20ODC"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-lg transition"
+              >
+                <span>WhatsApp Us</span>
+              </a>
             </div>
           </div>
 
