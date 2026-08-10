@@ -12,12 +12,42 @@ export async function POST(
     const eventId = params.id;
     const body = await request.json();
 
-    const { name, phone, email, university, universityId, profilePhotoUrl, customFields } = body;
+    let { name, phone, email, university, universityId, profilePhotoUrl, customFields } = body;
 
-    // 1. Basic server-side input validation
-    if (!name || !phone || !email || !university || !universityId) {
-      return NextResponse.json({ success: false, message: "Missing required student profile fields." }, { status: 400 });
+    // Dynamically extract values from custom fields if custom fields have keys matching name, phone, email
+    if (customFields) {
+      Object.keys(customFields).forEach((key) => {
+        const val = String(customFields[key]).trim();
+        if (!val) return;
+        const normalizedKey = key.toLowerCase().trim();
+        
+        if (normalizedKey === "name" || normalizedKey === "full name" || normalizedKey === "student name") {
+          name = val;
+        }
+        if (normalizedKey === "phone" || normalizedKey === "phone number" || normalizedKey === "whatsapp" || normalizedKey === "whatsapp phone number" || normalizedKey === "whatsapp number") {
+          phone = val;
+        }
+        if (normalizedKey === "email" || normalizedKey === "email id" || normalizedKey === "email address") {
+          email = val;
+        }
+        if (normalizedKey === "university" || normalizedKey === "college" || normalizedKey === "university name" || normalizedKey === "college name") {
+          university = val;
+        }
+      });
     }
+
+    // Set logical fallbacks so database model constraints are satisfied even if some fields are missing
+    if (!universityId) {
+      return NextResponse.json({ success: false, message: "University Registration Number is required." }, { status: 400 });
+    }
+
+    const cleanUniId = universityId.trim().toUpperCase();
+
+    // Fallbacks if not provided or left as "N/A"
+    const finalName = (!name || name === "N/A") ? `Student ${cleanUniId}` : name.trim();
+    const finalPhone = (!phone || phone === "N/A") ? cleanUniId : phone.trim();
+    const finalEmail = (!email || email === "N/A") ? `${cleanUniId.toLowerCase().replace(/[^a-z0-9]/g, "")}@topline.co.in` : email.trim().toLowerCase();
+    const finalUniversity = (!university || university === "N/A") ? "N/A" : university.trim();
 
     // 2. Fetch the target event
     const event = await Event.findById(eventId);
@@ -31,7 +61,7 @@ export async function POST(
 
     // 3. Find or Create the Student profile
     let student = await Student.findOne({
-      $or: [{ phone: phone.trim() }, { universityId: universityId.trim() }]
+      $or: [{ phone: finalPhone }, { universityId: cleanUniId }]
     });
 
     if (student) {
@@ -48,11 +78,11 @@ export async function POST(
     } else {
       // Create new student profile
       student = await Student.create({
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim().toLowerCase(),
-        university: university.trim(),
-        universityId: universityId.trim().toUpperCase(),
+        name: finalName,
+        phone: finalPhone,
+        email: finalEmail,
+        university: finalUniversity,
+        universityId: cleanUniId,
         profilePhotoUrl: profilePhotoUrl || "",
         status: "active",
       });

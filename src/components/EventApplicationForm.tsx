@@ -26,9 +26,9 @@ export default function EventApplicationForm({
   status: string;
 }) {
   const [formData, setFormData] = useState<Record<string, any>>({
-    name: "",
-    phone: "",
-    email: "",
+    name: "N/A",
+    phone: "N/A",
+    email: "N/A",
     university: "N/A",
     universityId: "",
     profilePhotoUrl: ""
@@ -116,58 +116,17 @@ export default function EventApplicationForm({
       )}
 
       {/* Standard Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Full Name *</label>
-          <input
-            type="text"
-            name="name"
-            required
-            value={formData.name}
-            onChange={handleProfileChange}
-            placeholder="Rahul Kumar"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">WhatsApp Phone Number *</label>
-          <input
-            type="tel"
-            name="phone"
-            required
-            value={formData.phone}
-            onChange={handleProfileChange}
-            placeholder="9876543210"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Email Address *</label>
-          <input
-            type="email"
-            name="email"
-            required
-            value={formData.email}
-            onChange={handleProfileChange}
-            placeholder="rahul@university.edu"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">University Registration Number *</label>
-          <input
-            type="text"
-            name="universityId"
-            required
-            value={formData.universityId}
-            onChange={handleProfileChange}
-            placeholder="PU-2024-887"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
-          />
-        </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">University Registration Number *</label>
+        <input
+          type="text"
+          name="universityId"
+          required
+          value={formData.universityId}
+          onChange={handleProfileChange}
+          placeholder="PU-2024-887"
+          className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-650"
+        />
       </div>
 
       {/* Dynamic Fields */}
