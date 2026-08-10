@@ -4,13 +4,17 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IAdmin extends Document {
   username: string;
   passwordHash: string;
-  role: 'admin' | 'superadmin';
+  role: 'admin' | 'superadmin' | 'calling';
+  assignedEvents?: mongoose.Types.ObjectId[];
+  isActive?: boolean;
   createdAt: Date;
 }
 const AdminSchema = new Schema<IAdmin>({
   username: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'superadmin'], default: 'admin' },
+  role: { type: String, enum: ['admin', 'superadmin', 'calling'], default: 'admin' },
+  assignedEvents: [{ type: Schema.Types.ObjectId, ref: 'Event', default: [] }],
+  isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });
 

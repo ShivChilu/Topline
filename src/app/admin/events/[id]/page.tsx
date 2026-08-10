@@ -25,6 +25,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [event, setEvent] = useState<any>(null);
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Custom payout override input state
@@ -33,16 +34,30 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const fetchEventData = async () => {
     try {
       setLoading(true);
-      const eventRes = await fetch(`/api/admin/events/${eventId}?t=${Date.now()}`, { cache: "no-store" });
-      const eventData = await eventRes.json();
+      setErrorMsg(null);
       
+      const eventRes = await fetch(`/api/admin/events/${eventId}?t=${Date.now()}`, { cache: "no-store" });
+      if (eventRes.status === 403) {
+        setErrorMsg("403 Access Denied. You do not have permission to view this event.");
+        setLoading(false);
+        return;
+      }
+      
+      const eventData = await eventRes.json();
+      if (!eventData.success) {
+        setErrorMsg(eventData.message || "Failed to load event.");
+        setLoading(false);
+        return;
+      }
+
       const appRes = await fetch(`/api/admin/applications?eventId=${eventId}&t=${Date.now()}`, { cache: "no-store" });
       const appData = await appRes.json();
 
-      if (eventData.success) setEvent(eventData.event);
+      setEvent(eventData.event);
       if (appData.success) setApplications(appData.applications);
     } catch (err) {
       console.error(err);
+      setErrorMsg("An error occurred while loading event details.");
     } finally {
       setLoading(false);
     }
@@ -53,6 +68,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   }, [eventId]);
 
   if (loading) return <div className="text-slate-900 text-center py-12">Loading event management portal...</div>;
+  
+  if (errorMsg) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 bg-white border border-slate-200 rounded-3xl p-8 space-y-4 shadow-sm mt-8">
+        <div className="text-rose-600 text-lg font-bold uppercase">403 Access Denied</div>
+        <p className="text-slate-500 text-sm">{errorMsg}</p>
+        <Link href="/admin/calling" className="inline-block bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+          Return to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
   if (!event) return <div className="text-slate-900 text-center py-12">Event not found.</div>;
 
   // Compute application statistics

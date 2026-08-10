@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -19,23 +19,71 @@ import BrandLogo from "@/components/BrandLogo";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    if (pathname === "/admin/login") {
+      setCheckingAuth(false);
+      return;
+    }
+
+    const verifySession = async () => {
+      try {
+        const res = await fetch("/api/admin/users/me");
+        const data = await res.json();
+        if (data.success) {
+          setAdminRole(data.role);
+          // Block calling admin from viewing other pages
+          if (data.role === "calling" && !pathname.startsWith("/admin/calling")) {
+            router.push("/admin/calling");
+          }
+          // Block captain / super admins from calling page
+          if (data.role !== "calling" && pathname.startsWith("/admin/calling")) {
+            router.push("/admin/dashboard");
+          }
+        } else {
+          router.push("/admin/login");
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+        router.push("/admin/login");
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    verifySession();
+  }, [pathname, router]);
 
   // Skip sidebar on the login screen
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  const menuItems = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { name: "Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
-    { name: "Applications", href: "/admin/applications", icon: <FileSpreadsheet className="w-5 h-5" /> },
-    { name: "Students", href: "/admin/students", icon: <Users2 className="w-5 h-5" /> },
-    { name: "Clients", href: "/admin/clients", icon: <Building2 className="w-5 h-5" /> },
-    { name: "Gallery", href: "/admin/gallery", icon: <Image className="w-5 h-5" /> },
-    { name: "Website settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },
-  ];
+  if (checkingAuth) {
+    return (
+      <div className="flex h-screen bg-slate-50 items-center justify-center text-slate-500 font-bold text-sm">
+        Verifying admin session credentials...
+      </div>
+    );
+  }
+
+  const menuItems = adminRole === "calling"
+    ? [
+        { name: "Calling Dashboard", href: "/admin/calling", icon: <Users2 className="w-5 h-5" /> }
+      ]
+    : [
+        { name: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { name: "Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
+        { name: "Applications", href: "/admin/applications", icon: <FileSpreadsheet className="w-5 h-5" /> },
+        { name: "Students", href: "/admin/students", icon: <Users2 className="w-5 h-5" /> },
+        { name: "Clients", href: "/admin/clients", icon: <Building2 className="w-5 h-5" /> },
+        { name: "Gallery", href: "/admin/gallery", icon: <Image className="w-5 h-5" /> },
+        { name: "Website settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },
+      ];
 
   const handleLogout = async () => {
     if (confirm("Are you sure you want to log out?")) {

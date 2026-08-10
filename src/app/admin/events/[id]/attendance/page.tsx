@@ -24,6 +24,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [event, setEvent] = useState<any>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [filteredAttendance, setFilteredAttendance] = useState<any[]>([]);
@@ -43,22 +44,35 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const fetchAttendance = async () => {
     try {
       setLoading(true);
+      setErrorMsg(null);
+      
       const res = await fetch(`/api/admin/events/${eventId}/attendance?t=${Date.now()}`, { cache: "no-store" });
-      const data = await res.json();
-      if (data.success) {
-        setAttendance(data.attendance);
-        setFilteredAttendance(data.attendance);
-        setEvent(data.event);
-        setQrEnabled(data.event.attendanceTokenEnabled || false);
-        setVerificationField(data.event.attendanceVerificationField || "registrationNumber");
-        setGracePeriod(data.event.gracePeriod || 15);
-        setQrToken(data.event.attendanceToken || "");
-        setDisplayFields(data.event.attendanceDisplayFields && data.event.attendanceDisplayFields.length > 0
-          ? data.event.attendanceDisplayFields
-          : ["registrationNumber", "name", "phone"]);
+      if (res.status === 403) {
+        setErrorMsg("403 Access Denied. You do not have permission to view or manage attendance for this event.");
+        setLoading(false);
+        return;
       }
+      
+      const data = await res.json();
+      if (!data.success) {
+        setErrorMsg(data.message || "Failed to load attendance logs.");
+        setLoading(false);
+        return;
+      }
+
+      setAttendance(data.attendance);
+      setFilteredAttendance(data.attendance);
+      setEvent(data.event);
+      setQrEnabled(data.event.attendanceTokenEnabled || false);
+      setVerificationField(data.event.attendanceVerificationField || "registrationNumber");
+      setGracePeriod(data.event.gracePeriod || 15);
+      setQrToken(data.event.attendanceToken || "");
+      setDisplayFields(data.event.attendanceDisplayFields && data.event.attendanceDisplayFields.length > 0
+        ? data.event.attendanceDisplayFields
+        : ["registrationNumber", "name", "phone"]);
     } catch (err) {
       console.error(err);
+      setErrorMsg("An error occurred while loading attendance.");
     } finally {
       setLoading(false);
     }
@@ -67,6 +81,20 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   useEffect(() => {
     fetchAttendance();
   }, [eventId]);
+
+  if (loading) return <div className="text-slate-900 text-center py-12">Loading attendance dashboard...</div>;
+
+  if (errorMsg) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 bg-white border border-slate-200 rounded-3xl p-8 space-y-4 shadow-sm mt-8 text-slate-800">
+        <div className="text-rose-600 text-lg font-bold uppercase">403 Access Denied</div>
+        <p className="text-slate-500 text-sm">{errorMsg}</p>
+        <Link href="/admin/calling" className="inline-block bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+          Return to Dashboard
+        </Link>
+      </div>
+    );
+  }
 
   useEffect(() => {
     let result = attendance;

@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { Event, Application, Attendance, AuditLog } from "@/models";
+import { Event, Application, Attendance, AuditLog, Admin } from "@/models";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
+
+async function getLoggedInAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) return null;
+  const admin = await Admin.findById(decoded.id);
+  if (!admin || admin.isActive === false) return null;
+  return admin;
+}
 
 export async function GET(
   request: Request,
@@ -9,18 +22,32 @@ export async function GET(
   const params = await props.params;
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const eventId = params.id;
+    // Calling Admin security boundaries
+    if (admin.role === "calling") {
+      const isAssigned = admin.assignedEvents?.some((id) => id.toString() === eventId);
+      if (!isAssigned) {
+        return NextResponse.json({ success: false, message: "Forbidden. You do not have access to this event." }, { status: 403 });
+      }
+    }
+
     const { searchParams } = new URL(request.url);
     const getStats = searchParams.get("stats") === "true";
 
-    const event = await Event.findById(params.id).populate("clientId").lean();
+    const event = await Event.findById(eventId).populate("clientId").lean();
     if (!event) {
       return NextResponse.json({ success: false, message: "Event not found." }, { status: 404 });
     }
 
     if (getStats) {
-      const applicationsCount = await Application.countDocuments({ eventId: params.id });
-      const attendanceCount = await Attendance.countDocuments({ eventId: params.id });
-      const paymentsCount = await Application.countDocuments({ eventId: params.id, paymentStatus: "PAID" });
+      const applicationsCount = await Application.countDocuments({ eventId });
+      const attendanceCount = await Attendance.countDocuments({ eventId });
+      const paymentsCount = await Application.countDocuments({ eventId, paymentStatus: "PAID" });
 
       return NextResponse.json({
         success: true,
@@ -46,6 +73,15 @@ export async function PATCH(
   const params = await props.params;
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    if (admin.role === "calling") {
+      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot edit events." }, { status: 403 });
+    }
+
     const eventId = params.id;
     const body = await request.json();
 
@@ -68,6 +104,15 @@ export async function DELETE(
   const params = await props.params;
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    if (admin.role === "calling") {
+      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot delete events." }, { status: 403 });
+    }
+
     const eventId = params.id;
 
     // Verify event exists
@@ -78,7 +123,7 @@ export async function DELETE(
 
     // Write audit log trail
     await AuditLog.create({
-      adminId: "SYSTEM_ADMIN",
+      adminId: admin._id.toString(),
       eventId: event._id.toString(),
       eventName: event.name,
       eventDate: event.date,

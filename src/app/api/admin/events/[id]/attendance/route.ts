@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { Event, Application, Attendance, Student } from "@/models";
+import { Event, Application, Attendance, Student, Admin } from "@/models";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
+
+async function getLoggedInAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) return null;
+  const admin = await Admin.findById(decoded.id);
+  if (!admin || admin.isActive === false) return null;
+  return admin;
+}
 
 // GET all eligible applicants and their attendance status for an event
 export async function GET(
@@ -12,6 +25,16 @@ export async function GET(
   const params = await props.params;
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    // Calling Admins cannot access attendance data
+    if (admin.role === "calling") {
+      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot view attendance logs." }, { status: 403 });
+    }
+
     const eventId = params.id;
 
     const event = await Event.findById(eventId);
@@ -65,6 +88,16 @@ export async function POST(
   const params = await props.params;
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    // Calling Admins cannot mark attendance
+    if (admin.role === "calling") {
+      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot record attendance." }, { status: 403 });
+    }
+
     const eventId = params.id;
     const body = await request.json();
     const { studentId, applicationId, status, remarks } = body;

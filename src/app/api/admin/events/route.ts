@@ -1,10 +1,33 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { Event } from "@/models";
+import { Event, Admin } from "@/models";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
+
+async function getLoggedInAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) return null;
+  const admin = await Admin.findById(decoded.id);
+  if (!admin || admin.isActive === false) return null;
+  return admin;
+}
 
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    // Calling admins are not authorized to create events
+    if (admin.role === "calling") {
+      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot create events." }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const {
@@ -66,9 +89,40 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await connectToDatabase();
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const recentOnly = searchParams.get("recent") === "true";
+
+    // Calling Admins can only retrieve events they are assigned to
+    if (admin.role === "calling") {
+      const filter: any = { _id: { $in: admin.assignedEvents || [] } };
+      if (recentOnly) {
+        filter.status = { $in: ["OPEN", "DRAFT", "FULL", "CLOSED"] };
+      }
+      
+      const query = Event.find(filter).sort({ date: -1 });
+      if (recentOnly) {
+        query.limit(3);
+      }
+      const events = await query.lean();
+      return NextResponse.json({ success: true, events });
+    }
+
+    if (recentOnly) {
+      const events = await Event.find({ status: { $in: ["OPEN", "DRAFT", "FULL", "CLOSED"] } })
+        .sort({ date: -1 })
+        .limit(3)
+        .lean();
+      return NextResponse.json({ success: true, events });
+    }
+
     const events = await Event.find().sort({ date: -1 }).populate("clientId").lean();
     return NextResponse.json({ success: true, events });
   } catch (error: any) {
