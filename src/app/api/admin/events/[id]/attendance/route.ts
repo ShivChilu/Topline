@@ -22,7 +22,7 @@ export async function GET(
     // Get selected or confirmed applications
     const applications = await Application.find({
       eventId,
-      status: { $in: ["selected", "confirmed", "attended", "paid"] }
+      status: { $in: ["applied", "selected", "confirmed", "attended", "paid"] }
     }).populate("studentId");
 
     // Get actual attendance records

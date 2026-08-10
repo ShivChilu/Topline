@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     // 2. Fetch all selected or confirmed applications for this event
     const applications = await Application.find({
       eventId: event._id,
-      status: { $in: ["selected", "confirmed", "attended"] }
+      status: { $in: ["applied", "selected", "confirmed", "attended"] }
     }).populate("studentId");
 
     let matchedApplication = null;
