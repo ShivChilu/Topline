@@ -24,7 +24,7 @@ export default function TermsPage() {
           </p>
           <h2 className="text-xl font-bold text-white mt-6">2. Cancellations & Reliability</h2>
           <p>
-            Last-minute cancellations without a valid reason within 24 hours of an event will lead to a reliability score penalty and potential suspension from future opportunities.
+            Last-minute cancellations without a valid reason within 24 hours of an event will lead to a reliability score penalty and potential suspension from future events.
           </p>
           <h2 className="text-xl font-bold text-white mt-6">3. Payment Terms</h2>
           <p>

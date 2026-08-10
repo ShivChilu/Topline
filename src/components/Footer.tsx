@@ -19,7 +19,7 @@ export default function Footer() {
           <ul className="space-y-2 text-sm">
             <li>
               <Link href="/opportunities" className="hover:text-red-600 transition">
-                View Opportunities
+                Upcoming Events
               </Link>
             </li>
             <li>

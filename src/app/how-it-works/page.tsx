@@ -6,8 +6,8 @@ export default function HowItWorksPage() {
   const steps = [
     {
       icon: <Search className="w-10 h-10 text-red-600" />,
-      title: "1. Find Opportunities",
-      desc: "Browse our active hospitality opportunities. Check details such as date, location, payout, and required dress code."
+      title: "1. Find Upcoming Events",
+      desc: "Browse our active upcoming events. Check details such as date, location, payout, and required dress code."
     },
     {
       icon: <UserCheck className="w-10 h-10 text-red-600" />,

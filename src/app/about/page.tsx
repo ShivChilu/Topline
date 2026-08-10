@@ -22,7 +22,7 @@ export default function AboutPage() {
             Founded on the values of trust, professionalism, and speed, we support hotel supervisors and banquet managers by deploying pre-screened students for catering operations, food service, buffet coordination, and VIP banquet settings.
           </p>
           <p>
-            At the same time, we empower university students by providing them with part-time, well-paid event opportunities that fit their study schedules and help them build real-world hospitality experience.
+            At the same time, we empower university students by providing them with part-time, well-paid upcoming events that fit their study schedules and help them build real-world hospitality experience.
           </p>
         </div>
       </main>

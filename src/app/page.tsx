@@ -78,7 +78,7 @@ export default async function HomePage() {
             href="/opportunities"
             className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
           >
-            <span>View Opportunities</span>
+            <span>Upcoming Events</span>
             <ArrowRight className="w-5 h-5" />
           </Link>
           <Link
@@ -128,7 +128,7 @@ export default async function HomePage() {
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
             <div>
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider uppercase">
-                <span className="gradient-text">Active Opportunities</span>
+                <span className="gradient-text">Upcoming Events</span>
               </h2>
               <p className="mt-2 text-slate-500 text-lg">
                 High-paying catering and hospitality slots currently recruiting students.
@@ -138,7 +138,7 @@ export default async function HomePage() {
               href="/opportunities"
               className="mt-4 md:mt-0 flex items-center space-x-2 text-red-600 hover:text-red-700 font-bold transition duration-300"
             >
-              <span>See All Opportunities</span>
+              <span>See All Upcoming Events</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -286,7 +286,7 @@ export default async function HomePage() {
             Ready to partner with TOPLINE?
           </h2>
           <p className="mt-4 text-slate-500 max-w-xl mx-auto text-lg">
-            Get in touch to deploy reliable student crews at your luxury hotel, catering event, or resort. Or view our active opportunities to apply.
+            Get in touch to deploy reliable student crews at your luxury hotel, catering event, or resort. Or view our upcoming events to apply.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

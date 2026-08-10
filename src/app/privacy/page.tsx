@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           </p>
           <h2 className="text-xl font-bold text-white mt-6">1. Information We Collect</h2>
           <p>
-            When students register or apply for active opportunities, we collect personal identity details including full name, email address, phone number, university registration details, college/university ID, and optional profile photos.
+            When students register or apply for upcoming events, we collect personal identity details including full name, email address, phone number, university registration details, college/university ID, and optional profile photos.
           </p>
           <h2 className="text-xl font-bold text-white mt-6">2. How We Use Your Information</h2>
           <p>
