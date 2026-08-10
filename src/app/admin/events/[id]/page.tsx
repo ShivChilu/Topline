@@ -51,8 +51,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     fetchEventData();
   }, [eventId]);
 
-  if (loading) return <div className="text-white text-center py-12">Loading event management portal...</div>;
-  if (!event) return <div className="text-white text-center py-12">Event not found.</div>;
+  if (loading) return <div className="text-slate-900 text-center py-12">Loading event management portal...</div>;
+  if (!event) return <div className="text-slate-900 text-center py-12">Event not found.</div>;
 
   // Compute application statistics
   const totalApps = applications.length;
@@ -212,15 +212,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="space-y-8 text-white">
+    <div className="space-y-8 text-slate-900">
       {/* Title block */}
       <div className="flex items-center space-x-3">
-        <Link href="/admin/events" className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition">
+        <Link href="/admin/events" className="p-2 hover:bg-gray-800 rounded-lg text-slate-500 hover:text-slate-900 transition">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">{event.name}</h1>
-          <p className="text-gray-400 text-sm mt-1">Status: <span className="text-red-600 font-bold">{event.status}</span></p>
+          <p className="text-slate-500 text-sm mt-1">Status: <span className="text-red-600 font-bold">{event.status}</span></p>
         </div>
       </div>
 
@@ -228,9 +228,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Logistics card */}
-        <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2">Event Logistics</h2>
-          <div className="space-y-3 text-sm text-gray-300">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2">Event Logistics</h2>
+          <div className="space-y-3 text-sm text-slate-650">
             <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-red-600" />
               <span>Date: {new Date(event.date).toLocaleDateString("en-GB")}</span>
@@ -249,7 +249,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-850 flex flex-wrap gap-2">
+          <div className="pt-4 border-t border-slate-200 flex flex-wrap gap-2">
             <button
               onClick={handleWhatsAppShare}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-xs font-bold transition flex items-center space-x-1"
@@ -268,9 +268,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </div>
 
         {/* Change event status and application rules */}
-        <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2">Operational Controls</h2>
-          <p className="text-xs text-gray-400">Current application limits: {event.applicationsCount} / {event.maxApplications}</p>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2">Operational Controls</h2>
+          <p className="text-xs text-slate-500">Current application limits: {event.applicationsCount} / {event.maxApplications}</p>
           
           <div className="flex flex-wrap gap-2 pt-2">
             {event.status === "DRAFT" && (
@@ -317,22 +317,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </div>
 
         {/* Financials details - admin only */}
-        <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold text-red-600 border-b border-gray-850 pb-2 uppercase tracking-wide">Event Financials</h2>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <h2 className="text-lg font-bold text-red-600 border-b border-slate-200 pb-2 uppercase tracking-wide">Event Financials</h2>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-400">Client Revenue:</span>
-              <span className="font-bold text-white">₹{revenue.toLocaleString()}</span>
+              <span className="text-slate-500">Client Revenue:</span>
+              <span className="font-bold text-slate-900">₹{revenue.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Worker Payouts:</span>
+              <span className="text-slate-500">Worker Payouts:</span>
               <span className="font-bold text-red-400">₹{workerPaymentsTotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Other Expenses:</span>
+              <span className="text-slate-500">Other Expenses:</span>
               <span className="font-bold text-red-400">₹{expenses.toLocaleString()}</span>
             </div>
-            <hr className="border-gray-850" />
+            <hr className="border-slate-200" />
             <div className="flex justify-between text-sm">
               <span className="font-semibold text-emerald-400">Net Profit:</span>
               <span className="font-bold text-emerald-400">₹{profit.toLocaleString()} ({profitMargin}%)</span>
@@ -343,9 +343,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       </div>
 
       {/* Bulk actions header */}
-      <div className="bg-[#0c0d12] p-4 rounded-xl border border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div>
-          <span className="text-sm font-semibold text-gray-400">Selected: {selectedIds.length} students</span>
+          <span className="text-sm font-semibold text-slate-500">Selected: {selectedIds.length} students</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -362,13 +362,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           </button>
           <button
             onClick={() => handleBulkStatusChange("attended")}
-            className="bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white border border-purple-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-slate-900 border border-purple-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Attended
           </button>
           <button
             onClick={() => handleBulkStatusChange("cancelled")}
-            className="bg-red-500/20 text-red-450 hover:bg-red-500 hover:text-white border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
+            className="bg-red-500/20 text-red-450 hover:bg-red-500 hover:text-slate-900 border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold transition"
           >
             Mark Cancelled
           </button>
@@ -376,21 +376,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       </div>
 
       {/* Applications list table */}
-      <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800">
-        <h2 className="text-lg font-bold uppercase tracking-wider mb-4 border-b border-gray-850 pb-2">Registered Applicants ({totalApps})</h2>
+      <div className="bg-white p-6 rounded-xl border border-slate-200">
+        <h2 className="text-lg font-bold uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Registered Applicants ({totalApps})</h2>
         {applications.length === 0 ? (
-          <p className="text-gray-500 text-center py-6 text-sm">No applications submitted yet.</p>
+          <p className="text-slate-450 text-center py-6 text-sm">No applications submitted yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead>
-                <tr className="text-gray-500 border-b border-gray-850 uppercase text-xs">
+                <tr className="text-slate-450 border-b border-slate-200 uppercase text-xs">
                   <th className="pb-3 text-center">
                     <input
                       type="checkbox"
                       checked={selectedIds.length === applications.length}
                       onChange={handleSelectAll}
-                      className="rounded border-gray-800 text-red-600 focus:ring-red-600"
+                      className="rounded border-slate-200 text-red-600 focus:ring-red-600"
                     />
                   </th>
                   <th className="pb-3 pl-3">Student Name</th>
@@ -412,24 +412,24 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           type="checkbox"
                           checked={selectedIds.includes(app._id)}
                           onChange={() => handleToggleSelect(app._id)}
-                          className="rounded border-gray-850 text-red-600 focus:ring-red-600"
+                          className="rounded border-slate-200 text-red-600 focus:ring-red-600"
                         />
                       </td>
-                      <td className="py-4 pl-3 font-bold text-white">{s.name}</td>
-                      <td className="py-4 text-gray-400">{s.phone}</td>
-                      <td className="py-4 text-gray-400">
+                      <td className="py-4 pl-3 font-bold text-slate-900">{s.name}</td>
+                      <td className="py-4 text-slate-500">{s.phone}</td>
+                      <td className="py-4 text-slate-500">
                         <span className="block font-medium">{s.university}</span>
-                        <span className="text-xs text-gray-500">{s.universityId}</span>
+                        <span className="text-xs text-slate-450">{s.universityId}</span>
                       </td>
                       <td className="py-4">
                         <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
                           {app.status}
                         </span>
                       </td>
-                      <td className="py-4 text-xs text-gray-400 max-w-xs truncate">
+                      <td className="py-4 text-xs text-slate-500 max-w-xs truncate">
                         {Object.entries(app.customFieldsData || {}).map(([k, v]) => (
                           <div key={k}>
-                            <span className="font-semibold text-gray-500">{k}:</span> {String(v)}
+                            <span className="font-semibold text-slate-450">{k}:</span> {String(v)}
                           </div>
                         ))}
                       </td>
@@ -440,11 +440,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             placeholder={event.paymentPerStudent}
                             value={tempPayouts[app._id] !== undefined ? tempPayouts[app._id] : (app.paymentOverride ?? "")}
                             onChange={(e) => setTempPayouts({ ...tempPayouts, [app._id]: Number(e.target.value) })}
-                            className="w-20 bg-[#161822] border border-gray-800 rounded px-2 py-1 text-white text-xs text-center focus:outline-none"
+                            className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-900 text-xs text-center focus:outline-none"
                           />
                           <button
                             onClick={() => handleSavePayoutOverride(app._id)}
-                            className="bg-gray-800 hover:bg-red-600 hover:text-black text-gray-300 text-xs px-2 py-1 rounded transition"
+                            className="bg-gray-800 hover:bg-red-600 hover:text-black text-slate-650 text-xs px-2 py-1 rounded transition"
                           >
                             Set
                           </button>
@@ -460,7 +460,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </button>
                           <button
                             onClick={() => handleSingleStatusChange(app._id, "absent")}
-                            className="px-2 py-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 rounded text-red-400 text-xs font-bold transition"
+                            className="px-2 py-1 bg-red-500/10 hover:bg-red-500 hover:text-slate-900 border border-red-500/20 rounded text-red-400 text-xs font-bold transition"
                           >
                             Absent
                           </button>

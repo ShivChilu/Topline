@@ -94,14 +94,14 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <div className="space-y-6 text-white max-w-5xl mx-auto">
+    <div className="space-y-6 text-slate-900 max-w-5xl mx-auto">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
             Manage Gallery
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Upload and organize photographs for the public home slider and folder gallery</p>
+          <p className="text-slate-500 text-sm mt-1">Upload and organize photographs for the public home slider and folder gallery</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -114,37 +114,37 @@ export default function AdminGalleryPage() {
 
       {/* Upload image form */}
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4 max-w-xl">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2">Image Specifications</h2>
+        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 space-y-4 max-w-xl">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2">Image Specifications</h2>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Image URL (from Cloudinary or Unsplash) *</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Image URL (from Cloudinary or Unsplash) *</label>
             <input
               type="url"
               required
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://images.unsplash.com/..."
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Caption *</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Caption *</label>
             <input
               type="text"
               required
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Buffet service operations setup"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Category *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Category *</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="Catering Setup">Catering Setup</option>
                 <option value="Banquets">Banquets</option>
@@ -158,9 +158,9 @@ export default function AdminGalleryPage() {
                 id="publish_img"
                 checked={published}
                 onChange={(e) => setPublished(e.target.checked)}
-                className="rounded border-gray-800 text-red-600 focus:ring-red-600"
+                className="rounded border-slate-200 text-red-600 focus:ring-red-600"
               />
-              <label htmlFor="publish_img" className="text-sm font-semibold text-gray-300">Publish Immediately</label>
+              <label htmlFor="publish_img" className="text-sm font-semibold text-slate-650">Publish Immediately</label>
             </div>
           </div>
           <button
@@ -175,16 +175,16 @@ export default function AdminGalleryPage() {
       {/* Grid of gallery assets */}
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading gallery images...</p>
+          <p className="text-slate-450">Loading gallery images...</p>
         </div>
       ) : images.length === 0 ? (
-        <div className="text-center py-16 bg-[#0c0d12] rounded-xl border border-gray-800">
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
           <p className="text-gray-550">No uploaded gallery photographs found. Create one above.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {images.map((img) => (
-            <div key={img._id} className="bg-[#0c0d12] rounded-xl border border-gray-800 overflow-hidden flex flex-col justify-between group">
+            <div key={img._id} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between group">
               <div className="relative h-48 w-full bg-gray-900 overflow-hidden">
                 <img src={img.imageUrl} alt={img.caption} className="object-cover w-full h-full" />
                 <span className="absolute top-2 left-2 bg-red-600 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">
@@ -192,12 +192,12 @@ export default function AdminGalleryPage() {
                 </span>
               </div>
               <div className="p-4 flex-grow flex flex-col justify-between space-y-3">
-                <p className="text-xs text-gray-300 font-medium line-clamp-2">{img.caption}</p>
-                <div className="flex items-center justify-between border-t border-gray-850 pt-3">
+                <p className="text-xs text-slate-650 font-medium line-clamp-2">{img.caption}</p>
+                <div className="flex items-center justify-between border-t border-slate-200 pt-3">
                   <button
                     onClick={() => handleTogglePublished(img._id, img.published)}
                     className={`p-1.5 rounded transition ${
-                      img.published ? "bg-emerald-950/20 text-emerald-400" : "bg-gray-850 text-gray-500"
+                      img.published ? "bg-emerald-950/20 text-emerald-400" : "bg-gray-850 text-slate-450"
                     }`}
                     title={img.published ? "Unpublish image" : "Publish image"}
                   >

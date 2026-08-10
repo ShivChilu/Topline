@@ -49,12 +49,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="flex h-screen bg-[#07080b] text-white overflow-hidden">
+    <div className="flex h-screen bg-[#f8fafc] text-slate-900 overflow-hidden">
       {/* Sidebar for Desktop */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-[#0c0d12] border-r border-gray-800">
-        <div className="p-6 flex items-center space-x-3 border-b border-gray-800">
-          <BrandLogo width={32} height={32} className="overflow-hidden rounded border border-gray-850" />
-          <span className="text-lg font-bold tracking-wider uppercase text-white font-sans">TOPLINE Control</span>
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-white border-r border-slate-200">
+        <div className="p-6 flex items-center space-x-3 border-b border-slate-200">
+          <BrandLogo width={32} height={32} className="overflow-hidden rounded border border-slate-200" />
+          <span className="text-lg font-bold tracking-wider uppercase text-slate-900 font-sans">TOPLINE Control</span>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
@@ -66,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
                   isActive
                     ? "bg-red-600 text-black"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800/40"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-gray-800/40"
                 }`}
               >
                 {item.icon}
@@ -75,10 +75,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-slate-200">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold text-red-400 hover:text-white hover:bg-red-950/20 transition"
+            className="flex w-full items-center space-x-3 px-4 py-3 rounded-lg text-sm font-semibold text-red-400 hover:text-slate-900 hover:bg-red-950/20 transition"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
@@ -89,14 +89,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Panel Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
-        <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-[#0c0d12] border-b border-gray-800">
+        <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
           <div className="flex items-center space-x-3">
-            <BrandLogo width={28} height={28} className="overflow-hidden rounded border border-gray-850" />
+            <BrandLogo width={28} height={28} className="overflow-hidden rounded border border-slate-200" />
             <span className="text-md font-bold uppercase tracking-wider font-sans">TOPLINE</span>
           </div>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 rounded text-gray-400 hover:text-white focus:outline-none"
+            className="p-1 rounded text-slate-500 hover:text-slate-900 focus:outline-none"
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -106,10 +106,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {isOpen && (
           <div className="lg:hidden fixed inset-0 z-50 flex">
             <div className="fixed inset-0 bg-black/60" onClick={() => setIsOpen(false)}></div>
-            <aside className="relative flex flex-col w-64 max-w-xs bg-[#0c0d12] border-r border-gray-800 h-full p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-850 pb-4">
-                <span className="text-lg font-bold text-white uppercase">Menu</span>
-                <button onClick={() => setIsOpen(false)} className="text-gray-400">
+            <aside className="relative flex flex-col w-64 max-w-xs bg-white border-r border-slate-200 h-full p-6 space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <span className="text-lg font-bold text-slate-900 uppercase">Menu</span>
+                <button onClick={() => setIsOpen(false)} className="text-slate-500">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -124,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition ${
                         isActive
                           ? "bg-red-600 text-black"
-                          : "text-gray-400 hover:text-white hover:bg-gray-800/40"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-gray-800/40"
                       }`}
                     >
                       {item.icon}
@@ -138,7 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   setIsOpen(false);
                   handleLogout();
                 }}
-                className="flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-400 hover:text-white hover:bg-red-950/20 transition w-full"
+                className="flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-400 hover:text-slate-900 hover:bg-red-950/20 transition w-full"
               >
                 <LogOut className="w-5 h-5" />
                 <span>Logout</span>

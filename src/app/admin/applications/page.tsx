@@ -112,32 +112,32 @@ export default function AdminApplicationsPage() {
   };
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6 text-slate-900">
       {/* Title */}
       <div>
         <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
           Review Applications
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Audit student registrations across all active events</p>
+        <p className="text-slate-500 text-sm mt-1">Audit student registrations across all active events</p>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-[#0c0d12] p-4 rounded-xl border border-gray-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-60">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search candidate name / phone..."
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-red-600"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-600"
             />
           </div>
           <select
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
-            className="bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-600"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-600"
           >
             <option value="">All Events...</option>
             {events.map((e) => (
@@ -149,7 +149,7 @@ export default function AdminApplicationsPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-600"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-600"
           >
             <option value="">All Statuses...</option>
             {["applied", "under_review", "selected", "confirmed", "cancelled", "attended", "absent", "paid"].map((st) => (
@@ -189,24 +189,24 @@ export default function AdminApplicationsPage() {
       {/* Table view */}
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading registrations list...</p>
+          <p className="text-slate-450">Loading registrations list...</p>
         </div>
       ) : applications.length === 0 ? (
-        <div className="text-center py-16 bg-[#0c0d12] rounded-xl border border-gray-800">
-          <p className="text-gray-500">No student applications matching filter criteria.</p>
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <p className="text-slate-450">No student applications matching filter criteria.</p>
         </div>
       ) : (
-        <div className="bg-[#0c0d12] rounded-xl border border-gray-800 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead>
-                <tr className="text-gray-500 border-b border-gray-850 uppercase text-xs">
+                <tr className="text-slate-450 border-b border-slate-200 uppercase text-xs">
                   <th className="p-4 text-center">
                     <input
                       type="checkbox"
                       checked={selectedIds.length === applications.length}
                       onChange={handleSelectAll}
-                      className="rounded border-gray-800 text-red-600 focus:ring-red-600"
+                      className="rounded border-slate-200 text-red-600 focus:ring-red-600"
                     />
                   </th>
                   <th className="p-4">Candidate</th>
@@ -228,17 +228,17 @@ export default function AdminApplicationsPage() {
                           type="checkbox"
                           checked={selectedIds.includes(app._id)}
                           onChange={() => handleToggleSelect(app._id)}
-                          className="rounded border-gray-850 text-red-600 focus:ring-red-600"
+                          className="rounded border-slate-200 text-red-600 focus:ring-red-600"
                         />
                       </td>
-                      <td className="p-4 font-bold text-white">
+                      <td className="p-4 font-bold text-slate-900">
                         <div>{s.name}</div>
-                        <div className="text-xs text-gray-500 font-semibold uppercase">{s.universityId}</div>
+                        <div className="text-xs text-slate-450 font-semibold uppercase">{s.universityId}</div>
                       </td>
                       <td className="p-4 text-gray-450">{s.phone}</td>
                       <td className="p-4">
-                        <div className="font-semibold text-white">{ev.name}</div>
-                        <div className="text-xs text-gray-500">{new Date(ev.date).toLocaleDateString("en-GB")}</div>
+                        <div className="font-semibold text-slate-900">{ev.name}</div>
+                        <div className="text-xs text-slate-450">{new Date(ev.date).toLocaleDateString("en-GB")}</div>
                       </td>
                       <td className="p-4">
                         <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">

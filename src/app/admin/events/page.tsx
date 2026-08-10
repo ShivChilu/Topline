@@ -81,14 +81,14 @@ export default function AdminEventsPage() {
   };
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6 text-slate-900">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
             Manage Events
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Create, publish, and monitor catering schedules</p>
+          <p className="text-slate-500 text-sm mt-1">Create, publish, and monitor catering schedules</p>
         </div>
         <Link
           href="/admin/events/create"
@@ -100,15 +100,15 @@ export default function AdminEventsPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-[#0c0d12] p-4 rounded-xl border border-gray-800">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-slate-200">
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events..."
-            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-red-600"
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-600"
           />
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto justify-start">
@@ -117,7 +117,7 @@ export default function AdminEventsPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-3 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition ${
-                tab === t ? "bg-red-600 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
+                tab === t ? "bg-red-600 text-black" : "bg-gray-800/60 text-slate-500 hover:text-slate-900"
               }`}
             >
               {t}
@@ -129,22 +129,22 @@ export default function AdminEventsPage() {
       {/* Grid of cards */}
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading events...</p>
+          <p className="text-slate-450">Loading events...</p>
         </div>
       ) : filteredEvents.length === 0 ? (
-        <div className="text-center py-16 bg-[#0c0d12] rounded-xl border border-gray-800">
-          <p className="text-gray-500">No events found matching your filter criteria.</p>
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <p className="text-slate-450">No events found matching your filter criteria.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEvents.map((event) => (
             <div
               key={event._id}
-              className="bg-[#0c0d12] rounded-xl border border-gray-800 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300"
+              className="bg-white rounded-xl border border-slate-200 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300"
             >
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 font-semibold uppercase">{event.workType}</span>
+                  <span className="text-xs text-slate-450 font-semibold uppercase">{event.workType}</span>
                   <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs font-bold uppercase">
                     {event.status}
                   </span>
@@ -152,7 +152,7 @@ export default function AdminEventsPage() {
                 <h3 className="text-xl font-bold hover:text-red-600 transition">
                   <Link href={`/admin/events/${event._id}`}>{event.name}</Link>
                 </h3>
-                <div className="space-y-2 text-sm text-gray-400">
+                <div className="space-y-2 text-sm text-slate-500">
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-red-600" />
                     <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
@@ -165,11 +165,11 @@ export default function AdminEventsPage() {
               </div>
 
               {/* Action Toolbar */}
-              <div className="bg-[#12141f] border-t border-gray-800 px-6 py-4 flex items-center justify-between gap-2">
+              <div className="bg-slate-50/50 border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-2">
                 <div className="flex gap-2">
                   <Link
                     href={`/admin/events/${event._id}`}
-                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition"
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-slate-650 transition"
                     title="View & Manage"
                   >
                     <Eye className="w-4 h-4" />
@@ -177,7 +177,7 @@ export default function AdminEventsPage() {
                   <Link
                     href={`/events/${event._id}`}
                     target="_blank"
-                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition"
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded text-slate-650 transition"
                     title="Preview Public Page"
                   >
                     <Edit className="w-4 h-4" />
@@ -195,7 +195,7 @@ export default function AdminEventsPage() {
                   {event.status === "OPEN" && (
                     <button
                       onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                      className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-1 rounded text-xs font-bold transition"
+                      className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-slate-900 border border-red-500/20 px-3 py-1 rounded text-xs font-bold transition"
                     >
                       Close Form
                     </button>

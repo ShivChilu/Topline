@@ -153,17 +153,17 @@ export default function CreateEventPage() {
   };
 
   return (
-    <div className="space-y-6 text-white max-w-5xl mx-auto pb-12">
+    <div className="space-y-6 text-slate-900 max-w-5xl mx-auto pb-12">
       {/* Title */}
       <div className="flex items-center space-x-3">
-        <Link href="/admin/events" className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition">
+        <Link href="/admin/events" className="p-2 hover:bg-gray-800 rounded-lg text-slate-500 hover:text-slate-900 transition">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
           <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
             Create Event & Build Form
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Configure event specifications and custom applicant questions</p>
+          <p className="text-slate-500 text-sm mt-1">Configure event specifications and custom applicant questions</p>
         </div>
       </div>
 
@@ -173,162 +173,162 @@ export default function CreateEventPage() {
         <div className="lg:col-span-2 space-y-6">
           
           {/* General Details */}
-          <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide border-b border-gray-800 pb-2">General Details</h2>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">General Details</h2>
             
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Event Name *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Name *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Grand Corporate Buffet Coordination"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Event Date *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Date *</label>
                 <input
                   type="date"
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Work Type / Category *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Type / Category *</label>
                 <input
                   type="text"
                   required
                   value={workType}
                   onChange={(e) => setWorkType(e.target.value)}
                   placeholder="Catering Staff / Banquet Host"
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Reporting Time *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Reporting Time *</label>
                 <input
                   type="time"
                   required
                   value={reportingTime}
                   onChange={(e) => setReportingTime(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Duty Start Time *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty Start Time *</label>
                 <input
                   type="time"
                   required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Duty End Time *</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty End Time *</label>
                 <input
                   type="time"
                   required
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Location Details *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Location Details *</label>
               <input
                 type="text"
                 required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Aura Resort, Chandigarh-Ambala Highway"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Google Maps Link</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Google Maps Link</label>
               <input
                 type="url"
                 value={googleMapsUrl}
                 onChange={(e) => setGoogleMapsUrl(e.target.value)}
                 placeholder="https://maps.google.com/..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Event Description *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Description *</label>
               <textarea
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide a summary of the duties and event settings..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-24"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-24"
               ></textarea>
             </div>
           </div>
 
           {/* Operational logistics */}
-          <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide border-b border-gray-800 pb-2">Logistics & Dress Code</h2>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">Logistics & Dress Code</h2>
             
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Required Dress Code</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Required Dress Code</label>
               <input
                 type="text"
                 value={dressCode}
                 onChange={(e) => setDressCode(e.target.value)}
                 placeholder="White shirt, Black trousers, Black leather shoes, Black apron"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Important Instructions (e.g. confirmation message)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Important Instructions (e.g. confirmation message)</label>
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Details shown to students after submitting application (e.g., report to entry gate, carry physical roll number ID)..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-20"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-20"
               ></textarea>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Do's & Don'ts (One rule per line)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Do's & Don'ts (One rule per line)</label>
               <textarea
                 value={dosAndDontsText}
                 onChange={(e) => setDosAndDontsText(e.target.value)}
                 placeholder="DO: Arrive on time&#10;DONT: Use mobile phones while on duty"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-20"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-20"
               ></textarea>
             </div>
           </div>
 
           {/* Dynamic Form Custom Fields List */}
-          <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide border-b border-gray-800 pb-2">Custom Questionnaire</h2>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">Custom Questionnaire</h2>
             
             {customFields.length === 0 ? (
-              <p className="text-gray-500 text-sm">No custom fields added yet. Standard profile inputs (Name, Phone, Email, University, University ID) are included by default.</p>
+              <p className="text-slate-450 text-sm">No custom fields added yet. Standard profile inputs (Name, Phone, Email, University, University ID) are included by default.</p>
             ) : (
               <div className="space-y-3">
                 {customFields.map((field, idx) => (
-                  <div key={field.id} className="flex items-center justify-between bg-[#161822] p-3 rounded-lg border border-gray-800">
+                  <div key={field.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div>
                       <p className="text-sm font-semibold">{field.label}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-450">
                         Type: <span className="text-red-600 uppercase">{field.type}</span> | Required: {field.required ? "Yes" : "No"}
                       </p>
                     </div>
@@ -351,15 +351,15 @@ export default function CreateEventPage() {
         <div className="space-y-6">
           
           {/* Partnership & Financials */}
-          <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-            <h2 className="text-lg font-bold text-red-600 uppercase tracking-wide border-b border-gray-850 pb-2">Financials & Partner</h2>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+            <h2 className="text-lg font-bold text-red-600 uppercase tracking-wide border-b border-slate-200 pb-2">Financials & Partner</h2>
             
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Select Client Resort/Hotel</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Select Client Resort/Hotel</label>
               <select
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="">Select partner client...</option>
                 {clients.map((c) => (
@@ -372,64 +372,64 @@ export default function CreateEventPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Required Workers</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Required Workers</label>
                 <input
                   type="number"
                   required
                   value={workersRequired}
                   onChange={(e) => setWorkersRequired(Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Max Applications</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Max Applications</label>
                 <input
                   type="number"
                   required
                   value={maxApplications}
                   onChange={(e) => setMaxApplications(Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Student Payment (₹ / candidate)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Student Payment (₹ / candidate)</label>
               <input
                 type="number"
                 required
                 value={paymentPerStudent}
                 onChange={(e) => setPaymentPerStudent(Number(e.target.value))}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Client Revenue (₹ total)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Client Revenue (₹ total)</label>
               <input
                 type="number"
                 value={clientRevenue}
                 onChange={(e) => setClientRevenue(Number(e.target.value))}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Other Expenses (₹ total)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Other Expenses (₹ total)</label>
               <input
                 type="number"
                 value={otherExpenses}
                 onChange={(e) => setOtherExpenses(Number(e.target.value))}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Visibility</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Visibility</label>
               <select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="VISIBLE">VISIBLE</option>
                 <option value="HIDDEN">HIDDEN</option>
@@ -438,26 +438,26 @@ export default function CreateEventPage() {
           </div>
 
           {/* Form Builder Toolbox */}
-          <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide border-b border-gray-850 pb-2">Add Form Field</h2>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">Add Form Field</h2>
             
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Question / Label</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Question / Label</label>
               <input
                 type="text"
                 value={newFieldLabel}
                 onChange={(e) => setNewFieldLabel(e.target.value)}
                 placeholder="e.g. Select your shirt size"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Field Type</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Field Type</label>
               <select
                 value={newFieldType}
                 onChange={(e) => setNewFieldType(e.target.value as any)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="text">Short Answer</option>
                 <option value="paragraph">Paragraph</option>
@@ -469,25 +469,25 @@ export default function CreateEventPage() {
 
             {newFieldType === "select" && (
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Options (Comma separated)</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Options (Comma separated)</label>
                 <input
                   type="text"
                   value={newFieldOptionsText}
                   onChange={(e) => setNewFieldOptionsText(e.target.value)}
                   placeholder="S, M, L, XL, XXL"
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Description / Instruction</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Description / Instruction</label>
               <input
                 type="text"
                 value={newFieldDescription}
                 onChange={(e) => setNewFieldDescription(e.target.value)}
                 placeholder="Subtext details..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -497,9 +497,9 @@ export default function CreateEventPage() {
                 id="required_box"
                 checked={newFieldRequired}
                 onChange={(e) => setNewFieldRequired(e.target.checked)}
-                className="rounded border-gray-800 text-red-600 focus:ring-red-600"
+                className="rounded border-slate-200 text-red-600 focus:ring-red-600"
               />
-              <label htmlFor="required_box" className="text-sm font-semibold text-gray-300">Mark as Required</label>
+              <label htmlFor="required_box" className="text-sm font-semibold text-slate-650">Mark as Required</label>
             </div>
 
             <button

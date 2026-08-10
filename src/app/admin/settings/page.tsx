@@ -159,99 +159,99 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (loading) return <div className="text-white text-center py-12">Loading settings module...</div>;
+  if (loading) return <div className="text-slate-900 text-center py-12">Loading settings module...</div>;
 
   return (
-    <div className="space-y-12 text-white max-w-4xl mx-auto pb-12">
+    <div className="space-y-12 text-slate-900 max-w-4xl mx-auto pb-12">
       {/* Title */}
       <div>
         <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
           Website Settings
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Configure banner copywriting, social networks, and student conduct guidelines</p>
+        <p className="text-slate-500 text-sm mt-1">Configure banner copywriting, social networks, and student conduct guidelines</p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
+      <form onSubmit={handleSave} className="space-y-6 bg-white p-8 rounded-xl border border-slate-200">
         
         <div className="space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600">Homepage Banner Copy</h2>
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-red-600">Homepage Banner Copy</h2>
           
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Headline</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Headline</label>
             <input
               type="text"
               required
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Subheadline / Supporting Text</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Subheadline / Supporting Text</label>
             <textarea
               required
               value={subheadline}
               onChange={(e) => setSubheadline(e.target.value)}
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-24"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-24"
             ></textarea>
           </div>
         </div>
 
-        <div className="space-y-4 pt-6 border-t border-gray-850">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600">Contact Details</h2>
+        <div className="space-y-4 pt-6 border-t border-slate-200">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-red-600">Contact Details</h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">WhatsApp Group Invite Link</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">WhatsApp Group Invite Link</label>
               <input
                 type="url"
                 required
                 value={whatsappLink}
                 onChange={(e) => setWhatsappLink(e.target.value)}
                 placeholder="https://chat.whatsapp.com/..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Contact Email Address</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Email Address</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">About Section Text</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">About Section Text</label>
             <textarea
               value={aboutText}
               onChange={(e) => setAboutText(e.target.value)}
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-24"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-24"
             ></textarea>
           </div>
         </div>
 
-        <div className="space-y-4 pt-6 border-t border-gray-850 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-4 pt-6 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-emerald-450">Do's Rules (One per line)</h2>
+            <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-emerald-450">Do's Rules (One per line)</h2>
             <textarea
               value={dosText}
               onChange={(e) => setDosText(e.target.value)}
               placeholder="Arrive on time&#10;Wear correct uniform"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-48 mt-2"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-48 mt-2"
             ></textarea>
           </div>
           <div>
-            <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-450">Don'ts Rules (One per line)</h2>
+            <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-red-450">Don'ts Rules (One per line)</h2>
             <textarea
               value={dontsText}
               onChange={(e) => setDontsText(e.target.value)}
               placeholder="Do not leave early&#10;Do not damage hotel property"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-48 mt-2"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-48 mt-2"
             ></textarea>
           </div>
         </div>
@@ -270,30 +270,30 @@ export default function AdminSettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Update Own Credentials Card */}
-        <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
+        <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-4">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
             <Key className="w-5 h-5" />
             <span>Change My Credentials</span>
           </h2>
           <form onSubmit={handleUpdateOwnCredentials} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">New Username</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">New Username</label>
               <input
                 type="text"
                 value={myUsername}
                 onChange={(e) => setMyUsername(e.target.value)}
                 placeholder="Enter new username..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">New Password</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">New Password</label>
               <input
                 type="password"
                 value={myPassword}
                 onChange={(e) => setMyPassword(e.target.value)}
                 placeholder="Enter new password..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <button
@@ -306,40 +306,40 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Create New Admin Card */}
-        <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
+        <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-4">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
             <UserPlus className="w-5 h-5" />
             <span>Create New Admin</span>
           </h2>
           <form onSubmit={handleCreateAdmin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Username *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Username *</label>
               <input
                 type="text"
                 required
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
                 placeholder="e.g. captain_aman"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Password *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Password *</label>
               <input
                 type="password"
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Role</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Role</label>
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="admin">Captain (Admin)</option>
                 <option value="superadmin">Super Admin</option>
@@ -357,30 +357,30 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Admin Users Roster */}
-      <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-4">
-        <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
+      <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-4">
+        <h2 className="text-lg font-bold border-b border-slate-200 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
           <Users className="w-5 h-5" />
           <span>Active Administrators ({admins.length})</span>
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="text-gray-500 border-b border-gray-850 uppercase text-xs">
+              <tr className="text-slate-450 border-b border-slate-200 uppercase text-xs">
                 <th className="pb-3">Username</th>
                 <th className="pb-3">Role</th>
                 <th className="pb-3">Registered Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-850 text-gray-300">
+            <tbody className="divide-y divide-gray-850 text-slate-650">
               {admins.map((adm) => (
                 <tr key={adm._id} className="hover:bg-gray-850/10">
-                  <td className="py-3 font-semibold text-white">{adm.username}</td>
+                  <td className="py-3 font-semibold text-slate-900">{adm.username}</td>
                   <td className="py-3 uppercase text-xs">
-                    <span className={`px-2 py-0.5 rounded ${adm.role === "superadmin" ? "bg-red-600/10 text-red-600 border border-red-600/20" : "bg-gray-800 text-gray-400"}`}>
+                    <span className={`px-2 py-0.5 rounded ${adm.role === "superadmin" ? "bg-red-600/10 text-red-600 border border-red-600/20" : "bg-gray-800 text-slate-500"}`}>
                       {adm.role}
                     </span>
                   </td>
-                  <td className="py-3 text-xs text-gray-500">{new Date(adm.createdAt).toLocaleDateString("en-GB")}</td>
+                  <td className="py-3 text-xs text-slate-450">{new Date(adm.createdAt).toLocaleDateString("en-GB")}</td>
                 </tr>
               ))}
             </tbody>

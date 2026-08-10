@@ -66,14 +66,14 @@ export default function AdminClientsPage() {
   };
 
   return (
-    <div className="space-y-6 text-white max-w-5xl mx-auto">
+    <div className="space-y-6 text-slate-900 max-w-5xl mx-auto">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
             Client Directory
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Manage hospitality clients, hotels, and resort partners</p>
+          <p className="text-slate-500 text-sm mt-1">Manage hospitality clients, hotels, and resort partners</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -86,72 +86,72 @@ export default function AdminClientsPage() {
 
       {/* Add Client Form */}
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4 max-w-xl">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2">Add Partner Profile</h2>
+        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 space-y-4 max-w-xl">
+          <h2 className="text-lg font-bold border-b border-slate-200 pb-2">Add Partner Profile</h2>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Company / Resort Name *</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Company / Resort Name *</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Grand Regency Resort"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Contact Person *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Contact Person *</label>
               <input
                 type="text"
                 required
                 value={contactPerson}
                 onChange={(e) => setContactPerson(e.target.value)}
                 placeholder="Rajesh Sharma"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Phone Number *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Phone Number *</label>
               <input
                 type="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Email Address *</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Email Address *</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="events@grandregency.com"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Address *</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Address *</label>
             <input
               type="text"
               required
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Sector 17, Chandigarh, India"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Internal Notes</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Internal Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any details, payment preferences, or special rules..."
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-20"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm h-20"
             ></textarea>
           </div>
           <button
@@ -166,27 +166,27 @@ export default function AdminClientsPage() {
       {/* List */}
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading client profiles...</p>
+          <p className="text-slate-450">Loading client profiles...</p>
         </div>
       ) : clients.length === 0 ? (
-        <div className="text-center py-16 bg-[#0c0d12] rounded-xl border border-gray-800">
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
           <p className="text-gray-550">No partner client files found. Create one above.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {clients.map((c) => (
-            <div key={c._id} className="bg-[#0c0d12] rounded-xl border border-gray-800 p-6 space-y-4 hover:border-red-600/20 transition duration-300">
-              <div className="flex items-center space-x-3 border-b border-gray-850 pb-3">
+            <div key={c._id} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 hover:border-red-600/20 transition duration-300">
+              <div className="flex items-center space-x-3 border-b border-slate-200 pb-3">
                 <div className="w-10 h-10 bg-red-600/10 rounded-lg border border-red-600/20 flex items-center justify-center text-red-600 flex-shrink-0">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white leading-tight">{c.name}</h3>
-                  <span className="text-xs text-gray-500 font-semibold uppercase">Hospitality Client</span>
+                  <h3 className="text-lg font-bold text-slate-900 leading-tight">{c.name}</h3>
+                  <span className="text-xs text-slate-450 font-semibold uppercase">Hospitality Client</span>
                 </div>
               </div>
 
-              <div className="space-y-2 text-xs text-gray-300">
+              <div className="space-y-2 text-xs text-slate-650">
                 <div className="flex items-center space-x-2">
                   <User className="w-4 h-4 text-red-600" />
                   <span>Contact: {c.contactPerson}</span>
@@ -206,8 +206,8 @@ export default function AdminClientsPage() {
               </div>
 
               {c.notes && (
-                <div className="pt-3 border-t border-gray-850">
-                  <p className="text-xs text-gray-500 italic">Notes: {c.notes}</p>
+                <div className="pt-3 border-t border-slate-200">
+                  <p className="text-xs text-slate-450 italic">Notes: {c.notes}</p>
                 </div>
               )}
             </div>

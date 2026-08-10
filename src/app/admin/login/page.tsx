@@ -38,14 +38,14 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#07080b] px-4 text-white">
-      <div className="w-full max-w-md bg-[#0c0d12] border border-gray-800 rounded-2xl p-8 shadow-2xl space-y-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#f8fafc] px-4 text-slate-900">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-2xl space-y-6">
         
         {/* Header */}
         <div className="text-center space-y-2">
-          <BrandLogo width={90} height={90} className="mx-auto mb-4 overflow-hidden rounded border border-gray-800 bg-[#07080b] p-1.5" />
-          <h2 className="text-2xl font-bold uppercase tracking-wider text-white">TOPLINE Admin</h2>
-          <p className="text-gray-400 text-sm">Please sign in to access control management</p>
+          <BrandLogo width={90} height={90} className="mx-auto mb-4 overflow-hidden rounded border border-slate-200 bg-[#f8fafc] p-1.5" />
+          <h2 className="text-2xl font-bold uppercase tracking-wider text-slate-900">TOPLINE Admin</h2>
+          <p className="text-slate-500 text-sm">Please sign in to access control management</p>
         </div>
 
         {error && (
@@ -58,31 +58,31 @@ export default function AdminLoginPage() {
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Username</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Username</label>
             <div className="relative">
-              <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+              <User className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Password</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+              <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
@@ -97,7 +97,7 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="text-center">
-          <a href="/" className="text-xs text-gray-500 hover:text-red-600 transition">
+          <a href="/" className="text-xs text-slate-450 hover:text-red-600 transition">
             &larr; Back to public site
           </a>
         </div>

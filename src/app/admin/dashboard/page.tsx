@@ -91,24 +91,24 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-8 text-white">
+    <div className="space-y-8 text-slate-900">
       {/* Title */}
       <div>
         <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
           Business Overview
         </h1>
-        <p className="text-gray-400 text-sm mt-1">Real-time catering recruitment operations and financial performance</p>
+        <p className="text-slate-500 text-sm mt-1">Real-time catering recruitment operations and financial performance</p>
       </div>
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi, idx) => (
-          <div key={idx} className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 flex items-center justify-between">
+          <div key={idx} className="bg-white p-6 rounded-xl border border-slate-200 flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{kpi.name}</p>
+              <p className="text-xs text-slate-450 font-semibold uppercase tracking-wider">{kpi.name}</p>
               <h3 className="text-3xl font-bold mt-2">{kpi.value}</h3>
             </div>
-            <div className="w-10 h-10 bg-gray-800/50 rounded-lg flex items-center justify-center border border-gray-800">
+            <div className="w-10 h-10 bg-gray-800/50 rounded-lg flex items-center justify-center border border-slate-200">
               {kpi.icon}
             </div>
           </div>
@@ -116,22 +116,22 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Financial Section */}
-      <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-6">
-        <h2 className="text-xl font-bold text-white uppercase tracking-wider border-b border-gray-800 pb-3 flex items-center space-x-2">
+      <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6">
+        <h2 className="text-xl font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3 flex items-center space-x-2">
           <Banknote className="text-red-600" />
           <span>Financial Performance Summary</span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="p-4 bg-gray-850/20 rounded-lg border border-gray-850">
-            <p className="text-xs text-gray-500 font-semibold uppercase">Client Revenue</p>
-            <p className="text-2xl font-bold text-white mt-1">₹{finances.revenue.toLocaleString()}</p>
+          <div className="p-4 bg-gray-850/20 rounded-lg border border-slate-200">
+            <p className="text-xs text-slate-450 font-semibold uppercase">Client Revenue</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">₹{finances.revenue.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-gray-850/20 rounded-lg border border-gray-850">
-            <p className="text-xs text-gray-500 font-semibold uppercase">Worker Payouts</p>
+          <div className="p-4 bg-gray-850/20 rounded-lg border border-slate-200">
+            <p className="text-xs text-slate-450 font-semibold uppercase">Worker Payouts</p>
             <p className="text-2xl font-bold text-red-400 mt-1">₹{finances.workerPayments.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-gray-850/20 rounded-lg border border-gray-850">
-            <p className="text-xs text-gray-500 font-semibold uppercase">Other Expenses</p>
+          <div className="p-4 bg-gray-850/20 rounded-lg border border-slate-200">
+            <p className="text-xs text-slate-450 font-semibold uppercase">Other Expenses</p>
             <p className="text-2xl font-bold text-red-400 mt-1">₹{finances.expenses.toLocaleString()}</p>
           </div>
           <div className="p-4 bg-emerald-950/20 rounded-lg border border-emerald-900/30">
@@ -148,9 +148,9 @@ export default async function AdminDashboardPage() {
       {/* Upcoming Events / Operations Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Events table */}
-        <div className="lg:col-span-2 bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-800 pb-3">
-            <h3 className="text-lg font-bold text-white uppercase tracking-wider">Active Staffing Queue</h3>
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wider">Active Staffing Queue</h3>
             <Link href="/admin/events" className="text-red-600 hover:underline text-xs flex items-center space-x-1">
               <span>All Events</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -158,12 +158,12 @@ export default async function AdminDashboardPage() {
           </div>
 
           {upcomingEvents.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-6">No events in queue.</p>
+            <p className="text-slate-450 text-sm text-center py-6">No events in queue.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead>
-                  <tr className="text-gray-500 border-b border-gray-850 uppercase text-xs">
+                  <tr className="text-slate-450 border-b border-slate-200 uppercase text-xs">
                     <th className="pb-3">Event Name</th>
                     <th className="pb-3">Date</th>
                     <th className="pb-3">Reporting</th>
@@ -174,14 +174,14 @@ export default async function AdminDashboardPage() {
                 <tbody className="divide-y divide-gray-850">
                   {upcomingEvents.map((ev) => (
                     <tr key={ev._id.toString()} className="hover:bg-gray-800/20 transition">
-                      <td className="py-3 font-bold text-white">
+                      <td className="py-3 font-bold text-slate-900">
                         <Link href={`/admin/events/${ev._id}`} className="hover:text-red-600">
                           {ev.name}
                         </Link>
                       </td>
-                      <td className="py-3 text-gray-400">{new Date(ev.date).toLocaleDateString("en-GB")}</td>
-                      <td className="py-3 text-gray-400">{ev.reportingTime}</td>
-                      <td className="py-3 text-center font-semibold text-gray-300">
+                      <td className="py-3 text-slate-500">{new Date(ev.date).toLocaleDateString("en-GB")}</td>
+                      <td className="py-3 text-slate-500">{ev.reportingTime}</td>
+                      <td className="py-3 text-center font-semibold text-slate-650">
                         {ev.applicationsCount} / {ev.maxApplications}
                       </td>
                       <td className="py-3">
@@ -198,8 +198,8 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Right Column: Quick Admin Tools */}
-        <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-          <h3 className="text-lg font-bold text-white uppercase tracking-wider border-b border-gray-800 pb-3">Quick Actions</h3>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+          <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3">Quick Actions</h3>
           <div className="grid grid-cols-1 gap-3">
             <Link
               href="/admin/events/create"
@@ -209,13 +209,13 @@ export default async function AdminDashboardPage() {
             </Link>
             <Link
               href="/admin/applications"
-              className="bg-[#161822] hover:bg-gray-800 text-white font-bold p-3 rounded-lg text-center text-sm border border-gray-800 transition"
+              className="bg-slate-50 hover:bg-gray-800 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
             >
               Review Pending Applications
             </Link>
             <Link
               href="/admin/students"
-              className="bg-[#161822] hover:bg-gray-800 text-white font-bold p-3 rounded-lg text-center text-sm border border-gray-800 transition"
+              className="bg-slate-50 hover:bg-gray-800 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
             >
               Search Student Profiles
             </Link>
