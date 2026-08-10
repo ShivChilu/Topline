@@ -41,9 +41,6 @@ export default async function OpportunitiesPage(props: {
           <h1 className="text-4xl font-extrabold text-amber-500 uppercase tracking-wider">
             Hospitality Opportunities
           </h1>
-          <p className="text-gray-400 mt-2 max-w-xl mx-auto">
-            Apply to active shifts at Chandigarh, Zirakpur, and Punjab's premium resorts and banquet programs.
-          </p>
         </div>
 
         {/* Filter Toolbar */}
