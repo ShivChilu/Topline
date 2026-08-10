@@ -34,14 +34,6 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="flex items-start space-x-4">
-              <MapPin className="text-amber-500 mt-1" />
-              <div>
-                <h4 className="font-semibold text-white">Location</h4>
-                <p className="text-gray-400">Sector 17, Chandigarh, India</p>
-              </div>
-            </div>
-
             <div className="pt-4 border-t border-gray-800">
               <a
                 href="https://wa.me/917986955634?text=I%20would%20like%20to%20contact%20TOPLINE%20ODC"

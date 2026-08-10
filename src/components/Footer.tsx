@@ -71,11 +71,9 @@ export default function Footer() {
             Contact
           </h4>
           <p className="text-sm space-y-1">
-            <span>Email: info@toplinecatering.com</span>
+            <span>Email: contact@toplineodc.co.in</span>
             <br />
-            <span>Phone: +91 98765 43210</span>
-            <br />
-            <span>Chandigarh, India</span>
+            <span>Phone: +91 79869 55634, +91 93810 39799</span>
           </p>
         </div>
       </div>
