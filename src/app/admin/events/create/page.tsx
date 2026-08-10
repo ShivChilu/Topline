@@ -160,7 +160,7 @@ export default function CreateEventPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
+          <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
             Create Event & Build Form
           </h1>
           <p className="text-gray-400 text-sm mt-1">Configure event specifications and custom applicant questions</p>
@@ -184,7 +184,7 @@ export default function CreateEventPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Grand Corporate Buffet Coordination"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -196,7 +196,7 @@ export default function CreateEventPage() {
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
@@ -207,7 +207,7 @@ export default function CreateEventPage() {
                   value={workType}
                   onChange={(e) => setWorkType(e.target.value)}
                   placeholder="Catering Staff / Banquet Host"
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             </div>
@@ -220,7 +220,7 @@ export default function CreateEventPage() {
                   required
                   value={reportingTime}
                   onChange={(e) => setReportingTime(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
@@ -230,7 +230,7 @@ export default function CreateEventPage() {
                   required
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
@@ -240,7 +240,7 @@ export default function CreateEventPage() {
                   required
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             </div>
@@ -253,7 +253,7 @@ export default function CreateEventPage() {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Aura Resort, Chandigarh-Ambala Highway"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -264,7 +264,7 @@ export default function CreateEventPage() {
                 value={googleMapsUrl}
                 onChange={(e) => setGoogleMapsUrl(e.target.value)}
                 placeholder="https://maps.google.com/..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -275,7 +275,7 @@ export default function CreateEventPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide a summary of the duties and event settings..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-24"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-24"
               ></textarea>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function CreateEventPage() {
                 value={dressCode}
                 onChange={(e) => setDressCode(e.target.value)}
                 placeholder="White shirt, Black trousers, Black leather shoes, Black apron"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -301,7 +301,7 @@ export default function CreateEventPage() {
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Details shown to students after submitting application (e.g., report to entry gate, carry physical roll number ID)..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-20"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-20"
               ></textarea>
             </div>
 
@@ -311,7 +311,7 @@ export default function CreateEventPage() {
                 value={dosAndDontsText}
                 onChange={(e) => setDosAndDontsText(e.target.value)}
                 placeholder="DO: Arrive on time&#10;DONT: Use mobile phones while on duty"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-20"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-20"
               ></textarea>
             </div>
           </div>
@@ -329,13 +329,13 @@ export default function CreateEventPage() {
                     <div>
                       <p className="text-sm font-semibold">{field.label}</p>
                       <p className="text-xs text-gray-500">
-                        Type: <span className="text-rose-600 uppercase">{field.type}</span> | Required: {field.required ? "Yes" : "No"}
+                        Type: <span className="text-red-600 uppercase">{field.type}</span> | Required: {field.required ? "Yes" : "No"}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveField(field.id)}
-                      className="p-1 text-rose-400 hover:text-rose-500"
+                      className="p-1 text-red-400 hover:text-red-500"
                     >
                       <Trash className="w-4 h-4" />
                     </button>
@@ -352,14 +352,14 @@ export default function CreateEventPage() {
           
           {/* Partnership & Financials */}
           <div className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
-            <h2 className="text-lg font-bold text-rose-600 uppercase tracking-wide border-b border-gray-850 pb-2">Financials & Partner</h2>
+            <h2 className="text-lg font-bold text-red-600 uppercase tracking-wide border-b border-gray-850 pb-2">Financials & Partner</h2>
             
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Select Client Resort/Hotel</label>
               <select
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="">Select partner client...</option>
                 {clients.map((c) => (
@@ -378,7 +378,7 @@ export default function CreateEventPage() {
                   required
                   value={workersRequired}
                   onChange={(e) => setWorkersRequired(Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
               <div>
@@ -388,7 +388,7 @@ export default function CreateEventPage() {
                   required
                   value={maxApplications}
                   onChange={(e) => setMaxApplications(Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             </div>
@@ -400,7 +400,7 @@ export default function CreateEventPage() {
                 required
                 value={paymentPerStudent}
                 onChange={(e) => setPaymentPerStudent(Number(e.target.value))}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -410,7 +410,7 @@ export default function CreateEventPage() {
                 type="number"
                 value={clientRevenue}
                 onChange={(e) => setClientRevenue(Number(e.target.value))}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -420,7 +420,7 @@ export default function CreateEventPage() {
                 type="number"
                 value={otherExpenses}
                 onChange={(e) => setOtherExpenses(Number(e.target.value))}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -429,7 +429,7 @@ export default function CreateEventPage() {
               <select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="VISIBLE">VISIBLE</option>
                 <option value="HIDDEN">HIDDEN</option>
@@ -448,7 +448,7 @@ export default function CreateEventPage() {
                 value={newFieldLabel}
                 onChange={(e) => setNewFieldLabel(e.target.value)}
                 placeholder="e.g. Select your shirt size"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -457,7 +457,7 @@ export default function CreateEventPage() {
               <select
                 value={newFieldType}
                 onChange={(e) => setNewFieldType(e.target.value as any)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="text">Short Answer</option>
                 <option value="paragraph">Paragraph</option>
@@ -475,7 +475,7 @@ export default function CreateEventPage() {
                   value={newFieldOptionsText}
                   onChange={(e) => setNewFieldOptionsText(e.target.value)}
                   placeholder="S, M, L, XL, XXL"
-                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                  className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
                 />
               </div>
             )}
@@ -487,7 +487,7 @@ export default function CreateEventPage() {
                 value={newFieldDescription}
                 onChange={(e) => setNewFieldDescription(e.target.value)}
                 placeholder="Subtext details..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
@@ -497,7 +497,7 @@ export default function CreateEventPage() {
                 id="required_box"
                 checked={newFieldRequired}
                 onChange={(e) => setNewFieldRequired(e.target.checked)}
-                className="rounded border-gray-800 text-rose-600 focus:ring-rose-600"
+                className="rounded border-gray-800 text-red-600 focus:ring-red-600"
               />
               <label htmlFor="required_box" className="text-sm font-semibold text-gray-300">Mark as Required</label>
             </div>
@@ -505,7 +505,7 @@ export default function CreateEventPage() {
             <button
               type="button"
               onClick={handleAddField}
-              className="w-full bg-transparent hover:bg-rose-600 hover:text-black border border-rose-600/30 text-rose-600 font-bold py-2 rounded transition text-sm flex items-center justify-center space-x-1"
+              className="w-full bg-transparent hover:bg-red-600 hover:text-black border border-red-600/30 text-red-600 font-bold py-2 rounded transition text-sm flex items-center justify-center space-x-1"
             >
               <Plus className="w-4 h-4" />
               <span>Insert Field</span>
@@ -515,7 +515,7 @@ export default function CreateEventPage() {
           {/* Submit Action */}
           <button
             type="submit"
-            className="w-full bg-rose-600 hover:bg-rose-700 text-black font-extrabold py-3.5 rounded-xl transition duration-200"
+            className="w-full bg-red-600 hover:bg-red-700 text-black font-extrabold py-3.5 rounded-xl transition duration-200"
           >
             Save Event Draft
           </button>

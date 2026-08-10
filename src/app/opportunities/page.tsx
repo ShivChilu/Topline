@@ -51,11 +51,11 @@ export default async function OpportunitiesPage(props: {
               name="search"
               defaultValue={searchParams.search || ""}
               placeholder="Search by name/location..."
-              className="bg-[#161822] border border-gray-800 rounded px-4 py-2 text-white focus:outline-none focus:border-rose-600 text-sm md:w-64"
+              className="bg-[#161822] border border-gray-800 rounded px-4 py-2 text-white focus:outline-none focus:border-red-600 text-sm md:w-64"
             />
             <button
               type="submit"
-              className="bg-rose-600 hover:bg-rose-700 text-black px-4 py-2 rounded text-sm font-bold transition"
+              className="bg-red-600 hover:bg-red-700 text-black px-4 py-2 rounded text-sm font-bold transition"
             >
               Filter
             </button>
@@ -65,7 +65,7 @@ export default async function OpportunitiesPage(props: {
               href="/opportunities"
               className={`px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wider transition ${
                 !searchParams.status
-                  ? "bg-rose-600 text-black"
+                  ? "bg-red-600 text-black"
                   : "bg-gray-800 text-gray-400 hover:text-white"
               }`}
             >
@@ -85,7 +85,7 @@ export default async function OpportunitiesPage(props: {
               href="/opportunities?status=FULL"
               className={`px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wider transition ${
                 searchParams.status === "FULL"
-                  ? "bg-rose-700 text-white"
+                  ? "bg-red-700 text-white"
                   : "bg-gray-800 text-gray-400 hover:text-white"
               }`}
             >
@@ -108,8 +108,8 @@ export default async function OpportunitiesPage(props: {
 
               let statusBadgeColor = "bg-slate-100 text-slate-500 border-slate-200";
               if (isOpen) statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-250";
-              if (isFull) statusBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
-              if (isClosed) statusBadgeColor = "bg-rose-50 text-rose-700 border-rose-250";
+              if (isFull) statusBadgeColor = "bg-red-50 text-red-800 border-red-200";
+              if (isClosed) statusBadgeColor = "bg-red-50 text-red-700 border-red-250";
 
               return (
                 <div
@@ -126,25 +126,25 @@ export default async function OpportunitiesPage(props: {
                       </span>
                     </div>
 
-                    <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-rose-700 transition duration-300">
+                    <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-red-700 transition duration-300">
                       <Link href={`/events/${event._id}`}>{event.name}</Link>
                     </h3>
 
                     <div className="mt-6 space-y-3.5 text-sm text-slate-600">
                       <div className="flex items-center space-x-2.5">
-                        <Calendar className="w-4 h-4 text-rose-700" />
+                        <Calendar className="w-4 h-4 text-red-700" />
                         <span>Date: {new Date(event.date).toLocaleDateString("en-GB")}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <MapPin className="w-4 h-4 text-rose-700" />
+                        <MapPin className="w-4 h-4 text-red-700" />
                         <span className="truncate">Location: {event.location}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <Clock className="w-4 h-4 text-rose-700" />
+                        <Clock className="w-4 h-4 text-red-700" />
                         <span>Reporting: {event.reportingTime}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
-                        <Users className="w-4 h-4 text-rose-700" />
+                        <Users className="w-4 h-4 text-red-700" />
                         <span>Required: {event.workersRequired} candidates</span>
                       </div>
                     </div>
@@ -153,14 +153,14 @@ export default async function OpportunitiesPage(props: {
                   <div className="bg-slate-50/50 px-6 py-5 flex items-center justify-between border-t border-slate-100">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider">Payment</p>
-                      <p className="text-xl font-extrabold text-rose-700">₹{event.paymentPerStudent}</p>
+                      <p className="text-xl font-extrabold text-red-700">₹{event.paymentPerStudent}</p>
                     </div>
 
                     <Link
                       href={`/events/${event._id}`}
                       className={`text-xs font-bold px-4 py-2.5 rounded-lg transition duration-300 flex items-center space-x-1.5 ${
                         isOpen
-                          ? "bg-rose-600 hover:bg-rose-700 text-black shadow-sm"
+                          ? "bg-red-600 hover:bg-red-700 text-black shadow-sm"
                           : "bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-200"
                       }`}
                     >

@@ -84,7 +84,7 @@ export default async function AdminDashboardPage() {
   }
 
   const kpis = [
-    { name: "Total Students", value: stats.totalStudents, icon: <Users className="w-5 h-5 text-rose-600" /> },
+    { name: "Total Students", value: stats.totalStudents, icon: <Users className="w-5 h-5 text-red-600" /> },
     { name: "Open Forms", value: stats.openForms, icon: <CalendarCheck className="w-5 h-5 text-emerald-500" /> },
     { name: "Total Applications", value: stats.totalApplications, icon: <Layers className="w-5 h-5 text-sky-500" /> },
     { name: "Completed Events", value: stats.completedEvents, icon: <TrendingUp className="w-5 h-5 text-purple-500" /> },
@@ -94,7 +94,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8 text-white">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
+        <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
           Business Overview
         </h1>
         <p className="text-gray-400 text-sm mt-1">Real-time catering recruitment operations and financial performance</p>
@@ -118,7 +118,7 @@ export default async function AdminDashboardPage() {
       {/* Financial Section */}
       <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-6">
         <h2 className="text-xl font-bold text-white uppercase tracking-wider border-b border-gray-800 pb-3 flex items-center space-x-2">
-          <Banknote className="text-rose-600" />
+          <Banknote className="text-red-600" />
           <span>Financial Performance Summary</span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -128,19 +128,19 @@ export default async function AdminDashboardPage() {
           </div>
           <div className="p-4 bg-gray-850/20 rounded-lg border border-gray-850">
             <p className="text-xs text-gray-500 font-semibold uppercase">Worker Payouts</p>
-            <p className="text-2xl font-bold text-rose-400 mt-1">₹{finances.workerPayments.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-red-400 mt-1">₹{finances.workerPayments.toLocaleString()}</p>
           </div>
           <div className="p-4 bg-gray-850/20 rounded-lg border border-gray-850">
             <p className="text-xs text-gray-500 font-semibold uppercase">Other Expenses</p>
-            <p className="text-2xl font-bold text-rose-400 mt-1">₹{finances.expenses.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-red-400 mt-1">₹{finances.expenses.toLocaleString()}</p>
           </div>
           <div className="p-4 bg-emerald-950/20 rounded-lg border border-emerald-900/30">
             <p className="text-xs text-emerald-500 font-semibold uppercase">Net Profit</p>
             <p className="text-2xl font-bold text-emerald-400 mt-1">₹{finances.profit.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-rose-600/10 rounded-lg border border-rose-600/20">
-            <p className="text-xs text-rose-600 font-semibold uppercase">Profit Margin</p>
-            <p className="text-2xl font-bold text-rose-600 mt-1">{finances.margin}%</p>
+          <div className="p-4 bg-red-600/10 rounded-lg border border-red-600/20">
+            <p className="text-xs text-red-600 font-semibold uppercase">Profit Margin</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{finances.margin}%</p>
           </div>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default async function AdminDashboardPage() {
         <div className="lg:col-span-2 bg-[#0c0d12] p-6 rounded-xl border border-gray-800 space-y-4">
           <div className="flex items-center justify-between border-b border-gray-800 pb-3">
             <h3 className="text-lg font-bold text-white uppercase tracking-wider">Active Staffing Queue</h3>
-            <Link href="/admin/events" className="text-rose-600 hover:underline text-xs flex items-center space-x-1">
+            <Link href="/admin/events" className="text-red-600 hover:underline text-xs flex items-center space-x-1">
               <span>All Events</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
@@ -175,7 +175,7 @@ export default async function AdminDashboardPage() {
                   {upcomingEvents.map((ev) => (
                     <tr key={ev._id.toString()} className="hover:bg-gray-800/20 transition">
                       <td className="py-3 font-bold text-white">
-                        <Link href={`/admin/events/${ev._id}`} className="hover:text-rose-600">
+                        <Link href={`/admin/events/${ev._id}`} className="hover:text-red-600">
                           {ev.name}
                         </Link>
                       </td>
@@ -185,7 +185,7 @@ export default async function AdminDashboardPage() {
                         {ev.applicationsCount} / {ev.maxApplications}
                       </td>
                       <td className="py-3">
-                        <span className="bg-rose-600/10 text-rose-600 border border-rose-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
+                        <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
                           {ev.status}
                         </span>
                       </td>
@@ -203,7 +203,7 @@ export default async function AdminDashboardPage() {
           <div className="grid grid-cols-1 gap-3">
             <Link
               href="/admin/events/create"
-              className="bg-rose-600 hover:bg-rose-700 text-black font-bold p-3 rounded-lg text-center text-sm transition"
+              className="bg-red-600 hover:bg-red-700 text-black font-bold p-3 rounded-lg text-center text-sm transition"
             >
               Create New Event
             </Link>

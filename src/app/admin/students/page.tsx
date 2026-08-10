@@ -59,7 +59,7 @@ export default function AdminStudentsPage() {
     <div className="space-y-6 text-white">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
+        <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
           Student Database
         </h1>
         <p className="text-gray-400 text-sm mt-1">Monitor, query, and verify student applicant reliability profiles</p>
@@ -74,14 +74,14 @@ export default function AdminStudentsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, phone, university ID..."
-            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600"
+            className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-red-600"
           />
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setStatusFilter("")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition uppercase tracking-wider ${
-              statusFilter === "" ? "bg-rose-600 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
+              statusFilter === "" ? "bg-red-600 text-black" : "bg-gray-800/60 text-gray-400 hover:text-white"
             }`}
           >
             All
@@ -97,7 +97,7 @@ export default function AdminStudentsPage() {
           <button
             onClick={() => setStatusFilter("blocked")}
             className={`px-3 py-1.5 rounded text-xs font-bold transition uppercase tracking-wider ${
-              statusFilter === "blocked" ? "bg-rose-650 text-white" : "bg-gray-800/60 text-gray-400 hover:text-white"
+              statusFilter === "blocked" ? "bg-red-650 text-white" : "bg-gray-800/60 text-gray-400 hover:text-white"
             }`}
           >
             Blocked
@@ -138,7 +138,7 @@ export default function AdminStudentsPage() {
                       <span>{student.name}</span>
                       {student.status === "blocked" && (
                         <span title="Blocked Student">
-                          <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                          <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
                         </span>
                       )}
                     </td>
@@ -150,8 +150,8 @@ export default function AdminStudentsPage() {
                     <td className="p-4 text-center font-semibold text-gray-300">{student.appliedCount}</td>
                     <td className="p-4 text-center font-semibold text-emerald-450">{student.selectedCount}</td>
                     <td className="p-4 text-center font-semibold text-emerald-400">{student.attendedCount}</td>
-                    <td className="p-4 text-center font-semibold text-rose-400">{student.cancelledCount}</td>
-                    <td className="p-4 font-bold text-rose-600">₹{student.totalEarnings.toLocaleString()}</td>
+                    <td className="p-4 text-center font-semibold text-red-400">{student.cancelledCount}</td>
+                    <td className="p-4 font-bold text-red-600">₹{student.totalEarnings.toLocaleString()}</td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button
@@ -165,7 +165,7 @@ export default function AdminStudentsPage() {
                           onClick={() => handleToggleBlock(student._id, student.status)}
                           className={`p-1 rounded ${
                             student.status === "active"
-                              ? "bg-rose-950/20 text-rose-400 hover:bg-rose-500 hover:text-black border border-rose-900/30"
+                              ? "bg-red-950/20 text-red-400 hover:bg-red-500 hover:text-black border border-red-900/30"
                               : "bg-emerald-950/20 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-900/30"
                           }`}
                           title={student.status === "active" ? "Block Candidate" : "Activate Profile"}
@@ -192,7 +192,7 @@ export default function AdminStudentsPage() {
                 <p className="text-xs text-gray-500">University ID: {activeStudent.universityId}</p>
               </div>
               <span className={`text-xs font-bold px-2 py-0.5 rounded border uppercase ${
-                activeStudent.status === "active" ? "border-emerald-500/20 text-emerald-400" : "border-rose-500/20 text-rose-400"
+                activeStudent.status === "active" ? "border-emerald-500/20 text-emerald-400" : "border-red-500/20 text-red-400"
               }`}>
                 {activeStudent.status}
               </span>
@@ -201,7 +201,7 @@ export default function AdminStudentsPage() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-gray-850/20 border border-gray-850 rounded">
                 <span className="text-gray-500 block text-xs">Total Earnings</span>
-                <span className="font-bold text-rose-600 text-lg">₹{activeStudent.totalEarnings}</span>
+                <span className="font-bold text-red-600 text-lg">₹{activeStudent.totalEarnings}</span>
               </div>
               <div className="p-3 bg-gray-850/20 border border-gray-850 rounded">
                 <span className="text-gray-500 block text-xs">Events Attended</span>

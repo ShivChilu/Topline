@@ -18,22 +18,22 @@ export default function Footer() {
           </h4>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/opportunities" className="hover:text-rose-600 transition">
+              <Link href="/opportunities" className="hover:text-red-600 transition">
                 View Opportunities
               </Link>
             </li>
             <li>
-              <Link href="/how-it-works" className="hover:text-rose-600 transition">
+              <Link href="/how-it-works" className="hover:text-red-600 transition">
                 How It Works
               </Link>
             </li>
             <li>
-              <Link href="/dos-donts" className="hover:text-rose-600 transition">
+              <Link href="/dos-donts" className="hover:text-red-600 transition">
                 Do's & Don'ts
               </Link>
             </li>
             <li>
-              <Link href="/gallery" className="hover:text-rose-600 transition">
+              <Link href="/gallery" className="hover:text-red-600 transition">
                 Event Gallery
               </Link>
             </li>
@@ -45,22 +45,22 @@ export default function Footer() {
           </h4>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/about" className="hover:text-rose-600 transition">
+              <Link href="/about" className="hover:text-red-600 transition">
                 About Us
               </Link>
             </li>
             <li>
-              <Link href="/contact" className="hover:text-rose-600 transition">
+              <Link href="/contact" className="hover:text-red-600 transition">
                 Contact
               </Link>
             </li>
             <li>
-              <Link href="/privacy" className="hover:text-rose-600 transition">
+              <Link href="/privacy" className="hover:text-red-600 transition">
                 Privacy Policy
               </Link>
             </li>
             <li>
-              <Link href="/terms" className="hover:text-rose-600 transition">
+              <Link href="/terms" className="hover:text-red-600 transition">
                 Terms & Conditions
               </Link>
             </li>

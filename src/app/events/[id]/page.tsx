@@ -33,7 +33,7 @@ export default async function EventDetailsPage(props: {
         {/* Left Column: Event details */}
         <div className="lg:col-span-2 space-y-8">
           <div>
-            <span className="bg-rose-600/10 text-rose-600 text-xs font-bold px-3 py-1.5 rounded border border-rose-600/20 uppercase tracking-widest">
+            <span className="bg-red-600/10 text-red-600 text-xs font-bold px-3 py-1.5 rounded border border-red-600/20 uppercase tracking-widest">
               {event.workType}
             </span>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-4 uppercase tracking-wider">
@@ -47,21 +47,21 @@ export default async function EventDetailsPage(props: {
             <div>
               <p className="text-xs text-gray-500 uppercase font-semibold">Payment Rate</p>
               <div className="flex items-center space-x-1 mt-1">
-                <Banknote className="w-4 h-4 text-rose-600" />
-                <span className="font-bold text-rose-600">₹{event.paymentPerStudent}</span>
+                <Banknote className="w-4 h-4 text-red-600" />
+                <span className="font-bold text-red-600">₹{event.paymentPerStudent}</span>
               </div>
             </div>
             <div>
               <p className="text-xs text-gray-500 uppercase font-semibold">Required Staff</p>
               <div className="flex items-center space-x-1 mt-1">
-                <Users className="w-4 h-4 text-rose-600" />
+                <Users className="w-4 h-4 text-red-600" />
                 <span className="font-bold">{event.workersRequired} Slots</span>
               </div>
             </div>
             <div>
               <p className="text-xs text-gray-500 uppercase font-semibold">Reporting Time</p>
               <div className="flex items-center space-x-1 mt-1">
-                <Clock className="w-4 h-4 text-rose-600" />
+                <Clock className="w-4 h-4 text-red-600" />
                 <span className="font-bold">{event.reportingTime}</span>
               </div>
             </div>
@@ -71,13 +71,13 @@ export default async function EventDetailsPage(props: {
                 {(() => {
                   const remaining = event.maxApplications - event.applicationsCount;
                   if (remaining <= 0) {
-                    return <span className="font-bold text-rose-500 uppercase text-xs tracking-wider">Full</span>;
+                    return <span className="font-bold text-red-500 uppercase text-xs tracking-wider">Full</span>;
                   }
                   if (remaining <= 2) {
-                    return <span className="font-bold text-rose-500">{remaining} slots left</span>;
+                    return <span className="font-bold text-red-500">{remaining} slots left</span>;
                   }
                   if (remaining <= 4) {
-                    return <span className="font-bold text-rose-600">{remaining} slots left</span>;
+                    return <span className="font-bold text-red-600">{remaining} slots left</span>;
                   }
                   if (remaining === 5) {
                     return <span className="font-bold text-emerald-400">5 slots left</span>;
@@ -93,7 +93,7 @@ export default async function EventDetailsPage(props: {
             <h3 className="text-lg font-bold text-white uppercase tracking-wide">Venue & Schedule</h3>
             <div className="space-y-3 text-gray-300 text-sm">
               <div className="flex items-start space-x-3">
-                <Calendar className="w-5 h-5 text-rose-600 mt-0.5" />
+                <Calendar className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
                   <span className="font-semibold text-white">Event Date:</span>{" "}
                   {new Date(event.date).toLocaleDateString("en-GB", {
@@ -105,7 +105,7 @@ export default async function EventDetailsPage(props: {
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-rose-600 mt-0.5" />
+                <MapPin className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
                   <span className="font-semibold text-white">Location Address:</span> {event.location}
                   {event.googleMapsUrl && (
@@ -113,7 +113,7 @@ export default async function EventDetailsPage(props: {
                       href={event.googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-rose-600 hover:underline mt-1 text-xs"
+                      className="block text-red-600 hover:underline mt-1 text-xs"
                     >
                       Open Google Maps Location Link
                     </a>
@@ -121,7 +121,7 @@ export default async function EventDetailsPage(props: {
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Clock className="w-5 h-5 text-rose-600 mt-0.5" />
+                <Clock className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
                   <span className="font-semibold text-white">Duty Hours:</span> {event.startTime} to {event.endTime}
                 </div>
@@ -133,7 +133,7 @@ export default async function EventDetailsPage(props: {
           {event.dressCode && (
             <div className="bg-[#0c0d12]/40 p-6 rounded-xl border border-gray-800">
               <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2 flex items-center space-x-2">
-                <ShieldCheck className="text-rose-600 w-5 h-5" />
+                <ShieldCheck className="text-red-600 w-5 h-5" />
                 <span>Required Dress Code & Uniform</span>
               </h3>
               <p className="text-gray-300 text-sm">{event.dressCode}</p>
@@ -147,7 +147,7 @@ export default async function EventDetailsPage(props: {
               <ul className="space-y-2 text-sm text-gray-300">
                 {event.dosAndDonts.map((instruction: string, idx: number) => (
                   <li key={idx} className="flex items-start space-x-2">
-                    <span className="text-rose-600">•</span>
+                    <span className="text-red-600">•</span>
                     <span>{instruction}</span>
                   </li>
                 ))}

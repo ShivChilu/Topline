@@ -49,7 +49,7 @@ export default function AdminLoginPage() {
         </div>
 
         {error && (
-          <div className="flex items-center space-x-2 bg-rose-950/20 border border-rose-900/30 text-rose-400 p-3 rounded-lg text-sm">
+          <div className="flex items-center space-x-2 bg-red-950/20 border border-red-900/30 text-red-400 p-3 rounded-lg text-sm">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -67,7 +67,7 @@ export default function AdminLoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg pl-10 pr-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
@@ -90,14 +90,14 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-rose-600 hover:bg-rose-700 text-black font-bold py-2.5 rounded-lg transition duration-200 text-sm"
+            className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-2.5 rounded-lg transition duration-200 text-sm"
           >
             {loading ? "Authenticating..." : "Login to Dashboard"}
           </button>
         </form>
 
         <div className="text-center">
-          <a href="/" className="text-xs text-gray-500 hover:text-rose-600 transition">
+          <a href="/" className="text-xs text-gray-500 hover:text-red-600 transition">
             &larr; Back to public site
           </a>
         </div>

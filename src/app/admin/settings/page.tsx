@@ -165,7 +165,7 @@ export default function AdminSettingsPage() {
     <div className="space-y-12 text-white max-w-4xl mx-auto pb-12">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-rose-600 uppercase">
+        <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
           Website Settings
         </h1>
         <p className="text-gray-400 text-sm mt-1">Configure banner copywriting, social networks, and student conduct guidelines</p>
@@ -174,7 +174,7 @@ export default function AdminSettingsPage() {
       <form onSubmit={handleSave} className="space-y-6 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
         
         <div className="space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-rose-600">Homepage Banner Copy</h2>
+          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600">Homepage Banner Copy</h2>
           
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Headline</label>
@@ -183,7 +183,7 @@ export default function AdminSettingsPage() {
               required
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
             />
           </div>
 
@@ -193,13 +193,13 @@ export default function AdminSettingsPage() {
               required
               value={subheadline}
               onChange={(e) => setSubheadline(e.target.value)}
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-24"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-24"
             ></textarea>
           </div>
         </div>
 
         <div className="space-y-4 pt-6 border-t border-gray-850">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-rose-600">Contact Details</h2>
+          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600">Contact Details</h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -210,7 +210,7 @@ export default function AdminSettingsPage() {
                 value={whatsappLink}
                 onChange={(e) => setWhatsappLink(e.target.value)}
                 placeholder="https://chat.whatsapp.com/..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
@@ -220,7 +220,7 @@ export default function AdminSettingsPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function AdminSettingsPage() {
             <textarea
               value={aboutText}
               onChange={(e) => setAboutText(e.target.value)}
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-24"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-24"
             ></textarea>
           </div>
         </div>
@@ -242,16 +242,16 @@ export default function AdminSettingsPage() {
               value={dosText}
               onChange={(e) => setDosText(e.target.value)}
               placeholder="Arrive on time&#10;Wear correct uniform"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-48 mt-2"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-48 mt-2"
             ></textarea>
           </div>
           <div>
-            <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-rose-450">Don'ts Rules (One per line)</h2>
+            <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-450">Don'ts Rules (One per line)</h2>
             <textarea
               value={dontsText}
               onChange={(e) => setDontsText(e.target.value)}
               placeholder="Do not leave early&#10;Do not damage hotel property"
-              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm h-48 mt-2"
+              className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm h-48 mt-2"
             ></textarea>
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function AdminSettingsPage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-rose-600 hover:bg-rose-700 text-black font-extrabold py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
+          className="w-full bg-red-600 hover:bg-red-700 text-black font-extrabold py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
         >
           <Save className="w-5 h-5" />
           <span>{saving ? "Saving Changes..." : "Save Website Settings"}</span>
@@ -271,7 +271,7 @@ export default function AdminSettingsPage() {
         
         {/* Update Own Credentials Card */}
         <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-rose-600 flex items-center space-x-2">
+          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
             <Key className="w-5 h-5" />
             <span>Change My Credentials</span>
           </h2>
@@ -283,7 +283,7 @@ export default function AdminSettingsPage() {
                 value={myUsername}
                 onChange={(e) => setMyUsername(e.target.value)}
                 placeholder="Enter new username..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
@@ -293,12 +293,12 @@ export default function AdminSettingsPage() {
                 value={myPassword}
                 onChange={(e) => setMyPassword(e.target.value)}
                 placeholder="Enter new password..."
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <button
               type="submit"
-              className="w-full bg-transparent hover:bg-rose-600 hover:text-black border border-rose-600/30 text-rose-600 font-bold py-2 rounded-lg transition text-sm"
+              className="w-full bg-transparent hover:bg-red-600 hover:text-black border border-red-600/30 text-red-600 font-bold py-2 rounded-lg transition text-sm"
             >
               Update Credentials
             </button>
@@ -307,7 +307,7 @@ export default function AdminSettingsPage() {
 
         {/* Create New Admin Card */}
         <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-4">
-          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-rose-600 flex items-center space-x-2">
+          <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
             <UserPlus className="w-5 h-5" />
             <span>Create New Admin</span>
           </h2>
@@ -320,7 +320,7 @@ export default function AdminSettingsPage() {
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
                 placeholder="e.g. captain_aman"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
@@ -331,7 +331,7 @@ export default function AdminSettingsPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
             <div>
@@ -339,7 +339,7 @@ export default function AdminSettingsPage() {
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-rose-600 text-sm"
+                className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-600 text-sm"
               >
                 <option value="admin">Captain (Admin)</option>
                 <option value="superadmin">Super Admin</option>
@@ -347,7 +347,7 @@ export default function AdminSettingsPage() {
             </div>
             <button
               type="submit"
-              className="w-full bg-rose-600 hover:bg-rose-700 text-black font-bold py-2 rounded-lg transition text-sm"
+              className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-2 rounded-lg transition text-sm"
             >
               Register New Admin
             </button>
@@ -358,7 +358,7 @@ export default function AdminSettingsPage() {
 
       {/* Admin Users Roster */}
       <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800 space-y-4">
-        <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-rose-600 flex items-center space-x-2">
+        <h2 className="text-lg font-bold border-b border-gray-850 pb-2 uppercase tracking-wide text-red-600 flex items-center space-x-2">
           <Users className="w-5 h-5" />
           <span>Active Administrators ({admins.length})</span>
         </h2>
@@ -376,7 +376,7 @@ export default function AdminSettingsPage() {
                 <tr key={adm._id} className="hover:bg-gray-850/10">
                   <td className="py-3 font-semibold text-white">{adm.username}</td>
                   <td className="py-3 uppercase text-xs">
-                    <span className={`px-2 py-0.5 rounded ${adm.role === "superadmin" ? "bg-rose-600/10 text-rose-600 border border-rose-600/20" : "bg-gray-800 text-gray-400"}`}>
+                    <span className={`px-2 py-0.5 rounded ${adm.role === "superadmin" ? "bg-red-600/10 text-red-600 border border-red-600/20" : "bg-gray-800 text-gray-400"}`}>
                       {adm.role}
                     </span>
                   </td>
