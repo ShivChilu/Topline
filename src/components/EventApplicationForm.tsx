@@ -105,12 +105,12 @@ export default function EventApplicationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
-      <BrandLogo width={80} height={80} className="mx-auto overflow-hidden rounded border border-gray-800 bg-[#07080b] p-1" />
-      <h3 className="text-xl font-bold text-white text-center mb-6 border-b border-gray-800 pb-3">Student Recruitment Form</h3>
+    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+      <BrandLogo width={80} height={80} className="mx-auto overflow-hidden rounded border border-slate-250 bg-slate-50 p-1" />
+      <h3 className="text-xl font-bold text-slate-900 text-center mb-6 border-b border-slate-100 pb-3 uppercase tracking-wider">Student Recruitment Form</h3>
 
       {message && (
-        <div className="bg-red-950/20 text-red-400 border border-red-900/30 p-3 rounded text-sm text-center">
+        <div className="bg-red-50 text-red-750 border border-red-200 p-3 rounded-xl text-sm text-center">
           {message}
         </div>
       )}
@@ -118,86 +118,86 @@ export default function EventApplicationForm({
       {/* Standard Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Full Name *</label>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Full Name *</label>
           <input
             type="text"
             name="name"
             required
             value={formData.name}
             onChange={handleProfileChange}
-            placeholder="Rahul Kumar"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+            placeholder=""
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">WhatsApp Phone Number *</label>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">WhatsApp Phone Number *</label>
           <input
             type="tel"
             name="phone"
             required
             value={formData.phone}
             onChange={handleProfileChange}
-            placeholder="9876543210"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+            placeholder=""
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-650 focus:bg-white transition"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Email Address *</label>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Email Address *</label>
           <input
             type="email"
             name="email"
             required
             value={formData.email}
             onChange={handleProfileChange}
-            placeholder="rahul@university.edu"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+            placeholder=""
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">University / College Name *</label>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">University / College Name *</label>
           <input
             type="text"
             name="university"
             required
             value={formData.university}
             onChange={handleProfileChange}
-            placeholder="Panjab University"
-            className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+            placeholder=""
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">University ID Card / Roll No *</label>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">University ID Card / Roll No *</label>
         <input
           type="text"
           name="universityId"
           required
           value={formData.universityId}
           onChange={handleProfileChange}
-          placeholder="PU-2024-887"
-          className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+          placeholder="e.g. PU-2024-887"
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
         />
       </div>
 
       {/* Dynamic Fields */}
       {customFields.length > 0 && (
-        <div className="pt-6 border-t border-gray-800 space-y-4">
-          <h4 className="text-sm font-semibold text-red-600 uppercase tracking-wider">Additional Questionnaire</h4>
+        <div className="pt-6 border-t border-slate-100 space-y-4">
+          <h4 className="text-sm font-bold text-red-600 uppercase tracking-wider">Additional Questionnaire</h4>
           {customFields.map((field) => (
             <div key={field.id}>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
                 {field.label} {field.required && "*"}
               </label>
-              {field.description && <p className="text-xs text-gray-500 mb-2">{field.description}</p>}
+              {field.description && <p className="text-xs text-slate-400 mb-2">{field.description}</p>}
 
               {field.type === "yesno" && (
                 <div className="flex gap-4">
                   {["Yes", "No"].map((opt) => (
-                    <label key={opt} className="inline-flex items-center space-x-2 text-sm text-gray-300">
+                    <label key={opt} className="inline-flex items-center space-x-2 text-sm text-slate-655 font-medium">
                       <input
                         type="radio"
                         name={field.id}
@@ -215,7 +215,7 @@ export default function EventApplicationForm({
                 <select
                   required={field.required}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
                 >
                   <option value="">Choose an option...</option>
                   {field.options?.map((opt) => (
@@ -232,7 +232,7 @@ export default function EventApplicationForm({
                   required={field.required}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
                 />
               )}
 
@@ -244,7 +244,7 @@ export default function EventApplicationForm({
                   max={field.max}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition"
                 />
               )}
 
@@ -253,7 +253,7 @@ export default function EventApplicationForm({
                   required={field.required}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600 h-24"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-red-600 focus:bg-white transition h-24"
                 ></textarea>
               )}
             </div>
@@ -264,7 +264,7 @@ export default function EventApplicationForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-3 rounded transition duration-200"
+        className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3.5 rounded-xl transition duration-200 shadow-sm"
       >
         {isSubmitting ? "Submitting Application..." : "Submit Recruitment Application"}
       </button>
