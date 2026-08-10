@@ -26,47 +26,51 @@ export default async function EventDetailsPage(props: {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <Navbar />
-      <main className="flex-grow max-w-6xl mx-auto px-4 py-16 w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="flex-grow max-w-6xl mx-auto px-4 py-16 w-full grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         
         {/* Left Column: Event details */}
         <div className="lg:col-span-2 space-y-8">
           <div>
-            <span className="bg-red-600/10 text-red-600 text-xs font-bold px-3 py-1.5 rounded border border-red-600/20 uppercase tracking-widest">
+            <span className="bg-red-600/10 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full border border-red-600/20 uppercase tracking-widest">
               {event.workType}
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-4 uppercase tracking-wider">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-4 uppercase tracking-wider">
               {event.name}
             </h1>
-            <p className="text-gray-400 mt-4 text-base leading-relaxed">{event.description}</p>
+            <p className="text-slate-600 mt-4 text-base leading-relaxed">{event.description}</p>
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#0c0d12] p-4 rounded-xl border border-gray-800">
+          <div className="light-panel rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Payment Rate</p>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Payment Rate</p>
               <div className="flex items-center space-x-1 mt-1">
                 <Banknote className="w-4 h-4 text-red-600" />
                 <span className="font-bold text-red-600">₹{event.paymentPerStudent}</span>
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Required Staff</p>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Required Staff</p>
               <div className="flex items-center space-x-1 mt-1">
                 <Users className="w-4 h-4 text-red-600" />
-                <span className="font-bold">{event.workersRequired} Slots</span>
+                <span className="font-bold text-slate-800">{event.workersRequired} Slots</span>
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Reporting Time</p>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Reporting Time</p>
               <div className="flex items-center space-x-1 mt-1">
                 <Clock className="w-4 h-4 text-red-600" />
-                <span className="font-bold">{event.reportingTime}</span>
+                <span className="font-bold text-slate-800">{event.reportingTime}</span>
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Availability</p>
+              <p className="text-xs text-slate-500 uppercase font-semibold">Availability</p>
               <div className="flex items-center mt-1">
                 {(() => {
                   const remaining = event.maxApplications - event.applicationsCount;
@@ -89,13 +93,13 @@ export default async function EventDetailsPage(props: {
           </div>
 
           {/* Location & Times Details */}
-          <div className="space-y-4 bg-[#0c0d12]/40 p-6 rounded-xl border border-gray-800">
-            <h3 className="text-lg font-bold text-white uppercase tracking-wide">Venue & Schedule</h3>
-            <div className="space-y-3 text-gray-300 text-sm">
+          <div className="space-y-4 light-panel p-6 rounded-2xl">
+            <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wide">Venue & Schedule</h3>
+            <div className="space-y-3 text-slate-600 text-sm">
               <div className="flex items-start space-x-3">
                 <Calendar className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-white">Event Date:</span>{" "}
+                  <span className="font-semibold text-slate-800">Event Date:</span>{" "}
                   {new Date(event.date).toLocaleDateString("en-GB", {
                     weekday: "long",
                     year: "numeric",
@@ -107,13 +111,13 @@ export default async function EventDetailsPage(props: {
               <div className="flex items-start space-x-3">
                 <MapPin className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-white">Location Address:</span> {event.location}
+                  <span className="font-semibold text-slate-800">Location Address:</span> {event.location}
                   {event.googleMapsUrl && (
                     <a
                       href={event.googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-red-600 hover:underline mt-1 text-xs"
+                      className="block text-red-650 hover:underline mt-1 text-xs"
                     >
                       Open Google Maps Location Link
                     </a>
@@ -123,7 +127,7 @@ export default async function EventDetailsPage(props: {
               <div className="flex items-start space-x-3">
                 <Clock className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-white">Duty Hours:</span> {event.startTime} to {event.endTime}
+                  <span className="font-semibold text-slate-800">Duty Hours:</span> {event.startTime} to {event.endTime}
                 </div>
               </div>
             </div>
@@ -131,20 +135,20 @@ export default async function EventDetailsPage(props: {
 
           {/* Uniform and Dress code */}
           {event.dressCode && (
-            <div className="bg-[#0c0d12]/40 p-6 rounded-xl border border-gray-800">
-              <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2 flex items-center space-x-2">
+            <div className="light-panel p-6 rounded-2xl">
+              <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center space-x-2">
                 <ShieldCheck className="text-red-600 w-5 h-5" />
                 <span>Required Dress Code & Uniform</span>
               </h3>
-              <p className="text-gray-300 text-sm">{event.dressCode}</p>
+              <p className="text-slate-650 text-sm leading-relaxed">{event.dressCode}</p>
             </div>
           )}
 
           {/* Do's & Don'ts */}
           {event.dosAndDonts && event.dosAndDonts.length > 0 && (
-            <div className="bg-[#0c0d12]/40 p-6 rounded-xl border border-gray-800">
-              <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-4">Event Rules & Instructions</h3>
-              <ul className="space-y-2 text-sm text-gray-300">
+            <div className="light-panel p-6 rounded-2xl">
+              <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wide mb-4">Event Rules & Instructions</h3>
+              <ul className="space-y-2 text-sm text-slate-650">
                 {event.dosAndDonts.map((instruction: string, idx: number) => (
                   <li key={idx} className="flex items-start space-x-2">
                     <span className="text-red-600">•</span>

@@ -34,7 +34,11 @@ export default async function OpportunitiesPage(props: {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <Navbar />
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
         <div className="text-center mb-12">

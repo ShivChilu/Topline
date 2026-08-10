@@ -64,7 +64,11 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[20%] left-[-10%] w-[40vw] h-[40vw] bg-red-650/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[60%] right-[-10%] w-[40vw] h-[40vw] bg-red-650/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <Navbar />
 
       {/* Hero Slideshow Section */}
