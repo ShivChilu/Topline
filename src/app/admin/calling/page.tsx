@@ -3,6 +3,20 @@
 import { useEffect, useState } from "react";
 import { Search, Calendar, MapPin, Clock, MessageSquare, Check, X, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
 
+function formatTime12(timeStr: string) {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  if (isNaN(hours)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = hours < 10 ? "0" + hours : hours;
+  return `${strHours}:${minutes} ${ampm}`;
+}
+
 export default function CallingDashboard() {
   const [assignedEvents, setAssignedEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
@@ -287,7 +301,7 @@ export default function CallingDashboard() {
                   <Clock className="w-4 h-4 text-slate-400" />
                   <div>
                     <span className="font-bold text-slate-450 block uppercase text-[10px]">Reporting Time</span>
-                    <span>{eventDetails.reportingTime}</span>
+                    <span>{formatTime12(eventDetails.reportingTime)}</span>
                   </div>
                 </div>
                 <div className="border-t border-slate-100 pt-3 flex justify-between">

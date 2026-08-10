@@ -7,6 +7,20 @@ import { Calendar, MapPin, Clock, Users, ArrowRight } from "lucide-react";
 
 export const revalidate = 0; // Disable static cache for live availability updates
 
+function formatTime12(timeStr: string) {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  if (isNaN(hours)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = hours < 10 ? "0" + hours : hours;
+  return `${strHours}:${minutes} ${ampm}`;
+}
+
 export default async function OpportunitiesPage(props: {
   searchParams: Promise<{ status?: string; search?: string }>;
 }) {
@@ -145,7 +159,7 @@ export default async function OpportunitiesPage(props: {
                       </div>
                       <div className="flex items-center space-x-2.5">
                         <Clock className="w-4 h-4 text-red-700" />
-                        <span>Reporting: {event.reportingTime}</span>
+                        <span>Reporting: {formatTime12(event.reportingTime)}</span>
                       </div>
                       <div className="flex items-center space-x-2.5">
                         <Users className="w-4 h-4 text-red-700" />

@@ -8,6 +8,20 @@ import { notFound } from "next/navigation";
 
 export const revalidate = 0; // Live check for status changes
 
+function formatTime12(timeStr: string) {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  if (isNaN(hours)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = hours < 10 ? "0" + hours : hours;
+  return `${strHours}:${minutes} ${ampm}`;
+}
+
 export default async function EventDetailsPage(props: {
   params: Promise<{ id: string }>;
 }) {
@@ -66,7 +80,7 @@ export default async function EventDetailsPage(props: {
               <p className="text-xs text-slate-500 uppercase font-semibold">Reporting Time</p>
               <div className="flex items-center space-x-1 mt-1">
                 <Clock className="w-4 h-4 text-red-600" />
-                <span className="font-bold text-slate-800">{event.reportingTime}</span>
+                <span className="font-bold text-slate-800">{formatTime12(event.reportingTime)}</span>
               </div>
             </div>
             <div>
@@ -127,7 +141,7 @@ export default async function EventDetailsPage(props: {
               <div className="flex items-start space-x-3">
                 <Clock className="w-5 h-5 text-red-600 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-slate-800">Duty Hours:</span> {event.startTime} to {event.endTime}
+                  <span className="font-semibold text-slate-800">Duty Hours:</span> {formatTime12(event.startTime)} to {formatTime12(event.endTime)}
                 </div>
               </div>
             </div>

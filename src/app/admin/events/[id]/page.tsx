@@ -18,6 +18,20 @@ import {
   QrCode
 } from "lucide-react";
 
+function formatTime12(timeStr: string) {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  if (isNaN(hours)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = hours < 10 ? "0" + hours : hours;
+  return `${strHours}:${minutes} ${ampm}`;
+}
+
 export default function AdminEventDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -214,7 +228,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
     const publicUrl = `${window.location.origin}/events/${eventId}`;
 
-    const text = `*TOPLINE ODC*\n🔔 New Hospitality Opportunity\n\n📅 *Date:* ${dateStr}\n📍 *Location:* ${event.location}\n👨🍳 *Work:* ${event.workType}\n💰 *Payment:* ₹${event.paymentPerStudent}\n👥 *Required:* ${event.workersRequired}\n⏰ *Reporting:* ${event.reportingTime}\n\nApply here:\n${publicUrl}`;
+    const text = `*TOPLINE ODC*\n🔔 New Hospitality Opportunity\n\n📅 *Date:* ${dateStr}\n📍 *Location:* ${event.location}\n👨🍳 *Work:* ${event.workType}\n💰 *Payment:* ₹${event.paymentPerStudent}\n👥 *Required:* ${event.workersRequired}\n⏰ *Reporting:* ${formatTime12(event.reportingTime)}\n\nApply here:\n${publicUrl}`;
     
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, "_blank");
@@ -270,7 +284,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="w-4 h-4 text-red-600" />
-              <span>Reporting: {event.reportingTime}</span>
+              <span>Reporting: {formatTime12(event.reportingTime)}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Users className="w-4 h-4 text-red-600" />

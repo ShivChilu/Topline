@@ -247,7 +247,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
       item.studentName,
       item.phone,
       item.status,
-      item.checkInTime ? new Date(item.checkInTime).toLocaleString() : "-",
+      item.checkInTime ? new Date(item.checkInTime).toLocaleString([], { hour12: true }) : "-",
       item.manualRemarks || "-",
     ]);
 
@@ -465,7 +465,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                             </span>
                           </td>
                           <td className="px-6 py-4 text-xs font-semibold text-slate-500">
-                            {item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
+                            {item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : "-"}
                           </td>
                           <td className="px-6 py-4 text-right space-x-1.5">
                             {item.status === "ABSENT" ? (

@@ -14,6 +14,20 @@ import Link from "next/link";
 
 export const revalidate = 0; // Fresh stats on reload
 
+function formatTime12(timeStr: string) {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  if (isNaN(hours)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const strHours = hours < 10 ? "0" + hours : hours;
+  return `${strHours}:${minutes} ${ampm}`;
+}
+
 export default async function AdminDashboardPage() {
   let stats = {
     totalStudents: 0,
@@ -180,7 +194,7 @@ export default async function AdminDashboardPage() {
                         </Link>
                       </td>
                       <td className="py-3 text-slate-500">{new Date(ev.date).toLocaleDateString("en-GB")}</td>
-                      <td className="py-3 text-slate-500">{ev.reportingTime}</td>
+                      <td className="py-3 text-slate-500">{formatTime12(ev.reportingTime)}</td>
                       <td className="py-3 text-center font-semibold text-slate-650">
                         {ev.applicationsCount} / {ev.maxApplications}
                       </td>
