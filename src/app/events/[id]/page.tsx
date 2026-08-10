@@ -66,9 +66,24 @@ export default async function EventDetailsPage(props: {
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Applications</p>
-              <div className="flex items-center space-x-1 mt-1">
-                <span className="font-bold text-gray-300">{event.applicationsCount} / {event.maxApplications}</span>
+              <p className="text-xs text-gray-500 uppercase font-semibold">Availability</p>
+              <div className="flex items-center mt-1">
+                {(() => {
+                  const remaining = event.maxApplications - event.applicationsCount;
+                  if (remaining <= 0) {
+                    return <span className="font-bold text-rose-500 uppercase text-xs tracking-wider">Full</span>;
+                  }
+                  if (remaining <= 2) {
+                    return <span className="font-bold text-rose-500">{remaining} slots left</span>;
+                  }
+                  if (remaining <= 4) {
+                    return <span className="font-bold text-amber-500">{remaining} slots left</span>;
+                  }
+                  if (remaining === 5) {
+                    return <span className="font-bold text-emerald-400">5 slots left</span>;
+                  }
+                  return <span className="font-bold text-emerald-400">Slots Available</span>;
+                })()}
               </div>
             </div>
           </div>
