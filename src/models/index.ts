@@ -247,6 +247,24 @@ const GallerySchema = new Schema<IGallery>({
   createdAt: { type: Date, default: Date.now },
 });
 
+// --- AUDIT LOG SCHEMA ---
+export interface IAuditLog extends Document {
+  adminId?: string;
+  eventId: string;
+  eventName: string;
+  eventDate: Date;
+  deletedAt: Date;
+  action: string;
+}
+const AuditLogSchema = new Schema<IAuditLog>({
+  adminId: { type: String },
+  eventId: { type: String, required: true },
+  eventName: { type: String, required: true },
+  eventDate: { type: Date, required: true },
+  deletedAt: { type: Date, default: Date.now },
+  action: { type: String, default: "EVENT_DELETED" }
+});
+
 // Avoid Mongoose OverwriteModelError
 export const Admin: Model<IAdmin> = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', AdminSchema);
 export const Client: Model<IClient> = mongoose.models.Client || mongoose.model<IClient>('Client', ClientSchema);
@@ -256,3 +274,4 @@ export const Application: Model<IApplication> = mongoose.models.Application || m
 export const Attendance: Model<IAttendance> = mongoose.models.Attendance || mongoose.model<IAttendance>('Attendance', AttendanceSchema);
 export const Setting: Model<ISetting> = mongoose.models.Setting || mongoose.model<ISetting>('Setting', SettingSchema);
 export const Gallery: Model<IGallery> = mongoose.models.Gallery || mongoose.model<IGallery>('Gallery', GallerySchema);
+export const AuditLog: Model<IAuditLog> = mongoose.models.AuditLog || mongoose.model<IAuditLog>('AuditLog', AuditLogSchema);

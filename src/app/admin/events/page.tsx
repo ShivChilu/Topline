@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X } from "lucide-react";
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -10,6 +10,13 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("ALL");
+
+  // Delete modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState<any>(null);
+  const [deleteStats, setDeleteStats] = useState<any>(null);
+  const [confirmNameInput, setConfirmNameInput] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchEvents = async () => {
     try {
@@ -66,10 +73,14 @@ export default function AdminEventsPage() {
   };
 
   const handleArchive = async (id: string) => {
-    if (!confirm("Are you sure you want to archive (soft-delete) this event?")) return;
+    if (!confirm("Are you sure you want to archive this event? It will be hidden but retained in records.")) return;
 
     try {
-      const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/events/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ARCHIVED" }),
+      });
       const data = await res.json();
       if (data.success) {
         alert("Event archived successfully!");
@@ -77,6 +88,53 @@ export default function AdminEventsPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const openDeleteModal = async (eventObj: any) => {
+    try {
+      setDeletingEvent(eventObj);
+      setConfirmNameInput("");
+      setShowDeleteModal(true);
+      
+      // Fetch dynamic stats for confirmation
+      const res = await fetch(`/api/admin/events/${eventObj._id}?stats=true`);
+      const data = await res.json();
+      if (data.success) {
+        setDeleteStats(data.stats);
+      }
+    } catch (err) {
+      console.error("Fetch delete stats error:", err);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!deletingEvent) return;
+
+    // Strong confirmation validation check
+    const hasData = deleteStats && (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0);
+    if (hasData && confirmNameInput.trim() !== deletingEvent.name) {
+      alert("Please enter the correct event name to confirm deletion.");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const res = await fetch(`/api/admin/events/${deletingEvent._id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✓ Event "${deletingEvent.name}" permanently deleted.`);
+        setShowDeleteModal(false);
+        setDeletingEvent(null);
+        setDeleteStats(null);
+        fetchEvents();
+      } else {
+        alert(data.message || "Failed to delete event.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -100,7 +158,7 @@ export default function AdminEventsPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-slate-200">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
           <input
@@ -108,7 +166,7 @@ export default function AdminEventsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-600"
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-650"
           />
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto justify-start">
@@ -140,7 +198,7 @@ export default function AdminEventsPage() {
           {filteredEvents.map((event) => (
             <div
               key={event._id}
-              className="bg-white rounded-xl border border-slate-200 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300"
+              className="bg-white rounded-xl border border-slate-200 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300 shadow-sm"
             >
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -169,14 +227,14 @@ export default function AdminEventsPage() {
                 <div className="flex gap-2">
                   <Link
                     href={`/admin/events/${event._id}`}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
                     title="View & Manage"
                   >
                     <Eye className="w-4 h-4" />
                   </Link>
                   <Link
                     href={`/admin/events/${event._id}/attendance`}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-655 transition"
                     title="Attendance QR & Logs"
                   >
                     <QrCode className="w-4 h-4 text-red-600" />
@@ -184,7 +242,7 @@ export default function AdminEventsPage() {
                   <Link
                     href={`/events/${event._id}`}
                     target="_blank"
-                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
                     title="Preview Public Page"
                   >
                     <Edit className="w-4 h-4" />
@@ -195,17 +253,17 @@ export default function AdminEventsPage() {
                       navigator.clipboard.writeText(url);
                       alert("Public event link copied to clipboard!");
                     }}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
                     title="Copy Public Link"
                   >
                     <Copy className="w-4 h-4 text-slate-600" />
                   </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   {event.status === "DRAFT" && (
                     <button
                       onClick={() => handleUpdateStatus(event._id, "OPEN")}
-                      className="bg-emerald-600/10 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition"
+                      className="bg-emerald-600/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-emerald-600 hover:text-white"
                     >
                       Publish
                     </button>
@@ -213,7 +271,7 @@ export default function AdminEventsPage() {
                   {event.status === "OPEN" && (
                     <button
                       onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                      className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-slate-800 border border-red-500/20 px-3 py-1 rounded text-xs font-bold transition"
+                      className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
                     >
                       Close Form
                     </button>
@@ -221,16 +279,123 @@ export default function AdminEventsPage() {
                   {event.status !== "ARCHIVED" && (
                     <button
                       onClick={() => handleArchive(event._id)}
-                      className="p-2 bg-red-950/20 hover:bg-red-650 hover:text-white border border-red-900/30 rounded text-red-400 transition"
-                      title="Archive"
+                      className="p-2 bg-amber-50 hover:bg-amber-600 border border-amber-200 text-amber-700 hover:text-white rounded transition"
+                      title="Archive Event"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Archive className="w-4 h-4" />
                     </button>
                   )}
+                  <button
+                    onClick={() => openDeleteModal(event)}
+                    className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
+                    title="Delete Event"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deletingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 relative animate-scale-in">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="space-y-4">
+              <div className="text-center text-red-600 font-extrabold text-lg uppercase tracking-wider">
+                Delete Event?
+              </div>
+
+              <div className="text-sm text-slate-500 text-center">
+                You are about to permanently delete this event and all associated operational records:
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 text-xs text-slate-700">
+                <div>
+                  <span className="font-bold text-slate-500">Event:</span> {deletingEvent.name}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-500">Date:</span> {new Date(deletingEvent.date).toLocaleDateString("en-GB")}
+                </div>
+
+                {deleteStats ? (
+                  <div className="border-t border-slate-200 pt-2.5 mt-2.5 space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Applications:</span>
+                      <span className="font-bold text-slate-800">{deleteStats.applicationsCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Attendance Records:</span>
+                      <span className="font-bold text-slate-800">{deleteStats.attendanceCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Payments Recorded:</span>
+                      <span className="font-bold text-slate-800">{deleteStats.paymentsCount}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-slate-400 italic text-center pt-2">Loading event statistics...</p>
+                )}
+              </div>
+
+              <div className="text-xs text-rose-655 font-bold text-center border border-rose-100 bg-rose-50 p-2.5 rounded-xl">
+                ⚠ This action is permanent and cannot be undone.
+              </div>
+
+              {/* Strong Confirmation Input (if event has operational data) */}
+              {deleteStats && (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0) && (
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase block">
+                    Type the event name to confirm deletion:
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmNameInput}
+                    onChange={(e) => setConfirmNameInput(e.target.value)}
+                    placeholder={deletingEvent.name}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition border border-slate-200"
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePermanentDelete}
+                  className={`flex-1 py-2.5 font-bold rounded-xl text-xs transition text-white ${
+                    deleteStats && (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0)
+                      ? confirmNameInput === deletingEvent.name
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-slate-350 cursor-not-allowed opacity-50"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+                  disabled={
+                    actionLoading ||
+                    (!!deleteStats &&
+                      (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0) &&
+                      confirmNameInput !== deletingEvent.name)
+                  }
+                >
+                  {actionLoading ? "Deleting..." : "Permanently Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
