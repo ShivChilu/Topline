@@ -87,17 +87,17 @@ export default async function HomePage() {
 
       {/* Hero Slideshow Section */}
       <HeroSlideshow headline={homeContent.headline} subheadline={homeContent.subheadline}>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[320px] sm:max-w-none mx-auto">
           <Link
             href="/opportunities"
-            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-black px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border"
           >
             <span>Upcoming Events</span>
             <ArrowRight className="w-5 h-5" />
           </Link>
           <Link
             href="/contact"
-            className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-8 py-4 rounded-xl text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5"
+            className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center box-border"
           >
             Contact TOPLINE
           </Link>

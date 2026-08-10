@@ -35,7 +35,7 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
   };
 
   return (
-    <section className="relative min-h-[600px] md:min-h-[700px] w-full flex items-center justify-center overflow-hidden py-24 border-b border-slate-100">
+    <section className="relative min-h-[calc(100svh-64px)] md:min-h-[700px] w-full flex items-center justify-center overflow-hidden py-10 md:py-24 border-b border-slate-100">
       {/* Background Images with transitions */}
       {images.map((src, idx) => (
         <div
@@ -53,15 +53,15 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
       ))}
 
       {/* Hero Content Layer */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
-        <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
-          <span className="inline-flex items-center text-red-800 font-extrabold tracking-widest text-xs uppercase bg-red-600/10 px-4 py-2 rounded-full border border-red-600/20 mb-2">
+      <div className="w-full max-w-4xl mx-auto px-3.5 sm:px-6 lg:px-8 relative z-20 box-border">
+        <div className="bg-white/40 backdrop-blur-md p-6 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center w-full max-w-[calc(100%-28px)] mx-auto box-border">
+          <span className="inline-flex items-center text-red-805 font-extrabold tracking-widest text-[11px] sm:text-xs uppercase bg-red-600/10 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full border border-red-600/20 mb-2">
             TOPLINE Staffing Solutions
           </span>
-          <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight leading-tight text-slate-900">
+          <h1 className="mt-4 text-[clamp(28px,8vw,38px)] sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight leading-tight text-slate-900">
             {headline}
           </h1>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto font-sans font-normal leading-relaxed">
+          <p className="mt-4 text-[15px] sm:text-base md:text-lg text-slate-650 max-w-2xl mx-auto font-sans font-normal leading-relaxed">
             {subheadline}
           </p>
           <div className="mt-8 relative z-30">
