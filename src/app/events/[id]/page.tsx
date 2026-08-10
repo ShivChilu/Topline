@@ -61,7 +61,7 @@ export default async function EventDetailsPage(props: {
           </div>
 
           {/* Quick Metrics */}
-          <div className="light-panel rounded-2xl p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`light-panel rounded-2xl p-6 grid grid-cols-1 ${event.reportingTime ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
             <div>
               <p className="text-xs text-slate-500 uppercase font-semibold">Payment Rate</p>
               <div className="flex items-center space-x-1 mt-1">
@@ -69,13 +69,15 @@ export default async function EventDetailsPage(props: {
                 <span className="font-bold text-red-600">₹{event.paymentPerStudent}</span>
               </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-500 uppercase font-semibold">Reporting Time</p>
-              <div className="flex items-center space-x-1 mt-1">
-                <Clock className="w-4 h-4 text-red-600" />
-                <span className="font-bold text-slate-800">{formatTime12(event.reportingTime)}</span>
+            {event.reportingTime && (
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Reporting Time</p>
+                <div className="flex items-center space-x-1 mt-1">
+                  <Clock className="w-4 h-4 text-red-600" />
+                  <span className="font-bold text-slate-800">{formatTime12(event.reportingTime)}</span>
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <p className="text-xs text-slate-500 uppercase font-semibold">Availability</p>
               <div className="flex items-center mt-1">
@@ -129,12 +131,14 @@ export default async function EventDetailsPage(props: {
                   )}
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <Clock className="w-5 h-5 text-red-600 mt-0.5" />
-                <div>
-                  <span className="font-semibold text-slate-800">Duty Hours:</span> {formatTime12(event.startTime)} to {formatTime12(event.endTime)}
+              {event.startTime && event.endTime && (
+                <div className="flex items-start space-x-3">
+                  <Clock className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-slate-800">Duty Hours:</span> {formatTime12(event.startTime)} to {formatTime12(event.endTime)}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
