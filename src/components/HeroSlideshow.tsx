@@ -11,44 +11,56 @@ interface HeroSlideshowProps {
 }
 
 export default function HeroSlideshow({ headline, subheadline, children }: HeroSlideshowProps) {
-  const images = [
-    "/images/hero/hospitality-02.jpg",
-    "/images/hero/hospitality-03.jpg",
+  const slides = [
+    {
+      desktop: "/images/hero/hospitality-02.jpg",
+      mobile: "/images/hero/hospitality-02-mobile.jpg",
+    },
+    {
+      desktop: "/images/hero/hospitality-03.jpg",
+      mobile: "/images/hero/hospitality-03-mobile.jpg",
+    },
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % slides.length);
     }, 6000); // Transition every 6 seconds
 
     return () => clearInterval(timer);
-  }, [images.length]);
+  }, [slides.length]);
 
   const handlePrev = () => {
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + slides.length) % slides.length);
   };
 
   const handleNext = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % slides.length);
   };
 
   return (
     <section className="relative min-h-[calc(100svh-64px)] md:min-h-[700px] w-full flex items-center justify-center overflow-hidden py-10 md:py-24 border-b border-slate-100">
       {/* Background Images with transitions */}
-      {images.map((src, idx) => (
+      {slides.map((slide, idx) => (
         <div
-          key={src}
+          key={slide.desktop}
           className={`absolute inset-0 bg-[#0c0d12] transition-opacity duration-1000 ease-in-out ${
             idx === currentIndex ? "opacity-100 z-0" : "opacity-0 -z-10"
           }`}
         >
-          <img
-            src={src}
-            alt={`TOPLINE Hospitality Service - Slide ${idx + 1}`}
-            className="w-full h-full object-contain md:object-cover transform scale-105 transition-transform duration-[6000ms]"
-          />
+          <picture>
+            <source
+              media="(max-width: 767px)"
+              srcSet={slide.mobile}
+            />
+            <img
+              src={slide.desktop}
+              alt={`TOPLINE Hospitality Service - Slide ${idx + 1}`}
+              className="w-full h-full object-cover transform scale-105 transition-transform duration-[6000ms]"
+            />
+          </picture>
         </div>
       ))}
 
@@ -88,7 +100,7 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
 
       {/* Slide Indicators */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex space-x-2">
-        {images.map((_, idx) => (
+        {slides.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
