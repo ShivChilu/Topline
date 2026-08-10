@@ -10,7 +10,7 @@ export default function AdminSettingsPage() {
   // Homepage / Website settings States
   const [headline, setHeadline] = useState("");
   const [subheadline, setSubheadline] = useState("");
-  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [whatsappLink, setWhatsappLink] = useState("");
   const [email, setEmail] = useState("");
   const [aboutText, setAboutText] = useState("");
   const [dosText, setDosText] = useState("");
@@ -33,7 +33,7 @@ export default function AdminSettingsPage() {
         const val = data.settings;
         setHeadline(val.headline || "");
         setSubheadline(val.subheadline || "");
-        setWhatsappNumber(val.whatsappNumber || "");
+        setWhatsappLink(val.whatsappLink || "");
         setEmail(val.email || "");
         setAboutText(val.aboutText || "");
         setDosText(Array.isArray(val.dos) ? val.dos.join("\n") : "");
@@ -75,7 +75,7 @@ export default function AdminSettingsPage() {
     const payload = {
       headline,
       subheadline,
-      whatsappNumber,
+      whatsappLink,
       email,
       aboutText,
       dos,
@@ -203,13 +203,13 @@ export default function AdminSettingsPage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">WhatsApp Group / Contact Number</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">WhatsApp Group Invite Link</label>
               <input
-                type="text"
+                type="url"
                 required
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="e.g. 919876543210"
+                value={whatsappLink}
+                onChange={(e) => setWhatsappLink(e.target.value)}
+                placeholder="https://chat.whatsapp.com/..."
                 className="w-full bg-[#161822] border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 text-sm"
               />
             </div>

@@ -294,7 +294,7 @@ export default async function HomePage() {
               Get in Touch
             </Link>
             <a
-              href={`https://wa.me/${homeContent.whatsappNumber}`}
+              href={homeContent.whatsappLink || "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh"}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto bg-transparent hover:bg-emerald-500/10 text-emerald-400 px-8 py-3 rounded-lg text-lg font-bold border border-emerald-500/20 hover:border-emerald-500/40 transition"
