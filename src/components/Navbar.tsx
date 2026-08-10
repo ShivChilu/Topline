@@ -41,13 +41,7 @@ export default function Navbar() {
                   {link.name}
                 </Link>
               ))}
-              <Link
-                href="/admin/dashboard"
-                className="bg-red-600 hover:bg-red-700 text-black px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all duration-300 flex items-center space-x-1.5"
-              >
-                <ShieldAlert className="w-4 h-4" />
-                <span>Admin Panel</span>
-              </Link>
+
             </div>
           </div>
           <div className="md:hidden flex items-center">
@@ -75,15 +69,7 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <div className="pt-4 border-t border-slate-200/80">
-              <Link
-                href="/admin/dashboard"
-                onClick={() => setIsOpen(false)}
-                className="bg-red-600 text-black block px-4 py-3 rounded-lg text-base font-bold text-center shadow-sm"
-              >
-                Admin Panel
-              </Link>
-            </div>
+
           </div>
         </div>
       )}
