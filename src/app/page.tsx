@@ -25,6 +25,7 @@ export default async function HomePage() {
     headline: "Reliable Hospitality Workforce for Events, Hotels & Resorts",
     subheadline: "TOPLINE ODC connects premium hotels, resorts, and hospitality managers with a dependable, pre-screened student workforce.",
     whatsappNumber: "919876543210",
+    whatsappLink: "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh",
     email: "contact@toplinecatering.com",
     aboutText: "",
   };
