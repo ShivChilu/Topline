@@ -3,13 +3,18 @@ import Footer from "@/components/Footer";
 
 export default function TermsPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
       <Navbar />
+
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <main className="flex-grow max-w-4xl mx-auto px-4 py-16 text-left space-y-6">
         <h1 className="text-4xl font-extrabold text-red-600 mb-6 uppercase tracking-wider text-center">
           Terms & Conditions
         </h1>
-        <div className="text-gray-300 space-y-4">
+        <div className="text-slate-600 space-y-4">
           <p>
             Welcome to TOPLINE ODC. These terms and conditions outline the rules and regulations for the use of TOPLINE ODC's recruitment systems.
           </p>

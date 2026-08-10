@@ -4,25 +4,30 @@ import { Mail, Phone, MapPin } from "lucide-react";
 
 export default function ContactPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
       <Navbar />
+
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <main className="flex-grow max-w-5xl mx-auto px-4 py-16 w-full">
         <h1 className="text-4xl font-extrabold text-red-600 mb-4 uppercase tracking-wider text-center">
           Contact Us
         </h1>
-        <p className="text-gray-400 text-center max-w-xl mx-auto mb-12">
+        <p className="text-slate-500 text-center max-w-xl mx-auto mb-12">
           Are you a hotel manager looking for staff, or a university student looking for event opportunities? Get in touch with TOPLINE.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Contact Details */}
-          <div className="space-y-8 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
+          <div className="space-y-8 light-panel rounded-2xl p-8 rounded-xl border border-slate-200">
             <h2 className="text-2xl font-bold text-white mb-6">TOPLINE ODC</h2>
             <div className="flex items-start space-x-4">
               <Phone className="text-red-600 mt-1" />
               <div>
                 <h4 className="font-semibold text-white">Phone Support</h4>
-                <p className="text-gray-400">+91 79869 55634, +91 93810 39799</p>
+                <p className="text-slate-500">+91 79869 55634, +91 93810 39799</p>
               </div>
             </div>
 
@@ -30,11 +35,11 @@ export default function ContactPage() {
               <Mail className="text-red-600 mt-1" />
               <div>
                 <h4 className="font-semibold text-white">Email Address</h4>
-                <p className="text-gray-400">contact@toplineodc.co.in</p>
+                <p className="text-slate-500">contact@toplineodc.co.in</p>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-800">
+            <div className="pt-4 border-t border-slate-200">
               <a
                 href="https://wa.me/917986955634?text=I%20would%20like%20to%20contact%20TOPLINE%20ODC"
                 target="_blank"
@@ -47,29 +52,29 @@ export default function ContactPage() {
           </div>
 
           {/* Quick Form */}
-          <div className="bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
+          <div className="light-panel rounded-2xl p-8 rounded-xl border border-slate-200">
             <h2 className="text-2xl font-bold text-white mb-6">Send us a Message</h2>
             <form className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Your Name</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">Your Name</label>
                 <input
                   type="text"
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-[#161822] border border-slate-200 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
                   placeholder="Rahul Kumar / Rajesh Sharma"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Email / Phone</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">Email / Phone</label>
                 <input
                   type="text"
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-[#161822] border border-slate-200 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
                   placeholder="yourname@gmail.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Message</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">Message</label>
                 <textarea
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600 h-28"
+                  className="w-full bg-[#161822] border border-slate-200 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600 h-28"
                   placeholder="How can we help you?"
                 ></textarea>
               </div>

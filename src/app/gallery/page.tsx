@@ -46,13 +46,18 @@ export default async function GalleryPage() {
   const displayImages = images.length > 0 ? images : fallbackImages;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
       <Navbar />
+
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <main className="flex-grow max-w-7xl mx-auto px-4 py-16 w-full">
         <h1 className="text-4xl font-extrabold text-red-600 mb-4 uppercase tracking-wider text-center">
           Event Gallery
         </h1>
-        <p className="text-gray-400 text-center max-w-xl mx-auto mb-12">
+        <p className="text-slate-500 text-center max-w-xl mx-auto mb-12">
           A glimpse into the premium banquet layouts, corporate events, and wedding catering services supported by TOPLINE.
         </p>
 
@@ -60,7 +65,7 @@ export default async function GalleryPage() {
           {displayImages.map((img: any) => (
             <div
               key={img._id.toString()}
-              className="group relative overflow-hidden bg-[#0c0d12] rounded-xl border border-gray-800 hover:border-red-600/50 transition duration-300 flex flex-col"
+              className="group relative overflow-hidden light-panel rounded-2xl rounded-xl border border-slate-200 hover:border-red-600/50 transition duration-300 flex flex-col"
             >
               <div className="relative h-60 w-full overflow-hidden">
                 <img
@@ -73,7 +78,7 @@ export default async function GalleryPage() {
                 </span>
               </div>
               <div className="p-4 flex-grow flex items-center justify-center text-center">
-                <p className="text-sm text-gray-300 font-medium">{img.caption}</p>
+                <p className="text-sm text-slate-600 font-medium">{img.caption}</p>
               </div>
             </div>
           ))}

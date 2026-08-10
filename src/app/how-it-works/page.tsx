@@ -32,13 +32,18 @@ export default function HowItWorksPage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
       <Navbar />
+
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <main className="flex-grow max-w-5xl mx-auto px-4 py-16 w-full">
         <h1 className="text-4xl font-extrabold text-red-600 mb-4 uppercase tracking-wider text-center">
           How It Works
         </h1>
-        <p className="text-gray-400 text-center max-w-xl mx-auto mb-16">
+        <p className="text-slate-500 text-center max-w-xl mx-auto mb-16">
           A transparent, simple, and digitized process designed for students to find hospitality assignments and hotels to secure reliable staff.
         </p>
 
@@ -46,14 +51,14 @@ export default function HowItWorksPage() {
           {steps.map((step, idx) => (
             <div
               key={idx}
-              className="flex flex-col md:flex-row items-center gap-6 bg-[#0c0d12] p-8 rounded-xl border border-gray-800 hover:border-red-600/50 transition duration-300"
+              className="flex flex-col md:flex-row items-center gap-6 light-panel rounded-2xl p-8 rounded-xl border border-slate-200 hover:border-red-600/50 transition duration-300"
             >
-              <div className="p-4 bg-[#161822] rounded-lg border border-gray-800">
+              <div className="p-4 bg-[#161822] rounded-lg border border-slate-200">
                 {step.icon}
               </div>
               <div className="text-center md:text-left">
                 <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                <p className="text-gray-400 max-w-2xl">{step.desc}</p>
+                <p className="text-slate-500 max-w-2xl">{step.desc}</p>
               </div>
             </div>
           ))}

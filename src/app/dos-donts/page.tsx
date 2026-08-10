@@ -33,13 +33,18 @@ export default async function DosDontsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
       <Navbar />
+
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-[10%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+      <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
       <main className="flex-grow max-w-5xl mx-auto px-4 py-16 w-full">
         <h1 className="text-4xl font-extrabold text-red-600 mb-4 uppercase tracking-wider text-center">
           Workforce Do's & Don'ts
         </h1>
-        <p className="text-gray-400 text-center max-w-xl mx-auto mb-16">
+        <p className="text-slate-500 text-center max-w-xl mx-auto mb-16">
           Compliance with these guidelines is mandatory for all students on shift duty. Violations may result in suspension.
         </p>
 
@@ -52,7 +57,7 @@ export default async function DosDontsPage() {
             </div>
             <ul className="space-y-4">
               {dos.map((item, idx) => (
-                <li key={idx} className="flex items-start space-x-3 text-gray-300 text-sm md:text-base">
+                <li key={idx} className="flex items-start space-x-3 text-slate-600 text-sm md:text-base">
                   <span className="text-emerald-400 font-bold select-none">•</span>
                   <span>{item}</span>
                 </li>
@@ -68,7 +73,7 @@ export default async function DosDontsPage() {
             </div>
             <ul className="space-y-4">
               {donts.map((item, idx) => (
-                <li key={idx} className="flex items-start space-x-3 text-gray-300 text-sm md:text-base">
+                <li key={idx} className="flex items-start space-x-3 text-slate-600 text-sm md:text-base">
                   <span className="text-red-400 font-bold select-none">•</span>
                   <span>{item}</span>
                 </li>
