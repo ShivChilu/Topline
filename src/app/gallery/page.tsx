@@ -53,7 +53,7 @@ export default async function GalleryPage() {
           Event Gallery
         </h1>
         <p className="text-gray-400 text-center max-w-xl mx-auto mb-12">
-          A glimpse into the premium banquet layouts, corporate events, and wedding catering services supported by Top Line.
+          A glimpse into the premium banquet layouts, corporate events, and wedding catering services supported by TOPLINE.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

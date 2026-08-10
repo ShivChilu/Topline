@@ -26,7 +26,7 @@ export default function Navbar() {
             <Link href="/" className="flex items-center space-x-3">
               <BrandLogo width={36} height={36} className="overflow-hidden rounded border border-gray-850" />
               <span className="text-lg font-bold tracking-wider text-amber-500 uppercase hidden sm:inline">
-                Top Line
+                TOPLINE
               </span>
             </Link>
           </div>

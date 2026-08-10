@@ -11,7 +11,7 @@ export default function ContactPage() {
           Contact Us
         </h1>
         <p className="text-gray-400 text-center max-w-xl mx-auto mb-12">
-          Are you a hotel manager looking for staff, or a university student looking for event opportunities? Get in touch with Top Line.
+          Are you a hotel manager looking for staff, or a university student looking for event opportunities? Get in touch with TOPLINE.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
         </h1>
         <div className="text-gray-300 space-y-4">
           <p>
-            At TOPLINE ODC, accessible from Top Line platforms, one of our main priorities is the privacy of our visitors and student candidates. This Privacy Policy document contains types of information that is collected and recorded by Top Line and how we use it.
+            At TOPLINE ODC, accessible from TOPLINE platforms, one of our main priorities is the privacy of our visitors and student candidates. This Privacy Policy document contains types of information that is collected and recorded by TOPLINE and how we use it.
           </p>
           <h2 className="text-xl font-bold text-white mt-6">1. Information We Collect</h2>
           <p>

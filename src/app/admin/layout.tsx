@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-[#0c0d12] border-r border-gray-800">
         <div className="p-6 flex items-center space-x-3 border-b border-gray-800">
           <BrandLogo width={32} height={32} className="overflow-hidden rounded border border-gray-850" />
-          <span className="text-lg font-bold tracking-wider uppercase text-white font-sans">Top Line Control</span>
+          <span className="text-lg font-bold tracking-wider uppercase text-white font-sans">TOPLINE Control</span>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
@@ -92,7 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-[#0c0d12] border-b border-gray-800">
           <div className="flex items-center space-x-3">
             <BrandLogo width={28} height={28} className="overflow-hidden rounded border border-gray-850" />
-            <span className="text-md font-bold uppercase tracking-wider font-sans">Top Line</span>
+            <span className="text-md font-bold uppercase tracking-wider font-sans">TOPLINE</span>
           </div>
           <button
             onClick={() => setIsOpen(!isOpen)}

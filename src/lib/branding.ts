@@ -1,6 +1,6 @@
 export const BRANDING = {
   brandName: "TOPLINE ODC",
-  websiteName: "Top Line Staffing Solutions",
+  websiteName: "TOPLINE Staffing Solutions",
   logo: "/branding/logo.png",
   logoTransparent: "/branding/logo-transparent.png",
   favicon: "/favicon.png",

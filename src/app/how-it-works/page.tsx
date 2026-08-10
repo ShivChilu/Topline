@@ -17,7 +17,7 @@ export default function HowItWorksPage() {
     {
       icon: <CalendarCheck className="w-10 h-10 text-amber-500" />,
       title: "3. Selection & Confirmation",
-      desc: "Top Line captains will review applications and confirm selected students via WhatsApp/SMS notifications."
+      desc: "TOPLINE captains will review applications and confirm selected students via WhatsApp/SMS notifications."
     },
     {
       icon: <Clock className="w-10 h-10 text-amber-500" />,

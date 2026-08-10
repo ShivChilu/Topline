@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
         {/* Header */}
         <div className="text-center space-y-2">
           <BrandLogo width={90} height={90} className="mx-auto mb-4 overflow-hidden rounded border border-gray-800 bg-[#07080b] p-1.5" />
-          <h2 className="text-2xl font-bold uppercase tracking-wider text-white">Top Line Admin</h2>
+          <h2 className="text-2xl font-bold uppercase tracking-wider text-white">TOPLINE Admin</h2>
           <p className="text-gray-400 text-sm">Please sign in to access control management</p>
         </div>
 

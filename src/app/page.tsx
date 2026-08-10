@@ -71,7 +71,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.15),rgba(255,255,255,0))]"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <span className="text-amber-500 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
-            Top Line Staffing Solutions
+            TOPLINE Staffing Solutions
           </span>
           <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight">
             {homeContent.headline}
@@ -91,7 +91,7 @@ export default async function HomePage() {
               href="/contact"
               className="w-full sm:w-auto bg-transparent hover:bg-gray-800 text-white px-8 py-3 rounded-lg text-lg font-bold border border-gray-800 hover:border-gray-700 transition duration-200"
             >
-              Contact Top Line
+              Contact TOPLINE
             </Link>
           </div>
         </div>
@@ -222,7 +222,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Why Top Line Section */}
+      {/* Why TOPLINE Section */}
       <section className="py-20 border-t border-gray-950 bg-[#0c0d12]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -230,7 +230,7 @@ export default async function HomePage() {
               Partnership & Quality
             </span>
             <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-wider text-white uppercase">
-              Why Hotels & Resorts Choose Top Line
+              Why Hotels & Resorts Choose TOPLINE
             </h2>
             <p className="mt-4 text-gray-400 leading-relaxed">
               We eliminate the stress of manual hiring coordination. Our system provides automated registration tracking, real-time application limit configurations, duplicate checks, digital verification records, and automated check-ins.
@@ -282,7 +282,7 @@ export default async function HomePage() {
       <section className="py-20 border-t border-gray-950 bg-gradient-to-t from-[#090a0f] to-[#07080b]">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-amber-500 uppercase tracking-wider">
-            Ready to partner with Top Line?
+            Ready to partner with TOPLINE?
           </h2>
           <p className="mt-4 text-gray-400 max-w-xl mx-auto">
             Get in touch to deploy reliable student crews at your luxury hotel, catering event, or resort. Or view our active opportunities to apply.
