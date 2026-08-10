@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import HeroSlideshow from "@/components/HeroSlideshow";
 import { connectToDatabase } from "@/lib/db";
 import { Event, Setting, Gallery } from "@/models";
 import {
@@ -66,36 +67,24 @@ export default async function HomePage() {
     <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-24 pb-32 md:pt-36 md:pb-44 bg-gradient-to-b from-amber-500/[0.04] to-[#f8fafc]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.06),rgba(255,255,255,0))]"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <span className="inline-flex items-center text-amber-700 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20 mb-2">
-            TOPLINE Staffing Solutions
-          </span>
-          <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-display font-extrabold tracking-tight max-w-4xl mx-auto leading-tight text-slate-900">
-            {homeContent.headline}
-          </h1>
-          <p className="mt-6 text-lg sm:text-xl text-slate-500 max-w-2xl mx-auto font-sans font-normal leading-relaxed">
-            {homeContent.subheadline}
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/opportunities"
-              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
-            >
-              <span>View Opportunities</span>
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/contact"
-              className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-8 py-4 rounded-xl text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5"
-            >
-              Contact TOPLINE
-            </Link>
-          </div>
+      {/* Hero Slideshow Section */}
+      <HeroSlideshow headline={homeContent.headline} subheadline={homeContent.subheadline}>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            href="/opportunities"
+            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+          >
+            <span>View Opportunities</span>
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/contact"
+            className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-8 py-4 rounded-xl text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5"
+          >
+            Contact TOPLINE
+          </Link>
         </div>
-      </section>
+      </HeroSlideshow>
 
       {/* What We Provide Section */}
       <section className="py-24 border-t border-slate-100 bg-white">
