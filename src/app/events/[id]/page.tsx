@@ -61,19 +61,12 @@ export default async function EventDetailsPage(props: {
           </div>
 
           {/* Quick Metrics */}
-          <div className="light-panel rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="light-panel rounded-2xl p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-slate-500 uppercase font-semibold">Payment Rate</p>
               <div className="flex items-center space-x-1 mt-1">
                 <Banknote className="w-4 h-4 text-red-600" />
                 <span className="font-bold text-red-600">₹{event.paymentPerStudent}</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 uppercase font-semibold">Required Staff</p>
-              <div className="flex items-center space-x-1 mt-1">
-                <Users className="w-4 h-4 text-red-600" />
-                <span className="font-bold text-slate-800">{event.workersRequired} Slots</span>
               </div>
             </div>
             <div>
