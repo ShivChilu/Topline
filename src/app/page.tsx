@@ -54,42 +54,42 @@ export default async function HomePage() {
   }
 
   const defaultServices = [
-    { name: "Catering Staff", desc: "Expert food handlers and buffet counter management." },
-    { name: "Hospitality Staff", desc: "Front-desk, guest hospitality coordinators, and hostesses." },
-    { name: "Service Staff", desc: "Professional food and beverage server crews." },
-    { name: "Banquet Staff", desc: "Table operation specialists for weddings and corporate galas." },
-    { name: "Event Staff", desc: "Setup crews, coordinators, and logistics support teams." },
-    { name: "Temporary Workforce", desc: "On-demand teams for high-capacity hospitality demands." },
+    { name: "Catering Staff", desc: "Expert food handlers and buffet counter management.", icon: <Utensils className="text-amber-500 w-6 h-6" /> },
+    { name: "Hospitality Staff", desc: "Front-desk, guest hospitality coordinators, and hostesses.", icon: <Gem className="text-amber-500 w-6 h-6" /> },
+    { name: "Service Staff", desc: "Professional food and beverage server crews.", icon: <Users className="text-amber-500 w-6 h-6" /> },
+    { name: "Banquet Staff", desc: "Table operation specialists for weddings and corporate galas.", icon: <Briefcase className="text-amber-500 w-6 h-6" /> },
+    { name: "Event Staff", desc: "Setup crews, coordinators, and logistics support teams.", icon: <Award className="text-amber-500 w-6 h-6" /> },
+    { name: "Temporary Workforce", desc: "On-demand teams for high-capacity hospitality demands.", icon: <Clock className="text-amber-500 w-6 h-6" /> },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#07080b] text-white">
+    <div className="flex flex-col min-h-screen bg-[#06070a] text-white">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-28 md:pt-28 md:pb-36 bg-gradient-to-b from-[#0f111a] to-[#07080b]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.15),rgba(255,255,255,0))]"></div>
+      <section className="relative overflow-hidden pt-24 pb-32 md:pt-36 md:pb-44 bg-gradient-to-b from-[#0f111a] to-[#06070a]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.12),rgba(255,255,255,0))]"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <span className="text-amber-500 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+          <span className="inline-flex items-center text-amber-500 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20 mb-2">
             TOPLINE Staffing Solutions
           </span>
-          <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight">
+          <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-display font-extrabold tracking-tight max-w-4xl mx-auto leading-tight text-white">
             {homeContent.headline}
           </h1>
-          <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto font-medium">
+          <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto font-sans font-normal leading-relaxed">
             {homeContent.subheadline}
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/opportunities"
-              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-black px-8 py-3 rounded-lg text-lg font-bold transition duration-200 flex items-center justify-center space-x-2"
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black px-8 py-4 rounded-xl text-lg font-bold shadow-lg shadow-amber-500/10 hover:shadow-amber-500/25 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
             >
               <span>View Opportunities</span>
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
               href="/contact"
-              className="w-full sm:w-auto bg-transparent hover:bg-gray-800 text-white px-8 py-3 rounded-lg text-lg font-bold border border-gray-800 hover:border-gray-700 transition duration-200"
+              className="w-full sm:w-auto bg-white/[0.02] hover:bg-white/[0.04] text-white px-8 py-4 rounded-xl text-lg font-bold border border-white/10 hover:border-white/20 transition-all duration-300 transform hover:-translate-y-0.5"
             >
               Contact TOPLINE
             </Link>
@@ -98,13 +98,13 @@ export default async function HomePage() {
       </section>
 
       {/* What We Provide Section */}
-      <section className="py-20 border-t border-gray-900 bg-[#07080b]">
+      <section className="py-24 border-t border-white/[0.03] bg-[#06070a]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-amber-500 uppercase">
               What We Provide
             </h2>
-            <p className="mt-4 text-gray-400 max-w-2xl mx-auto text-lg">
+            <p className="mt-4 text-gray-400 max-w-2xl mx-auto text-lg font-sans">
               Tailored event crew staffing solutions built on professional standard criteria.
             </p>
           </div>
@@ -112,13 +112,13 @@ export default async function HomePage() {
             {defaultServices.map((service, idx) => (
               <div
                 key={idx}
-                className="bg-[#0c0d12] p-6 rounded-xl border border-gray-800 hover:border-amber-500/50 transition duration-300 flex flex-col"
+                className="glass-panel p-8 rounded-2xl hover-glow flex flex-col"
               >
-                <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center border border-amber-500/20 mb-6">
-                  <Utensils className="text-amber-500 w-6 h-6" />
+                <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20 mb-6">
+                  {service.icon}
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">{service.name}</h3>
-                <p className="text-gray-400 text-sm flex-grow">{service.desc}</p>
+                <h3 className="text-xl font-bold text-white mb-3">{service.name}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed flex-grow font-sans">{service.desc}</p>
               </div>
             ))}
           </div>

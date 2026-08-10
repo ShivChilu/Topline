@@ -114,11 +114,11 @@ export default async function OpportunitiesPage(props: {
               return (
                 <div
                   key={event._id.toString()}
-                  className="bg-[#0c0d12] rounded-xl border border-gray-800 hover:border-amber-500/50 transition duration-300 overflow-hidden flex flex-col justify-between"
+                  className="glass-panel rounded-2xl hover-glow overflow-hidden flex flex-col justify-between"
                 >
                   <div className="p-6">
                     <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase tracking-widest ${statusBadgeColor}`}>
+                      <span className={`text-xs font-extrabold px-3 py-1 rounded-full border uppercase tracking-widest ${statusBadgeColor}`}>
                         {event.status}
                       </span>
                       <span className="text-xs text-gray-500 uppercase font-semibold">
@@ -126,42 +126,42 @@ export default async function OpportunitiesPage(props: {
                       </span>
                     </div>
 
-                    <h3 className="mt-4 text-xl font-bold text-white hover:text-amber-500 transition">
+                    <h3 className="mt-4 text-xl font-bold text-white hover:text-amber-500 transition duration-300">
                       <Link href={`/events/${event._id}`}>{event.name}</Link>
                     </h3>
 
-                    <div className="mt-6 space-y-3 text-sm text-gray-300">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-amber-500" />
+                    <div className="mt-6 space-y-3.5 text-sm text-gray-300">
+                      <div className="flex items-center space-x-2.5">
+                        <Calendar className="w-4 h-4 text-amber-500/80" />
                         <span>Date: {new Date(event.date).toLocaleDateString("en-GB")}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-amber-500" />
-                        <span>Location: {event.location}</span>
+                      <div className="flex items-center space-x-2.5">
+                        <MapPin className="w-4 h-4 text-amber-500/80" />
+                        <span className="truncate">Location: {event.location}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-amber-500" />
+                      <div className="flex items-center space-x-2.5">
+                        <Clock className="w-4 h-4 text-amber-500/80" />
                         <span>Reporting: {event.reportingTime}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-4 h-4 text-amber-500" />
+                      <div className="flex items-center space-x-2.5">
+                        <Users className="w-4 h-4 text-amber-500/80" />
                         <span>Required: {event.workersRequired} candidates</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-[#12141f] px-6 py-4 flex items-center justify-between border-t border-gray-800">
+                  <div className="bg-white/[0.01] px-6 py-5 flex items-center justify-between border-t border-white/[0.04]">
                     <div>
-                      <p className="text-xs text-gray-400 uppercase">Payment</p>
-                      <p className="text-lg font-bold text-amber-500">₹{event.paymentPerStudent}</p>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">Payment</p>
+                      <p className="text-xl font-extrabold text-amber-500">₹{event.paymentPerStudent}</p>
                     </div>
 
                     <Link
                       href={`/events/${event._id}`}
-                      className={`text-xs font-bold px-4 py-2 rounded transition flex items-center space-x-1 ${
+                      className={`text-xs font-bold px-4 py-2.5 rounded-lg transition duration-300 flex items-center space-x-1.5 ${
                         isOpen
-                          ? "bg-amber-500 hover:bg-amber-600 text-black"
-                          : "bg-gray-850 text-gray-500 cursor-not-allowed border border-gray-800"
+                          ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-lg shadow-amber-500/5 hover:shadow-amber-500/15"
+                          : "bg-white/[0.02] border border-white/[0.04] text-gray-400 hover:bg-white/[0.04] hover:text-white"
                       }`}
                     >
                       <span>{isOpen ? "Apply Now" : "View Details"}</span>
