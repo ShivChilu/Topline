@@ -87,20 +87,18 @@ export default async function EventDetailsPage(props: {
               <p className="text-xs text-slate-500 uppercase font-semibold">Availability</p>
               <div className="flex items-center mt-1">
                 {(() => {
-                  const remaining = event.maxApplications - event.applicationsCount;
-                  if (remaining <= 0) {
-                    return <span className="font-bold text-red-500 uppercase text-xs tracking-wider">Full</span>;
+                  const remainingSlots = event.workersRequired - event.applicationsCount;
+                  if (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED") {
+                    return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">FULL</span>;
                   }
-                  if (remaining <= 2) {
-                    return <span className="font-bold text-red-500">{remaining} slots left</span>;
+                  if (remainingSlots >= 1 && remainingSlots <= 4) {
+                    return (
+                      <span className="font-extrabold text-[#ED0000] text-xs uppercase tracking-wider flex items-center space-x-1">
+                        <span>🔥 {remainingSlots} {remainingSlots === 1 ? "Slot" : "Slots"} Left — Hurry!</span>
+                      </span>
+                    );
                   }
-                  if (remaining <= 4) {
-                    return <span className="font-bold text-red-600">{remaining} slots left</span>;
-                  }
-                  if (remaining === 5) {
-                    return <span className="font-bold text-emerald-400">5 slots left</span>;
-                  }
-                  return <span className="font-bold text-emerald-400">Slots Available</span>;
+                  return <span className="font-bold text-emerald-400 text-xs uppercase tracking-wider">Slots Available</span>;
                 })()}
               </div>
             </div>
@@ -177,11 +175,19 @@ export default async function EventDetailsPage(props: {
         {/* Right Column: Application form */}
         <div className="space-y-6">
           <div className="sticky top-24">
-            <EventApplicationForm
-              eventId={event._id.toString()}
-              customFields={JSON.parse(JSON.stringify(event.customFormFields))}
-              status={event.status}
-            />
+            {(() => {
+              const remainingSlots = event.workersRequired - event.applicationsCount;
+              const formStatus = (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED")
+                ? "FULL"
+                : event.status;
+              return (
+                <EventApplicationForm
+                  eventId={event._id.toString()}
+                  customFields={JSON.parse(JSON.stringify(event.customFormFields))}
+                  status={formStatus}
+                />
+              );
+            })()}
           </div>
         </div>
 
