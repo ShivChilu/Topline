@@ -12,7 +12,6 @@ interface HeroSlideshowProps {
 
 export default function HeroSlideshow({ headline, subheadline, children }: HeroSlideshowProps) {
   const images = [
-    "/images/hero/hospitality-01.jpg",
     "/images/hero/hospitality-02.jpg",
     "/images/hero/hospitality-03.jpg",
   ];
@@ -41,21 +40,21 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
       {images.map((src, idx) => (
         <div
           key={src}
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 bg-[#0c0d12] transition-opacity duration-1000 ease-in-out ${
             idx === currentIndex ? "opacity-100 z-0" : "opacity-0 -z-10"
           }`}
         >
           <img
             src={src}
             alt={`TOPLINE Hospitality Service - Slide ${idx + 1}`}
-            className="w-full h-full object-cover transform scale-105 transition-transform duration-[6000ms]"
+            className="w-full h-full object-contain md:object-cover transform scale-105 transition-transform duration-[6000ms]"
           />
         </div>
       ))}
 
       {/* Hero Content Layer */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
-        <div className="bg-white/70 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
+        <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
           <span className="inline-flex items-center text-red-800 font-extrabold tracking-widest text-xs uppercase bg-red-600/10 px-4 py-2 rounded-full border border-red-600/20 mb-2">
             TOPLINE Staffing Solutions
           </span>
