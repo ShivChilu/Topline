@@ -87,8 +87,8 @@ export default function EventApplicationForm({
     return (
       <div className="bg-emerald-950/30 border border-emerald-950 p-8 rounded-xl text-center space-y-4">
         <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
-        <h3 className="text-2xl font-bold text-emerald-400">Application Submitted!</h3>
-        <p className="text-gray-300 whitespace-pre-wrap">{message}</p>
+        <h3 className="text-2xl font-bold text-emerald-400">Registration Submitted!</h3>
+        <p className="text-gray-350 whitespace-pre-wrap">{message}</p>
         <button
           onClick={() => {
             setIsSuccess(false);
@@ -96,18 +96,18 @@ export default function EventApplicationForm({
             setFormData({ name: "", phone: "", email: "", university: "", universityId: "", profilePhotoUrl: "" });
             setCustomData({});
           }}
-          className="mt-4 bg-red-600 hover:bg-red-700 text-black font-bold px-6 py-2 rounded transition"
+          className="mt-4 bg-[#ED0000] hover:bg-[#C00000] text-white font-bold px-6 py-2 rounded transition"
         >
-          Submit Another Application
+          Submit Another Registration
         </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
-      <BrandLogo width={80} height={80} className="mx-auto overflow-hidden rounded border border-gray-800 bg-[#07080b] p-1" />
-      <h3 className="text-xl font-bold text-white text-center mb-6 border-b border-gray-800 pb-3">Student Recruitment Form</h3>
+    <form onSubmit={handleSubmit} className="space-y-6 bg-[#0c0d12] p-8 rounded-xl border border-[#2A3040] shadow-xl">
+      <BrandLogo width={80} height={80} className="mx-auto overflow-hidden rounded border border-[#2A3040] bg-[#07080b] p-1" />
+      <h3 className="text-xl font-extrabold text-white text-center mb-6 border-b border-[#2A3040] pb-3 uppercase tracking-wider">Registration Form</h3>
 
       {message && (
         <div className="bg-red-950/20 text-red-400 border border-red-900/30 p-3 rounded text-sm text-center">
@@ -117,7 +117,7 @@ export default function EventApplicationForm({
 
       {/* Standard Fields */}
       <div>
-        <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">University Registration Number *</label>
+        <label className="block text-xs font-bold text-[#F3F4F6] uppercase mb-1">University Registration Number *</label>
         <input
           type="text"
           name="universityId"
@@ -125,31 +125,31 @@ export default function EventApplicationForm({
           value={formData.universityId}
           onChange={handleProfileChange}
           placeholder="PU-2024-887"
-          className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-650"
+          className="w-full bg-[#151923] border border-[#303747] rounded px-3 py-2 text-white focus:outline-none focus:border-[#ED0000] focus:ring-2 focus:ring-[#ED0000]/15 placeholder:text-[#9CA3AF]"
         />
       </div>
 
       {/* Dynamic Fields */}
       {customFields.length > 0 && (
-        <div className="pt-6 border-t border-gray-800 space-y-4">
-          <h4 className="text-sm font-semibold text-red-600 uppercase tracking-wider">Additional Questionnaire</h4>
+        <div className="pt-6 border-t border-[#2A3040] space-y-4">
+          <h4 className="text-sm font-bold text-[#FFFFFF] uppercase tracking-wider">Additional Details</h4>
           {customFields.map((field) => (
-            <div key={field.id}>
-              <label className="block text-xs font-semibold text-gray-300 mb-1">
+            <div key={field.id} className="space-y-1">
+              <label className="block text-xs font-semibold text-[#F3F4F6] mb-1">
                 {field.label} {field.required && "*"}
               </label>
-              {field.description && <p className="text-xs text-gray-500 mb-2">{field.description}</p>}
+              {field.description && <p className="text-xs text-slate-400 mb-2">{field.description}</p>}
 
               {field.type === "yesno" && (
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-1">
                   {["Yes", "No"].map((opt) => (
-                    <label key={opt} className="inline-flex items-center space-x-2 text-sm text-gray-300">
+                    <label key={opt} className="inline-flex items-center space-x-2 text-sm text-[#F3F4F6] cursor-pointer">
                       <input
                         type="radio"
                         name={field.id}
                         required={field.required}
                         onChange={() => handleCustomChange(field.id, opt)}
-                        className="text-red-600 focus:ring-red-600"
+                        className="text-[#ED0000] focus:ring-[#ED0000] focus:ring-offset-[#151923] bg-[#151923] border-[#303747]"
                       />
                       <span>{opt}</span>
                     </label>
@@ -161,11 +161,11 @@ export default function EventApplicationForm({
                 <select
                   required={field.required}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-[#151923] border border-[#303747] rounded px-3 py-2 text-white focus:outline-none focus:border-[#ED0000] focus:ring-2 focus:ring-[#ED0000]/15"
                 >
-                  <option value="">Choose an option...</option>
+                  <option value="" className="text-[#9CA3AF]">Choose an option...</option>
                   {field.options?.map((opt) => (
-                    <option key={opt} value={opt}>
+                    <option key={opt} value={opt} className="text-white bg-[#151923]">
                       {opt}
                     </option>
                   ))}
@@ -178,7 +178,7 @@ export default function EventApplicationForm({
                   required={field.required}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-[#151923] border border-[#303747] rounded px-3 py-2 text-white focus:outline-none focus:border-[#ED0000] focus:ring-2 focus:ring-[#ED0000]/15 placeholder:text-[#9CA3AF]"
                 />
               )}
 
@@ -190,7 +190,7 @@ export default function EventApplicationForm({
                   max={field.max}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, Number(e.target.value))}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600"
+                  className="w-full bg-[#151923] border border-[#303747] rounded px-3 py-2 text-white focus:outline-none focus:border-[#ED0000] focus:ring-2 focus:ring-[#ED0000]/15 placeholder:text-[#9CA3AF]"
                 />
               )}
 
@@ -199,7 +199,7 @@ export default function EventApplicationForm({
                   required={field.required}
                   placeholder={field.placeholder || ""}
                   onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                  className="w-full bg-[#161822] border border-gray-800 rounded px-3 py-2 text-white focus:outline-none focus:border-red-600 h-24"
+                  className="w-full bg-[#151923] border border-[#303747] rounded px-3 py-2 text-white focus:outline-none focus:border-[#ED0000] focus:ring-2 focus:ring-[#ED0000]/15 placeholder:text-[#9CA3AF] h-24"
                 ></textarea>
               )}
             </div>
@@ -210,9 +210,9 @@ export default function EventApplicationForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-red-600 hover:bg-red-700 text-black font-bold py-3 rounded transition duration-200"
+        className="w-full bg-[#ED0000] hover:bg-[#C00000] text-white font-extrabold py-3.5 rounded transition duration-200 uppercase tracking-wider text-sm shadow-md"
       >
-        {isSubmitting ? "Submitting Application..." : "Submit Recruitment Application"}
+        {isSubmitting ? "Submitting Registration..." : "Submit Registration"}
       </button>
     </form>
   );
