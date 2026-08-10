@@ -53,22 +53,21 @@ export default function HeroSlideshow({ headline, subheadline, children }: HeroS
         </div>
       ))}
 
-      {/* Modern Light overlay for absolute text readability */}
-      <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px] z-10"></div>
-
       {/* Hero Content Layer */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-25 mt-8">
-        <span className="inline-flex items-center text-amber-700 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20 mb-2">
-          TOPLINE Staffing Solutions
-        </span>
-        <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-display font-extrabold tracking-tight max-w-4xl mx-auto leading-tight text-slate-900">
-          {headline}
-        </h1>
-        <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto font-sans font-normal leading-relaxed">
-          {subheadline}
-        </p>
-        <div className="mt-10 relative z-30">
-          {children}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
+        <div className="bg-white/95 backdrop-blur-md p-8 sm:p-12 md:p-14 rounded-3xl shadow-xl border border-slate-200/50 text-center">
+          <span className="inline-flex items-center text-amber-700 font-extrabold tracking-widest text-xs uppercase bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20 mb-2">
+            TOPLINE Staffing Solutions
+          </span>
+          <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-display font-extrabold tracking-tight leading-tight text-slate-900">
+            {headline}
+          </h1>
+          <p className="mt-4 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto font-sans font-normal leading-relaxed">
+            {subheadline}
+          </p>
+          <div className="mt-8 relative z-30">
+            {children}
+          </div>
         </div>
       </div>
 
