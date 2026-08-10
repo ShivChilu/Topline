@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy } from "lucide-react";
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -189,6 +189,17 @@ export default function AdminEventsPage() {
                   >
                     <Edit className="w-4 h-4" />
                   </Link>
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/events/${event._id}`;
+                      navigator.clipboard.writeText(url);
+                      alert("Public event link copied to clipboard!");
+                    }}
+                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
+                    title="Copy Public Link"
+                  >
+                    <Copy className="w-4 h-4 text-slate-600" />
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   {event.status === "DRAFT" && (
