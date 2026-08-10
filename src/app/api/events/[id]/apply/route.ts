@@ -59,7 +59,16 @@ export async function POST(
       return NextResponse.json({ success: false, message: `Applications are currently ${event.status.toLowerCase()}.` }, { status: 400 });
     }
 
-    // 3. Find or Create the Student profile
+    // 3. Duplicate check using eventId + registrationNumber (University Roll No)
+    const existingReg = await Application.findOne({ eventId, registrationNumber: cleanUniId });
+    if (existingReg) {
+      return NextResponse.json({
+        success: false,
+        message: `Registration number ${cleanUniId} has already been registered for this event.`
+      }, { status: 409 });
+    }
+
+    // 4. Find or Create the Student profile
     let student = await Student.findOne({
       $or: [{ phone: finalPhone }, { universityId: cleanUniId }]
     });
@@ -77,7 +86,7 @@ export async function POST(
       student.university = finalUniversity;
       await student.save();
 
-      // 4. Duplicate Check (Event ID + Student ID)
+      // Duplicate Check (Event ID + Student ID)
       const existingApplication = await Application.findOne({ eventId, studentId: student._id });
       if (existingApplication) {
         return NextResponse.json({ success: false, message: "You have already applied for this opportunity." }, { status: 409 });
@@ -121,19 +130,25 @@ export async function POST(
       await updatedEvent.save();
     }
 
-    // Generate unique event-specific registration number
-    const year = new Date().getFullYear();
-    const randNum = Math.floor(10000 + Math.random() * 90000);
-    const regNo = `TL-${year}-${randNum}`;
-
-    // 6. Create the Application Record
-    const application = await Application.create({
-      eventId: event._id,
-      studentId: student._id,
-      status: "applied",
-      customFieldsData: customFields || {},
-      registrationNumber: regNo,
-    });
+    // 6. Create the Application Record (Catching concurrent unique key exceptions)
+    let application;
+    try {
+      application = await Application.create({
+        eventId: event._id,
+        studentId: student._id,
+        status: "applied",
+        customFieldsData: customFields || {},
+        registrationNumber: cleanUniId,
+      });
+    } catch (dbErr: any) {
+      if (dbErr.code === 11000) {
+        return NextResponse.json({
+          success: false,
+          message: `This registration number has already been registered for this event.`
+        }, { status: 409 });
+      }
+      throw dbErr;
+    }
 
     // 7. Update Student Metrics
     student.appliedCount += 1;
