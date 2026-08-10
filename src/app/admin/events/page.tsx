@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode } from "lucide-react";
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -173,6 +173,13 @@ export default function AdminEventsPage() {
                     title="View & Manage"
                   >
                     <Eye className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href={`/admin/events/${event._id}/attendance`}
+                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-650 transition"
+                    title="Attendance QR & Logs"
+                  >
+                    <QrCode className="w-4 h-4 text-red-600" />
                   </Link>
                   <Link
                     href={`/events/${event._id}`}
