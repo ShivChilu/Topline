@@ -50,29 +50,55 @@ export async function POST(request: Request) {
       status: { $in: ["applied", "selected", "confirmed", "attended"] }
     }).populate("studentId");
 
+    const verifyField = event.attendanceVerificationField || "registrationNumber";
     let matchedApplication = null;
     let matchedStudent = null;
 
-    // 3. Scan applications for matches (either Registration Number or dynamic phone/ID field)
+    // 3. Scan applications for matches specifically for the configured verification field
     for (const app of applications) {
       const student = app.studentId as any;
       if (!student) continue;
 
-      // Normalize fields from application or student database
-      const appRegNo = app.registrationNumber ? app.registrationNumber.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-      const studentPhone = student.phone ? student.phone.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-      const studentUniId = student.universityId ? student.universityId.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-      const studentEmail = student.email ? student.email.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-
-      if (
-        normalizedInput === appRegNo ||
-        normalizedInput === studentPhone ||
-        normalizedInput === studentUniId ||
-        normalizedInput === studentEmail
-      ) {
-        matchedApplication = app;
-        matchedStudent = student;
-        break;
+      if (verifyField === "registrationNumber" || verifyField === "universityId") {
+        const uniId = student.universityId ? student.universityId.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
+        const regNo = app.registrationNumber ? app.registrationNumber.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
+        if (normalizedInput === uniId || normalizedInput === regNo) {
+          matchedApplication = app;
+          matchedStudent = student;
+          break;
+        }
+      } else if (verifyField === "phone") {
+        const phone = student.phone ? student.phone.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
+        if (normalizedInput === phone) {
+          matchedApplication = app;
+          matchedStudent = student;
+          break;
+        }
+      } else if (verifyField === "email") {
+        const email = student.email ? student.email.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
+        if (normalizedInput === email) {
+          matchedApplication = app;
+          matchedStudent = student;
+          break;
+        }
+      } else {
+        // Custom field ID check
+        const customData = app.customFieldsData;
+        let customVal = typeof customData?.get === 'function' ? customData.get(verifyField) : customData?.[verifyField];
+        if (customVal === undefined) {
+          const fieldObj = event.customFormFields?.find((f: any) => f.id === verifyField);
+          if (fieldObj) {
+            customVal = typeof customData?.get === 'function' ? customData.get(fieldObj.label) : customData?.[fieldObj.label];
+          }
+        }
+        if (customVal) {
+          const normCustomVal = String(customVal).trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "");
+          if (normalizedInput === normCustomVal) {
+            matchedApplication = app;
+            matchedStudent = student;
+            break;
+          }
+        }
       }
     }
 

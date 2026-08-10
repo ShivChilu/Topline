@@ -42,6 +42,7 @@ export async function GET(
         status: att ? att.attendanceStatus : "ABSENT",
         checkInTime: att ? att.checkInTime : null,
         manualRemarks: att ? att.manualRemarks : "",
+        customFieldsData: app.customFieldsData || {},
       };
     });
 

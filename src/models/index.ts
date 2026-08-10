@@ -76,6 +76,7 @@ export interface IEvent extends Document {
   attendanceWindowStart?: Date;
   attendanceWindowEnd?: Date;
   gracePeriod?: number;
+  attendanceDisplayFields?: string[];
   createdAt: Date;
 }
 
@@ -120,6 +121,7 @@ const EventSchema = new Schema<IEvent>({
   attendanceWindowStart: { type: Date },
   attendanceWindowEnd: { type: Date },
   gracePeriod: { type: Number, default: 15 },
+  attendanceDisplayFields: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
 });
 

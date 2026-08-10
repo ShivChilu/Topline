@@ -31,6 +31,8 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   // Controls
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [displayFields, setDisplayFields] = useState<string[]>(["registrationNumber", "name", "phone"]);
   
   // Settings values
   const [qrEnabled, setQrEnabled] = useState(false);
@@ -51,6 +53,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
         setVerificationField(data.event.attendanceVerificationField || "registrationNumber");
         setGracePeriod(data.event.gracePeriod || 15);
         setQrToken(data.event.attendanceToken || "");
+        setDisplayFields(data.event.attendanceDisplayFields && data.event.attendanceDisplayFields.length > 0
+          ? data.event.attendanceDisplayFields
+          : ["registrationNumber", "name", "phone"]);
       }
     } catch (err) {
       console.error(err);
@@ -74,7 +79,10 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
         (item) =>
           item.studentName.toLowerCase().includes(q) ||
           item.registrationNumber.toLowerCase().includes(q) ||
-          item.phone.toLowerCase().includes(q)
+          item.phone.toLowerCase().includes(q) ||
+          Object.values(item.customFieldsData || {}).some((v) =>
+            String(v).toLowerCase().includes(q)
+          )
       );
     }
     setFilteredAttendance(result);
@@ -120,6 +128,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
         body: JSON.stringify({
           attendanceVerificationField: verificationField,
           gracePeriod: gracePeriod,
+          attendanceDisplayFields: displayFields,
         }),
       });
       const data = await res.json();
@@ -132,8 +141,58 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.length === attendance.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(attendance.map((a) => a.applicationId));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((x) => x !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleBulkAttendanceMark = async (status: string) => {
+    if (selectedIds.length === 0) {
+      alert("No student applications selected.");
+      return;
+    }
+
+    if (!confirm(`Mark attendance as ${status} for ${selectedIds.length} selected students?`)) return;
+
+    try {
+      await Promise.all(
+        selectedIds.map(async (id) => {
+          const item = attendance.find((a) => a.applicationId === id);
+          if (item) {
+            await fetch(`/api/admin/events/${eventId}/attendance`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                studentId: item.studentId,
+                applicationId: item.applicationId,
+                status,
+                remarks: "Bulk Admin Override",
+              }),
+            });
+          }
+        })
+      );
+      alert("Bulk attendance updated successfully!");
+      setSelectedIds([]);
+      fetchAttendance();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleManualMark = async (studentId: string, applicationId: string, status: string) => {
-    const remark = prompt("Enter override remarks (e.g. QR not working, Manual select):", "Manual Override");
+    const remark = status === "ABSENT" ? "Reset to Absent" : prompt("Enter override remarks (e.g. QR not working, Manual select):", "Manual Override");
     if (remark === null) return; // Cancelled
 
     try {
@@ -175,6 +234,20 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const getCustomValue = (item: any, fieldId: string) => {
+    if (!item.customFieldsData) return "";
+    const data = item.customFieldsData;
+    // Map or object lookup
+    let val = typeof data.get === 'function' ? data.get(fieldId) : data[fieldId];
+    if (val === undefined) {
+      const fieldObj = event?.customFormFields?.find((f: any) => f.id === fieldId);
+      if (fieldObj) {
+        val = typeof data.get === 'function' ? data.get(fieldObj.label) : data[fieldObj.label];
+      }
+    }
+    return val !== undefined ? String(val) : "";
   };
 
   const presentCount = attendance.filter((r) => r.status === "PRESENT").length;
@@ -226,6 +299,37 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
               </div>
             </div>
 
+            {/* Bulk actions toolbar */}
+            {selectedIds.length > 0 && (
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+                <div>
+                  <span className="text-sm font-semibold text-slate-600">
+                    Selected: <span className="text-red-655 font-extrabold">{selectedIds.length}</span> students
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleBulkAttendanceMark("PRESENT")}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                  >
+                    Mark Present
+                  </button>
+                  <button
+                    onClick={() => handleBulkAttendanceMark("LATE")}
+                    className="bg-amber-500 hover:bg-amber-650 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                  >
+                    Mark Late
+                  </button>
+                  <button
+                    onClick={() => handleBulkAttendanceMark("ABSENT")}
+                    className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                  >
+                    Revert Absent
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* List block */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
               {/* Filter controls */}
@@ -254,7 +358,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                   ))}
                   <button
                     onClick={handleExportCSV}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 transition"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 transition border border-slate-200"
                     title="Export CSV"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
@@ -263,38 +367,65 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto max-w-full">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-150 text-xs font-bold text-slate-500 uppercase">
-                      <th className="px-6 py-4">Reg Code</th>
-                      <th className="px-6 py-4">Student</th>
-                      <th className="px-6 py-4">Time</th>
+                      <th className="px-6 py-4 text-center w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === filteredAttendance.length && filteredAttendance.length > 0}
+                          onChange={handleSelectAll}
+                          className="rounded border-slate-200 text-red-655 focus:ring-red-655"
+                        />
+                      </th>
+                      {displayFields.map((fieldId) => {
+                        if (fieldId === "registrationNumber") return <th key={fieldId} className="px-6 py-4">Registration No.</th>;
+                        if (fieldId === "name") return <th key={fieldId} className="px-6 py-4">Name</th>;
+                        if (fieldId === "phone") return <th key={fieldId} className="px-6 py-4">Phone</th>;
+                        const f = event?.customFormFields?.find((x: any) => x.id === fieldId);
+                        return <th key={fieldId} className="px-6 py-4">{f ? f.label : fieldId}</th>;
+                      })}
                       <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Check-in Time</th>
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
+                  <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                     {filteredAttendance.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-10 text-center text-slate-400">
+                        <td colSpan={displayFields.length + 4} className="px-6 py-10 text-center text-slate-400">
                           No matching students registered under this event.
                         </td>
                       </tr>
                     ) : (
                       filteredAttendance.map((item) => (
-                        <tr key={item.studentId}>
-                          <td className="px-6 py-4 font-mono font-semibold text-slate-900">{item.registrationNumber}</td>
-                          <td className="px-6 py-4">
-                            <div className="font-semibold text-slate-800">{item.studentName}</div>
-                            <div className="text-xs text-slate-400">{item.phone}</div>
+                        <tr key={item.applicationId} className="hover:bg-slate-50/50 transition">
+                          <td className="px-6 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(item.applicationId)}
+                              onChange={() => handleToggleSelect(item.applicationId)}
+                              className="rounded border-slate-200 text-red-655 focus:ring-red-655"
+                            />
                           </td>
-                          <td className="px-6 py-4 text-xs">
-                            {item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
-                          </td>
+                          {displayFields.map((fieldId) => {
+                            if (fieldId === "registrationNumber") {
+                              return <td key={fieldId} className="px-6 py-4 font-mono font-bold text-slate-800">{item.registrationNumber}</td>;
+                            }
+                            if (fieldId === "name") {
+                              return <td key={fieldId} className="px-6 py-4 font-semibold text-slate-800">{item.studentName}</td>;
+                            }
+                            if (fieldId === "phone") {
+                              return <td key={fieldId} className="px-6 py-4 text-slate-550">{item.phone}</td>;
+                            }
+                            const val = getCustomValue(item, fieldId);
+                            return <td key={fieldId} className="px-6 py-4 text-slate-700 font-medium">{val || "-"}</td>;
+                          })}
+                          
                           <td className="px-6 py-4">
                             <span
-                              className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                              className={`text-[10px] font-extrabold px-2.5 py-1 rounded border uppercase tracking-wider ${
                                 item.status === "PRESENT"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                   : item.status === "LATE"
@@ -305,20 +436,31 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               {item.status}
                             </span>
                           </td>
+                          <td className="px-6 py-4 text-xs font-semibold text-slate-500">
+                            {item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
+                          </td>
                           <td className="px-6 py-4 text-right space-x-1.5">
                             {item.status === "ABSENT" ? (
-                              <button
-                                onClick={() => handleManualMark(item.studentId, item.applicationId, "PRESENT")}
-                                className="text-xs bg-emerald-550 text-white px-2.5 py-1.5 rounded hover:bg-emerald-600 transition"
-                              >
-                                Mark Present
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleManualMark(item.studentId, item.applicationId, "PRESENT")}
+                                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded transition font-bold"
+                                >
+                                  Mark Present
+                                </button>
+                                <button
+                                  onClick={() => handleManualMark(item.studentId, item.applicationId, "LATE")}
+                                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded transition font-bold"
+                                >
+                                  Late
+                                </button>
+                              </>
                             ) : (
                               <button
-                                onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
-                                className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded hover:bg-slate-200 transition"
+                                  onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
+                                  className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
                               >
-                                Reset Absent
+                                Revert
                               </button>
                             )}
                           </td>
@@ -342,7 +484,6 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
               {qrToken ? (
                 <div className="space-y-4 text-center">
                   <div className="bg-slate-100 p-4 rounded-2xl inline-block border border-slate-200">
-                    {/* Render high quality QR code container */}
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicQRUrl)}`}
                       alt="Attendance QR Code"
@@ -391,28 +532,89 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                 <h3 className="font-bold text-slate-900 text-lg">QR Verification Rule</h3>
               </div>
 
-              <div className="space-y-3 text-sm">
+              <div className="space-y-4 text-sm">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Verification field</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase block">Verification field</label>
                   <select
                     value={verificationField}
                     onChange={(e) => setVerificationField(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-600"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-650 text-xs"
                   >
                     <option value="registrationNumber">Registration Number</option>
+                    <option value="universityId">University ID / Student ID</option>
                     <option value="phone">Phone Number</option>
-                    <option value="universityId">College Student ID</option>
-                    <option value="email">Email ID</option>
+                    <option value="email">Email Address</option>
+                    {event?.customFormFields?.map((f: any) => (
+                      <option key={f.id} value={f.id}>{f.label}</option>
+                    ))}
                   </select>
                 </div>
 
+                <div className="space-y-1.5 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
+                  <label className="text-xs font-semibold text-slate-500 uppercase block mb-1">Attendance Display Fields</label>
+                  
+                  <label className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={displayFields.includes("registrationNumber")}
+                      onChange={(e) => {
+                        if (e.target.checked) setDisplayFields([...displayFields, "registrationNumber"]);
+                        else setDisplayFields(displayFields.filter(f => f !== "registrationNumber"));
+                      }}
+                      className="rounded border-slate-200 text-red-655"
+                    />
+                    <span>Registration Number</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={displayFields.includes("name")}
+                      onChange={(e) => {
+                        if (e.target.checked) setDisplayFields([...displayFields, "name"]);
+                        else setDisplayFields(displayFields.filter(f => f !== "name"));
+                      }}
+                      className="rounded border-slate-200 text-red-655"
+                    />
+                    <span>Name</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={displayFields.includes("phone")}
+                      onChange={(e) => {
+                        if (e.target.checked) setDisplayFields([...displayFields, "phone"]);
+                        else setDisplayFields(displayFields.filter(f => f !== "phone"));
+                      }}
+                      className="rounded border-slate-200 text-red-655"
+                    />
+                    <span>Phone Number</span>
+                  </label>
+
+                  {event?.customFormFields?.map((field: any) => (
+                    <label key={field.id} className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={displayFields.includes(field.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setDisplayFields([...displayFields, field.id]);
+                          else setDisplayFields(displayFields.filter(f => f !== field.id));
+                        }}
+                        className="rounded border-slate-200 text-red-655"
+                      />
+                      <span>{field.label}</span>
+                    </label>
+                  ))}
+                </div>
+
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Grace Period (Minutes)</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase block">Grace Period (Minutes)</label>
                   <input
                     type="number"
                     value={gracePeriod}
                     onChange={(e) => setGracePeriod(Number(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-600"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-650 text-xs"
                   />
                 </div>
 
@@ -420,7 +622,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                   onClick={handleSaveSettings}
                   className="w-full bg-slate-900 text-white hover:bg-slate-800 py-2.5 rounded-xl font-bold text-xs transition"
                 >
-                  Save QR Rules
+                  Save settings
                 </button>
               </div>
             </div>

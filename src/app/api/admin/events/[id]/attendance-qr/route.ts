@@ -51,7 +51,7 @@ export async function PATCH(
     await connectToDatabase();
     const eventId = params.id;
     const body = await request.json();
-    const { attendanceTokenEnabled, attendanceVerificationField, gracePeriod } = body;
+    const { attendanceTokenEnabled, attendanceVerificationField, gracePeriod, attendanceDisplayFields } = body;
 
     const updateFields: any = {};
     if (typeof attendanceTokenEnabled !== "undefined") {
@@ -62,6 +62,9 @@ export async function PATCH(
     }
     if (typeof gracePeriod !== "undefined") {
       updateFields.gracePeriod = Number(gracePeriod);
+    }
+    if (typeof attendanceDisplayFields !== "undefined") {
+      updateFields.attendanceDisplayFields = attendanceDisplayFields;
     }
 
     const event = await Event.findByIdAndUpdate(
