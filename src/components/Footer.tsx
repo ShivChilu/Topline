@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
           <h3 className="text-white text-lg font-bold tracking-wider uppercase mb-4">
-            TOP LINE CATERING
+            TOPLINE ODC
           </h3>
           <p className="text-sm">
             Connecting hospitality providers with pre-screened, dependable university student workforces for events, resorts, and premium catering.
@@ -81,7 +81,7 @@ export default function Footer() {
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-center text-xs">
         <p>
-          &copy; {new Date().getFullYear()} Top Line Catering. All rights reserved. Professional Workforce Solutions.
+          &copy; {new Date().getFullYear()} TOPLINE ODC. All rights reserved. Professional Workforce Solutions.
         </p>
       </div>
     </footer>

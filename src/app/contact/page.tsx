@@ -17,7 +17,7 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Contact Details */}
           <div className="space-y-8 bg-[#0c0d12] p-8 rounded-xl border border-gray-800">
-            <h2 className="text-2xl font-bold text-white mb-6">Top Line Catering Headquarters</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">TOPLINE ODC Headquarters</h2>
             <div className="flex items-start space-x-4">
               <Phone className="text-amber-500 mt-1" />
               <div>

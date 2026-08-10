@@ -11,7 +11,7 @@ export default function TermsPage() {
         </h1>
         <div className="text-gray-300 space-y-4">
           <p>
-            Welcome to Top Line Catering. These terms and conditions outline the rules and regulations for the use of Top Line Catering's recruitment systems.
+            Welcome to TOPLINE ODC. These terms and conditions outline the rules and regulations for the use of TOPLINE ODC's recruitment systems.
           </p>
           <h2 className="text-xl font-bold text-white mt-6">1. Student Conduct</h2>
           <p>

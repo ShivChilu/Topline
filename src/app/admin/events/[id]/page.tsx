@@ -185,7 +185,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
     const publicUrl = `${window.location.origin}/events/${eventId}`;
 
-    const text = `*TOP LINE CATERING*\n🔔 New Hospitality Opportunity\n\n📅 *Date:* ${dateStr}\n📍 *Location:* ${event.location}\n👨🍳 *Work:* ${event.workType}\n💰 *Payment:* ₹${event.paymentPerStudent}\n👥 *Required:* ${event.workersRequired}\n⏰ *Reporting:* ${event.reportingTime}\n\nApply here:\n${publicUrl}`;
+    const text = `*TOPLINE ODC*\n🔔 New Hospitality Opportunity\n\n📅 *Date:* ${dateStr}\n📍 *Location:* ${event.location}\n👨🍳 *Work:* ${event.workType}\n💰 *Payment:* ₹${event.paymentPerStudent}\n👥 *Required:* ${event.workersRequired}\n⏰ *Reporting:* ${event.reportingTime}\n\nApply here:\n${publicUrl}`;
     
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, "_blank");

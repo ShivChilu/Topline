@@ -7,11 +7,11 @@ export default function AboutPage() {
       <Navbar />
       <main className="flex-grow max-w-4xl mx-auto px-4 py-16 text-center">
         <h1 className="text-4xl font-extrabold text-amber-500 mb-6 uppercase tracking-wider">
-          About Top Line Catering
+          About TOPLINE ODC
         </h1>
         <div className="text-gray-300 space-y-6 text-lg leading-relaxed text-left max-w-2xl mx-auto">
           <p>
-            Top Line Catering is a premier hospitality recruitment and staffing platform designed to bridge the gap between luxury hotels, resorts, and events with energetic, trained, and reliable university student workforces.
+            TOPLINE ODC is a premier hospitality recruitment and staffing platform designed to bridge the gap between luxury hotels, resorts, and events with energetic, trained, and reliable university student workforces.
           </p>
           <p>
             Founded on the values of trust, professionalism, and speed, we support hotel supervisors and banquet managers by deploying pre-screened students for catering operations, food service, buffet coordination, and VIP banquet settings.

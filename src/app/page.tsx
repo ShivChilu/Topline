@@ -23,7 +23,7 @@ export default async function HomePage() {
   let galleryImages: any[] = [];
   let homeContent = {
     headline: "Reliable Hospitality Workforce for Events, Hotels & Resorts",
-    subheadline: "Top Line Catering connects premium hotels, resorts, and hospitality managers with a dependable, pre-screened student workforce.",
+    subheadline: "TOPLINE ODC connects premium hotels, resorts, and hospitality managers with a dependable, pre-screened student workforce.",
     whatsappNumber: "919876543210",
     email: "contact@toplinecatering.com",
     aboutText: "",

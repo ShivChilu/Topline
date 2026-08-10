@@ -14,10 +14,10 @@ const Setting = mongoose.models.Setting || mongoose.model('Setting', SettingSche
 
 const eliteProtocol = {
   headline: "Reliable Hospitality Workforce for Events, Hotels & Resorts",
-  subheadline: "Top Line Catering connects premium hotels, resorts, and hospitality managers with a dependable, pre-screened student workforce.",
+  subheadline: "TOPLINE ODC connects premium hotels, resorts, and hospitality managers with a dependable, pre-screened student workforce.",
   whatsappNumber: "919876543210",
   email: "contact@toplinecatering.com",
-  aboutText: "Top Line Catering delivers a premium guest experience. Every staff member represents the brand — behavior, appearance, and attitude reflect professional excellence at all times.",
+  aboutText: "TOPLINE ODC delivers a premium guest experience. Every staff member represents the brand — behavior, appearance, and attitude reflect professional excellence at all times.",
   dos: [
     "Arrive on time and remain at your assigned station.",
     "Wear correct uniform (Male: black formal trousers, plain white shirt, polished black shoes, clean shave. Female: black pants/leggings with uniform top, hair in neat bun).",

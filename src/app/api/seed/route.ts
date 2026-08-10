@@ -208,10 +208,10 @@ export async function GET() {
       key: "homepage_content",
       value: {
         headline: "Reliable Hospitality Workforce for Events, Hotels & Resorts",
-        subheadline: "Top Line Catering connects hotels, premium resorts, and hospitality organizers with high-quality, pre-screened student staff and temporary catering teams.",
+        subheadline: "TOPLINE ODC connects hotels, premium resorts, and hospitality organizers with high-quality, pre-screened student staff and temporary catering teams.",
         whatsappNumber: "919876543210",
         email: "contact@toplinecatering.com",
-        aboutText: "Top Line Catering has been the leading supplier of student and temporary hospitality workforce solutions in the tri-state area. We bridge the gap between busy event planners and enthusiastic, hard-working students looking for flexible working opportunities.",
+        aboutText: "TOPLINE ODC has been the leading supplier of student and temporary hospitality workforce solutions in the tri-state area. We bridge the gap between busy event planners and enthusiastic, hard-working students looking for flexible working opportunities.",
       }
     });
 
