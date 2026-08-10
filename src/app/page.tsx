@@ -224,7 +224,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { title: "1. Browse Slots", desc: "Find open hospitality events matching your free dates." },
-              { title: "2. Submit Form", desc: "Apply in under 2 minutes through the dynamic custom questionnaire." },
+              { title: "2. Submit Form", desc: "Fill out the registration details to submit your application." },
               { title: "3. Check-In & Work", desc: "Confirm selection, wear uniforms, scan attendance QR code." },
               { title: "4. Fast Payout", desc: "Complete work shifts, verify checkout, and get paid." },
             ].map((step, idx) => (
