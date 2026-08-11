@@ -173,6 +173,9 @@ export interface IApplication extends Document {
   registrationNumber?: string;
   paymentStatus?: 'UNPAID' | 'PAID';
   messageStatus?: 'NOT_SENT' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+  whatsappGroupAdded?: boolean;
+  whatsappGroupAddedAt?: Date;
+  whatsappGroupAddedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
 }
 const ApplicationSchema = new Schema<IApplication>({
@@ -186,6 +189,9 @@ const ApplicationSchema = new Schema<IApplication>({
   registrationNumber: { type: String },
   paymentStatus: { type: String, enum: ['UNPAID', 'PAID'], default: 'UNPAID' },
   messageStatus: { type: String, enum: ['NOT_SENT', 'SENT', 'DELIVERED', 'READ', 'FAILED'], default: 'NOT_SENT' },
+  whatsappGroupAdded: { type: Boolean, default: false },
+  whatsappGroupAddedAt: { type: Date },
+  whatsappGroupAddedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
   createdAt: { type: Date, default: Date.now },
 });
 

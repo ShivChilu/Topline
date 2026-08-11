@@ -202,6 +202,49 @@ export default function CallingDashboard() {
     }
   };
 
+  const handleSingleGroupAddedUpdate = async (id: string, groupAdded: boolean) => {
+    try {
+      const res = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [id], whatsappGroupAdded: groupAdded }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        fetchApplications(selectedEventId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleBulkGroupAddedUpdate = async (groupAdded: boolean) => {
+    if (selectedIds.length === 0) return;
+    const actionText = groupAdded ? "mark as added to WhatsApp group" : "revert WhatsApp group status";
+    if (!confirm(`Are you sure you want to ${actionText} for ${selectedIds.length} applicants?`)) return;
+
+    try {
+      setActionLoading(true);
+      const res = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds, whatsappGroupAdded: groupAdded }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`Successfully updated WhatsApp group status for ${selectedIds.length} applicants.`);
+        setSelectedIds([]);
+        fetchApplications(selectedEventId);
+      } else {
+        alert(data.message || "Failed to update applications.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleSelectAll = () => {
     if (selectedIds.length === filteredApplications.length) {
       setSelectedIds([]);
@@ -361,6 +404,20 @@ export default function CallingDashboard() {
                   >
                     Mark Msg Sent
                   </button>
+                  <button
+                    onClick={() => handleBulkGroupAddedUpdate(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                    disabled={actionLoading}
+                  >
+                    Mark Added
+                  </button>
+                  <button
+                    onClick={() => handleBulkGroupAddedUpdate(false)}
+                    className="bg-slate-500 hover:bg-slate-655 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                    disabled={actionLoading}
+                  >
+                    Revert Added
+                  </button>
                 </div>
               </div>
             )}
@@ -487,16 +544,42 @@ export default function CallingDashboard() {
                                 </span>
                               </td>
 
-                              <td className="px-6 py-4 text-xs font-semibold">
-                                <span
-                                  className={`px-2 py-0.5 rounded border ${
-                                    (app.messageStatus || "PENDING") === "SENT"
-                                      ? "bg-blue-50 text-blue-600 border-blue-200"
-                                      : "bg-slate-100 text-slate-400 border-slate-200"
-                                  }`}
-                                >
-                                  {(app.messageStatus || "PENDING").toUpperCase()}
-                                </span>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col space-y-1.5 items-start">
+                                  <span
+                                    className={`px-2 py-0.5 rounded border text-[10px] font-semibold ${
+                                      (app.messageStatus || "PENDING") === "SENT"
+                                        ? "bg-blue-50 text-blue-600 border-blue-200"
+                                        : "bg-slate-100 text-slate-400 border-slate-200"
+                                    }`}
+                                  >
+                                    {(app.messageStatus || "PENDING").toUpperCase()}
+                                  </span>
+                                  {app.whatsappGroupAdded ? (
+                                    <div className="flex items-center space-x-1">
+                                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        ✓ Added
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
+                                            handleSingleGroupAddedUpdate(app._id, false);
+                                          }
+                                        }}
+                                        className="text-[10px] text-slate-400 hover:text-red-655 font-bold"
+                                      >
+                                        Revert
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleSingleGroupAddedUpdate(app._id, true)}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded text-[10px] font-bold transition shadow-sm"
+                                    >
+                                      + Added
+                                    </button>
+                                  )}
+                                </div>
                               </td>
 
                               <td className="px-6 py-4 text-right space-x-1.5">

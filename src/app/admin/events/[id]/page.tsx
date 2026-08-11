@@ -135,7 +135,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   };
 
   // Bulk update applications (status, payment, message)
-  const handleBulkUpdate = async (updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number }) => {
+  const handleBulkUpdate = async (updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number; whatsappGroupAdded?: boolean }) => {
     if (selectedIds.length === 0) {
       alert("No student applications selected.");
       return;
@@ -150,6 +150,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       confirmationMsg = `Send message to ${selectedIds.length} selected students?`;
     } else if (updatePayload.paymentOverride) {
       confirmationMsg = `Apply payment of ₹${updatePayload.paymentOverride} to ${selectedIds.length} selected students?`;
+    } else if (updatePayload.whatsappGroupAdded !== undefined) {
+      confirmationMsg = updatePayload.whatsappGroupAdded
+        ? `Mark ${selectedIds.length} selected students as ADDED to WhatsApp Group?`
+        : `Revert WhatsApp Group status to NOT ADDED for ${selectedIds.length} selected students?`;
     }
 
     if (!confirm(confirmationMsg)) return;
@@ -174,7 +178,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   };
 
   // Single update application
-  const handleSingleUpdate = async (id: string, updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number }) => {
+  const handleSingleUpdate = async (id: string, updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number; whatsappGroupAdded?: boolean }) => {
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
@@ -459,6 +463,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             >
               Cancel Selected
             </button>
+            <button
+              onClick={() => handleBulkUpdate({ whatsappGroupAdded: true })}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Mark Added to Group
+            </button>
+            <button
+              onClick={() => handleBulkUpdate({ whatsappGroupAdded: false })}
+              className="bg-slate-500 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+            >
+              Revert Group Added
+            </button>
             
             {/* Bulk Payment Apply */}
             <div className="flex items-center space-x-1 border border-slate-200 rounded-lg p-1 bg-white text-xs">
@@ -565,19 +581,46 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         </span>
                       </td>
 
-                      {/* WhatsApp Sent Action */}
+                      {/* WhatsApp Sent Action & Group Added */}
                       <td className="py-4 px-3">
-                        <div className="flex items-center space-x-1 text-xs">
-                          {app.messageStatus === "SENT" ? (
-                            <span className="text-emerald-600 font-bold flex items-center space-x-1">
-                              <span>✓ Sent</span>
-                            </span>
+                        <div className="flex flex-col space-y-1.5 items-start text-xs">
+                          <div className="flex items-center space-x-1">
+                            {app.messageStatus === "SENT" ? (
+                              <span className="text-blue-600 font-bold border border-blue-200 bg-blue-50 px-2 py-0.5 rounded text-[10px] uppercase">
+                                ✓ Sent
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleSingleUpdate(app._id, { messageStatus: "SENT" })}
+                                className="text-red-650 hover:text-red-750 font-bold border border-red-200 hover:bg-red-50 px-2 py-0.5 rounded text-[10px] transition uppercase"
+                              >
+                                Send
+                              </button>
+                            )}
+                          </div>
+                          
+                          {app.whatsappGroupAdded ? (
+                            <div className="flex items-center space-x-1.5">
+                              <span className="text-emerald-750 font-bold border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">
+                                ✓ Added
+                              </span>
+                              <button
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
+                                    handleSingleUpdate(app._id, { whatsappGroupAdded: false });
+                                  }
+                                }}
+                                className="text-[10px] text-slate-400 hover:text-red-650 font-semibold underline"
+                              >
+                                Revert
+                              </button>
+                            </div>
                           ) : (
                             <button
-                              onClick={() => handleSingleUpdate(app._id, { messageStatus: "SENT" })}
-                              className="text-red-650 hover:text-red-750 font-bold border border-red-200 hover:bg-red-50 px-2 py-1 rounded text-[11px] transition"
+                              onClick={() => handleSingleUpdate(app._id, { whatsappGroupAdded: true })}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-0.5 rounded text-[10px] transition shadow-sm"
                             >
-                              Send
+                              + Added
                             </button>
                           )}
                         </div>

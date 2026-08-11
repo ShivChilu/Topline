@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { ids, status, paymentStatus, messageStatus, paymentOverride } = await request.json();
+    const { ids, status, paymentStatus, messageStatus, paymentOverride, whatsappGroupAdded } = await request.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ success: false, message: "Missing application IDs." }, { status: 400 });
@@ -100,6 +100,16 @@ export async function PATCH(request: Request) {
       }
       if (paymentOverride !== undefined) {
         app.paymentOverride = Number(paymentOverride);
+      }
+      if (whatsappGroupAdded !== undefined) {
+        app.whatsappGroupAdded = whatsappGroupAdded;
+        if (whatsappGroupAdded) {
+          app.whatsappGroupAddedAt = new Date();
+          app.whatsappGroupAddedBy = admin._id;
+        } else {
+          app.whatsappGroupAddedAt = undefined;
+          app.whatsappGroupAddedBy = undefined;
+        }
       }
 
       await app.save();
