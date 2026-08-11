@@ -104,7 +104,15 @@ export default function CallingDashboard() {
         const regNo = app.registrationNumber || "";
         const name = student.name || "";
         const phone = student.phone || "";
-        return regNo.toLowerCase().includes(q) || name.toLowerCase().includes(q) || phone.toLowerCase().includes(q);
+        
+        const customMatches = Object.values(app.customFieldsData || {}).some(val => 
+          String(val).toLowerCase().includes(q)
+        );
+
+        return regNo.toLowerCase().includes(q) || 
+               name.toLowerCase().includes(q) || 
+               phone.toLowerCase().includes(q) ||
+               customMatches;
       });
     }
     setFilteredApplications(result);
@@ -414,10 +422,7 @@ export default function CallingDashboard() {
                             className="rounded border-slate-200 text-red-655"
                           />
                         </th>
-                        <th className="px-6 py-4">Reg No</th>
-                        <th className="px-6 py-4">Name</th>
-                        <th className="px-6 py-4">Phone</th>
-                        {/* Dynamic Custom Fields */}
+                        {/* Dynamic Custom Fields from Form Schema only */}
                         {eventDetails?.customFormFields?.map((f: any) => (
                           <th key={f.id} className="px-6 py-4">{f.label}</th>
                         ))}
@@ -429,13 +434,12 @@ export default function CallingDashboard() {
                     <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                       {filteredApplications.length === 0 ? (
                         <tr>
-                          <td colSpan={(eventDetails?.customFormFields?.length || 0) + 7} className="px-6 py-10 text-center text-slate-400">
+                          <td colSpan={(eventDetails?.customFormFields?.length || 0) + 4} className="px-6 py-10 text-center text-slate-400">
                             No matching applications found.
                           </td>
                         </tr>
                       ) : (
                         filteredApplications.map((app) => {
-                          const student = app.studentId || {};
                           return (
                             <tr key={app._id} className="hover:bg-slate-50/50 transition">
                               <td className="px-6 py-4 text-center">
@@ -444,25 +448,23 @@ export default function CallingDashboard() {
                                   checked={selectedIds.includes(app._id)}
                                   onChange={() => handleToggleSelect(app._id)}
                                   className="rounded border-slate-200 text-red-655"
+                                  id={`select-${app._id}`}
                                 />
                               </td>
-                              <td className="px-6 py-4 font-mono font-bold text-slate-800">{app.registrationNumber || student.universityId || "-"}</td>
-                              <td className="px-6 py-4 font-semibold text-slate-800">{student.name || "N/A"}</td>
-                              <td className="px-6 py-4">
-                                <a
-                                  href={`tel:${student.phone}`}
-                                  className="text-red-655 hover:underline font-semibold"
-                                >
-                                  {student.phone || "N/A"}
-                                </a>
-                              </td>
                               
-                              {/* Dynamic Custom Values */}
+                              {/* Dynamic Custom Fields from Form Schema only */}
                               {eventDetails?.customFormFields?.map((f: any) => {
                                 const val = getCustomValue(app, f.id);
+                                const isPhone = f.type === "phone" || f.label.toLowerCase().includes("phone") || f.label.toLowerCase().includes("mobile") || f.label.toLowerCase().includes("contact");
                                 return (
                                   <td key={f.id} className="px-6 py-4 font-medium text-slate-600">
-                                    {val || "-"}
+                                    {isPhone && val ? (
+                                      <a href={`tel:${val}`} className="text-red-655 hover:underline font-semibold">
+                                        {val}
+                                      </a>
+                                    ) : (
+                                      val || "-"
+                                    )}
                                   </td>
                                 );
                               })}
@@ -470,8 +472,10 @@ export default function CallingDashboard() {
                               <td className="px-6 py-4">
                                 <span
                                   className={`text-[10px] font-extrabold px-2.5 py-1 rounded border uppercase tracking-wider ${
-                                    app.status === "selected"
+                                    app.status === "confirmed"
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : app.status === "selected"
+                                      ? "bg-teal-50 text-teal-700 border-teal-200"
                                       : app.status === "attended"
                                       ? "bg-blue-50 text-blue-700 border-blue-200"
                                       : app.status === "cancelled"
@@ -498,7 +502,7 @@ export default function CallingDashboard() {
                               <td className="px-6 py-4 text-right space-x-1.5">
                                 {app.status === "applied" ? (
                                   <button
-                                    onClick={() => handleSingleStatusUpdate(app._id, "selected")}
+                                    onClick={() => handleSingleStatusUpdate(app._id, "confirmed")}
                                     className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded transition font-bold"
                                   >
                                     Confirm
