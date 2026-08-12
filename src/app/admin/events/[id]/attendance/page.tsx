@@ -18,6 +18,14 @@ import {
   AlertCircle
 } from "lucide-react";
 
+const isReservedField = (label: string) => {
+  const norm = label.toLowerCase().trim();
+  const reservedNames = ["name", "full name", "student name", "candidate name", "applicant name"];
+  const reservedMobiles = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+  const reservedRegs = ["registration number", "registration no", "registration no.", "roll no", "roll no.", "roll number", "university id", "university roll no", "university registration number"];
+  return reservedNames.includes(norm) || reservedMobiles.includes(norm) || reservedRegs.includes(norm);
+};
+
 export default function AdminEventAttendancePage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -394,8 +402,8 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                 </div>
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto max-w-full">
+              {/* Table view (Desktop Only) */}
+              <div className="hidden md:block overflow-x-auto max-w-full">
                 <table className="w-full text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-150 text-xs font-bold text-slate-500 uppercase">
@@ -407,7 +415,11 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                           className="rounded border-slate-200 text-red-655 focus:ring-red-655"
                         />
                       </th>
-                      {displayFields.map((fieldId) => {
+                      {displayFields.filter((fieldId) => {
+                        if (fieldId === "registrationNumber" || fieldId === "name" || fieldId === "phone") return true;
+                        const f = event?.customFormFields?.find((x: any) => x.id === fieldId);
+                        return f ? !isReservedField(f.label) : true;
+                      }).map((fieldId) => {
                         if (fieldId === "registrationNumber") return <th key={fieldId} className="px-6 py-4">Registration No.</th>;
                         if (fieldId === "name") return <th key={fieldId} className="px-6 py-4">Name</th>;
                         if (fieldId === "phone") return <th key={fieldId} className="px-6 py-4">Phone</th>;
@@ -437,7 +449,11 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               className="rounded border-slate-200 text-red-655 focus:ring-red-655"
                             />
                           </td>
-                          {displayFields.map((fieldId) => {
+                          {displayFields.filter((fieldId) => {
+                            if (fieldId === "registrationNumber" || fieldId === "name" || fieldId === "phone") return true;
+                            const f = event?.customFormFields?.find((x: any) => x.id === fieldId);
+                            return f ? !isReservedField(f.label) : true;
+                          }).map((fieldId) => {
                             if (fieldId === "registrationNumber") {
                               return <td key={fieldId} className="px-6 py-4 font-mono font-bold text-slate-800">{item.registrationNumber}</td>;
                             }
@@ -445,7 +461,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               return <td key={fieldId} className="px-6 py-4 font-semibold text-slate-800">{item.studentName}</td>;
                             }
                             if (fieldId === "phone") {
-                              return <td key={fieldId} className="px-6 py-4 text-slate-550">{item.phone}</td>;
+                              return <td key={fieldId} className="px-6 py-4 text-slate-550">{item.phone || "Mobile number not available"}</td>;
                             }
                             const val = getCustomValue(item, fieldId);
                             return <td key={fieldId} className="px-6 py-4 text-slate-700 font-medium">{val || "-"}</td>;
@@ -497,6 +513,89 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile View Card List */}
+              <div className="block md:hidden space-y-4">
+                {filteredAttendance.length === 0 ? (
+                  <p className="text-center py-6 text-xs text-slate-400">No matching students registered under this event.</p>
+                ) : (
+                  filteredAttendance.map((item, index) => {
+                    const status = item.status;
+                    const phoneVal = item.phone || "";
+                    return (
+                      <div key={item.applicationId} className="bg-slate-50/50 p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 relative text-left">
+                        {/* Header info */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(item.applicationId)}
+                              onChange={() => handleToggleSelect(item.applicationId)}
+                              className="rounded border-slate-200 text-red-655 focus:ring-red-655 mt-1"
+                            />
+                            <div>
+                              <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {item.studentName}</h3>
+                              <p className="text-xs text-slate-500 font-mono">Reg No: {item.registrationNumber}</p>
+                              {phoneVal ? (
+                                <a href={`tel:${phoneVal}`} className="text-xs text-red-655 font-bold hover:underline inline-flex items-center mt-1">
+                                  📞 {phoneVal}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-slate-450 block mt-1">Mobile number not available</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <span
+                            className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded border uppercase tracking-wider ${
+                              status === "PRESENT"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : status === "LATE"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200"
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </div>
+
+                        {item.checkInTime && (
+                          <p className="text-[10px] text-slate-400 font-semibold font-mono">
+                            Checked In: {new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="border-t border-slate-100 pt-2 flex justify-end gap-2">
+                          {status === "ABSENT" ? (
+                            <>
+                              <button
+                                onClick={() => handleManualMark(item.studentId, item.applicationId, "PRESENT")}
+                                className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded transition font-bold"
+                              >
+                                Mark Present
+                              </button>
+                              <button
+                                onClick={() => handleManualMark(item.studentId, item.applicationId, "LATE")}
+                                className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded transition font-bold"
+                              >
+                                Late
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
+                              className="text-xs bg-slate-100 text-slate-655 px-2.5 py-1.5 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
+                            >
+                              Revert
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

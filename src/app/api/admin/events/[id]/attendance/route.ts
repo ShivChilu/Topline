@@ -54,14 +54,56 @@ export async function GET(
     // Map applications to attendance state
     const list = applications.map((app) => {
       const student = app.studentId as any;
-      const att = attendanceRecords.find((r) => r.studentId.toString() === student?._id.toString());
+      const studentIdStr = student?._id ? student._id.toString() : "";
+      const att = studentIdStr ? attendanceRecords.find((r) => r.studentId && r.studentId.toString() === studentIdStr) : null;
+
+      // Safe Name resolution: prioritize app.name, then student?.name, fallback to "Student <reg>"
+      const resolvedName = app.name || student?.name || `Student ${app.registrationNumber || "N/A"}`;
+
+      // Safe Mobile resolution
+      const regNo = (app.registrationNumber || student?.universityId || "").trim();
+      const isValidPhone = (val: any) => {
+        if (!val) return false;
+        const clean = String(val).trim();
+        if (clean === regNo) return false;
+        const digits = clean.replace(/[^0-9]/g, "");
+        return digits.length >= 10;
+      };
+
+      let resolvedMobile = "";
+      if (app.mobileNumber && isValidPhone(app.mobileNumber)) {
+        resolvedMobile = app.mobileNumber.trim();
+      } else if (student?.phone && isValidPhone(student.phone)) {
+        resolvedMobile = student.phone.trim();
+      } else {
+        const data = app.customFieldsData ? (
+          app.customFieldsData instanceof Map 
+            ? Object.fromEntries(app.customFieldsData) 
+            : app.customFieldsData
+        ) : {};
+        const phoneKeys = [
+          "phone", "phone number", "phone no", "phone no.", "phone no:",
+          "mobile", "mobile number", "mobile no", "mobile no.", "mobile no:",
+          "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"
+        ];
+        for (const key of Object.keys(data)) {
+          const normKey = key.toLowerCase().trim();
+          if (phoneKeys.some(k => normKey.startsWith(k) || normKey.includes(k))) {
+            const val = data[key];
+            if (val && isValidPhone(val)) {
+              resolvedMobile = String(val).trim();
+              break;
+            }
+          }
+        }
+      }
 
       return {
         applicationId: app._id,
-        studentId: student?._id,
-        studentName: student?.name || "N/A",
-        phone: student?.phone || "N/A",
-        registrationNumber: student?.universityId || app.registrationNumber || "N/A",
+        studentId: student?._id || null,
+        studentName: resolvedName,
+        phone: resolvedMobile, // Leave empty string if no valid mobile found
+        registrationNumber: app.registrationNumber || student?.universityId || "N/A",
         status: att ? att.attendanceStatus : "ABSENT",
         checkInTime: att ? att.checkInTime : null,
         manualRemarks: att ? att.manualRemarks : "",
@@ -100,9 +142,9 @@ export async function POST(
 
     const eventId = params.id;
     const body = await request.json();
-    const { studentId, applicationId, status, remarks } = body;
+    let { studentId, applicationId, status, remarks } = body;
 
-    if (!studentId || !applicationId || !status) {
+    if (!applicationId || !status) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
     }
 
@@ -111,7 +153,25 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Application not found" }, { status: 404 });
     }
 
-    const studentObj = await Student.findById(studentId);
+    let actualStudentId = studentId || app.studentId;
+    if (!actualStudentId) {
+      // Heal relationship: find existing Student or create new master Student
+      const regNo = app.registrationNumber || "N/A";
+      let studentObj = await Student.findOne({ universityId: regNo });
+      if (!studentObj) {
+        studentObj = await Student.create({
+          universityId: regNo,
+          name: app.name || `Student ${regNo}`,
+          phone: app.mobileNumber || ""
+        });
+      }
+      actualStudentId = studentObj._id;
+      app.studentId = actualStudentId;
+      await app.save();
+    }
+
+    const studentObj = await Student.findById(actualStudentId);
+    studentId = actualStudentId;
 
     // Update or create attendance record
     const attendance = await Attendance.findOneAndUpdate(
