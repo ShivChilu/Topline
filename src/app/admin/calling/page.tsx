@@ -51,27 +51,49 @@ const getApplicantName = (app: any, eventCustomFormFields?: any[]) => {
 };
 
 const getApplicantMobile = (app: any, eventCustomFormFields?: any[]) => {
-  if (app.mobileNumber) return app.mobileNumber;
+  const regNo = (app.registrationNumber || app.studentId?.universityId || "").trim();
+  
+  const isValid = (val: string) => {
+    if (!val) return false;
+    const cleanVal = val.trim();
+    if (cleanVal === regNo) return false;
+    const digits = cleanVal.replace(/[^0-9]/g, "");
+    return digits.length >= 10;
+  };
+
+  if (app.mobileNumber && isValid(app.mobileNumber)) {
+    return app.mobileNumber.trim();
+  }
 
   if (app.customFieldsData) {
     const data = app.customFieldsData;
-    const phoneKeys = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+    const phoneKeys = [
+      "phone", "phone number", "phone no", "phone no.", "phone no:",
+      "mobile", "mobile number", "mobile no", "mobile no.", "mobile no:",
+      "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"
+    ];
     for (const key of Object.keys(data)) {
-      if (phoneKeys.includes(key.toLowerCase().trim())) {
+      const normKey = key.toLowerCase().trim();
+      if (phoneKeys.some(k => normKey.startsWith(k) || normKey.includes(k))) {
         const val = typeof data.get === 'function' ? data.get(key) : data[key];
-        if (val) return String(val).trim();
+        if (val && isValid(String(val))) return String(val).trim();
       }
     }
     if (eventCustomFormFields) {
-      const field = eventCustomFormFields.find(f => phoneKeys.includes(f.label.toLowerCase().trim()));
+      const field = eventCustomFormFields.find(f => {
+        const normLabel = f.label.toLowerCase().trim();
+        return phoneKeys.some(k => normLabel.startsWith(k) || normLabel.includes(k));
+      });
       if (field) {
         const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
-        if (val) return String(val).trim();
+        if (val && isValid(String(val))) return String(val).trim();
       }
     }
   }
 
-  if (app.studentId?.phone) return app.studentId.phone;
+  if (app.studentId?.phone && isValid(app.studentId.phone)) {
+    return app.studentId.phone.trim();
+  }
   return "";
 };
 
@@ -828,10 +850,12 @@ export default function CallingDashboard() {
                                   <div>
                                     <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {name}</h3>
                                     <p className="text-xs text-slate-500 font-mono">Reg No: {regNo}</p>
-                                    {phone && (
+                                    {phone ? (
                                       <a href={`tel:${phone}`} className="text-xs text-red-655 font-bold hover:underline inline-flex items-center mt-1">
                                         📞 Call Student ({phone})
                                       </a>
+                                    ) : (
+                                      <span className="text-xs text-slate-450 block mt-1">Mobile number not available</span>
                                     )}
                                   </div>
                                 </div>
