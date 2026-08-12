@@ -113,9 +113,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
       const q = search.toLowerCase();
       result = result.filter(
         (item) =>
-          item.studentName.toLowerCase().includes(q) ||
-          item.registrationNumber.toLowerCase().includes(q) ||
-          item.phone.toLowerCase().includes(q) ||
+        (item.studentName || "").toLowerCase().includes(q) ||
+        (item.registrationNumber || "").toLowerCase().includes(q) ||
+        (item.phone || "").toLowerCase().includes(q) ||
           Object.values(item.customFieldsData || {}).some((v) =>
             String(v).toLowerCase().includes(q)
           )
