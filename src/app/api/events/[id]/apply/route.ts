@@ -139,6 +139,8 @@ export async function POST(
         status: "applied",
         customFieldsData: customFields || {},
         registrationNumber: cleanUniId,
+        name: finalName,
+        mobileNumber: finalPhone,
       });
     } catch (dbErr: any) {
       if (dbErr.code === 11000) {

@@ -275,6 +275,8 @@ export async function POST(request: Request) {
       status: "applied",
       customFieldsData: customFields || {},
       registrationNumber: cleanUniId,
+      name: finalName,
+      mobileNumber: finalPhone,
     });
 
     student.appliedCount += 1;

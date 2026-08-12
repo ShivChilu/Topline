@@ -75,6 +75,24 @@ export default function CreateEventPage() {
       return;
     }
 
+    const labelLower = newFieldLabel.trim().toLowerCase();
+    const reservedNames = ["name", "full name", "student name", "candidate name", "applicant name"];
+    const reservedMobiles = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+    const reservedRegs = ["registration number", "registration no", "registration no.", "roll no", "roll no.", "roll number", "university id", "university roll no", "university registration number"];
+
+    if (reservedNames.includes(labelLower)) {
+      alert("Name is already a default system field.\nPlease use the default Name field.");
+      return;
+    }
+    if (reservedMobiles.includes(labelLower)) {
+      alert("Mobile Number is already a default system field.\nPlease use the default Mobile Number field.");
+      return;
+    }
+    if (reservedRegs.includes(labelLower)) {
+      alert("Registration Number is already a default system field.\nPlease use the default Registration Number field.");
+      return;
+    }
+
     const fieldId = `field_${Date.now()}`;
     const options = newFieldOptionsText
       ? newFieldOptionsText.split(",").map((o) => o.trim()).filter((o) => o.length > 0)
@@ -306,10 +324,31 @@ export default function CreateEventPage() {
 
           {/* Dynamic Form Custom Fields List */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">Custom Questionnaire</h2>
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">Form Structure</h2>
+            
+            <div className="space-y-2 mb-4">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Default System Fields</span>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-500">
+                  <span>Registration Number *</span>
+                  <span className="text-[10px] uppercase bg-slate-200 px-2 py-0.5 rounded text-slate-650 font-bold">Locked</span>
+                </div>
+                <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-500">
+                  <span>Name *</span>
+                  <span className="text-[10px] uppercase bg-slate-200 px-2 py-0.5 rounded text-slate-650 font-bold">Locked</span>
+                </div>
+                <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-500">
+                  <span>Mobile Number *</span>
+                  <span className="text-[10px] uppercase bg-slate-200 px-2 py-0.5 rounded text-slate-650 font-bold">Locked</span>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-slate-150 my-3" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Custom Questionnaire</span>
             
             {customFields.length === 0 ? (
-              <p className="text-slate-450 text-sm">No custom fields added yet. Standard profile inputs (Name, Phone, Email, University, University ID) are included by default.</p>
+              <p className="text-slate-450 text-xs">No additional custom fields added yet. Customize your form in the sidebar.</p>
             ) : (
               <div className="space-y-3">
                 {customFields.map((field, idx) => (

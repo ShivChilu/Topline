@@ -171,6 +171,8 @@ export interface IApplication extends Document {
   checkInTime?: Date;
   checkOutTime?: Date;
   registrationNumber?: string;
+  name?: string;
+  mobileNumber?: string;
   paymentStatus?: 'UNPAID' | 'PAID';
   messageStatus?: 'NOT_SENT' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
   whatsappGroupAdded?: boolean;
@@ -187,6 +189,8 @@ const ApplicationSchema = new Schema<IApplication>({
   checkInTime: { type: Date },
   checkOutTime: { type: Date },
   registrationNumber: { type: String },
+  name: { type: String },
+  mobileNumber: { type: String },
   paymentStatus: { type: String, enum: ['UNPAID', 'PAID'], default: 'UNPAID' },
   messageStatus: { type: String, enum: ['NOT_SENT', 'SENT', 'DELIVERED', 'READ', 'FAILED'], default: 'NOT_SENT' },
   whatsappGroupAdded: { type: Boolean, default: false },

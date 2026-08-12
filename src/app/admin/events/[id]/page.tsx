@@ -32,6 +32,64 @@ function formatTime12(timeStr: string) {
   return `${strHours}:${minutes} ${ampm}`;
 }
 
+const isReservedField = (label: string) => {
+  const norm = label.toLowerCase().trim();
+  const reservedNames = ["name", "full name", "student name", "candidate name", "applicant name"];
+  const reservedMobiles = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+  const reservedRegs = ["registration number", "registration no", "registration no.", "roll no", "roll no.", "roll number", "university id", "university roll no", "university registration number"];
+  return reservedNames.includes(norm) || reservedMobiles.includes(norm) || reservedRegs.includes(norm);
+};
+
+const getApplicantName = (app: any, eventCustomFormFields?: any[]) => {
+  if (app.name) return app.name;
+  
+  if (app.customFieldsData) {
+    const data = app.customFieldsData;
+    const nameKeys = ["name", "full name", "student name", "candidate name", "applicant name"];
+    for (const key of Object.keys(data)) {
+      if (nameKeys.includes(key.toLowerCase().trim())) {
+        const val = typeof data.get === 'function' ? data.get(key) : data[key];
+        if (val) return String(val).trim();
+      }
+    }
+    if (eventCustomFormFields) {
+      const field = eventCustomFormFields.find(f => nameKeys.includes(f.label.toLowerCase().trim()));
+      if (field) {
+        const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
+        if (val) return String(val).trim();
+      }
+    }
+  }
+
+  if (app.studentId?.name) return app.studentId.name;
+  return `Student ${app.registrationNumber || "N/A"}`;
+};
+
+const getApplicantMobile = (app: any, eventCustomFormFields?: any[]) => {
+  if (app.mobileNumber) return app.mobileNumber;
+
+  if (app.customFieldsData) {
+    const data = app.customFieldsData;
+    const phoneKeys = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+    for (const key of Object.keys(data)) {
+      if (phoneKeys.includes(key.toLowerCase().trim())) {
+        const val = typeof data.get === 'function' ? data.get(key) : data[key];
+        if (val) return String(val).trim();
+      }
+    }
+    if (eventCustomFormFields) {
+      const field = eventCustomFormFields.find(f => phoneKeys.includes(f.label.toLowerCase().trim()));
+      if (field) {
+        const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
+        if (val) return String(val).trim();
+      }
+    }
+  }
+
+  if (app.studentId?.phone) return app.studentId.phone;
+  return "";
+};
+
 export default function AdminEventDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -357,36 +415,41 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     let csvContent = "";
     
     // Build Headers
-    const headers = ["Registration No."];
-    if (event.customFormFields) {
-      event.customFormFields.forEach((field: any) => {
-        headers.push(field.label);
-      });
-    }
-    headers.push("Application Status", "WhatsApp Message", "WhatsApp Group Added", "Payment");
+    const headers = ["S.No.", "Registration No.", "Name", "Mobile No."];
+    const customFieldsFiltered = event.customFormFields?.filter((field: any) => !isReservedField(field.label)) || [];
+    customFieldsFiltered.forEach((field: any) => {
+      headers.push(field.label);
+    });
+    headers.push("Application Status", "WhatsApp Message", "WhatsApp Group Added", "Payment Amount", "Payment Status");
     
     csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
 
     // Build Rows
-    applications.forEach((app) => {
-      const s = app.studentId || {};
-      const regNo = s.universityId || app.registrationNumber || "N/A";
+    applications.forEach((app, index) => {
+      const student = app.studentId || {};
+      const regNo = app.registrationNumber || student.universityId || "N/A";
+      const resolvedName = getApplicantName(app, event.customFormFields);
+      const resolvedMobile = getApplicantMobile(app, event.customFormFields);
       const payout = app.paymentOverride ?? event.paymentPerStudent;
       
-      const row = [regNo];
+      const row = [
+        index + 1,
+        regNo,
+        resolvedName,
+        resolvedMobile || "N/A"
+      ];
       
-      if (event.customFormFields) {
-        event.customFormFields.forEach((field: any) => {
-          const val = (globalThis as any).getCustomValue ? (globalThis as any).getCustomValue(app, field.id) : "";
-          row.push(val);
-        });
-      }
+      customFieldsFiltered.forEach((field: any) => {
+        const val = (globalThis as any).getCustomValue ? (globalThis as any).getCustomValue(app, field.id) : "";
+        row.push(val);
+      });
       
       row.push(
         app.status,
         app.messageStatus || "PENDING",
         app.whatsappGroupAdded ? "ADDED" : "NOT_ADDED",
-        `₹${payout}`
+        `₹${payout}`,
+        app.paymentStatus || "UNPAID"
       );
       
       csvContent += row.map(r => `"${String(r).replace(/"/g, '""')}"`).join(",") + "\n";
@@ -725,9 +788,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     </th>
                     <th className="pb-3 px-2 text-slate-400 w-12 font-bold">S.No.</th>
                     <th className="pb-3 pl-3">Registration No.</th>
+                    <th className="pb-3 px-3">Name</th>
+                    <th className="pb-3 px-3">Mobile No.</th>
 
                     {/* Dynamic Header Columns from Form Schema */}
-                    {event.customFormFields?.map((field: any) => (
+                    {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => (
                       <th key={field.id} className="pb-3 px-3">{field.label}</th>
                     ))}
 
@@ -756,9 +821,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <td className="py-4 pl-3 font-mono font-bold text-slate-800">
                           {s.universityId || app.registrationNumber || "N/A"}
                         </td>
+                        <td className="py-4 px-3 font-semibold text-slate-850">
+                          {getApplicantName(app, event.customFormFields)}
+                        </td>
+                        <td className="py-4 px-3 font-mono text-slate-650">
+                          {getApplicantMobile(app, event.customFormFields) || "N/A"}
+                        </td>
 
                         {/* Dynamic Field Values */}
-                        {event.customFormFields?.map((field: any) => {
+                        {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
                           const val = (globalThis as any).getCustomValue(app, field.id);
                           return (
                             <td key={field.id} className="py-4 px-3 font-medium text-slate-800">
@@ -947,8 +1018,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               {/* List of cards */}
               {applications.map((app, index) => {
                 const s = app.studentId || {};
-                const name = s.name || `Student ${s.universityId || app.registrationNumber || "N/A"}`;
-                const phone = s.phone || "N/A";
+                const name = getApplicantName(app, event.customFormFields);
+                const phone = getApplicantMobile(app, event.customFormFields);
                 const isExpanded = !!expandedCardIds[app._id];
                 const payout = app.paymentOverride ?? event.paymentPerStudent;
 
@@ -966,7 +1037,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <div>
                           <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {name}</h3>
                           <p className="text-xs text-slate-500 font-mono">Reg No: {s.universityId || app.registrationNumber || "N/A"}</p>
-                          {phone !== "N/A" && (
+                          {phone && (
                             <a href={`tel:${phone}`} className="text-xs text-red-655 font-bold hover:underline inline-flex items-center mt-1">
                               📞 {phone}
                             </a>
@@ -1054,7 +1125,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           <h4 className="font-extrabold text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1 mb-2">
                             Custom form details
                           </h4>
-                          {event.customFormFields?.map((field: any) => {
+                          {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
                             const val = (globalThis as any).getCustomValue(app, field.id);
                             return (
                               <div key={field.id} className="flex flex-col sm:flex-row justify-between sm:items-center py-1 border-b border-slate-50 last:border-0 gap-1">
@@ -1203,8 +1274,51 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 </div>
               )}
 
+              {/* Default System fields */}
+              <div className="space-y-1 text-left">
+                <label className="block text-xs font-bold text-slate-700 uppercase">
+                  Registration Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 12510114"
+                  value={addFormData["registrationNumber"] || ""}
+                  onChange={(e) => setAddFormData({ ...addFormData, "registrationNumber": e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="block text-xs font-bold text-slate-700 uppercase">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sachin Raj Gupta"
+                  value={addFormData["name"] || ""}
+                  onChange={(e) => setAddFormData({ ...addFormData, "name": e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
+                />
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label className="block text-xs font-bold text-slate-700 uppercase">
+                  Mobile Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 9334670202"
+                  value={addFormData["phone"] || ""}
+                  onChange={(e) => setAddFormData({ ...addFormData, "phone": e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
+                />
+              </div>
+
               {/* Dynamic form field loops */}
-              {event.customFormFields?.map((field: any) => {
+              {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
                 const isRequired = field.required;
                 const value = addFormData[field.id] !== undefined ? addFormData[field.id] : "";
 

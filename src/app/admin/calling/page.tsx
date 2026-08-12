@@ -17,6 +17,64 @@ function formatTime12(timeStr: string) {
   return `${strHours}:${minutes} ${ampm}`;
 }
 
+const isReservedField = (label: string) => {
+  const norm = label.toLowerCase().trim();
+  const reservedNames = ["name", "full name", "student name", "candidate name", "applicant name"];
+  const reservedMobiles = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+  const reservedRegs = ["registration number", "registration no", "registration no.", "roll no", "roll no.", "roll number", "university id", "university roll no", "university registration number"];
+  return reservedNames.includes(norm) || reservedMobiles.includes(norm) || reservedRegs.includes(norm);
+};
+
+const getApplicantName = (app: any, eventCustomFormFields?: any[]) => {
+  if (app.name) return app.name;
+  
+  if (app.customFieldsData) {
+    const data = app.customFieldsData;
+    const nameKeys = ["name", "full name", "student name", "candidate name", "applicant name"];
+    for (const key of Object.keys(data)) {
+      if (nameKeys.includes(key.toLowerCase().trim())) {
+        const val = typeof data.get === 'function' ? data.get(key) : data[key];
+        if (val) return String(val).trim();
+      }
+    }
+    if (eventCustomFormFields) {
+      const field = eventCustomFormFields.find(f => nameKeys.includes(f.label.toLowerCase().trim()));
+      if (field) {
+        const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
+        if (val) return String(val).trim();
+      }
+    }
+  }
+
+  if (app.studentId?.name) return app.studentId.name;
+  return `Student ${app.registrationNumber || "N/A"}`;
+};
+
+const getApplicantMobile = (app: any, eventCustomFormFields?: any[]) => {
+  if (app.mobileNumber) return app.mobileNumber;
+
+  if (app.customFieldsData) {
+    const data = app.customFieldsData;
+    const phoneKeys = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
+    for (const key of Object.keys(data)) {
+      if (phoneKeys.includes(key.toLowerCase().trim())) {
+        const val = typeof data.get === 'function' ? data.get(key) : data[key];
+        if (val) return String(val).trim();
+      }
+    }
+    if (eventCustomFormFields) {
+      const field = eventCustomFormFields.find(f => phoneKeys.includes(f.label.toLowerCase().trim()));
+      if (field) {
+        const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
+        if (val) return String(val).trim();
+      }
+    }
+  }
+
+  if (app.studentId?.phone) return app.studentId.phone;
+  return "";
+};
+
 export default function CallingDashboard() {
   const [assignedEvents, setAssignedEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
@@ -559,8 +617,11 @@ export default function CallingDashboard() {
                               />
                             </th>
                             <th className="px-6 py-4 text-slate-400 w-16 font-bold">S.No.</th>
+                            <th className="px-6 py-4">Reg No.</th>
+                            <th className="px-6 py-4">Name</th>
+                            <th className="px-6 py-4">Mobile No.</th>
                             {/* Dynamic Custom Fields from Form Schema only */}
-                            {eventDetails?.customFormFields?.map((f: any) => (
+                            {eventDetails?.customFormFields?.filter((f: any) => !isReservedField(f.label)).map((f: any) => (
                               <th key={f.id} className="px-6 py-4">{f.label}</th>
                             ))}
                             <th className="px-6 py-4">App Status</th>
@@ -571,12 +632,16 @@ export default function CallingDashboard() {
                         <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                           {filteredApplications.length === 0 ? (
                             <tr>
-                              <td colSpan={(eventDetails?.customFormFields?.length || 0) + 5} className="px-6 py-10 text-center text-slate-400">
+                              <td colSpan={(eventDetails?.customFormFields?.filter((f: any) => !isReservedField(f.label)).length || 0) + 7} className="px-6 py-10 text-center text-slate-400">
                                 No matching applications found.
                               </td>
                             </tr>
                           ) : (
                             filteredApplications.map((app, index) => {
+                              const student = app.studentId || {};
+                              const regNo = app.registrationNumber || student.universityId || "N/A";
+                              const resolvedName = getApplicantName(app, eventDetails?.customFormFields);
+                              const resolvedMobile = getApplicantMobile(app, eventDetails?.customFormFields);
                               return (
                                 <tr key={app._id} className="hover:bg-slate-50/50 transition">
                                   <td className="px-6 py-4 text-center">
@@ -591,9 +656,24 @@ export default function CallingDashboard() {
                                   <td className="px-6 py-4 font-mono text-xs text-slate-450 font-bold">
                                     {index + 1}
                                   </td>
+                                  <td className="px-6 py-4 font-mono font-bold text-slate-800">
+                                    {regNo}
+                                  </td>
+                                  <td className="px-6 py-4 font-semibold text-slate-850">
+                                    {resolvedName}
+                                  </td>
+                                  <td className="px-6 py-4 font-mono text-slate-650">
+                                    {resolvedMobile ? (
+                                      <a href={`tel:${resolvedMobile}`} className="text-red-655 hover:underline font-semibold">
+                                        {resolvedMobile}
+                                      </a>
+                                    ) : (
+                                      "N/A"
+                                    )}
+                                  </td>
                                   
                                   {/* Dynamic Custom Fields from Form Schema only */}
-                                  {eventDetails?.customFormFields?.map((f: any) => {
+                                  {eventDetails?.customFormFields?.filter((f: any) => !isReservedField(f.label)).map((f: any) => {
                                     const val = getCustomValue(app, f.id);
                                     const isPhone = f.type === "phone" || f.label.toLowerCase().includes("phone") || f.label.toLowerCase().includes("mobile") || f.label.toLowerCase().includes("contact");
                                     return (
@@ -728,18 +808,9 @@ export default function CallingDashboard() {
                       ) : (
                         filteredApplications.map((app, index) => {
                           const student = app.studentId || {};
-                          const regNo = student.universityId || app.registrationNumber || "N/A";
-                          const name = student.name || `Student ${regNo}`;
-                          
-                          let phone = student.phone || "";
-                          if (!phone && eventDetails?.customFormFields) {
-                            const phoneField = eventDetails.customFormFields.find((f: any) => 
-                              f.type === "phone" || f.label.toLowerCase().includes("phone") || f.label.toLowerCase().includes("mobile") || f.label.toLowerCase().includes("contact")
-                            );
-                            if (phoneField) {
-                              phone = getCustomValue(app, phoneField.id);
-                            }
-                          }
+                          const regNo = app.registrationNumber || student.universityId || "N/A";
+                          const name = getApplicantName(app, eventDetails?.customFormFields);
+                          const phone = getApplicantMobile(app, eventDetails?.customFormFields);
 
                           const isExpanded = !!expandedCardIds[app._id];
 
@@ -823,7 +894,7 @@ export default function CallingDashboard() {
                                     <h4 className="font-extrabold text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1 mb-2">
                                       Custom form details
                                     </h4>
-                                    {eventDetails?.customFormFields?.map((field: any) => {
+                                    {eventDetails?.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
                                       const val = getCustomValue(app, field.id);
                                       return (
                                         <div key={field.id} className="flex flex-col sm:flex-row justify-between sm:items-center py-1 border-b border-slate-50 last:border-0 gap-1">
