@@ -31,6 +31,30 @@ export default function CallingDashboard() {
   const [messageFilter, setMessageFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
+  const toggleCardDetails = (id: string) => {
+    setExpandedCardIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleNextCard = (currentIndex: number) => {
+    if (currentIndex < filteredApplications.length - 1) {
+      const nextApp = filteredApplications[currentIndex + 1];
+      setExpandedCardIds({ [nextApp._id]: true });
+      setTimeout(() => {
+        document.getElementById(`card-${nextApp._id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
+  };
+
+  const handlePrevCard = (currentIndex: number) => {
+    if (currentIndex > 0) {
+      const prevApp = filteredApplications[currentIndex - 1];
+      setExpandedCardIds({ [prevApp._id]: true });
+      setTimeout(() => {
+        document.getElementById(`card-${prevApp._id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
+  };
 
   // Fetch only assigned events
   const fetchAssignedEvents = async () => {
@@ -516,74 +540,233 @@ export default function CallingDashboard() {
                     <option value="SENT">Msg Sent</option>
                   </select>
                 </div>
-              </div>
-
-              {/* Table */}
+              </div>              {/* Table */}
               <div className="overflow-x-auto max-w-full">
                 {loadingApps ? (
                   <div className="text-center py-10 text-slate-400">Loading applications list...</div>
                 ) : (
-                  <table className="w-full text-left border-collapse whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-150 text-xs font-bold text-slate-500 uppercase">
-                        <th className="px-6 py-4 text-center w-12">
+                  <>
+                    <div className="hidden md:block overflow-x-auto max-w-full">
+                      <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-150 text-xs font-bold text-slate-500 uppercase">
+                            <th className="px-6 py-4 text-center w-12">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.length === filteredApplications.length && filteredApplications.length > 0}
+                                onChange={handleSelectAll}
+                                className="rounded border-slate-200 text-red-655"
+                              />
+                            </th>
+                            <th className="px-6 py-4 text-slate-400 w-16 font-bold">S.No.</th>
+                            {/* Dynamic Custom Fields from Form Schema only */}
+                            {eventDetails?.customFormFields?.map((f: any) => (
+                              <th key={f.id} className="px-6 py-4">{f.label}</th>
+                            ))}
+                            <th className="px-6 py-4">App Status</th>
+                            <th className="px-6 py-4">WhatsApp</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                          {filteredApplications.length === 0 ? (
+                            <tr>
+                              <td colSpan={(eventDetails?.customFormFields?.length || 0) + 5} className="px-6 py-10 text-center text-slate-400">
+                                No matching applications found.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredApplications.map((app, index) => {
+                              return (
+                                <tr key={app._id} className="hover:bg-slate-50/50 transition">
+                                  <td className="px-6 py-4 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedIds.includes(app._id)}
+                                      onChange={() => handleToggleSelect(app._id)}
+                                      className="rounded border-slate-200 text-red-655"
+                                      id={`select-${app._id}`}
+                                    />
+                                  </td>
+                                  <td className="px-6 py-4 font-mono text-xs text-slate-450 font-bold">
+                                    {index + 1}
+                                  </td>
+                                  
+                                  {/* Dynamic Custom Fields from Form Schema only */}
+                                  {eventDetails?.customFormFields?.map((f: any) => {
+                                    const val = getCustomValue(app, f.id);
+                                    const isPhone = f.type === "phone" || f.label.toLowerCase().includes("phone") || f.label.toLowerCase().includes("mobile") || f.label.toLowerCase().includes("contact");
+                                    return (
+                                      <td key={f.id} className="px-6 py-4 font-medium text-slate-600">
+                                        {isPhone && val ? (
+                                          <a href={`tel:${val}`} className="text-red-655 hover:underline font-semibold">
+                                            {val}
+                                          </a>
+                                        ) : (
+                                          val || "-"
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+
+                                  <td className="px-6 py-4">
+                                    <span
+                                      className={`text-[10px] font-extrabold px-2.5 py-1 rounded border uppercase tracking-wider ${
+                                        app.status === "confirmed"
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                          : app.status === "selected"
+                                          ? "bg-teal-50 text-teal-700 border-teal-200"
+                                          : app.status === "attended"
+                                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                                          : app.status === "cancelled"
+                                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                                          : "bg-slate-100 text-slate-650 border-slate-200"
+                                      }`}
+                                    >
+                                      {app.status}
+                                    </span>
+                                  </td>
+
+                                  <td className="px-6 py-4">
+                                    <div className="flex flex-col space-y-1.5 items-start">
+                                      <span
+                                        className={`px-2 py-0.5 rounded border text-[10px] font-semibold ${
+                                          (app.messageStatus || "PENDING") === "SENT"
+                                            ? "bg-blue-50 text-blue-600 border-blue-200"
+                                            : "bg-slate-100 text-slate-400 border-slate-200"
+                                        }`}
+                                      >
+                                        {(app.messageStatus || "PENDING").toUpperCase()}
+                                      </span>
+                                      {app.whatsappGroupAdded ? (
+                                        <div className="flex items-center space-x-1">
+                                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                            ✓ Added
+                                          </span>
+                                          <button
+                                            onClick={() => {
+                                              if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
+                                                handleSingleGroupAddedUpdate(app._id, false);
+                                              }
+                                            }}
+                                            className="text-[10px] text-slate-400 hover:text-red-655 font-bold"
+                                          >
+                                            Revert
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleSingleGroupAddedUpdate(app._id, true)}
+                                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded text-[10px] font-bold transition shadow-sm"
+                                        >
+                                          + Added
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  <td className="px-6 py-4 text-right space-x-1.5">
+                                    {app.status === "applied" ? (
+                                      <button
+                                        onClick={() => handleSingleStatusUpdate(app._id, "confirmed")}
+                                        className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded transition font-bold"
+                                      >
+                                        Confirm
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleSingleStatusUpdate(app._id, "applied")}
+                                        className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
+                                      >
+                                        Revert
+                                      </button>
+                                    )}
+                                    
+                                    {(app.messageStatus || "PENDING") === "PENDING" ? (
+                                      <button
+                                        onClick={() => handleSingleMessageUpdate(app._id, "SENT")}
+                                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded transition font-bold"
+                                        title="Mark Message Sent"
+                                      >
+                                        Sent
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleSingleMessageUpdate(app._id, "PENDING")}
+                                        className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
+                                        title="Reset Message Pending"
+                                      >
+                                        Reset
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="block md:hidden space-y-4">
+                      {/* Mobile Header Toolbar for Bulk Selection */}
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+                        <label className="flex items-center space-x-2 text-xs text-slate-700 font-semibold cursor-pointer">
                           <input
                             type="checkbox"
                             checked={selectedIds.length === filteredApplications.length && filteredApplications.length > 0}
                             onChange={handleSelectAll}
                             className="rounded border-slate-200 text-red-655"
                           />
-                        </th>
-                        {/* Dynamic Custom Fields from Form Schema only */}
-                        {eventDetails?.customFormFields?.map((f: any) => (
-                          <th key={f.id} className="px-6 py-4">{f.label}</th>
-                        ))}
-                        <th className="px-6 py-4">App Status</th>
-                        <th className="px-6 py-4">WhatsApp</th>
-                        <th className="px-6 py-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                      {filteredApplications.length === 0 ? (
-                        <tr>
-                          <td colSpan={(eventDetails?.customFormFields?.length || 0) + 4} className="px-6 py-10 text-center text-slate-400">
-                            No matching applications found.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredApplications.map((app) => {
-                          return (
-                            <tr key={app._id} className="hover:bg-slate-50/50 transition">
-                              <td className="px-6 py-4 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedIds.includes(app._id)}
-                                  onChange={() => handleToggleSelect(app._id)}
-                                  className="rounded border-slate-200 text-red-655"
-                                  id={`select-${app._id}`}
-                                />
-                              </td>
-                              
-                              {/* Dynamic Custom Fields from Form Schema only */}
-                              {eventDetails?.customFormFields?.map((f: any) => {
-                                const val = getCustomValue(app, f.id);
-                                const isPhone = f.type === "phone" || f.label.toLowerCase().includes("phone") || f.label.toLowerCase().includes("mobile") || f.label.toLowerCase().includes("contact");
-                                return (
-                                  <td key={f.id} className="px-6 py-4 font-medium text-slate-600">
-                                    {isPhone && val ? (
-                                      <a href={`tel:${val}`} className="text-red-655 hover:underline font-semibold">
-                                        {val}
-                                      </a>
-                                    ) : (
-                                      val || "-"
-                                    )}
-                                  </td>
-                                );
-                              })}
+                          <span>Select All ({filteredApplications.length})</span>
+                        </label>
+                      </div>
 
-                              <td className="px-6 py-4">
+                      {/* List of Cards */}
+                      {filteredApplications.length === 0 ? (
+                        <p className="text-center py-6 text-xs text-slate-400">No matching applications found.</p>
+                      ) : (
+                        filteredApplications.map((app, index) => {
+                          const student = app.studentId || {};
+                          const regNo = student.universityId || app.registrationNumber || "N/A";
+                          const name = student.name || `Student ${regNo}`;
+                          
+                          let phone = student.phone || "";
+                          if (!phone && eventDetails?.customFormFields) {
+                            const phoneField = eventDetails.customFormFields.find((f: any) => 
+                              f.type === "phone" || f.label.toLowerCase().includes("phone") || f.label.toLowerCase().includes("mobile") || f.label.toLowerCase().includes("contact")
+                            );
+                            if (phoneField) {
+                              phone = getCustomValue(app, phoneField.id);
+                            }
+                          }
+
+                          const isExpanded = !!expandedCardIds[app._id];
+
+                          return (
+                            <div key={app._id} id={`card-${app._id}`} className="bg-slate-50/50 p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 relative text-left">
+                              {/* Card Header */}
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIds.includes(app._id)}
+                                    onChange={() => handleToggleSelect(app._id)}
+                                    className="rounded border-slate-200 text-red-655 focus:ring-red-655 mt-1"
+                                  />
+                                  <div>
+                                    <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {name}</h3>
+                                    <p className="text-xs text-slate-500 font-mono">Reg No: {regNo}</p>
+                                    {phone && (
+                                      <a href={`tel:${phone}`} className="text-xs text-red-655 font-bold hover:underline inline-flex items-center mt-1">
+                                        📞 Call Student ({phone})
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+
                                 <span
-                                  className={`text-[10px] font-extrabold px-2.5 py-1 rounded border uppercase tracking-wider ${
+                                  className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${
                                     app.status === "confirmed"
                                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                       : app.status === "selected"
@@ -592,92 +775,153 @@ export default function CallingDashboard() {
                                       ? "bg-blue-50 text-blue-700 border-blue-200"
                                       : app.status === "cancelled"
                                       ? "bg-rose-50 text-rose-700 border-rose-200"
-                                      : "bg-slate-100 text-slate-600 border-slate-200"
+                                      : "bg-slate-100 text-slate-655 border-slate-200"
                                   }`}
                                 >
                                   {app.status}
                                 </span>
-                              </td>
+                              </div>
 
-                              <td className="px-6 py-4">
-                                <div className="flex flex-col space-y-1.5 items-start">
-                                  <span
-                                    className={`px-2 py-0.5 rounded border text-[10px] font-semibold ${
-                                      (app.messageStatus || "PENDING") === "SENT"
-                                        ? "bg-blue-50 text-blue-600 border-blue-200"
-                                        : "bg-slate-100 text-slate-400 border-slate-200"
-                                    }`}
-                                  >
-                                    {(app.messageStatus || "PENDING").toUpperCase()}
-                                  </span>
-                                  {app.whatsappGroupAdded ? (
-                                    <div className="flex items-center space-x-1">
+                              {/* Status row info */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-100 pt-3">
+                                <div>
+                                  <span className="text-[10px] text-slate-400 font-extrabold block uppercase tracking-wider mb-1">WhatsApp Status</span>
+                                  <div className="flex flex-col space-y-1 items-start">
+                                    <span
+                                      className={`px-2 py-0.5 rounded border text-[10px] font-semibold ${
+                                        (app.messageStatus || "PENDING") === "SENT"
+                                          ? "bg-blue-50 text-blue-600 border-blue-200"
+                                          : "bg-slate-100 text-slate-400 border-slate-200"
+                                      }`}
+                                    >
+                                      {(app.messageStatus || "PENDING").toUpperCase()}
+                                    </span>
+                                    {app.whatsappGroupAdded ? (
                                       <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                                        ✓ Added
+                                        ✓ Added to Group
                                       </span>
-                                      <button
-                                        onClick={() => {
-                                          if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
-                                            handleSingleGroupAddedUpdate(app._id, false);
-                                          }
-                                        }}
-                                        className="text-[10px] text-slate-400 hover:text-red-655 font-bold"
-                                      >
-                                        Revert
-                                      </button>
-                                    </div>
+                                    ) : (
+                                      <span className="bg-slate-100 text-slate-400 border border-slate-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        Not Added
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Expandable Custom Form Details */}
+                              <div className="border-t border-slate-100 pt-2">
+                                <button
+                                  onClick={() => toggleCardDetails(app._id)}
+                                  className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-700 py-1 bg-slate-100/50 rounded hover:bg-slate-100 transition"
+                                >
+                                  {isExpanded ? "Hide Details ▲" : "View All Details ▼"}
+                                </button>
+
+                                {isExpanded && (
+                                  <div className="mt-3 bg-white p-3 rounded-lg border border-slate-200 space-y-2 text-xs">
+                                    <h4 className="font-extrabold text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1 mb-2">
+                                      Custom form details
+                                    </h4>
+                                    {eventDetails?.customFormFields?.map((field: any) => {
+                                      const val = getCustomValue(app, field.id);
+                                      return (
+                                        <div key={field.id} className="flex flex-col sm:flex-row justify-between sm:items-center py-1 border-b border-slate-50 last:border-0 gap-1">
+                                          <span className="text-slate-500 font-semibold">{field.label}:</span>
+                                          <span className="text-slate-800 font-bold overflow-wrap break-word max-w-full">{val || "-"}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Actions Grid */}
+                              <div className="border-t border-slate-100 pt-3 space-y-2">
+                                <span className="text-[10px] text-slate-400 font-extrabold block uppercase tracking-wider mb-1">Management Actions</span>
+                                <div className="flex flex-wrap gap-2">
+                                  {/* Confirm/Revert */}
+                                  {app.status === "applied" ? (
+                                    <button
+                                      onClick={() => handleSingleStatusUpdate(app._id, "confirmed")}
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center shadow-sm"
+                                    >
+                                      Confirm
+                                    </button>
                                   ) : (
                                     <button
-                                      onClick={() => handleSingleGroupAddedUpdate(app._id, true)}
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded text-[10px] font-bold transition shadow-sm"
+                                      onClick={() => handleSingleStatusUpdate(app._id, "applied")}
+                                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-650 text-xs font-bold transition border border-slate-200 flex-1 min-h-[40px] flex items-center justify-center"
                                     >
-                                      + Added
+                                      Revert Status
+                                    </button>
+                                  )}
+
+                                  {/* WhatsApp Sent / Reset */}
+                                  {(app.messageStatus || "PENDING") === "PENDING" ? (
+                                    <button
+                                      onClick={() => handleSingleMessageUpdate(app._id, "SENT")}
+                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center shadow-sm"
+                                    >
+                                      Mark Sent
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleSingleMessageUpdate(app._id, "PENDING")}
+                                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-655 text-xs font-bold transition border border-slate-200 flex-1 min-h-[40px] flex items-center justify-center"
+                                    >
+                                      Reset Msg Status
                                     </button>
                                   )}
                                 </div>
-                              </td>
 
-                              <td className="px-6 py-4 text-right space-x-1.5">
-                                {app.status === "applied" ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {/* WhatsApp Group Added */}
+                                  {app.whatsappGroupAdded ? (
+                                    <button
+                                      onClick={() => {
+                                        if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
+                                          handleSingleGroupAddedUpdate(app._id, false);
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-655 text-xs font-bold transition border border-slate-200 flex-1 min-h-[40px] flex items-center justify-center"
+                                    >
+                                      Revert Group Added
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleSingleGroupAddedUpdate(app._id, true)}
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center shadow-sm"
+                                    >
+                                      + Added to Group
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Sequential Navigation Toolbar (Previous / Next) */}
+                                <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-2 gap-4">
                                   <button
-                                    onClick={() => handleSingleStatusUpdate(app._id, "confirmed")}
-                                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded transition font-bold"
+                                    onClick={() => handlePrevCard(index)}
+                                    disabled={index === 0}
+                                    className="px-3 py-2 bg-slate-100 border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-bold text-slate-600 flex-1 min-h-[36px]"
                                   >
-                                    Confirm
+                                    ← Previous
                                   </button>
-                                ) : (
                                   <button
-                                    onClick={() => handleSingleStatusUpdate(app._id, "applied")}
-                                    className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
+                                    onClick={() => handleNextCard(index)}
+                                    disabled={index === filteredApplications.length - 1}
+                                    className="px-3 py-2 bg-slate-100 border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-bold text-slate-600 flex-1 min-h-[36px]"
                                   >
-                                    Revert
+                                    Next →
                                   </button>
-                                )}
-                                
-                                {(app.messageStatus || "PENDING") === "PENDING" ? (
-                                  <button
-                                    onClick={() => handleSingleMessageUpdate(app._id, "SENT")}
-                                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded transition font-bold"
-                                    title="Mark Message Sent"
-                                  >
-                                    Sent
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleSingleMessageUpdate(app._id, "PENDING")}
-                                    className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
-                                    title="Reset Message Pending"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
+                                </div>
+                              </div>
+                            </div>
                           );
                         })
                       )}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 )}
               </div>
 
