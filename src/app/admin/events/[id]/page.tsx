@@ -45,9 +45,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   // Custom payout override input state
   const [tempPayouts, setTempPayouts] = useState<Record<string, number>>({});
 
-  const fetchEventData = async () => {
+  const fetchEventData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       setErrorMsg(null);
       
       const eventRes = await fetch(`/api/admin/events/${eventId}?t=${Date.now()}`, { cache: "no-store" });
@@ -73,7 +75,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       console.error(err);
       setErrorMsg("An error occurred while loading event details.");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -158,6 +162,23 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
     if (!confirm(confirmationMsg)) return;
 
+    const previousApplications = [...applications];
+    // Optimistically update applications
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (selectedIds.includes(app._id)) {
+          return {
+            ...app,
+            ...updatePayload,
+            ...(updatePayload.whatsappGroupAdded !== undefined ? {
+              whatsappGroupAddedAt: updatePayload.whatsappGroupAdded ? new Date() : undefined
+            } : {})
+          };
+        }
+        return app;
+      })
+    );
+
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
@@ -166,19 +187,38 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       });
       const data = await res.json();
       if (data.success) {
-        alert(data.message || "Successfully updated applications!");
         setSelectedIds([]);
-        fetchEventData();
+        fetchEventData(true);
       } else {
+        setApplications(previousApplications);
         alert(data.message || "Failed to update applications.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previousApplications);
+      alert("Network error. Failed to update applications.");
     }
   };
 
   // Single update application
   const handleSingleUpdate = async (id: string, updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number; whatsappGroupAdded?: boolean }) => {
+    const previousApplications = [...applications];
+    // Optimistically update application
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app._id === id) {
+          return {
+            ...app,
+            ...updatePayload,
+            ...(updatePayload.whatsappGroupAdded !== undefined ? {
+              whatsappGroupAddedAt: updatePayload.whatsappGroupAdded ? new Date() : undefined
+            } : {})
+          };
+        }
+        return app;
+      })
+    );
+
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
@@ -187,10 +227,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       });
       const data = await res.json();
       if (data.success) {
-        fetchEventData();
+        fetchEventData(true);
+      } else {
+        setApplications(previousApplications);
+        alert(data.message || "Failed to update application.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previousApplications);
+      alert("Network error. Failed to update application.");
     }
   };
 

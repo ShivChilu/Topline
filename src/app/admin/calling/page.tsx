@@ -56,10 +56,12 @@ export default function CallingDashboard() {
   }, []);
 
   // Fetch applications for selected event
-  const fetchApplications = async (eventId: string) => {
+  const fetchApplications = async (eventId: string, silent = false) => {
     if (!eventId) return;
     try {
-      setLoadingApps(true);
+      if (!silent) {
+        setLoadingApps(true);
+      }
       setSelectedIds([]);
       // Fetch event details
       const eventRes = await fetch(`/api/admin/events/${eventId}`);
@@ -78,7 +80,9 @@ export default function CallingDashboard() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingApps(false);
+      if (!silent) {
+        setLoadingApps(false);
+      }
     }
   };
 
@@ -123,6 +127,11 @@ export default function CallingDashboard() {
     if (selectedIds.length === 0) return;
     if (!confirm(`Are you sure you want to change the status of ${selectedIds.length} applicants to ${newStatus}?`)) return;
 
+    const previous = [...applications];
+    setApplications((prev) =>
+      prev.map((app) => (selectedIds.includes(app._id) ? { ...app, status: newStatus } : app))
+    );
+
     try {
       setActionLoading(true);
       const res = await fetch("/api/admin/applications", {
@@ -132,14 +141,16 @@ export default function CallingDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(`Successfully marked ${selectedIds.length} applicants as ${newStatus}!`);
         setSelectedIds([]);
-        fetchApplications(selectedEventId);
+        fetchApplications(selectedEventId, true);
       } else {
+        setApplications(previous);
         alert(data.message || "Failed to update applications.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previous);
+      alert("Network error. Failed to update applications.");
     } finally {
       setActionLoading(false);
     }
@@ -147,6 +158,11 @@ export default function CallingDashboard() {
 
   const handleBulkMessageUpdate = async (newMessageStatus: string) => {
     if (selectedIds.length === 0) return;
+    const previous = [...applications];
+    setApplications((prev) =>
+      prev.map((app) => (selectedIds.includes(app._id) ? { ...app, messageStatus: newMessageStatus } : app))
+    );
+
     try {
       setActionLoading(true);
       const res = await fetch("/api/admin/applications", {
@@ -156,14 +172,16 @@ export default function CallingDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(`Successfully updated message status to ${newMessageStatus} for ${selectedIds.length} applicants.`);
         setSelectedIds([]);
-        fetchApplications(selectedEventId);
+        fetchApplications(selectedEventId, true);
       } else {
+        setApplications(previous);
         alert(data.message || "Failed to update applications.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previous);
+      alert("Network error. Failed to update applications.");
     } finally {
       setActionLoading(false);
     }
@@ -171,6 +189,11 @@ export default function CallingDashboard() {
 
   // Single Action
   const handleSingleStatusUpdate = async (id: string, newStatus: string) => {
+    const previous = [...applications];
+    setApplications((prev) =>
+      prev.map((app) => (app._id === id ? { ...app, status: newStatus } : app))
+    );
+
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
@@ -179,14 +202,24 @@ export default function CallingDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        fetchApplications(selectedEventId);
+        fetchApplications(selectedEventId, true);
+      } else {
+        setApplications(previous);
+        alert(data.message || "Failed to update status.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previous);
+      alert("Network error. Failed to update status.");
     }
   };
 
   const handleSingleMessageUpdate = async (id: string, newMessageStatus: string) => {
+    const previous = [...applications];
+    setApplications((prev) =>
+      prev.map((app) => (app._id === id ? { ...app, messageStatus: newMessageStatus } : app))
+    );
+
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
@@ -195,14 +228,24 @@ export default function CallingDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        fetchApplications(selectedEventId);
+        fetchApplications(selectedEventId, true);
+      } else {
+        setApplications(previous);
+        alert(data.message || "Failed to update message status.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previous);
+      alert("Network error. Failed to update message status.");
     }
   };
 
   const handleSingleGroupAddedUpdate = async (id: string, groupAdded: boolean) => {
+    const previous = [...applications];
+    setApplications((prev) =>
+      prev.map((app) => (app._id === id ? { ...app, whatsappGroupAdded: groupAdded } : app))
+    );
+
     try {
       const res = await fetch("/api/admin/applications", {
         method: "PATCH",
@@ -211,10 +254,15 @@ export default function CallingDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        fetchApplications(selectedEventId);
+        fetchApplications(selectedEventId, true);
+      } else {
+        setApplications(previous);
+        alert(data.message || "Failed to update WhatsApp group status.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previous);
+      alert("Network error. Failed to update WhatsApp group status.");
     }
   };
 
@@ -222,6 +270,11 @@ export default function CallingDashboard() {
     if (selectedIds.length === 0) return;
     const actionText = groupAdded ? "mark as added to WhatsApp group" : "revert WhatsApp group status";
     if (!confirm(`Are you sure you want to ${actionText} for ${selectedIds.length} applicants?`)) return;
+
+    const previous = [...applications];
+    setApplications((prev) =>
+      prev.map((app) => (selectedIds.includes(app._id) ? { ...app, whatsappGroupAdded: groupAdded } : app))
+    );
 
     try {
       setActionLoading(true);
@@ -232,14 +285,16 @@ export default function CallingDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(`Successfully updated WhatsApp group status for ${selectedIds.length} applicants.`);
         setSelectedIds([]);
-        fetchApplications(selectedEventId);
+        fetchApplications(selectedEventId, true);
       } else {
-        alert(data.message || "Failed to update applications.");
+        setApplications(previous);
+        alert(data.message || "Failed to update WhatsApp group status.");
       }
     } catch (err) {
       console.error(err);
+      setApplications(previous);
+      alert("Network error. Failed to update WhatsApp group status.");
     } finally {
       setActionLoading(false);
     }
