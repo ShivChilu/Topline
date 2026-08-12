@@ -240,18 +240,48 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   // Export to CSV
   const handleExportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Student Name,Phone,Email,University,University ID,Application Status,Payment\n";
+    let csvContent = "";
+    
+    // Build Headers
+    const headers = ["Registration No."];
+    if (event.customFormFields) {
+      event.customFormFields.forEach((field: any) => {
+        headers.push(field.label);
+      });
+    }
+    headers.push("Application Status", "WhatsApp Message", "WhatsApp Group Added", "Payment");
+    
+    csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
 
+    // Build Rows
     applications.forEach((app) => {
       const s = app.studentId || {};
+      const regNo = s.universityId || app.registrationNumber || "N/A";
       const payout = app.paymentOverride ?? event.paymentPerStudent;
-      csvContent += `"${s.name || ''}","${s.phone || ''}","${s.email || ''}","${s.university || ''}","${s.universityId || ''}","${app.status}","₹${payout}"\n`;
+      
+      const row = [regNo];
+      
+      if (event.customFormFields) {
+        event.customFormFields.forEach((field: any) => {
+          const val = (globalThis as any).getCustomValue ? (globalThis as any).getCustomValue(app, field.id) : "";
+          row.push(val);
+        });
+      }
+      
+      row.push(
+        app.status,
+        app.messageStatus || "PENDING",
+        app.whatsappGroupAdded ? "ADDED" : "NOT_ADDED",
+        `₹${payout}`
+      );
+      
+      csvContent += row.map(r => `"${String(r).replace(/"/g, '""')}"`).join(",") + "\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", `${event.name.replace(/\s+/g, "_")}_StaffList.csv`);
     document.body.appendChild(link);
     link.click();
