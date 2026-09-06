@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const university = searchParams.get("university")?.trim();
 
     const andConditions: any[] = [
-      { role: Role.USER },
+      { role: "USER" },
     ];
 
     if (status === "active") {
