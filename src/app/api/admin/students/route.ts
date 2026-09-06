@@ -16,65 +16,73 @@ export async function GET(request: Request) {
     const city = searchParams.get("city")?.trim();
     const university = searchParams.get("university")?.trim();
 
-    const whereClause: any = {
-      role: Role.USER,
-    };
+    const andConditions: any[] = [
+      { role: Role.USER },
+    ];
 
     if (status === "active") {
-      whereClause.isActive = true;
+      andConditions.push({ isActive: true });
     } else if (status === "blocked") {
-      whereClause.isActive = false;
+      andConditions.push({ isActive: false });
     }
 
     if (selectionStatus && selectionStatus !== "ALL") {
-      whereClause.selectionStatus = selectionStatus as StudentSelectionStatus;
+      andConditions.push({ selectionStatus: selectionStatus as StudentSelectionStatus });
     }
 
     if (city && city !== "ALL") {
-      whereClause.city = { equals: city, mode: "insensitive" };
+      andConditions.push({ city: { equals: city, mode: "insensitive" } });
     }
 
     if (university && university !== "ALL") {
-      whereClause.university = { contains: university, mode: "insensitive" };
+      andConditions.push({ university: { contains: university, mode: "insensitive" } });
     }
 
     if (photoFilter === "WITH_PHOTOS") {
-      whereClause.OR = [
-        { profilePhotoUrl: { not: null } },
-        { studentPhotos: { some: {} } },
-      ];
+      andConditions.push({
+        OR: [
+          { profilePhotoUrl: { not: null } },
+          { studentPhotos: { some: {} } },
+        ],
+      });
     } else if (photoFilter === "WITHOUT_PHOTOS") {
-      whereClause.AND = [
-        { profilePhotoUrl: null },
-        { studentPhotos: { none: {} } },
-      ];
+      andConditions.push({
+        profilePhotoUrl: null,
+        studentPhotos: { none: {} },
+      });
     }
 
     if (profileFilter === "INCOMPLETE") {
       // Missing photo, university, or city
-      whereClause.OR = [
-        { profilePhotoUrl: null },
-        { university: null },
-        { city: null },
-      ];
+      andConditions.push({
+        OR: [
+          { profilePhotoUrl: null },
+          { university: null },
+          { city: null },
+        ],
+      });
     } else if (profileFilter === "COMPLETE") {
-      whereClause.AND = [
-        { OR: [{ profilePhotoUrl: { not: null } }, { studentPhotos: { some: {} } }] },
-        { university: { not: null } },
-        { phone: { not: null } },
-      ];
+      andConditions.push({
+        OR: [{ profilePhotoUrl: { not: null } }, { studentPhotos: { some: {} } }],
+        university: { not: null },
+        phone: { not: null },
+      });
     }
 
     if (search) {
-      whereClause.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search, mode: "insensitive" } },
-        { registrationNumber: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { university: { contains: search, mode: "insensitive" } },
-        { city: { contains: search, mode: "insensitive" } },
-      ];
+      andConditions.push({
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search, mode: "insensitive" } },
+          { registrationNumber: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { university: { contains: search, mode: "insensitive" } },
+          { city: { contains: search, mode: "insensitive" } },
+        ],
+      });
     }
+
+    const whereClause = andConditions.length === 1 ? andConditions[0] : { AND: andConditions };
 
     const students = await prisma.user.findMany({
       where: whereClause,
@@ -108,13 +116,17 @@ export async function GET(request: Request) {
     });
 
     const formattedStudents = students.map((s) => {
-      const appliedCount = s.applications.length;
-      const selectedCount = s.applications.filter((a) => a.status === "SELECTED").length;
-      const attendedCount = s.applications.filter((a) => a.status === "ATTENDED").length;
-      const cancelledCount = s.applications.filter((a) => a.status === "CANCELLED").length;
+      const userApps = s.applications || [];
+      const userPhotos = s.studentPhotos || [];
+      const userFieldValues = s.profileFieldValues || [];
+
+      const appliedCount = userApps.length;
+      const selectedCount = userApps.filter((a) => a.status === "SELECTED").length;
+      const attendedCount = userApps.filter((a) => a.status === "ATTENDED").length;
+      const cancelledCount = userApps.filter((a) => a.status === "CANCELLED").length;
 
       // Primary photo fallback
-      const primaryPhoto = s.studentPhotos.find((p) => p.isPrimary) || s.studentPhotos[0];
+      const primaryPhoto = userPhotos.find((p) => p.isPrimary) || userPhotos[0];
       const displayPhotoUrl = s.profilePhotoUrl || primaryPhoto?.url || null;
 
       // Completeness score
@@ -128,7 +140,7 @@ export async function GET(request: Request) {
       return {
         _id: s.id,
         id: s.id,
-        name: s.name,
+        name: s.name || "Student",
         phone: s.phone || "N/A",
         email: s.email || "N/A",
         university: s.university || "N/A",
@@ -142,7 +154,7 @@ export async function GET(request: Request) {
         upiId: s.upiId || "N/A",
         bio: s.bio || "",
         profilePhotoUrl: displayPhotoUrl,
-        selectionStatus: s.selectionStatus,
+        selectionStatus: s.selectionStatus || "UNDER_REVIEW",
         selectedAt: s.selectedAt,
         selectionEmailSentAt: s.selectionEmailSentAt,
         status: s.isActive ? "active" : "blocked",
@@ -153,13 +165,15 @@ export async function GET(request: Request) {
         cancelledCount,
         totalEarnings: attendedCount * 800,
         completenessScore: score,
-        photos: s.studentPhotos,
-        dynamicFields: s.profileFieldValues.map((v) => ({
-          label: v.profileField.label,
-          key: v.profileField.key,
-          value: v.value,
-        })),
-        recentApplications: s.applications.slice(0, 5),
+        photos: userPhotos,
+        dynamicFields: userFieldValues
+          .filter((v) => v && v.profileField)
+          .map((v) => ({
+            label: v.profileField?.label || "",
+            key: v.profileField?.key || "",
+            value: v.value || "",
+          })),
+        recentApplications: userApps.slice(0, 5),
         createdAt: s.createdAt,
       };
     });
@@ -167,7 +181,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, students: formattedStudents });
   } catch (error: any) {
     console.error("Admin students fetch error:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || "Failed to load students." }, { status: 500 });
   }
 }
 

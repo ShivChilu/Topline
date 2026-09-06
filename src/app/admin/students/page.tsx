@@ -139,9 +139,13 @@ export default function AdminStudentsPage() {
       const data = await res.json();
       if (data.success) {
         setStudents(data.students || []);
+      } else {
+        console.error("Failed to load students:", data.message);
+        showToast(data.message || "Failed to load students list.");
       }
     } catch (err) {
       console.error("Error fetching students:", err);
+      showToast("Network error fetching students list.");
     } finally {
       setLoading(false);
     }
