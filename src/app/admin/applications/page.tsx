@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Eye, Filter } from "lucide-react";
+import { Search, Eye, Filter, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   
   // Filters
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -95,6 +96,66 @@ export default function AdminApplicationsPage() {
     }
   };
 
+  // Permanently delete a single application
+  const handleDeleteApplication = async (appId: string, candidateName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to PERMANENTLY delete this event registration for "${candidateName}"?\n\n(The student account itself will remain safe, only this event application will be erased).`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setActionLoading(appId);
+      const res = await fetch(`/api/admin/applications?id=${appId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        alert("✓ Application deleted successfully.");
+        setApplications((prev) => prev.filter((a) => a._id !== appId && a.id !== appId));
+        setSelectedIds((prev) => prev.filter((id) => id !== appId));
+      } else {
+        alert(data.message || "Failed to delete application.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting application.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Permanently delete multiple selected applications
+  const handleBulkDeleteApplications = async () => {
+    if (selectedIds.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to PERMANENTLY delete ${selectedIds.length} selected application(s)?\n\nThis will remove their event registrations and attendance. Student accounts remain safe.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setActionLoading("bulk");
+      const res = await fetch(`/api/admin/applications?ids=${selectedIds.join(",")}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || "Applications deleted.");
+        setApplications((prev) => prev.filter((a) => !selectedIds.includes(a._id) && !selectedIds.includes(a.id)));
+        setSelectedIds([]);
+      } else {
+        alert(data.message || "Bulk delete failed.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting applications.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+
   const handleToggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((x) => x !== id));
@@ -163,7 +224,7 @@ export default function AdminApplicationsPage() {
 
       {/* Bulk action buttons */}
       {selectedIds.length > 0 && (
-        <div className="bg-red-600/10 p-3 rounded-lg border border-red-600/20 flex gap-2 items-center">
+        <div className="bg-red-600/10 p-3 rounded-lg border border-red-600/20 flex flex-wrap gap-2 items-center">
           <span className="text-xs font-bold text-red-600 mr-2 uppercase">Bulk Selection:</span>
           <button
             onClick={() => handleBulkStatusChange("selected")}
@@ -173,15 +234,24 @@ export default function AdminApplicationsPage() {
           </button>
           <button
             onClick={() => handleBulkStatusChange("confirmed")}
-            className="bg-emerald-600 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded transition"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition"
           >
             Confirm
           </button>
           <button
             onClick={() => handleBulkStatusChange("attended")}
-            className="bg-purple-600 hover:bg-purple-750 text-white text-xs font-bold px-3 py-1.5 rounded transition"
+            className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded transition"
           >
             Attended
+          </button>
+          <button
+            onClick={handleBulkDeleteApplications}
+            disabled={actionLoading === "bulk"}
+            className="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1.5 sm:ml-auto"
+            title="Permanently delete selected applications"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete ({selectedIds.length})</span>
           </button>
         </div>
       )}
@@ -214,20 +284,21 @@ export default function AdminApplicationsPage() {
                   <th className="p-4">Target Event</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Submitted At</th>
-                  <th className="p-4 text-right">Link</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-850">
                 {applications.map((app) => {
                   const s = app.studentId || {};
                   const ev = app.eventId || {};
+                  const appId = app._id || app.id;
                   return (
-                    <tr key={app._id} className="hover:bg-slate-100/10 transition">
+                    <tr key={appId} className="hover:bg-slate-100/10 transition">
                       <td className="p-4 text-center">
                         <input
                           type="checkbox"
-                          checked={selectedIds.includes(app._id)}
-                          onChange={() => handleToggleSelect(app._id)}
+                          checked={selectedIds.includes(appId)}
+                          onChange={() => handleToggleSelect(appId)}
                           className="rounded border-slate-200 text-red-600 focus:ring-red-600"
                         />
                       </td>
@@ -247,13 +318,24 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="p-4 text-gray-450">{new Date(app.createdAt).toLocaleDateString("en-GB")}</td>
                       <td className="p-4 text-right">
-                        <Link
-                          href={`/admin/events/${ev._id}`}
-                          className="text-red-600 hover:underline text-xs flex items-center justify-end space-x-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Review</span>
-                        </Link>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link
+                            href={`/admin/events/${ev._id || ev.id}`}
+                            className="text-red-600 hover:text-red-700 font-semibold text-xs flex items-center space-x-1 p-1 rounded hover:bg-red-50 transition"
+                            title="Review inside event"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Review</span>
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteApplication(appId, s.name || "Candidate")}
+                            disabled={actionLoading === appId}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-rose-50 rounded transition"
+                            title="Delete Application Permanently"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Building2, User, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Building2, User, Phone, Mail, MapPin, Trash2 } from "lucide-react";
 
 export default function AdminClientsPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Form inputs
   const [name, setName] = useState("");
@@ -35,6 +36,27 @@ export default function AdminClientsPage() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  const handleDeleteClient = async (clientId: string, clientName: string) => {
+    if (!confirm(`Are you sure you want to PERMANENTLY delete client "${clientName}"?`)) return;
+
+    try {
+      setActionLoading(clientId);
+      const res = await fetch(`/api/admin/clients?id=${clientId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        alert("✓ Client profile deleted.");
+        setClients((prev) => prev.filter((c) => c._id !== clientId && c.id !== clientId));
+      } else {
+        alert(data.message || "Failed to delete client.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting client.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,14 +198,24 @@ export default function AdminClientsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {clients.map((c) => (
             <div key={c._id} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 hover:border-red-600/20 transition duration-300">
-              <div className="flex items-center space-x-3 border-b border-slate-200 pb-3">
-                <div className="w-10 h-10 bg-red-600/10 rounded-lg border border-red-600/20 flex items-center justify-center text-red-600 flex-shrink-0">
-                  <Building2 className="w-5 h-5" />
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-red-600/10 rounded-lg border border-red-600/20 flex items-center justify-center text-red-600 flex-shrink-0">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight">{c.name}</h3>
+                    <span className="text-xs text-slate-450 font-semibold uppercase">Hospitality Client</span>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 leading-tight">{c.name}</h3>
-                  <span className="text-xs text-slate-450 font-semibold uppercase">Hospitality Client</span>
-                </div>
+                <button
+                  onClick={() => handleDeleteClient(c._id || c.id, c.name)}
+                  disabled={actionLoading === (c._id || c.id)}
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-rose-50 rounded-lg transition"
+                  title="Permanently Delete Client"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
 
               <div className="space-y-2 text-xs text-slate-650">

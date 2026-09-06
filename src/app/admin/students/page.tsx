@@ -244,6 +244,69 @@ export default function AdminStudentsPage() {
     }
   };
 
+  // Permanently delete a single student
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to PERMANENTLY delete student "${studentName}"?\n\nThis will remove their permanent profile, photos, and all event applications. This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setActionLoading(studentId);
+      const res = await fetch(`/api/admin/students?id=${studentId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✓ Student "${studentName}" permanently deleted.`);
+        setStudents((prev) => prev.filter((s) => s.id !== studentId));
+        setSelectedStudentIds((prev) => prev.filter((id) => id !== studentId));
+        if (inspectStudent && inspectStudent.id === studentId) {
+          setInspectStudent(null);
+        }
+      } else {
+        alert(data.message || "Failed to delete student.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting student.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Permanently delete multiple selected students
+  const handleBulkDeleteStudents = async () => {
+    if (selectedStudentIds.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to PERMANENTLY delete ${selectedStudentIds.length} selected student accounts?\n\nAll photos, applications, and profile data will be permanently removed. This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setActionLoading("bulk");
+      const res = await fetch(`/api/admin/students?ids=${selectedStudentIds.join(",")}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✓ ${data.count || selectedStudentIds.length} student account(s) permanently deleted.`);
+        setStudents((prev) => prev.filter((s) => !selectedStudentIds.includes(s.id)));
+        setSelectedStudentIds([]);
+      } else {
+        alert(data.message || "Bulk delete failed.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting students.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+
   // Toggle active/blocked status
   const handleToggleBlock = async (studentId: string, currentStatus: string) => {
     const nextStatus = currentStatus === "active" ? "blocked" : "active";
@@ -559,6 +622,15 @@ export default function AdminStudentsPage() {
                   <Clock className="w-3.5 h-3.5" />
                   Under Review
                 </button>
+                <button
+                  disabled={actionLoading === "bulk"}
+                  onClick={handleBulkDeleteStudents}
+                  className="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  title="Permanently delete selected student accounts"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete ({selectedStudentIds.length})
+                </button>
               </div>
             </div>
           )}
@@ -718,13 +790,23 @@ export default function AdminStudentsPage() {
                           </button>
                         </div>
 
-                        {/* Inspect full profile */}
-                        <button
-                          onClick={() => setInspectStudent(student)}
-                          className="w-full py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
-                        >
-                          View Full Profile & Photos
-                        </button>
+                        {/* Inspect full profile & Delete button */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setInspectStudent(student)}
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                          >
+                            View Full Profile & Photos
+                          </button>
+                          <button
+                            disabled={actionLoading === student.id}
+                            onClick={() => handleDeleteStudent(student.id, student.name)}
+                            className="p-1.5 bg-rose-50 hover:bg-red-600 border border-rose-200 text-rose-600 hover:text-white rounded-lg transition"
+                            title="Permanently Delete Student Account"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -855,6 +937,14 @@ export default function AdminStudentsPage() {
                           title={student.status === "active" ? "Block" : "Unblock"}
                         >
                           {student.status === "active" ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                        </button>
+                        <button
+                          disabled={actionLoading === student.id}
+                          onClick={() => handleDeleteStudent(student.id, student.name)}
+                          className="p-1.5 bg-rose-50 hover:bg-red-600 border border-rose-200 text-rose-600 hover:text-white rounded-lg transition"
+                          title="Permanently Delete Student"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -1202,6 +1292,14 @@ export default function AdminStudentsPage() {
                       className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
                     >
                       Under Review
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudent(inspectStudent.id, inspectStudent.name)}
+                      className="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
+                      title="Permanently Delete Student Profile & Records"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-400" />
+                      Delete Account
                     </button>
                   </div>
                 </div>

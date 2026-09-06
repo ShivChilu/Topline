@@ -47,3 +47,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await request.json();
+        if (body.id) id = body.id;
+      } catch {
+        // no body
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "Client ID is required." }, { status: 400 });
+    }
+
+    await prisma.client.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Client profile permanently deleted.",
+    });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+

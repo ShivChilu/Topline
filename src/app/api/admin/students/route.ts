@@ -251,9 +251,51 @@ export async function PATCH(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: false, message: "Invalid request parameters." }, { status: 400 });
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get("id");
+    let ids = searchParams.get("ids")?.split(",").filter(Boolean);
+
+    // Also support JSON body if passed
+    if (!id && (!ids || ids.length === 0)) {
+      try {
+        const body = await request.json();
+        if (body.id) id = body.id;
+        if (Array.isArray(body.ids)) ids = body.ids;
+      } catch {
+        // no body
+      }
+    }
+
+    const targetIds = id ? [id] : ids || [];
+
+    if (targetIds.length === 0) {
+      return NextResponse.json({ success: false, message: "Missing student ID(s) to delete." }, { status: 400 });
+    }
+
+    // Delete student users (foreign keys configured with onDelete: Cascade will clean all photos, applications, profile fields, attendance)
+    const result = await prisma.user.deleteMany({
+      where: {
+        id: { in: targetIds },
+        role: Role.USER, // Protect admin accounts from accidental deletion via student endpoint
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: "PERMANENT_STUDENT_DELETION",
+        metadata: { count: result.count, targetIds },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Permanently deleted ${result.count} student account(s) and all associated records.`,
+      count: result.count,
+    });
   } catch (error: any) {
-    console.error("Admin student patch error:", error);
+    console.error("Delete Student API Error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
