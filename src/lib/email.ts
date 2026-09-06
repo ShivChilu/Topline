@@ -48,7 +48,7 @@ async function sendEmail({
   html: string;
 }): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   const resendApiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.RESEND_FROM || process.env.SMTP_FROM || "Topline ODC <onboarding@resend.dev>";
+  const fromAddress = process.env.RESEND_FROM || process.env.SMTP_FROM || "Topline ODC <updates@toplineodc.co.in>";
 
   // 1. Primary: Resend HTTPS REST API (Port 443, never blocked on Render)
   if (resendApiKey) {
