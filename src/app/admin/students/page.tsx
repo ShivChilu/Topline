@@ -136,6 +136,19 @@ export default function AdminStudentsPage() {
       if (statusFilter !== "ALL") params.append("status", statusFilter);
 
       const res = await fetch(`/api/admin/students?${params.toString()}`);
+      if (!res.ok) {
+        let msg = `Server returned status ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.message) msg = errData.message;
+        } catch {
+          // ignore non-json error
+        }
+        console.error("Fetch students failed:", msg);
+        showToast(msg);
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
         setStudents(data.students || []);
@@ -143,9 +156,9 @@ export default function AdminStudentsPage() {
         console.error("Failed to load students:", data.message);
         showToast(data.message || "Failed to load students list.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching students:", err);
-      showToast("Network error fetching students list.");
+      showToast(err?.message || "Network error fetching students list.");
     } finally {
       setLoading(false);
     }
