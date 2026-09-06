@@ -251,6 +251,13 @@ export async function PATCH(request: Request) {
       });
     }
 
+    return NextResponse.json({ success: false, message: "Invalid request parameters." }, { status: 400 });
+  } catch (error: any) {
+    console.error("Admin student patch error:", error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
