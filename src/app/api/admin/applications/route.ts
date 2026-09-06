@@ -49,23 +49,103 @@ export async function GET(request: Request) {
     const applications = await prisma.application.findMany({
       where: whereClause,
       include: {
-        event: true,
+        event: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+            location: true,
+            workType: true,
+            reportingTime: true,
+            paymentPerStudent: true,
+            status: true,
+          },
+        },
         user: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            registrationNumber: true,
+            university: true,
+            city: true,
+            gender: true,
+            height: true,
+            weight: true,
+            age: true,
+            upiId: true,
+            bio: true,
+            profilePhotoUrl: true,
+            selectionStatus: true,
             studentPhotos: {
+              select: {
+                id: true,
+                url: true,
+                photoType: true,
+                caption: true,
+                isPrimary: true,
+              },
               orderBy: { createdAt: "desc" },
             },
             profileFieldValues: {
-              include: { profileField: true },
+              select: {
+                value: true,
+                profileField: {
+                  select: {
+                    key: true,
+                    label: true,
+                    type: true,
+                  },
+                },
+              },
             },
           },
         },
         fieldResponses: {
-          include: { formField: true },
+          select: {
+            id: true,
+            fieldId: true,
+            value: true,
+            formField: {
+              select: {
+                id: true,
+                key: true,
+                label: true,
+              },
+            },
+          },
         },
-        photos: true,
-        attendance: true,
+        photos: {
+          select: {
+            id: true,
+            url: true,
+            caption: true,
+            photoType: true,
+          },
+        },
+        attendance: {
+          select: {
+            id: true,
+            attendanceStatus: true,
+            checkInTime: true,
+            checkOutTime: true,
+          },
+        },
         statusHistory: {
+          select: {
+            id: true,
+            oldStatus: true,
+            newStatus: true,
+            notes: true,
+            changedBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            createdAt: true,
+          },
           orderBy: { createdAt: "desc" },
           take: 5,
         },
@@ -79,7 +159,9 @@ export async function GET(request: Request) {
 
     const formattedApplications = applications.map((app) => {
       const customFieldsMap: Record<string, any> = {};
-      app.fieldResponses.forEach((fr) => {
+      const responses = app.fieldResponses || [];
+      responses.forEach((fr) => {
+        if (!fr || !fr.formField) return;
         try {
           customFieldsMap[fr.formField.key] = JSON.parse(fr.value);
         } catch {
@@ -89,18 +171,25 @@ export async function GET(request: Request) {
       });
 
       // Photo fallback hierarchy: Primary -> Formal -> Full Length -> Casual -> User profilePhotoUrl
-      const studentPhotos = app.user?.studentPhotos || [];
+      const rawStudentPhotos = app.user?.studentPhotos || [];
       const primaryPhoto =
-        studentPhotos.find((p) => p.isPrimary) ||
-        studentPhotos.find((p) => p.photoType === "FORMAL") ||
-        studentPhotos.find((p) => p.photoType === "FULL_LENGTH") ||
-        studentPhotos[0];
+        rawStudentPhotos.find((p) => p.isPrimary) ||
+        rawStudentPhotos.find((p) => p.photoType === "FORMAL") ||
+        rawStudentPhotos.find((p) => p.photoType === "FULL_LENGTH") ||
+        rawStudentPhotos[0];
 
-      const resolvedPhotoUrl =
-        primaryPhoto?.url ||
-        app.photos[0]?.url ||
-        app.user?.profilePhotoUrl ||
-        "";
+      let resolvedPhotoUrl = "";
+      if (primaryPhoto) {
+        resolvedPhotoUrl = primaryPhoto.url?.startsWith("data:")
+          ? `/api/photos/student?photoId=${primaryPhoto.id}`
+          : primaryPhoto.url || "";
+      } else if (app.user?.profilePhotoUrl) {
+        resolvedPhotoUrl = app.user.profilePhotoUrl.startsWith("data:")
+          ? `/api/photos/student?userId=${app.user.id}`
+          : app.user.profilePhotoUrl;
+      } else if (app.photos && app.photos[0]) {
+        resolvedPhotoUrl = app.photos[0].url || "";
+      }
 
       // Authoritative Mobile Phone
       const authoritativePhone =
@@ -116,53 +205,94 @@ export async function GET(request: Request) {
       if (app.user?.university) score += 15;
       if (app.user?.city || app.user?.gender) score += 15;
 
+      const formattedStudentPhotos = rawStudentPhotos.map((p) => ({
+        id: p.id,
+        photoType: p.photoType,
+        caption: p.caption,
+        isPrimary: p.isPrimary,
+        url: p.url && p.url.startsWith("data:") ? `/api/photos/student?photoId=${p.id}` : p.url || "",
+      }));
+
       return {
-        ...app,
-        _id: app.id,
         id: app.id,
-        status: app.status,
+        _id: app.id,
+        eventId: app.event
+          ? {
+              ...app.event,
+              _id: app.event.id,
+            }
+          : { id: app.eventId, _id: app.eventId },
+        userId: app.userId,
+        name: app.name,
+        email: app.user?.email || "N/A",
         mobileNumber: authoritativePhone,
+        registrationNumber: app.registrationNumber,
+        status: app.status,
+        paymentStatus: app.paymentStatus,
+        paymentOverride: app.paymentOverride,
+        messageStatus: app.messageStatus,
+        attendanceStatus: app.attendance?.attendanceStatus || "PENDING",
+        callPriority: app.callPriority,
+        callStatus: app.status,
+        lastActionAt: app.lastActionAt,
+        whatsappAdded: app.whatsappGroupAdded,
+        whatsappAddedAt: app.whatsappGroupAddedAt,
+        callingRemarks: app.callingRemarks,
+        manualOrder: app.manualOrder,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
+        attendance: app.attendance
+          ? {
+              ...app.attendance,
+              status: app.attendance.attendanceStatus,
+            }
+          : null,
+        statusHistory: (app.statusHistory || []).map((sh) => ({
+          ...sh,
+          fromStatus: sh.oldStatus,
+          toStatus: sh.newStatus,
+        })),
         photoUrl: resolvedPhotoUrl,
         completenessScore: Math.min(score, 100),
-        studentId: {
-          ...app.user,
-          _id: app.user?.id,
-          id: app.user?.id,
-          name: app.user?.name || app.name,
-          phone: authoritativePhone,
-          email: app.user?.email || "N/A",
-          universityId: app.user?.registrationNumber || app.registrationNumber,
-          registrationNumber: app.user?.registrationNumber || app.registrationNumber,
-          university: app.user?.university || "N/A",
-          city: app.user?.city || "N/A",
-          gender: app.user?.gender || "N/A",
-          height: app.user?.height || "N/A",
-          weight: app.user?.weight || "N/A",
-          age: app.user?.age || null,
-          upiId: app.user?.upiId || "N/A",
-          bio: app.user?.bio || "",
-          profilePhotoUrl: resolvedPhotoUrl,
-          studentPhotos: studentPhotos,
-          selectionStatus: app.user?.selectionStatus || "UNDER_REVIEW", // Permanent Student Selection
-          dynamicProfileFields: app.user?.profileFieldValues?.map((pv) => ({
-            key: pv.profileField.key,
-            label: pv.profileField.label,
-            type: pv.profileField.type,
-            value: pv.value,
-          })) || [],
-        },
-        eventId: {
-          ...app.event,
-          _id: app.event.id,
-          id: app.event.id,
-        },
+        studentId: app.user
+          ? {
+              id: app.user.id,
+              _id: app.user.id,
+              name: app.user.name || app.name,
+              phone: authoritativePhone,
+              email: app.user.email || "N/A",
+              universityId: app.user.registrationNumber || app.registrationNumber,
+              registrationNumber: app.user.registrationNumber || app.registrationNumber,
+              university: app.user.university || "N/A",
+              city: app.user.city || "N/A",
+              gender: app.user.gender || "N/A",
+              height: app.user.height || "N/A",
+              weight: app.user.weight || "N/A",
+              age: app.user.age || null,
+              upiId: app.user.upiId || "N/A",
+              bio: app.user.bio || "",
+              profilePhotoUrl: resolvedPhotoUrl,
+              studentPhotos: formattedStudentPhotos,
+              selectionStatus: app.user.selectionStatus || "UNDER_REVIEW",
+              dynamicProfileFields: (app.user.profileFieldValues || [])
+                .filter((pv: any) => pv && pv.profileField)
+                .map((pv: any) => ({
+                  key: pv.profileField?.key || "",
+                  label: pv.profileField?.label || "",
+                  type: pv.profileField?.type || "TEXT",
+                  value: pv.value || "",
+                })),
+            }
+          : null,
         customFieldsData: customFieldsMap,
-        dynamicEventResponses: app.fieldResponses.map((fr) => ({
-          fieldId: fr.fieldId,
-          key: fr.formField.key,
-          label: fr.formField.label,
-          value: customFieldsMap[fr.formField.key] || fr.value,
-        })),
+        dynamicEventResponses: responses
+          .filter((fr: any) => fr && fr.formField)
+          .map((fr: any) => ({
+            fieldId: fr.fieldId,
+            key: fr.formField.key,
+            label: fr.formField.label,
+            value: customFieldsMap[fr.formField.key] || fr.value,
+          })),
       };
     });
 
@@ -293,7 +423,7 @@ export async function PATCH(request: Request) {
           },
         });
 
-        // Trigger email asynchronously only when status genuine transitioned
+        // Trigger email asynchronously only when status genuinely transitioned
         if (sendEmail && app.user?.email) {
           if (nextStatus === "SELECTED") {
             sendEventSelectionEmail({

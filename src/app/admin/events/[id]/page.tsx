@@ -122,11 +122,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         return;
       }
 
-      const appRes = await fetch(`/api/admin/applications?eventId=${eventId}&t=${Date.now()}`, { cache: "no-store" });
-      const appData = await appRes.json();
-
       setEvent(eventData.event);
-      if (appData.success) setApplications(appData.applications || []);
+
+      try {
+        const appRes = await fetch(`/api/admin/applications?eventId=${eventId}&t=${Date.now()}`, { cache: "no-store" });
+        if (appRes.ok) {
+          const appData = await appRes.json();
+          if (appData.success) setApplications(appData.applications || []);
+        } else {
+          console.error("Applications fetch status:", appRes.status);
+        }
+      } catch (appErr) {
+        console.error("Failed to parse applications:", appErr);
+      }
     } catch (err) {
       console.error(err);
       setErrorMsg("An error occurred while loading event details.");
