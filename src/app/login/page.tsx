@@ -122,17 +122,11 @@ export default function StudentLoginPage() {
             </button>
           </form>
 
-          <div className="text-center pt-4 border-t border-slate-100 space-y-2">
+          <div className="text-center pt-4 border-t border-slate-100">
             <p className="text-xs text-slate-500">
               Don't have an account yet?{" "}
               <Link href="/register" className="text-red-600 font-bold hover:underline">
                 Register now
-              </Link>
-            </p>
-            <p className="text-xs text-slate-400">
-              Are you a staff administrator?{" "}
-              <Link href="/admin/login" className="text-slate-600 font-medium hover:underline">
-                Admin login
               </Link>
             </p>
           </div>
