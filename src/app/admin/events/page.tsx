@@ -113,7 +113,7 @@ export default function AdminEventsPage() {
 
     // Strong confirmation validation check
     const hasData = deleteStats && (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0);
-    if (hasData && confirmNameInput.trim() !== deletingEvent.name) {
+    if (hasData && confirmNameInput.trim().toLowerCase() !== deletingEvent.name.trim().toLowerCase()) {
       alert("Please enter the correct event name to confirm deletion.");
       return;
     }
@@ -354,16 +354,35 @@ export default function AdminEventsPage() {
               {/* Strong Confirmation Input (if event has operational data) */}
               {deleteStats && (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0) && (
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase block">
-                    Type the event name to confirm deletion:
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase block">
+                      Type event name to confirm:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmNameInput(deletingEvent.name)}
+                      className="text-[11px] text-red-600 font-bold hover:underline cursor-pointer"
+                    >
+                      ⚡ Auto-fill
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={confirmNameInput}
                     onChange={(e) => setConfirmNameInput(e.target.value)}
-                    placeholder={deletingEvent.name}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600"
+                    placeholder={`Type "${deletingEvent.name}" here`}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 font-medium"
+                    autoFocus
                   />
+                  {confirmNameInput.trim().toLowerCase() !== deletingEvent.name.trim().toLowerCase() ? (
+                    <p className="text-[10px] text-slate-500">
+                      Must match: <span className="font-semibold text-slate-800">{deletingEvent.name}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-emerald-600 font-bold">
+                      ✓ Name confirmed. Delete button unlocked.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -379,16 +398,16 @@ export default function AdminEventsPage() {
                   onClick={handlePermanentDelete}
                   className={`flex-1 py-2.5 font-bold rounded-xl text-xs transition ${
                     deleteStats && (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0)
-                      ? confirmNameInput === deletingEvent.name
-                        ? "bg-red-600 hover:bg-red-700 text-white shadow-sm"
+                      ? confirmNameInput.trim().toLowerCase() === deletingEvent.name.trim().toLowerCase()
+                        ? "bg-red-600 hover:bg-red-700 text-white shadow-sm cursor-pointer"
                         : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-700 text-white shadow-sm"
+                      : "bg-red-600 hover:bg-red-700 text-white shadow-sm cursor-pointer"
                   }`}
                   disabled={
                     actionLoading ||
                     (!!deleteStats &&
                       (deleteStats.applicationsCount > 0 || deleteStats.attendanceCount > 0 || deleteStats.paymentsCount > 0) &&
-                      confirmNameInput !== deletingEvent.name)
+                      confirmNameInput.trim().toLowerCase() !== deletingEvent.name.trim().toLowerCase())
                   }
                 >
                   {actionLoading ? "Deleting..." : "Permanently Delete"}
