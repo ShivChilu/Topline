@@ -31,9 +31,9 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Validate size (max 5MB)
-    if (buffer.length > 5 * 1024 * 1024) {
-      return NextResponse.json({ success: false, message: "File size exceeds 5MB limit." }, { status: 400 });
+    // Validate size (max 3MB for safety, images are auto-compressed on client)
+    if (buffer.length > 3 * 1024 * 1024) {
+      return NextResponse.json({ success: false, message: "File size exceeds 3MB limit." }, { status: 400 });
     }
 
     const mimeType = file.type || "image/jpeg";

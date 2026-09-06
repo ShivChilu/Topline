@@ -30,6 +30,7 @@ import {
   Info
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
+import { compressImage } from "@/lib/image-compress";
 
 interface StudentPhoto {
   id: string;
@@ -49,7 +50,7 @@ interface DynamicField {
   placeholder?: string;
   options: string[];
   isRequired: boolean;
-  value: string;
+  value?: string;
 }
 
 export default function StudentProfilePage() {
@@ -156,17 +157,19 @@ export default function StudentProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 8 * 1024 * 1024) {
-      showFeedback("error", "Photo file size must be less than 8MB.");
+    if (file.size > 15 * 1024 * 1024) {
+      showFeedback("error", "Photo file size must be less than 15MB.");
       return;
     }
 
     setUploadingPhoto(true);
 
     try {
-      // Step 1: Upload binary to storage
+      // Step 1: Automatically compress image in browser to ~150KB-250KB before upload
+      const optimizedFile = await compressImage(file);
+
       const body = new FormData();
-      body.append("file", file);
+      body.append("file", optimizedFile);
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
