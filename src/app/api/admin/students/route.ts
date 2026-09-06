@@ -86,29 +86,51 @@ export async function GET(request: Request) {
 
     const students = await prisma.user.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        university: true,
+        registrationNumber: true,
+        city: true,
+        gender: true,
+        height: true,
+        weight: true,
+        age: true,
+        upiId: true,
+        bio: true,
+        profilePhotoUrl: true,
+        selectionStatus: true,
+        selectedAt: true,
+        selectionEmailSentAt: true,
+        isActive: true,
+        createdAt: true,
         studentPhotos: {
+          select: {
+            id: true,
+            url: true,
+            photoType: true,
+            caption: true,
+            isPrimary: true,
+          },
           orderBy: { createdAt: "desc" },
         },
         profileFieldValues: {
-          include: {
-            profileField: true,
+          select: {
+            value: true,
+            profileField: {
+              select: {
+                key: true,
+                label: true,
+              },
+            },
           },
         },
         applications: {
           select: {
             id: true,
             status: true,
-            eventId: true,
-            createdAt: true,
-            event: {
-              select: {
-                id: true,
-                name: true,
-                date: true,
-                location: true,
-              },
-            },
           },
         },
       },
