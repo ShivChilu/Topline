@@ -147,9 +147,18 @@ export async function GET(request: Request) {
       const attendedCount = userApps.filter((a) => a.status === "ATTENDED").length;
       const cancelledCount = userApps.filter((a) => a.status === "CANCELLED").length;
 
-      // Primary photo fallback
+      // Primary photo fallback - use fast streaming URL instead of heavy base64 strings
       const primaryPhoto = userPhotos.find((p) => p.isPrimary) || userPhotos[0];
-      const displayPhotoUrl = s.profilePhotoUrl || primaryPhoto?.url || null;
+      let displayPhotoUrl: string | null = null;
+      if (s.profilePhotoUrl) {
+        displayPhotoUrl = s.profilePhotoUrl.startsWith("data:")
+          ? `/api/photos/student?userId=${s.id}`
+          : s.profilePhotoUrl;
+      } else if (primaryPhoto) {
+        displayPhotoUrl = primaryPhoto.url?.startsWith("data:")
+          ? `/api/photos/student?photoId=${primaryPhoto.id}`
+          : primaryPhoto.url || null;
+      }
 
       // Completeness score
       let score = 0;
@@ -158,6 +167,14 @@ export async function GET(request: Request) {
       if (displayPhotoUrl) score += 30;
       if (s.university) score += 15;
       if (s.city || s.gender) score += 15;
+
+      const formattedPhotos = userPhotos.map((p) => ({
+        id: p.id,
+        photoType: p.photoType,
+        caption: p.caption,
+        isPrimary: p.isPrimary,
+        url: p.url && p.url.startsWith("data:") ? `/api/photos/student?photoId=${p.id}` : p.url || "",
+      }));
 
       return {
         _id: s.id,
@@ -187,7 +204,7 @@ export async function GET(request: Request) {
         cancelledCount,
         totalEarnings: attendedCount * 800,
         completenessScore: score,
-        photos: userPhotos,
+        photos: formattedPhotos,
         dynamicFields: userFieldValues
           .filter((v) => v && v.profileField)
           .map((v) => ({
