@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Event } from "@/models";
+import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -11,24 +10,16 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    await connectToDatabase();
     const eventId = params.id;
-
-    // Generate secure random 256-bit token
     const token = crypto.randomBytes(32).toString("hex");
 
-    const event = await Event.findByIdAndUpdate(
-      eventId,
-      {
+    const event = await prisma.event.update({
+      where: { id: eventId },
+      data: {
         attendanceToken: token,
         attendanceTokenEnabled: true,
       },
-      { new: true }
-    );
-
-    if (!event) {
-      return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
-    }
+    });
 
     return NextResponse.json({
       success: true,
@@ -36,9 +27,9 @@ export async function POST(
       attendanceToken: event.attendanceToken,
       attendanceTokenEnabled: event.attendanceTokenEnabled,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("QR Code generation error:", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || "Internal server error" }, { status: 500 });
   }
 }
 
@@ -48,14 +39,13 @@ export async function PATCH(
 ) {
   const params = await props.params;
   try {
-    await connectToDatabase();
     const eventId = params.id;
     const body = await request.json();
     const { attendanceTokenEnabled, attendanceVerificationField, gracePeriod, attendanceDisplayFields } = body;
 
     const updateFields: any = {};
     if (typeof attendanceTokenEnabled !== "undefined") {
-      updateFields.attendanceTokenEnabled = attendanceTokenEnabled;
+      updateFields.attendanceTokenEnabled = Boolean(attendanceTokenEnabled);
     }
     if (typeof attendanceVerificationField !== "undefined") {
       updateFields.attendanceVerificationField = attendanceVerificationField;
@@ -67,23 +57,18 @@ export async function PATCH(
       updateFields.attendanceDisplayFields = attendanceDisplayFields;
     }
 
-    const event = await Event.findByIdAndUpdate(
-      eventId,
-      { $set: updateFields },
-      { new: true }
-    );
-
-    if (!event) {
-      return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
-    }
+    const event = await prisma.event.update({
+      where: { id: eventId },
+      data: updateFields,
+    });
 
     return NextResponse.json({
       success: true,
       message: "Settings updated successfully",
-      event,
+      event: { ...event, _id: event.id },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("QR Settings patch error:", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || "Internal server error" }, { status: 500 });
   }
 }

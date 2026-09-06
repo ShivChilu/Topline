@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch & uploads
+scratch/
+/public/uploads/*
+!/public/uploads/.gitkeep

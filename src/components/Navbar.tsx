@@ -1,12 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X, ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Menu, X, User, LogIn } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success && data?.user) {
+          setLoggedInUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -31,7 +43,7 @@ export default function Navbar() {
             </Link>
           </div>
           <div className="hidden md:block">
-            <div className="ml-10 flex items-center space-x-8">
+            <div className="ml-10 flex items-center space-x-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
@@ -42,9 +54,41 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              {loggedInUser ? (
+                <Link
+                  href="/profile"
+                  className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>My Profile</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center space-x-1.5 bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Student Login</span>
+                </Link>
+              )}
             </div>
           </div>
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center space-x-2">
+            {loggedInUser ? (
+              <Link
+                href="/profile"
+                className="bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-bold uppercase"
+              >
+                Profile
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-slate-900 text-white px-3 py-1 rounded-lg text-xs font-bold uppercase"
+              >
+                Login
+              </Link>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 focus:outline-none"
@@ -70,6 +114,25 @@ export default function Navbar() {
               </Link>
             ))}
 
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+              {loggedInUser ? (
+                <Link
+                  href="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="bg-red-600 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
+                >
+                  My Profile ({loggedInUser.name})
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="bg-slate-900 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
+                >
+                  Student Login / Register
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

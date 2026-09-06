@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Admin } from "@/models";
+import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
@@ -17,21 +16,31 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Invalid session." }, { status: 401 });
     }
 
-    await connectToDatabase();
-    const admin = await Admin.findById(decoded.id).select("-passwordHash");
-    
-    // Revoke access immediately if the admin is disabled/deactivated
-    if (!admin || admin.isActive === false) {
-      const response = NextResponse.json({ success: false, message: "Account disabled." }, { status: 401 });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      include: {
+        assignedEvents: {
+          select: { eventId: true },
+        },
+      },
+    });
+
+    if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) {
+      const response = NextResponse.json({ success: false, message: "Account disabled or unauthorized." }, { status: 401 });
       response.cookies.delete("admin_token");
       return response;
     }
 
+    const roleLower = user.role === "CALLING_ADMIN" ? "calling" : user.role === "SUPERADMIN" ? "superadmin" : "admin";
+    const assignedEvents = user.assignedEvents.map((a) => a.eventId);
+
     return NextResponse.json({
       success: true,
-      username: admin.username,
-      role: admin.role,
-      assignedEvents: admin.assignedEvents || [],
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: roleLower,
+      assignedEvents,
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

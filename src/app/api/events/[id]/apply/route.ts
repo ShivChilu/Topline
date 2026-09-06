@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Event, Student, Application } from "@/models";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getStudentProfileCompletion } from "@/lib/profile-completion";
+import { ApplicationStatus, EventStatus } from "@prisma/client";
 
 export async function POST(
   request: Request,
@@ -8,167 +11,180 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    await connectToDatabase();
     const eventId = params.id;
     const body = await request.json();
 
-    let { name, phone, email, university, universityId, profilePhotoUrl, customFields } = body;
+    // 1. Authenticate Student Session
+    const cookieStore = await cookies();
+    const token = cookieStore.get("user_token")?.value;
 
-    // Dynamically extract values from custom fields if custom fields have keys matching name, phone, email
-    if (customFields) {
-      Object.keys(customFields).forEach((key) => {
-        const val = String(customFields[key]).trim();
-        if (!val) return;
-        const normalizedKey = key.toLowerCase().trim();
-        
-        if (normalizedKey === "name" || normalizedKey === "full name" || normalizedKey === "student name") {
-          name = val;
-        }
-        if (normalizedKey === "phone" || normalizedKey === "phone number" || normalizedKey === "whatsapp" || normalizedKey === "whatsapp phone number" || normalizedKey === "whatsapp number") {
-          phone = val;
-        }
-        if (normalizedKey === "email" || normalizedKey === "email id" || normalizedKey === "email address") {
-          email = val;
-        }
-        if (normalizedKey === "university" || normalizedKey === "college" || normalizedKey === "university name" || normalizedKey === "college name") {
-          university = val;
-        }
-      });
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Please log in with your Topline student account to apply." },
+        { status: 401 }
+      );
     }
 
-    // Set logical fallbacks so database model constraints are satisfied even if some fields are missing
-    if (!universityId) {
-      return NextResponse.json({ success: false, message: "University Registration Number is required." }, { status: 400 });
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.id) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired session. Please log in again." },
+        { status: 401 }
+      );
     }
 
-    const cleanUniId = universityId.trim().toUpperCase();
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
 
-    // Fallbacks if not provided or left as "N/A"
-    const finalName = (!name || name === "N/A") ? `Student ${cleanUniId}` : name.trim();
-    const finalPhone = (!phone || phone === "N/A") ? cleanUniId : phone.trim();
-    const finalEmail = (!email || email === "N/A") ? `${cleanUniId.toLowerCase().replace(/[^a-z0-9]/g, "")}@topline.co.in` : email.trim().toLowerCase();
-    const finalUniversity = (!university || university === "N/A") ? "N/A" : university.trim();
+    if (!user || !user.isActive) {
+      return NextResponse.json(
+        { success: false, message: "Your student profile is inactive or restricted by administrators." },
+        { status: 403 }
+      );
+    }
 
-    // 2. Fetch the target event
-    const event = await Event.findById(eventId);
+    // 2. Strict 100% Profile Completeness Gate
+    const completeness = await getStudentProfileCompletion(user.id);
+    if (!completeness.isComplete) {
+      const missingList = [...completeness.missingFields, ...completeness.missingPhotos];
+      return NextResponse.json(
+        {
+          success: false,
+          error: "PROFILE_INCOMPLETE",
+          message: `Your profile must be 100% complete before applying to events. Missing: ${missingList.join(", ")}`,
+          completeness,
+        },
+        { status: 403 }
+      );
+    }
+
+    // 3. Fetch target event
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) {
       return NextResponse.json({ success: false, message: "Event not found." }, { status: 404 });
     }
 
-    if (event.status !== "OPEN") {
-      return NextResponse.json({ success: false, message: `Applications are currently ${event.status.toLowerCase()}.` }, { status: 400 });
+    if (event.status !== EventStatus.OPEN) {
+      return NextResponse.json(
+        { success: false, message: `Applications are currently ${event.status.toLowerCase()}.` },
+        { status: 400 }
+      );
     }
 
-    // 3. Duplicate check using eventId + registrationNumber (University Roll No)
-    const existingReg = await Application.findOne({ eventId, registrationNumber: cleanUniId });
-    if (existingReg) {
-      return NextResponse.json({
-        success: false,
-        message: `Registration number ${cleanUniId} has already been registered for this event.`
-      }, { status: 409 });
+    if (event.applicationsCount >= event.maxApplications) {
+      return NextResponse.json(
+        { success: false, message: "Applications are full for this event." },
+        { status: 400 }
+      );
     }
 
-    // 4. Find or Create the Student profile
-    let student = await Student.findOne({
-      $or: [{ phone: finalPhone }, { universityId: cleanUniId }]
+    // 4. Gender Eligibility Gate
+    if (event.allowedGender === "FEMALE_ONLY") {
+      if (!user.gender || user.gender.toLowerCase() !== "female") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "GENDER_INELIGIBLE",
+            message: `This event is exclusively open to female candidates. Your profile gender is listed as ${user.gender || "unspecified"}.`,
+          },
+          { status: 403 }
+        );
+      }
+    } else if (event.allowedGender === "MALE_ONLY") {
+      if (!user.gender || user.gender.toLowerCase() !== "male") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "GENDER_INELIGIBLE",
+            message: `This event is exclusively open to male candidates. Your profile gender is listed as ${user.gender || "unspecified"}.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 5. Check duplicate application by (eventId + userId) OR (eventId + registrationNumber)
+    const existingApp = await prisma.application.findFirst({
+      where: {
+        eventId,
+        OR: [
+          { userId: user.id },
+          ...(user.registrationNumber ? [{ registrationNumber: user.registrationNumber }] : []),
+        ],
+      },
     });
 
-    if (student) {
-      // Check if student status is blocked
-      if (student.status === "blocked") {
-        return NextResponse.json({ success: false, message: "Your profile has been restricted by administrators." }, { status: 403 });
-      }
-
-      // Overwrite existing record with new submission data to ensure fresh rendering
-      student.name = finalName;
-      student.phone = finalPhone;
-      student.email = finalEmail;
-      student.university = finalUniversity;
-      await student.save();
-
-      // Duplicate Check (Event ID + Student ID)
-      const existingApplication = await Application.findOne({ eventId, studentId: student._id });
-      if (existingApplication) {
-        return NextResponse.json({ success: false, message: "You have already applied for this opportunity." }, { status: 409 });
-      }
-    } else {
-      // Create new student profile
-      student = await Student.create({
-        name: finalName,
-        phone: finalPhone,
-        email: finalEmail,
-        university: finalUniversity,
-        universityId: cleanUniId,
-        profilePhotoUrl: profilePhotoUrl || "",
-        status: "active",
-      });
-    }
-
-    // 5. Safe Concurrency Check and Increment
-    // Find the event and increment applicationsCount ONLY if it is still less than maxApplications
-    const updatedEvent = await Event.findOneAndUpdate(
-      {
-        _id: eventId,
-        status: "OPEN",
-        applicationsCount: { $lt: event.maxApplications }
-      },
-      {
-        $inc: { applicationsCount: 1 }
-      },
-      {
-        new: true // return the updated document
-      }
-    );
-
-    if (!updatedEvent) {
-      return NextResponse.json({ success: false, message: "Sorry, this event filled up just now!" }, { status: 423 });
-    }
-
-    // If application count hits the cap, automatically set status to FULL
-    if (updatedEvent.applicationsCount >= updatedEvent.maxApplications) {
-      updatedEvent.status = "FULL";
-      await updatedEvent.save();
-    }
-
-    // 6. Create the Application Record (Catching concurrent unique key exceptions)
-    let application;
-    try {
-      application = await Application.create({
-        eventId: event._id,
-        studentId: student._id,
-        status: "applied",
-        customFieldsData: customFields || {},
-        registrationNumber: cleanUniId,
-        name: finalName,
-        mobileNumber: finalPhone,
-      });
-    } catch (dbErr: any) {
-      if (dbErr.code === 11000) {
-        return NextResponse.json({
+    if (existingApp) {
+      return NextResponse.json(
+        {
           success: false,
-          message: `This registration number has already been registered for this event.`
-        }, { status: 409 });
-      }
-      throw dbErr;
+          message: "You have already applied for this event.",
+        },
+        { status: 409 }
+      );
     }
 
-    // 7. Update Student Metrics
-    student.appliedCount += 1;
-    await student.save();
+    // 5. Update Event application count
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        applicationsCount: { increment: 1 },
+      },
+    });
 
-    // 8. Return confirmation response
-    const confirmationMessage = event.instructions || "Application Submitted Successfully. Selection details will be communicated via WhatsApp.";
+    if (updatedEvent.applicationsCount >= updatedEvent.maxApplications && updatedEvent.status === EventStatus.OPEN) {
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { status: EventStatus.FULL },
+      });
+    }
+
+    // 6. Create Application record linked to verified user profile
+    const application = await prisma.application.create({
+      data: {
+        eventId: event.id,
+        userId: user.id,
+        name: user.name,
+        mobileNumber: user.phone || "N/A",
+        registrationNumber: user.registrationNumber || "N/A",
+        status: ApplicationStatus.APPLIED,
+      },
+    });
+
+    // 7. Save dynamic custom field responses
+    const customFields = body.customFields;
+    if (customFields && typeof customFields === "object") {
+      for (const [key, val] of Object.entries(customFields)) {
+        if (val === undefined || val === null || String(val).trim() === "") continue;
+        const fieldKey = key.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+        const formField = await prisma.formField.findUnique({ where: { key: fieldKey } });
+        if (formField) {
+          await prisma.applicationFieldResponse.create({
+            data: {
+              applicationId: application.id,
+              fieldId: formField.id,
+              value: typeof val === "object" ? JSON.stringify(val) : String(val),
+            },
+          });
+        }
+      }
+    }
+
+    const confirmationMessage =
+      event.instructions ||
+      "Application Submitted Successfully! Selection details will be communicated via WhatsApp.";
 
     return NextResponse.json({
       success: true,
       message: confirmationMessage,
-      applicationId: application._id,
+      applicationId: application.id,
     });
   } catch (error: any) {
-    console.error("Application error:", error);
-    if (error.code === 11000) {
-      return NextResponse.json({ success: false, message: "You have already applied for this event." }, { status: 409 });
-    }
-    return NextResponse.json({ success: false, message: "Internal server error occurred." }, { status: 500 });
+    console.error("Application submission error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Internal server error." },
+      { status: 500 }
+    );
   }
 }

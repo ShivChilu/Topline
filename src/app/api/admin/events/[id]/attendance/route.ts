@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Event, Application, Attendance, Student, Admin } from "@/models";
+import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
@@ -12,9 +11,11 @@ async function getLoggedInAdmin() {
   if (!token) return null;
   const decoded = verifyToken(token);
   if (!decoded || !decoded.id) return null;
-  const admin = await Admin.findById(decoded.id);
-  if (!admin || admin.isActive === false) return null;
-  return admin;
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+  });
+  if (!user || user.isActive === false) return null;
+  return user;
 }
 
 // GET all eligible applicants and their attendance status for an event
@@ -24,44 +25,54 @@ export async function GET(
 ) {
   const params = await props.params;
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
     // Calling Admins cannot access attendance data
-    if (admin.role === "calling") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot view attendance logs." }, { status: 403 });
+    if (admin.role === "CALLING_ADMIN") {
+      return NextResponse.json(
+        { success: false, message: "Forbidden. Calling Admins cannot view attendance logs." },
+        { status: 403 }
+      );
     }
 
     const eventId = params.id;
 
-    const event = await Event.findById(eventId);
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) {
       return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
     }
 
-    // Get selected or confirmed applications
-    const applications = await Application.find({
-      eventId,
-      status: { $in: ["applied", "selected", "confirmed", "attended", "paid"] }
-    }).populate("studentId");
-
-    // Get actual attendance records
-    const attendanceRecords = await Attendance.find({ eventId });
+    // Get selected or confirmed applications with user, responses, and attendance
+    const applications = await prisma.application.findMany({
+      where: {
+        eventId,
+        status: { in: ["APPLIED", "SELECTED", "CONFIRMED", "ATTENDED", "PAID"] },
+      },
+      include: {
+        user: true,
+        fieldResponses: {
+          include: {
+            formField: true,
+          },
+        },
+        attendance: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
 
     // Map applications to attendance state
     const list = applications.map((app) => {
-      const student = app.studentId as any;
-      const studentIdStr = student?._id ? student._id.toString() : "";
-      const att = studentIdStr ? attendanceRecords.find((r) => r.studentId && r.studentId.toString() === studentIdStr) : null;
+      const student = app.user;
+      const att = app.attendance;
 
-      // Safe Name resolution: prioritize app.name, then student?.name, fallback to "Student <reg>"
       const resolvedName = app.name || student?.name || `Student ${app.registrationNumber || "N/A"}`;
 
-      // Safe Mobile resolution
-      const regNo = (app.registrationNumber || student?.universityId || "").trim();
+      const regNo = (app.registrationNumber || student?.registrationNumber || "").trim();
       const isValidPhone = (val: any) => {
         if (!val) return false;
         const clean = String(val).trim();
@@ -76,45 +87,47 @@ export async function GET(
       } else if (student?.phone && isValidPhone(student.phone)) {
         resolvedMobile = student.phone.trim();
       } else {
-        const data = app.customFieldsData ? (
-          app.customFieldsData instanceof Map 
-            ? Object.fromEntries(app.customFieldsData) 
-            : app.customFieldsData
-        ) : {};
-        const phoneKeys = [
-          "phone", "phone number", "phone no", "phone no.", "phone no:",
-          "mobile", "mobile number", "mobile no", "mobile no.", "mobile no:",
-          "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"
-        ];
-        for (const key of Object.keys(data)) {
-          const normKey = key.toLowerCase().trim();
-          if (phoneKeys.some(k => normKey.startsWith(k) || normKey.includes(k))) {
-            const val = data[key];
-            if (val && isValidPhone(val)) {
-              resolvedMobile = String(val).trim();
+        for (const resp of app.fieldResponses) {
+          const normKey = (resp.formField?.label || resp.fieldId).toLowerCase().trim();
+          if (["phone", "mobile", "contact", "whatsapp"].some((k) => normKey.includes(k))) {
+            if (isValidPhone(resp.value)) {
+              resolvedMobile = resp.value.trim();
               break;
             }
           }
         }
       }
 
+      // Build customFieldsData object
+      const customFieldsData: Record<string, any> = {};
+      for (const resp of app.fieldResponses) {
+        if (resp.formField) {
+          customFieldsData[resp.formField.id] = resp.value;
+          customFieldsData[resp.formField.label] = resp.value;
+        }
+      }
+
       return {
-        applicationId: app._id,
-        studentId: student?._id || null,
+        _id: app.id,
+        applicationId: app.id,
+        studentId: student?.id || null,
         studentName: resolvedName,
-        phone: resolvedMobile, // Leave empty string if no valid mobile found
-        registrationNumber: app.registrationNumber || student?.universityId || "N/A",
+        phone: resolvedMobile,
+        registrationNumber: app.registrationNumber || student?.registrationNumber || "N/A",
         status: att ? att.attendanceStatus : "ABSENT",
         checkInTime: att ? att.checkInTime : null,
         manualRemarks: att ? att.manualRemarks : "",
-        customFieldsData: app.customFieldsData || {},
+        customFieldsData,
       };
     });
 
     return NextResponse.json({
       success: true,
       attendance: list,
-      event,
+      event: {
+        ...event,
+        _id: event.id,
+      },
     });
   } catch (error) {
     console.error("Fetch attendance error:", error);
@@ -129,15 +142,17 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
     // Calling Admins cannot mark attendance
-    if (admin.role === "calling") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot record attendance." }, { status: 403 });
+    if (admin.role === "CALLING_ADMIN") {
+      return NextResponse.json(
+        { success: false, message: "Forbidden. Calling Admins cannot record attendance." },
+        { status: 403 }
+      );
     }
 
     const eventId = params.id;
@@ -148,53 +163,79 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
     }
 
-    const app = await Application.findById(applicationId);
+    const app = await prisma.application.findUnique({
+      where: { id: applicationId },
+      include: { user: true },
+    });
+
     if (!app) {
       return NextResponse.json({ success: false, message: "Application not found" }, { status: 404 });
     }
 
-    let actualStudentId = studentId || app.studentId;
-    if (!actualStudentId) {
-      // Heal relationship: find existing Student or create new master Student
+    let actualUserId = studentId || app.userId;
+    if (!actualUserId) {
       const regNo = app.registrationNumber || "N/A";
-      let studentObj = await Student.findOne({ universityId: regNo });
-      if (!studentObj) {
-        studentObj = await Student.create({
-          universityId: regNo,
-          name: app.name || `Student ${regNo}`,
-          phone: app.mobileNumber || ""
+      let userObj = await prisma.user.findFirst({
+        where: { registrationNumber: regNo },
+      });
+      if (!userObj) {
+        userObj = await prisma.user.create({
+          data: {
+            username: regNo,
+            registrationNumber: regNo,
+            name: app.name || `Student ${regNo}`,
+            phone: app.mobileNumber || "",
+            passwordHash: "",
+            role: "USER",
+          },
         });
       }
-      actualStudentId = studentObj._id;
-      app.studentId = actualStudentId;
-      await app.save();
+      actualUserId = userObj.id;
+      await prisma.application.update({
+        where: { id: applicationId },
+        data: { userId: actualUserId },
+      });
     }
 
-    const studentObj = await Student.findById(actualStudentId);
-    studentId = actualStudentId;
+    const normStatus = (String(status).toUpperCase() === "PRESENT"
+      ? "PRESENT"
+      : String(status).toUpperCase() === "LATE"
+      ? "LATE"
+      : "ABSENT") as "PRESENT" | "LATE" | "ABSENT";
 
-    // Update or create attendance record
-    const attendance = await Attendance.findOneAndUpdate(
-      { eventId, studentId },
-      {
-        $set: {
-          applicationId,
-          registrationNumber: studentObj?.universityId || app.registrationNumber || "N/A",
-          attendanceStatus: status,
-          checkInTime: new Date(),
-          manualRemarks: remarks || "Admin Override",
-        }
+    // Update or upsert attendance record
+    const attendance = await prisma.attendance.upsert({
+      where: { applicationId },
+      create: {
+        eventId,
+        applicationId,
+        userId: actualUserId,
+        registrationNumber: app.registrationNumber || "N/A",
+        attendanceStatus: normStatus,
+        checkInTime: new Date(),
+        manualRemarks: remarks || "Admin Override",
       },
-      { upsert: true, new: true }
-    );
+      update: {
+        attendanceStatus: normStatus,
+        checkInTime: new Date(),
+        manualRemarks: remarks || "Admin Override",
+      },
+    });
 
     // Sync status to the application as well
-    if (status === "PRESENT" || status === "LATE") {
-      app.status = "attended";
-    } else if (status === "ABSENT") {
-      app.status = "confirmed"; // reset to selected/confirmed
+    let newAppStatus = app.status;
+    if (normStatus === "PRESENT" || normStatus === "LATE") {
+      newAppStatus = "ATTENDED";
+    } else if (normStatus === "ABSENT") {
+      newAppStatus = "CONFIRMED";
     }
-    await app.save();
+
+    if (newAppStatus !== app.status) {
+      await prisma.application.update({
+        where: { id: applicationId },
+        data: { status: newAppStatus },
+      });
+    }
 
     return NextResponse.json({
       success: true,

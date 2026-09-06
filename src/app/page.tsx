@@ -2,8 +2,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HeroSlideshow from "@/components/HeroSlideshow";
-import { connectToDatabase } from "@/lib/db";
-import { Event, Setting, Gallery } from "@/models";
+import { prisma } from "@/lib/prisma";
 import {
   Calendar,
   MapPin,
@@ -36,7 +35,7 @@ function formatTime12(timeStr: string) {
 export default async function HomePage() {
   let activeEvents: any[] = [];
   let galleryImages: any[] = [];
-  let homeContent = {
+  let homeContent: any = {
     headline: "Reliable Hospitality Workforce for Events, Hotels & Resorts",
     subheadline: "TOPLINE ODC connects premium hotels, resorts, and hospitality managers with a dependable, pre-screened student workforce.",
     whatsappNumber: "919876543210",
@@ -46,22 +45,25 @@ export default async function HomePage() {
   };
 
   try {
-    await connectToDatabase();
     // Fetch active open events
-    activeEvents = await Event.find({ status: "OPEN", visibility: "VISIBLE" })
-      .sort({ date: 1 })
-      .limit(3)
-      .lean();
+    activeEvents = await prisma.event.findMany({
+      where: { status: "OPEN", visibility: "VISIBLE" },
+      orderBy: { date: "asc" },
+      take: 3,
+    });
 
     // Fetch published gallery images
-    galleryImages = await Gallery.find({ published: true })
-      .sort({ createdAt: -1 })
-      .limit(4)
-      .lean();
+    galleryImages = await prisma.gallery.findMany({
+      where: { published: true },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+    });
 
     // Fetch site configurations
-    const config = await Setting.findOne({ key: "homepage_content" });
-    if (config?.value) {
+    const config = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
+    if (config?.value && typeof config.value === "object") {
       homeContent = { ...homeContent, ...config.value };
     }
   } catch (error) {
@@ -166,7 +168,7 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {activeEvents.map((event: any) => (
                 <div
-                  key={event._id.toString()}
+                  key={event.id}
                   className="light-panel rounded-2xl overflow-hidden flex flex-col justify-between relative group"
                 >
                   {/* Left accent bar on hover */}
@@ -178,7 +180,7 @@ export default async function HomePage() {
                       {event.status}
                     </span>
                     <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-red-700 transition duration-300">
-                      <Link href={`/events/${event._id}`}>{event.name}</Link>
+                      <Link href={`/events/${event.id}`}>{event.name}</Link>
                     </h3>
                     <p className="mt-2 text-sm text-slate-500 line-clamp-2">{event.description}</p>
                     <div className="mt-6 space-y-3.5 text-sm text-slate-600">
@@ -202,7 +204,7 @@ export default async function HomePage() {
                       <p className="text-xl font-extrabold text-red-700">₹{event.paymentPerStudent}</p>
                     </div>
                     <Link
-                      href={`/events/${event._id}`}
+                      href={`/events/${event.id}`}
                       className="bg-red-600 hover:bg-red-700 text-black text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition duration-300"
                     >
                       Apply Now
@@ -269,8 +271,8 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 gap-4">
             {galleryImages.length > 0 ? (
               galleryImages.map((img: any) => (
-                <div key={img._id.toString()} className="h-48 relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-                  <img src={img.imageUrl} alt={img.caption} className="object-cover w-full h-full" />
+                <div key={img.id} className="h-48 relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                  <img src={img.imageUrl} alt={img.caption || ""} className="object-cover w-full h-full" />
                 </div>
               ))
             ) : (

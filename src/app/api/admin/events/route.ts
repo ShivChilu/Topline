@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Event, Admin } from "@/models";
+import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { Role, EventStatus, EventVisibility, FieldType } from "@prisma/client";
 
 async function getLoggedInAdmin() {
   const cookieStore = await cookies();
@@ -10,21 +10,22 @@ async function getLoggedInAdmin() {
   if (!token) return null;
   const decoded = verifyToken(token);
   if (!decoded || !decoded.id) return null;
-  const admin = await Admin.findById(decoded.id);
-  if (!admin || admin.isActive === false) return null;
-  return admin;
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+    include: { assignedEvents: { select: { eventId: true } } },
+  });
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  return user;
 }
 
 export async function POST(request: Request) {
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    // Calling admins are not authorized to create events
-    if (admin.role === "calling") {
+    if (admin.role === "CALLING_ADMIN") {
       return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot create events." }, { status: 403 });
     }
 
@@ -50,39 +51,106 @@ export async function POST(request: Request) {
       otherExpenses,
       clientId,
       customFormFields,
-      visibility
+      visibility,
     } = body;
 
-    // Validate core fields
-    if (!name || !date || !location || !reportingTime || !startTime || !endTime || !workType || !description) {
-      return NextResponse.json({ success: false, message: "Missing required core event fields." }, { status: 400 });
-    }
+    // All fields are optional: populate sensible defaults for draft events
+    const finalName = name && name.trim() ? name.trim() : "New Event Draft";
+    const finalDate = date ? new Date(date) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const finalLocation = location && location.trim() ? location.trim() : "Venue to be announced";
+    const finalReportingTime = reportingTime && reportingTime.trim() ? reportingTime.trim() : "TBD";
+    const finalStartTime = startTime && startTime.trim() ? startTime.trim() : "TBD";
+    const finalEndTime = endTime && endTime.trim() ? endTime.trim() : "TBD";
+    const finalWorkType = workType && workType.trim() ? workType.trim() : "Catering Staff";
+    const finalDescription = description && description.trim() ? description.trim() : "Event responsibilities and details will be updated soon.";
 
-    const event = await Event.create({
-      name,
-      date: new Date(date),
-      location,
-      googleMapsUrl,
-      reportingTime,
-      startTime,
-      endTime,
-      workType,
-      description,
-      instructions,
-      dressCode,
-      dosAndDonts: Array.isArray(dosAndDonts) ? dosAndDonts : [],
-      workersRequired: Number(workersRequired || 0),
-      maxApplications: Number(maxApplications || 0),
-      paymentPerStudent: Number(paymentPerStudent || 0),
-      clientRevenue: Number(clientRevenue || 0),
-      otherExpenses: Number(otherExpenses || 0),
-      status: "DRAFT", // Initialize as draft
-      visibility: visibility || "VISIBLE",
-      clientId: clientId || null,
-      customFormFields: Array.isArray(customFormFields) ? customFormFields : [],
+    const event = await prisma.event.create({
+      data: {
+        name: finalName,
+        date: finalDate,
+        location: finalLocation,
+        googleMapsUrl: googleMapsUrl ? googleMapsUrl.trim() : null,
+        reportingTime: finalReportingTime,
+        startTime: finalStartTime,
+        endTime: finalEndTime,
+        workType: finalWorkType,
+        description: finalDescription,
+        instructions: instructions ? instructions.trim() : null,
+        dressCode: dressCode ? dressCode.trim() : null,
+        dosAndDonts: Array.isArray(dosAndDonts) ? dosAndDonts : [],
+        workersRequired: Number(workersRequired) || 15,
+        maxApplications: Number(maxApplications) || 25,
+        paymentPerStudent: Number(paymentPerStudent) || 800,
+        clientRevenue: Number(clientRevenue) || 0,
+        otherExpenses: Number(otherExpenses) || 0,
+        status: EventStatus.DRAFT,
+        visibility: visibility === "HIDDEN" ? EventVisibility.HIDDEN : EventVisibility.VISIBLE,
+        allowedGender: body.allowedGender === "FEMALE_ONLY" ? "FEMALE_ONLY" : body.allowedGender === "MALE_ONLY" ? "MALE_ONLY" : "ALL",
+        clientId: clientId || null,
+      },
     });
 
-    return NextResponse.json({ success: true, message: "Event created successfully as Draft!", eventId: event._id });
+    // Relational dynamic form field creation/junction setup
+    if (Array.isArray(customFormFields) && customFormFields.length > 0) {
+      for (let idx = 0; idx < customFormFields.length; idx++) {
+        const f = customFormFields[idx];
+        const fieldKey = (f.label || `field_${Date.now()}_${idx}`).toLowerCase().replace(/[^a-z0-9_]/g, "_");
+
+        const typeMap: Record<string, FieldType> = {
+          text: FieldType.TEXT,
+          paragraph: FieldType.PARAGRAPH,
+          number: FieldType.NUMBER,
+          email: FieldType.EMAIL,
+          phone: FieldType.PHONE,
+          date: FieldType.DATE,
+          time: FieldType.TIME,
+          select: FieldType.SELECT,
+          checkbox: FieldType.CHECKBOX,
+          radio: FieldType.RADIO,
+          yesno: FieldType.YESNO,
+          rating: FieldType.RATING,
+          file: FieldType.FILE,
+        };
+
+        const formField = await prisma.formField.upsert({
+          where: { key: fieldKey },
+          update: {
+            label: f.label,
+            type: typeMap[f.type] || FieldType.TEXT,
+            description: f.description || null,
+            placeholder: f.placeholder || null,
+            options: Array.isArray(f.options) ? f.options : [],
+            isRequired: Boolean(f.required),
+          },
+          create: {
+            key: fieldKey,
+            label: f.label,
+            type: typeMap[f.type] || FieldType.TEXT,
+            description: f.description || null,
+            placeholder: f.placeholder || null,
+            options: Array.isArray(f.options) ? f.options : [],
+            isRequired: Boolean(f.required),
+            displayOrder: idx,
+          },
+        });
+
+        await prisma.eventFormField.create({
+          data: {
+            eventId: event.id,
+            fieldId: formField.id,
+            isRequired: Boolean(f.required),
+            displayOrder: idx,
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Event created successfully as Draft!",
+      eventId: event.id,
+      _id: event.id,
+    });
   } catch (error: any) {
     console.error("Create Event API Error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -91,7 +159,6 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -100,31 +167,48 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const recentOnly = searchParams.get("recent") === "true";
 
-    // Calling Admins can only retrieve events they are assigned to
-    if (admin.role === "calling") {
-      const filter: any = { _id: { $in: admin.assignedEvents || [] } };
-      if (recentOnly) {
-        filter.status = { $in: ["OPEN", "DRAFT", "FULL", "CLOSED"] };
-      }
-      
-      const query = Event.find(filter).sort({ date: -1 });
-      if (recentOnly) {
-        query.limit(3);
-      }
-      const events = await query.lean();
-      return NextResponse.json({ success: true, events });
+    const whereClause: any = {};
+
+    if (admin.role === "CALLING_ADMIN") {
+      const assignedIds = admin.assignedEvents.map((a) => a.eventId);
+      whereClause.id = { in: assignedIds };
     }
 
     if (recentOnly) {
-      const events = await Event.find({ status: { $in: ["OPEN", "DRAFT", "FULL", "CLOSED"] } })
-        .sort({ date: -1 })
-        .limit(3)
-        .lean();
-      return NextResponse.json({ success: true, events });
+      whereClause.status = { in: [EventStatus.OPEN, EventStatus.DRAFT, EventStatus.FULL, EventStatus.CLOSED] };
     }
 
-    const events = await Event.find().sort({ date: -1 }).populate("clientId").lean();
-    return NextResponse.json({ success: true, events });
+    const events = await prisma.event.findMany({
+      where: whereClause,
+      include: {
+        client: true,
+        eventFormFields: {
+          include: { formField: true },
+          orderBy: { displayOrder: "asc" },
+        },
+      },
+      orderBy: { date: "desc" },
+      take: recentOnly ? 3 : undefined,
+    });
+
+    const formattedEvents = events.map((e) => ({
+      ...e,
+      _id: e.id,
+      customFormFields: e.eventFormFields.map((ef) => ({
+        id: ef.formField.id,
+        key: ef.formField.key,
+        label: ef.formField.label,
+        type: ef.formField.type.toLowerCase(),
+        description: ef.formField.description || "",
+        placeholder: ef.formField.placeholder || "",
+        options: ef.formField.options,
+        required: ef.isRequired,
+        min: null,
+        max: null,
+      })),
+    }));
+
+    return NextResponse.json({ success: true, events: formattedEvents });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

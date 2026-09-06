@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Setting } from "@/models";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    await connectToDatabase();
-    const config = await Setting.findOne({ key: "homepage_content" });
+    const config = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
     return NextResponse.json({ success: true, settings: config?.value || {} });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -14,16 +14,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await connectToDatabase();
     const body = await request.json();
 
-    const config = await Setting.findOneAndUpdate(
-      { key: "homepage_content" },
-      { value: body, updatedAt: new Date() },
-      { upsert: true, new: true }
-    );
+    const config = await prisma.setting.upsert({
+      where: { key: "homepage_content" },
+      update: { value: body },
+      create: { key: "homepage_content", value: body },
+    });
 
-    return NextResponse.json({ success: true, message: "Settings updated successfully!", settings: config.value });
+    return NextResponse.json({
+      success: true,
+      message: "Settings updated successfully!",
+      settings: config.value,
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

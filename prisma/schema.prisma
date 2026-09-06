@@ -1,0 +1,519 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+  CALLING_ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  FULL
+  CLOSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum EventVisibility {
+  VISIBLE
+  HIDDEN
+}
+
+enum AllowedGender {
+  ALL
+  MALE_ONLY
+  FEMALE_ONLY
+}
+
+enum ApplicationStatus {
+  APPLIED
+  UNDER_REVIEW
+  SELECTED
+  NOT_SELECTED
+  REJECTED
+  CONFIRMED
+  CANCELLED
+  ATTENDED
+  ABSENT
+  PAID
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
+enum MessageStatus {
+  NOT_SENT
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  CANCELLED
+}
+
+enum FieldType {
+  TEXT
+  PARAGRAPH
+  NUMBER
+  EMAIL
+  PHONE
+  DATE
+  TIME
+  SELECT
+  CHECKBOX
+  RADIO
+  YESNO
+  RATING
+  FILE
+}
+
+enum PhotoType {
+  PROFILE
+  EVENT_APPLICATION
+  GALLERY
+}
+
+enum StudentSelectionStatus {
+  UNDER_REVIEW
+  SELECTED
+  NOT_SELECTED
+}
+
+enum StudentPhotoType {
+  FORMAL
+  FULL_LENGTH
+  CASUAL
+  OTHER
+}
+
+// -------------------------------------------------------------
+// USER & PROFILE
+// -------------------------------------------------------------
+model User {
+  id                  String               @id @default(uuid())
+  username            String               @unique
+  name                String
+  phone               String?              @unique
+  email               String?              @unique
+  registrationNumber  String?              @unique // University Roll No / Reg No
+  passwordHash        String
+  role                Role                 @default(USER)
+  isActive            Boolean              @default(true)
+  profilePhotoUrl     String?
+  gender              String?
+  height              String?
+  weight              String?
+  university          String?
+  course              String?
+  year                String?
+  city                String?
+  age                 Int?
+  upiId               String?
+  bio                 String?
+
+  // Global Student Selection Status & History
+  selectionStatus     StudentSelectionStatus @default(UNDER_REVIEW)
+  selectedAt          DateTime?
+  selectionEmailSentAt DateTime?
+  
+  // Permanent Student Profile Photos
+  studentPhotos       StudentPhoto[]
+
+  // Dynamic Profile Field Responses
+  profileFieldValues  StudentProfileFieldValue[]
+  
+  // Calling Admin assigned events
+  assignedEvents      AdminAssignedEvent[]
+  
+  // Applications created by user
+  applications        Application[]
+  
+  // Attendance records
+  attendanceRecords   Attendance[]
+  
+  // Photos uploaded (Legacy & Event)
+  photos              Photo[]
+  
+  // Audit trail & actions
+  auditLogs           AuditLog[]
+  whatsappAdditions   Application[]        @relation("WhatsappAddedBy")
+  statusHistoriesChanged ApplicationStatusHistory[]
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([username])
+  @@index([phone])
+  @@index([registrationNumber])
+  @@index([selectionStatus])
+  @@index([university])
+  @@index([city])
+}
+
+// -------------------------------------------------------------
+// CLIENTS
+// -------------------------------------------------------------
+model Client {
+  id            String    @id @default(uuid())
+  name          String
+  contactPerson String
+  phone         String
+  email         String
+  address       String
+  notes         String?
+  events        Event[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// -------------------------------------------------------------
+// EVENTS
+// -------------------------------------------------------------
+model Event {
+  id                          String               @id @default(uuid())
+  name                        String
+  date                        DateTime
+  location                    String
+  googleMapsUrl               String?
+  reportingTime               String
+  startTime                   String
+  endTime                     String
+  workType                    String
+  description                 String
+  instructions                String?
+  dressCode                   String?
+  dosAndDonts                 String[]             @default([])
+  workersRequired             Int
+  maxApplications             Int
+  applicationsCount           Int                  @default(0)
+  paymentPerStudent           Float
+  clientRevenue               Float                @default(0)
+  otherExpenses               Float                @default(0)
+  status                      EventStatus          @default(DRAFT)
+  visibility                  EventVisibility      @default(VISIBLE)
+  allowedGender               AllowedGender        @default(ALL)
+  
+  clientId                    String?
+  client                      Client?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  // Event-specific form configuration
+  eventFormFields             EventFormField[]
+  
+  // Relational Applications
+  applications                Application[]
+  attendanceRecords           Attendance[]
+  assignedCallingAdmins       AdminAssignedEvent[]
+  photos                      Photo[]
+
+  attendanceToken             String?
+  attendanceTokenEnabled      Boolean              @default(false)
+  attendanceVerificationField String               @default("registrationNumber")
+  attendanceWindowStart       DateTime?
+  attendanceWindowEnd         DateTime?
+  gracePeriod                 Int                  @default(15)
+  attendanceDisplayFields     String[]             @default([])
+
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@index([visibility])
+}
+
+// Calling Admin assignment relationship
+model AdminAssignedEvent {
+  id        String   @id @default(uuid())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([adminId, eventId])
+}
+
+// -------------------------------------------------------------
+// DYNAMIC FORM FIELD DEFINITIONS
+// -------------------------------------------------------------
+model FormField {
+  id           String           @id @default(uuid())
+  key          String           @unique // e.g. "height", "course", "languages"
+  label        String
+  type         FieldType        @default(TEXT)
+  description  String?
+  placeholder  String?
+  options      String[]         @default([]) // For select/radio/checkbox
+  isRequired   Boolean          @default(false)
+  displayOrder Int              @default(0)
+  isActive     Boolean          @default(true) // Soft deactivate, never corrupt historical responses
+  
+  eventMappings EventFormField[]
+  responses     ApplicationFieldResponse[]
+
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+// Event to Form Field junction with per-event requirement & ordering
+model EventFormField {
+  id           String     @id @default(uuid())
+  eventId      String
+  event        Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fieldId      String
+  formField    FormField  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  isRequired   Boolean    @default(false)
+  displayOrder Int        @default(0)
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([eventId, fieldId])
+}
+
+// -------------------------------------------------------------
+// APPLICATIONS & CANDIDATE RESPONSES
+// -------------------------------------------------------------
+model Application {
+  id                   String                   @id @default(uuid())
+  eventId              String
+  event                Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // First-class snapshot identity fields to prevent mapping bugs
+  name                 String
+  mobileNumber         String
+  registrationNumber   String
+  
+  status               ApplicationStatus        @default(APPLIED)
+  paymentStatus        PaymentStatus            @default(UNPAID)
+  paymentOverride      Float?
+  messageStatus        MessageStatus            @default(NOT_SENT)
+  
+  // Event-specific selection timestamps & notifications
+  selectedAt           DateTime?
+  notSelectedAt        DateTime?
+  confirmedAt          DateTime?
+  eventSelectionEmailSentAt DateTime?
+  eventDeselectionEmailSentAt DateTime?
+
+  // Calling Admin and manual sorting metrics
+  lastActionAt         DateTime                 @default(now())
+  callPriority         Int                      @default(0) // Higher = top
+  manualOrder          Int                      @default(0)
+  callingRemarks       String?
+  
+  // WhatsApp tracking
+  whatsappGroupAdded   Boolean                  @default(false)
+  whatsappGroupAddedAt DateTime?
+  whatsappGroupAddedById String?
+  whatsappGroupAddedBy User?                    @relation("WhatsappAddedBy", fields: [whatsappGroupAddedById], references: [id], onDelete: SetNull)
+
+  // Structured relational responses
+  fieldResponses       ApplicationFieldResponse[]
+  attendance           Attendance?
+  photos               Photo[]
+  statusHistory        ApplicationStatusHistory[]
+
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  @@unique([eventId, userId])
+  @@unique([eventId, registrationNumber])
+  @@index([eventId, status])
+  @@index([mobileNumber])
+  @@index([registrationNumber])
+  @@index([lastActionAt])
+}
+
+model ApplicationStatusHistory {
+  id            String            @id @default(uuid())
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  oldStatus     ApplicationStatus?
+  newStatus     ApplicationStatus
+  changedById   String?
+  changedBy     User?             @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  notes         String?
+  createdAt     DateTime          @default(now())
+
+  @@index([applicationId])
+}
+
+model ApplicationFieldResponse {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fieldId       String
+  formField     FormField   @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value         String      // Value representation or stringified JSON for arrays
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([applicationId, fieldId])
+}
+
+// -------------------------------------------------------------
+// ATTENDANCE
+// -------------------------------------------------------------
+model Attendance {
+  id                 String           @id @default(uuid())
+  eventId            String
+  event              Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId      String           @unique
+  application        Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  
+  registrationNumber String
+  checkInTime        DateTime         @default(now())
+  checkOutTime       DateTime?
+  attendanceStatus   AttendanceStatus @default(PRESENT)
+  deviceMetadata     String?
+  manualRemarks      String?
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([eventId, registrationNumber])
+}
+
+// -------------------------------------------------------------
+// PHOTOS (Event-Specific & Profile Storage)
+// -------------------------------------------------------------
+model Photo {
+  id            String       @id @default(uuid())
+  url           String
+  thumbnailUrl  String?
+  storageKey    String?
+  photoType     PhotoType    @default(PROFILE)
+  mimeType      String?
+  fileSize      Int?
+  
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId       String?
+  event         Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  applicationId String?
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  caption       String?
+  category      String?
+  isPublic      Boolean      @default(true)
+  isSelected    Boolean      @default(false)
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([applicationId])
+}
+
+// -------------------------------------------------------------
+// WEBSITE CMS SETTINGS & GALLERY
+// -------------------------------------------------------------
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Gallery {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  caption   String
+  category  String
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  adminId   String?
+  admin     User?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action    String
+  target    String?
+  metadata  Json?
+  timestamp DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// PERMANENT STUDENT PROFILE PHOTOS
+// -------------------------------------------------------------
+model StudentPhoto {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url          String
+  thumbnailUrl String?
+  storageKey   String?
+  photoType    StudentPhotoType @default(FORMAL)
+  caption      String?
+  isPrimary    Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([photoType])
+}
+
+// -------------------------------------------------------------
+// DYNAMIC STUDENT PROFILE FIELDS (Admin Managed)
+// -------------------------------------------------------------
+model StudentProfileField {
+  id           String                     @id @default(uuid())
+  key          String                     @unique // e.g. "instagramHandle", "passportAvailable"
+  label        String
+  type         FieldType                  @default(TEXT)
+  description  String?
+  placeholder  String?
+  options      String[]                   @default([]) // For select/radio/checkbox
+  isRequired   Boolean                    @default(false)
+  displayOrder Int                        @default(0)
+  isActive     Boolean                    @default(true) // Soft deactivate
+  
+  values       StudentProfileFieldValue[]
+
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  @@index([displayOrder])
+  @@index([isActive])
+}
+
+model StudentProfileFieldValue {
+  id           String              @id @default(uuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fieldId      String
+  profileField StudentProfileField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value        String              // Stored string or JSON string
+
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([userId, fieldId])
+  @@index([userId])
+}

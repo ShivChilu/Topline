@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Event, Application, Attendance, Student } from "@/models";
+import { prisma } from "@/lib/prisma";
+import { ApplicationStatus, AttendanceStatus, EventStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    await connectToDatabase();
     const body = await request.json();
     const { token, verificationValue } = body;
 
@@ -15,7 +14,10 @@ export async function POST(request: Request) {
     }
 
     // 1. Locate the event by attendance token
-    const event = await Event.findOne({ attendanceToken: token });
+    const event = await prisma.event.findFirst({
+      where: { attendanceToken: token },
+    });
+
     if (!event) {
       return NextResponse.json({ success: false, message: "Attendance session not found or disabled." }, { status: 404 });
     }
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Attendance QR is currently inactive." }, { status: 403 });
     }
 
-    if (event.status === "COMPLETED" || event.status === "ARCHIVED") {
+    if (event.status === EventStatus.COMPLETED || event.status === EventStatus.ARCHIVED) {
       return NextResponse.json({ success: false, message: "Attendance is locked. This event is completed." }, { status: 403 });
     }
 
@@ -37,83 +39,50 @@ export async function POST(request: Request) {
           date: event.date,
           location: event.location,
           reportingTime: event.reportingTime,
-        }
+        },
       });
     }
 
-    // Normalize verification value
     const normalizedInput = verificationValue.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "");
 
-    // 2. Fetch all selected or confirmed applications for this event
-    const applications = await Application.find({
-      eventId: event._id,
-      status: { $in: ["applied", "selected", "confirmed", "attended"] }
-    }).populate("studentId");
+    // 2. Fetch applications for this event
+    const applications = await prisma.application.findMany({
+      where: {
+        eventId: event.id,
+        status: { in: [ApplicationStatus.APPLIED, ApplicationStatus.SELECTED, ApplicationStatus.CONFIRMED, ApplicationStatus.ATTENDED] },
+      },
+      include: {
+        user: true,
+        fieldResponses: { include: { formField: true } },
+      },
+    });
 
-    const verifyField = event.attendanceVerificationField || "registrationNumber";
-    let matchedApplication = null;
-    let matchedStudent = null;
+    let matchedApplication: any = null;
+    let matchedUser: any = null;
 
-    // 3. Scan applications for matches specifically for the configured verification field
     for (const app of applications) {
-      const student = app.studentId as any;
-      if (!student) continue;
+      const user = app.user;
+      const regNo = (app.registrationNumber || user.registrationNumber || "").trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "");
+      const phone = (app.mobileNumber || user.phone || "").trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "");
+      const email = (user.email || "").trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "");
 
-      if (verifyField === "registrationNumber" || verifyField === "universityId") {
-        const uniId = student.universityId ? student.universityId.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-        const regNo = app.registrationNumber ? app.registrationNumber.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-        if (normalizedInput === uniId || normalizedInput === regNo) {
-          matchedApplication = app;
-          matchedStudent = student;
-          break;
-        }
-      } else if (verifyField === "phone") {
-        const phone = student.phone ? student.phone.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-        if (normalizedInput === phone) {
-          matchedApplication = app;
-          matchedStudent = student;
-          break;
-        }
-      } else if (verifyField === "email") {
-        const email = student.email ? student.email.trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "") : "";
-        if (normalizedInput === email) {
-          matchedApplication = app;
-          matchedStudent = student;
-          break;
-        }
-      } else {
-        // Custom field ID check
-        const customData = app.customFieldsData;
-        let customVal = typeof customData?.get === 'function' ? customData.get(verifyField) : customData?.[verifyField];
-        if (customVal === undefined) {
-          const fieldObj = event.customFormFields?.find((f: any) => f.id === verifyField);
-          if (fieldObj) {
-            customVal = typeof customData?.get === 'function' ? customData.get(fieldObj.label) : customData?.[fieldObj.label];
-          }
-        }
-        if (customVal) {
-          const normCustomVal = String(customVal).trim().toLowerCase().replace(/[\s\-\+\(\)]/g, "");
-          if (normalizedInput === normCustomVal) {
-            matchedApplication = app;
-            matchedStudent = student;
-            break;
-          }
-        }
+      if (normalizedInput === regNo || normalizedInput === phone || normalizedInput === email) {
+        matchedApplication = app;
+        matchedUser = user;
+        break;
       }
     }
 
-    if (!matchedApplication || !matchedStudent) {
-      // Security measure: Do not disclose if registered under another event
+    if (!matchedApplication || !matchedUser) {
       return NextResponse.json({
         success: false,
-        message: "Registration not found for this event. Please check the credential you submitted during application."
+        message: "Registration not found for this event. Please check the credential you submitted during application.",
       }, { status: 404 });
     }
 
-    // 4. Duplicate Check: Ensure student hasn't already checked in
-    const existingAttendance = await Attendance.findOne({
-      eventId: event._id,
-      studentId: matchedStudent._id
+    // 3. Duplicate Check
+    const existingAttendance = await prisma.attendance.findUnique({
+      where: { applicationId: matchedApplication.id },
     });
 
     if (existingAttendance) {
@@ -122,17 +91,17 @@ export async function POST(request: Request) {
         message: "Attendance Already Recorded",
         alreadyMarked: true,
         attendance: {
-          studentName: matchedStudent.name,
+          studentName: matchedApplication.name,
           registrationNumber: matchedApplication.registrationNumber,
           checkInTime: existingAttendance.checkInTime,
           status: existingAttendance.attendanceStatus,
-        }
+        },
       }, { status: 409 });
     }
 
-    // 5. Late calculation based on Reporting Time & Grace Period
+    // 4. Late calculation based on Reporting Time & Grace Period
     const checkInTime = new Date();
-    let attendanceStatus: "PRESENT" | "LATE" = "PRESENT";
+    let attendanceStatus: AttendanceStatus = AttendanceStatus.PRESENT;
 
     if (event.reportingTime) {
       try {
@@ -144,43 +113,43 @@ export async function POST(request: Request) {
         const grace = event.gracePeriod || 15;
 
         if (diffMinutes > grace) {
-          attendanceStatus = "LATE";
+          attendanceStatus = AttendanceStatus.LATE;
         }
       } catch (err) {
         console.error("Failed to parse reporting time:", err);
       }
     }
 
-    // 6. Write to Database
-    const attendance = await Attendance.create({
-      eventId: event._id,
-      studentId: matchedStudent._id,
-      applicationId: matchedApplication._id,
-      registrationNumber: matchedApplication.registrationNumber || "N/A",
-      checkInTime,
-      attendanceStatus,
-    });
-
-    // Also update application status to 'attended'
-    matchedApplication.status = "attended";
-    matchedApplication.checkInTime = checkInTime;
-    await matchedApplication.save();
-
-    // Increment attendedCount in Student metrics
-    await Student.findByIdAndUpdate(matchedStudent._id, {
-      $inc: { attendedCount: 1 }
-    });
+    // 5. Write Attendance to PostgreSQL
+    await prisma.$transaction([
+      prisma.attendance.create({
+        data: {
+          eventId: event.id,
+          userId: matchedUser.id,
+          applicationId: matchedApplication.id,
+          registrationNumber: matchedApplication.registrationNumber,
+          checkInTime,
+          attendanceStatus,
+        },
+      }),
+      prisma.application.update({
+        where: { id: matchedApplication.id },
+        data: {
+          status: ApplicationStatus.ATTENDED,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
       message: "Attendance Successful",
-      studentName: matchedStudent.name,
+      studentName: matchedApplication.name,
       registrationNumber: matchedApplication.registrationNumber,
       checkInTime,
       status: attendanceStatus,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Attendance verify error:", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message || "Internal server error" }, { status: 500 });
   }
 }

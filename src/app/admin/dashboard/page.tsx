@@ -1,5 +1,4 @@
-import { connectToDatabase } from "@/lib/db";
-import { Student, Event, Application } from "@/models";
+import { prisma } from "@/lib/prisma";
 import {
   Users,
   CalendarCheck,
@@ -49,34 +48,35 @@ export default async function AdminDashboardPage() {
   let upcomingEvents: any[] = [];
 
   try {
-    await connectToDatabase();
-
     // 1. Overview counts
-    stats.totalStudents = await Student.countDocuments();
-    stats.totalEvents = await Event.countDocuments();
-    stats.openForms = await Event.countDocuments({ status: "OPEN" });
-    stats.totalApplications = await Application.countDocuments();
-    stats.selectedStudents = await Application.countDocuments({ status: "selected" });
-    stats.completedEvents = await Event.countDocuments({ status: "COMPLETED" });
+    stats.totalStudents = await prisma.user.count({ where: { role: "USER" } });
+    stats.totalEvents = await prisma.event.count();
+    stats.openForms = await prisma.event.count({ where: { status: "OPEN" } });
+    stats.totalApplications = await prisma.application.count();
+    stats.selectedStudents = await prisma.application.count({ where: { status: "SELECTED" } });
+    stats.completedEvents = await prisma.event.count({ where: { status: "COMPLETED" } });
 
     // 2. Load events to calculate finances (exclude DRAFT events)
-    const activeEvents = await Event.find({ status: { $ne: "DRAFT" } }).lean();
-    
+    const activeEvents = await prisma.event.findMany({
+      where: { status: { not: "DRAFT" } },
+    });
+
     // Calculate worker payouts by querying applications with positive statuses
-    const applications = await Application.find().populate('eventId').lean();
-    
+    const applications = await prisma.application.findMany({
+      include: { event: true },
+    });
+
     let totalWorkerPayments = 0;
-    applications.forEach((app: any) => {
-      if (app.eventId && ["selected", "confirmed", "attended", "paid"].includes(app.status)) {
-        // use override or event standard payment
-        totalWorkerPayments += app.paymentOverride ?? app.eventId.paymentPerStudent ?? 0;
+    applications.forEach((app) => {
+      if (app.event && ["SELECTED", "CONFIRMED", "ATTENDED", "PAID"].includes(app.status)) {
+        totalWorkerPayments += app.paymentOverride ?? app.event.paymentPerStudent ?? 0;
       }
     });
 
     let totalRevenue = 0;
     let totalOtherExpenses = 0;
 
-    activeEvents.forEach((ev: any) => {
+    activeEvents.forEach((ev) => {
       totalRevenue += ev.clientRevenue || 0;
       totalOtherExpenses += ev.otherExpenses || 0;
     });
@@ -88,11 +88,11 @@ export default async function AdminDashboardPage() {
     finances.margin = totalRevenue > 0 ? Math.round((finances.profit / totalRevenue) * 100) : 0;
 
     // 3. Get upcoming events
-    upcomingEvents = await Event.find({ status: { $in: ["OPEN", "FULL", "CLOSED"] } })
-      .sort({ date: 1 })
-      .limit(5)
-      .lean();
-
+    upcomingEvents = await prisma.event.findMany({
+      where: { status: { in: ["OPEN", "FULL", "CLOSED"] } },
+      orderBy: { date: "asc" },
+      take: 5,
+    });
   } catch (error) {
     console.error("Dashboard DB fetch error:", error);
   }
@@ -187,9 +187,9 @@ export default async function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-850">
                   {upcomingEvents.map((ev) => (
-                    <tr key={ev._id.toString()} className="hover:bg-slate-100/20 transition">
+                    <tr key={ev.id} className="hover:bg-slate-100/20 transition">
                       <td className="py-3 font-bold text-slate-900">
-                        <Link href={`/admin/events/${ev._id}`} className="hover:text-red-600">
+                        <Link href={`/admin/events/${ev.id}`} className="hover:text-red-600">
                           {ev.name}
                         </Link>
                       </td>

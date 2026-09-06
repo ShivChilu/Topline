@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Client } from "@/models";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    await connectToDatabase();
-    const clients = await Client.find().sort({ name: 1 }).lean();
-    return NextResponse.json({ success: true, clients });
+    const clients = await prisma.client.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: { events: true },
+        },
+      },
+    });
+    const formatted = clients.map((c) => ({ ...c, _id: c.id }));
+    return NextResponse.json({ success: true, clients: formatted });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
@@ -14,7 +20,6 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await connectToDatabase();
     const body = await request.json();
     const { name, contactPerson, phone, email, address, notes } = body;
 
@@ -22,16 +27,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Missing required client fields." }, { status: 400 });
     }
 
-    const client = await Client.create({
-      name,
-      contactPerson,
-      phone,
-      email,
-      address,
-      notes,
+    const client = await prisma.client.create({
+      data: {
+        name,
+        contactPerson,
+        phone,
+        email,
+        address,
+        notes,
+      },
     });
 
-    return NextResponse.json({ success: true, message: "Client profile created successfully!", client });
+    return NextResponse.json({
+      success: true,
+      message: "Client profile created successfully!",
+      client: { ...client, _id: client.id },
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

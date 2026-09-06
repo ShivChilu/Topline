@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Application, Student, Event, Admin } from "@/models";
+import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { ApplicationStatus, PaymentStatus, MessageStatus } from "@prisma/client";
+import { sendEventSelectionEmail, sendEventDeselectionEmail } from "@/lib/email";
+
+export const dynamic = "force-dynamic";
 
 async function getLoggedInAdmin() {
   const cookieStore = await cookies();
@@ -10,14 +13,16 @@ async function getLoggedInAdmin() {
   if (!token) return null;
   const decoded = verifyToken(token);
   if (!decoded || !decoded.id) return null;
-  const admin = await Admin.findById(decoded.id);
-  if (!admin || admin.isActive === false) return null;
-  return admin;
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+    include: { assignedEvents: { select: { eventId: true } } },
+  });
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  return user;
 }
 
 export async function GET(request: Request) {
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -27,330 +32,376 @@ export async function GET(request: Request) {
     const eventId = searchParams.get("eventId");
     const status = searchParams.get("status");
 
-    // Calling Admin security validation
-    if (admin.role === "calling") {
+    if (admin.role === "CALLING_ADMIN") {
       if (!eventId) {
         return NextResponse.json({ success: false, message: "Forbidden. Event ID is required for Calling Admin queries." }, { status: 403 });
       }
-      const isAssigned = admin.assignedEvents?.some((id) => id.toString() === eventId);
+      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
       if (!isAssigned) {
         return NextResponse.json({ success: false, message: "Forbidden. You do not have access to this event." }, { status: 403 });
       }
     }
 
-    const filter: any = {};
-    if (eventId) filter.eventId = eventId;
-    if (status) filter.status = status;
+    const whereClause: any = {};
+    if (eventId) whereClause.eventId = eventId;
+    if (status && status !== "ALL") whereClause.status = status.toUpperCase() as ApplicationStatus;
 
-    const applications = await Application.find(filter)
-      .populate("eventId")
-      .populate("studentId")
-      .sort({ createdAt: -1 })
-      .lean();
+    const applications = await prisma.application.findMany({
+      where: whereClause,
+      include: {
+        event: true,
+        user: {
+          include: {
+            studentPhotos: {
+              orderBy: { createdAt: "desc" },
+            },
+            profileFieldValues: {
+              include: { profileField: true },
+            },
+          },
+        },
+        fieldResponses: {
+          include: { formField: true },
+        },
+        photos: true,
+        attendance: true,
+        statusHistory: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+      },
+      orderBy: [
+        { callPriority: "desc" },
+        { lastActionAt: "desc" },
+        { createdAt: "asc" },
+      ],
+    });
 
-    return NextResponse.json({ success: true, applications });
+    const formattedApplications = applications.map((app) => {
+      const customFieldsMap: Record<string, any> = {};
+      app.fieldResponses.forEach((fr) => {
+        try {
+          customFieldsMap[fr.formField.key] = JSON.parse(fr.value);
+        } catch {
+          customFieldsMap[fr.formField.key] = fr.value;
+        }
+        customFieldsMap[fr.formField.id] = customFieldsMap[fr.formField.key];
+      });
+
+      // Photo fallback hierarchy: Primary -> Formal -> Full Length -> Casual -> User profilePhotoUrl
+      const studentPhotos = app.user?.studentPhotos || [];
+      const primaryPhoto =
+        studentPhotos.find((p) => p.isPrimary) ||
+        studentPhotos.find((p) => p.photoType === "FORMAL") ||
+        studentPhotos.find((p) => p.photoType === "FULL_LENGTH") ||
+        studentPhotos[0];
+
+      const resolvedPhotoUrl =
+        primaryPhoto?.url ||
+        app.photos[0]?.url ||
+        app.user?.profilePhotoUrl ||
+        "";
+
+      // Authoritative Mobile Phone
+      const authoritativePhone =
+        (app.user?.phone && app.user.phone !== "N/A" ? app.user.phone : null) ||
+        (app.mobileNumber && app.mobileNumber !== "N/A" ? app.mobileNumber : "") ||
+        "Mobile not available";
+
+      // Completeness score
+      let score = 0;
+      if (app.name || app.user?.name) score += 20;
+      if (authoritativePhone && authoritativePhone !== "Mobile not available") score += 20;
+      if (resolvedPhotoUrl) score += 30;
+      if (app.user?.university) score += 15;
+      if (app.user?.city || app.user?.gender) score += 15;
+
+      return {
+        ...app,
+        _id: app.id,
+        id: app.id,
+        status: app.status,
+        mobileNumber: authoritativePhone,
+        photoUrl: resolvedPhotoUrl,
+        completenessScore: Math.min(score, 100),
+        studentId: {
+          ...app.user,
+          _id: app.user?.id,
+          id: app.user?.id,
+          name: app.user?.name || app.name,
+          phone: authoritativePhone,
+          email: app.user?.email || "N/A",
+          universityId: app.user?.registrationNumber || app.registrationNumber,
+          registrationNumber: app.user?.registrationNumber || app.registrationNumber,
+          university: app.user?.university || "N/A",
+          city: app.user?.city || "N/A",
+          gender: app.user?.gender || "N/A",
+          height: app.user?.height || "N/A",
+          weight: app.user?.weight || "N/A",
+          age: app.user?.age || null,
+          upiId: app.user?.upiId || "N/A",
+          bio: app.user?.bio || "",
+          profilePhotoUrl: resolvedPhotoUrl,
+          studentPhotos: studentPhotos,
+          selectionStatus: app.user?.selectionStatus || "UNDER_REVIEW", // Permanent Student Selection
+          dynamicProfileFields: app.user?.profileFieldValues?.map((pv) => ({
+            key: pv.profileField.key,
+            label: pv.profileField.label,
+            type: pv.profileField.type,
+            value: pv.value,
+          })) || [],
+        },
+        eventId: {
+          ...app.event,
+          _id: app.event.id,
+          id: app.event.id,
+        },
+        customFieldsData: customFieldsMap,
+        dynamicEventResponses: app.fieldResponses.map((fr) => ({
+          fieldId: fr.fieldId,
+          key: fr.formField.key,
+          label: fr.formField.label,
+          value: customFieldsMap[fr.formField.key] || fr.value,
+        })),
+      };
+    });
+
+    return NextResponse.json({ success: true, applications: formattedApplications });
   } catch (error: any) {
+    console.error("Admin applications GET error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request) {
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    const { ids, status, paymentStatus, messageStatus, paymentOverride, whatsappGroupAdded } = await request.json();
+    const {
+      ids,
+      status,
+      paymentStatus,
+      messageStatus,
+      paymentOverride,
+      whatsappGroupAdded,
+      callPriority,
+      manualOrder,
+      callingRemarks,
+      sendEmail = true,
+      notes,
+    } = await request.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ success: false, message: "Missing application IDs." }, { status: 400 });
     }
 
-    // Block calling admins from updating financials
-    if (admin.role === "calling") {
+    if (admin.role === "CALLING_ADMIN") {
       if (paymentStatus !== undefined || paymentOverride !== undefined) {
         return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot modify payment details." }, { status: 403 });
       }
     }
 
-    // Process status updates and update student statistics dynamically
+    const now = new Date();
+    let updatedCount = 0;
+
     for (const appId of ids) {
-      const app = await Application.findById(appId).populate("eventId").populate("studentId");
+      const app = await prisma.application.findUnique({
+        where: { id: appId },
+        include: {
+          event: true,
+          user: true,
+        },
+      });
       if (!app) continue;
 
-      // Event boundary check for Calling Admins
-      if (admin.role === "calling") {
-        const isAssigned = admin.assignedEvents?.some((id) => id.toString() === app.eventId._id.toString());
+      if (admin.role === "CALLING_ADMIN") {
+        const isAssigned = admin.assignedEvents.some((a) => a.eventId === app.eventId);
         if (!isAssigned) {
           return NextResponse.json({ success: false, message: "Forbidden. Attempted access to unassigned event data." }, { status: 403 });
         }
       }
 
       const oldStatus = app.status;
-      if (status !== undefined) {
-        app.status = status;
+      const nextStatus = status ? (status.toUpperCase() as ApplicationStatus) : undefined;
+      const isStatusChanged = nextStatus !== undefined && nextStatus !== oldStatus;
+
+      const updateData: any = {
+        lastActionAt: now,
+      };
+
+      if (nextStatus) {
+        updateData.status = nextStatus;
+
+        if (nextStatus === "SELECTED") {
+          updateData.selectedAt = now;
+          if (sendEmail) updateData.eventSelectionEmailSentAt = now;
+          updateData.callPriority = -1; // Move processed down queue
+        } else if (nextStatus === "NOT_SELECTED" || nextStatus === "REJECTED") {
+          updateData.notSelectedAt = now;
+          if (sendEmail) updateData.eventDeselectionEmailSentAt = now;
+          updateData.callPriority = -1;
+        } else if (["CONFIRMED", "ATTENDED", "ABSENT", "CANCELLED"].includes(nextStatus)) {
+          if (nextStatus === "CONFIRMED") updateData.confirmedAt = now;
+          updateData.callPriority = -1;
+        } else if (nextStatus === "APPLIED" || nextStatus === "UNDER_REVIEW") {
+          updateData.callPriority = 0; // Keep pending near top
+        }
       }
+
       if (paymentStatus !== undefined) {
-        app.paymentStatus = paymentStatus;
+        updateData.paymentStatus = paymentStatus.toUpperCase() as PaymentStatus;
       }
       if (messageStatus !== undefined) {
-        app.messageStatus = messageStatus;
+        updateData.messageStatus = messageStatus.toUpperCase() as MessageStatus;
       }
       if (paymentOverride !== undefined) {
-        app.paymentOverride = Number(paymentOverride);
+        updateData.paymentOverride = Number(paymentOverride);
+      }
+      if (callPriority !== undefined) {
+        updateData.callPriority = Number(callPriority);
+      }
+      if (manualOrder !== undefined) {
+        updateData.manualOrder = Number(manualOrder);
+      }
+      if (callingRemarks !== undefined) {
+        updateData.callingRemarks = callingRemarks;
       }
       if (whatsappGroupAdded !== undefined) {
-        app.whatsappGroupAdded = whatsappGroupAdded;
-        if (whatsappGroupAdded) {
-          app.whatsappGroupAddedAt = new Date();
-          app.whatsappGroupAddedBy = admin._id;
-        } else {
-          app.whatsappGroupAddedAt = undefined;
-          app.whatsappGroupAddedBy = undefined;
+        updateData.whatsappGroupAdded = Boolean(whatsappGroupAdded);
+        updateData.whatsappGroupAddedAt = whatsappGroupAdded ? now : null;
+        updateData.whatsappGroupAddedById = whatsappGroupAdded ? admin.id : null;
+      }
+
+      // Execute DB update
+      await prisma.application.update({
+        where: { id: appId },
+        data: updateData,
+      });
+
+      // Log status history if status changed
+      if (isStatusChanged && nextStatus) {
+        await prisma.applicationStatusHistory.create({
+          data: {
+            applicationId: appId,
+            oldStatus,
+            newStatus: nextStatus,
+            changedById: admin.id,
+            notes: notes || undefined,
+          },
+        });
+
+        // Trigger email asynchronously only when status genuine transitioned
+        if (sendEmail && app.user?.email) {
+          if (nextStatus === "SELECTED") {
+            sendEventSelectionEmail({
+              studentName: app.user.name || app.name,
+              email: app.user.email,
+              eventName: app.event.name,
+              eventDate: app.event.date,
+              eventLocation: app.event.location,
+              reportingTime: app.event.reportingTime,
+              instructions: app.event.instructions,
+              notes,
+            }).catch((err) => console.error("Event selection email dispatch error:", err));
+          } else if (nextStatus === "NOT_SELECTED" || nextStatus === "REJECTED") {
+            sendEventDeselectionEmail({
+              studentName: app.user.name || app.name,
+              email: app.user.email,
+              eventName: app.event.name,
+              eventDate: app.event.date,
+              notes,
+            }).catch((err) => console.error("Event deselection email dispatch error:", err));
+          }
         }
       }
 
-      await app.save();
-
-      // Trigger student stats adjustments
-      const student: any = app.studentId;
-      const event: any = app.eventId;
-
-      if (student && event && status !== undefined) {
-        // Selection count
-        if (status === "selected" && oldStatus !== "selected") {
-          student.selectedCount += 1;
-        }
-
-        // Attendance check-in/check-out metrics
-        if (status === "attended" && oldStatus !== "attended") {
-          student.attendedCount += 1;
-          const earnAmt = app.paymentOverride ?? event.paymentPerStudent ?? 0;
-          student.totalEarnings += earnAmt;
-        }
-
-        // Cancellations
-        if (status === "cancelled" && oldStatus !== "cancelled") {
-          student.cancelledCount += 1;
-        }
-
-        await student.save();
-      }
+      updatedCount++;
     }
 
-    return NextResponse.json({ success: true, message: `Successfully updated ${ids.length} applications.` });
+    return NextResponse.json({
+      success: true,
+      message: `Successfully updated ${updatedCount} application(s).`,
+    });
   } catch (error: any) {
     console.error("Bulk Application Update Error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    await connectToDatabase();
-    const admin = await getLoggedInAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-    }
-
-    if (admin.role === "calling") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot add students." }, { status: 403 });
-    }
-
-    const body = await request.json();
-    const { eventId, customFields } = body;
-
-    if (!eventId) {
-      return NextResponse.json({ success: false, message: "Missing event ID." }, { status: 400 });
-    }
-
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return NextResponse.json({ success: false, message: "Event not found." }, { status: 404 });
-    }
-
-    // Extract basic student details from customFields
-    let name = "";
-    let phone = "";
-    let email = "";
-    let university = "";
-    let universityId = "";
-
-    if (customFields) {
-      Object.keys(customFields).forEach((key) => {
-        const val = String(customFields[key]).trim();
-        if (!val) return;
-        const normalizedKey = key.toLowerCase().trim();
-        
-        if (normalizedKey === "name" || normalizedKey === "full name" || normalizedKey === "student name") {
-          name = val;
-        }
-        if (normalizedKey === "phone" || normalizedKey === "phone number" || normalizedKey === "whatsapp" || normalizedKey === "whatsapp phone number" || normalizedKey === "whatsapp number") {
-          phone = val;
-        }
-        if (normalizedKey === "email" || normalizedKey === "email id" || normalizedKey === "email address") {
-          email = val;
-        }
-        if (normalizedKey === "university" || normalizedKey === "college" || normalizedKey === "university name" || normalizedKey === "college name") {
-          university = val;
-        }
-        if (
-          normalizedKey === "registration number" ||
-          normalizedKey === "registration no" ||
-          normalizedKey === "registration no." ||
-          normalizedKey === "roll no" ||
-          normalizedKey === "roll no." ||
-          normalizedKey === "roll number" ||
-          normalizedKey === "university id" ||
-          normalizedKey === "university roll no" ||
-          normalizedKey === "university registration number"
-        ) {
-          universityId = val;
-        }
-      });
-    }
-
-    if (!universityId) {
-      return NextResponse.json({ success: false, message: "University Registration Number is required." }, { status: 400 });
-    }
-
-    const cleanUniId = universityId.trim().toUpperCase();
-
-    // Fallbacks if not provided or left as "N/A"
-    const finalName = (!name || name === "N/A") ? `Student ${cleanUniId}` : name.trim();
-    const finalPhone = (!phone || phone === "N/A") ? cleanUniId : phone.trim();
-    const finalEmail = (!email || email === "N/A") ? `${cleanUniId.toLowerCase().replace(/[^a-z0-9]/g, "")}@topline.co.in` : email.trim().toLowerCase();
-    const finalUniversity = (!university || university === "N/A") ? "N/A" : university.trim();
-
-    // Event isolation uniqueness check
-    const existingReg = await Application.findOne({ eventId, registrationNumber: cleanUniId });
-    if (existingReg) {
-      return NextResponse.json({ success: false, message: `Registration number ${cleanUniId} has already been registered for this event.` }, { status: 409 });
-    }
-
-    // Find or create student master record
-    let student = await Student.findOne({
-      $or: [{ phone: finalPhone }, { universityId: cleanUniId }]
-    });
-
-    if (student) {
-      if (student.status === "blocked") {
-        return NextResponse.json({ success: false, message: "Student profile is restricted." }, { status: 403 });
-      }
-      student.name = finalName;
-      student.phone = finalPhone;
-      student.email = finalEmail;
-      student.university = finalUniversity;
-      await student.save();
-
-      // Duplicate check (eventId + studentId)
-      const existingApplication = await Application.findOne({ eventId, studentId: student._id });
-      if (existingApplication) {
-        return NextResponse.json({ success: false, message: "This student is already registered for this event." }, { status: 409 });
-      }
-    } else {
-      student = await Student.create({
-        name: finalName,
-        phone: finalPhone,
-        email: finalEmail,
-        university: finalUniversity,
-        universityId: cleanUniId,
-        status: "active",
-      });
-    }
-
-    // Increment event applications count
-    event.applicationsCount += 1;
-    if (event.applicationsCount >= event.maxApplications) {
-      event.status = "FULL";
-    }
-    await event.save();
-
-    // Create Application
-    const application = await Application.create({
-      eventId: event._id,
-      studentId: student._id,
-      status: "applied",
-      customFieldsData: customFields || {},
-      registrationNumber: cleanUniId,
-      name: finalName,
-      mobileNumber: finalPhone,
-    });
-
-    student.appliedCount += 1;
-    await student.save();
-
-    const populatedApp = await Application.findById(application._id).populate("studentId").populate("eventId").lean();
-
-    return NextResponse.json({
-      success: true,
-      message: "Student added successfully.",
-      application: populatedApp
-    });
-  } catch (error: any) {
-    console.error("Add Student API Error:", error);
-    if (error.code === 11000) {
-      return NextResponse.json({ success: false, message: "Student has already been registered for this event." }, { status: 409 });
-    }
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
-  }
-}
-
 export async function DELETE(request: Request) {
   try {
-    await connectToDatabase();
     const admin = await getLoggedInAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
-    }
-
-    if (admin.role === "calling") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot delete applications." }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const ids = searchParams.get("ids")?.split(",").filter(Boolean);
 
-    if (!id) {
-      return NextResponse.json({ success: false, message: "Missing application ID." }, { status: 400 });
+    const targetIds = id ? [id] : ids || [];
+
+    if (targetIds.length === 0) {
+      return NextResponse.json({ success: false, message: "Missing application ID(s)." }, { status: 400 });
     }
 
-    const app = await Application.findById(id).populate("eventId").populate("studentId");
-    if (!app) {
-      return NextResponse.json({ success: false, message: "Application not found." }, { status: 404 });
-    }
+    let deletedCount = 0;
 
-    const student: any = app.studentId;
-    const event: any = app.eventId;
+    for (const appId of targetIds) {
+      const app = await prisma.application.findUnique({
+        where: { id: appId },
+        include: { event: true },
+      });
+      if (!app) continue;
 
-    // Decrement Student metrics if relevant
-    if (student) {
-      if (app.status === "applied") student.appliedCount = Math.max(0, student.appliedCount - 1);
-      if (app.status === "selected") student.selectedCount = Math.max(0, student.selectedCount - 1);
-      if (app.status === "cancelled") student.cancelledCount = Math.max(0, student.cancelledCount - 1);
-      if (app.status === "attended") {
-        student.attendedCount = Math.max(0, student.attendedCount - 1);
-        const earnAmt = app.paymentOverride ?? event?.paymentPerStudent ?? 0;
-        student.totalEarnings = Math.max(0, student.totalEarnings - earnAmt);
+      if (admin.role === "CALLING_ADMIN") {
+        const isAssigned = admin.assignedEvents.some((a) => a.eventId === app.eventId);
+        if (!isAssigned) {
+          return NextResponse.json({ success: false, message: "Forbidden. You cannot remove applicants from this event." }, { status: 403 });
+        }
       }
-      await student.save();
-    }
 
-    // Decrement Event applicationsCount
-    if (event) {
-      event.applicationsCount = Math.max(0, event.applicationsCount - 1);
-      if (event.status === "FULL" && event.applicationsCount < event.maxApplications) {
-        event.status = "OPEN";
+      // Safe deletion: removes ONLY application and its event responses/attendance
+      await prisma.application.delete({
+        where: { id: appId },
+      });
+
+      // Decrement event count safely
+      if (app.event) {
+        await prisma.event.update({
+          where: { id: app.eventId },
+          data: {
+            applicationsCount: Math.max(0, app.event.applicationsCount - 1),
+            status: app.event.status === "FULL" ? "OPEN" : app.event.status,
+          },
+        });
       }
-      await event.save();
+
+      // Audit log
+      await prisma.auditLog.create({
+        data: {
+          adminId: admin.id,
+          action: "DELETE_EVENT_APPLICATION",
+          target: appId,
+          metadata: {
+            eventId: app.eventId,
+            userId: app.userId,
+            candidateName: app.name,
+            registrationNumber: app.registrationNumber,
+          },
+        },
+      });
+
+      deletedCount++;
     }
 
-    // Remove application
-    await Application.deleteOne({ _id: id });
-
-    return NextResponse.json({ success: true, message: "Application deleted successfully." });
+    return NextResponse.json({
+      success: true,
+      message: `Successfully removed ${deletedCount} event application(s). Student accounts remain fully intact.`,
+    });
   } catch (error: any) {
     console.error("Delete Application Error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

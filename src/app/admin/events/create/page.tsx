@@ -41,6 +41,7 @@ export default function CreateEventPage() {
   const [otherExpenses, setOtherExpenses] = useState(1000);
   const [clientId, setClientId] = useState("");
   const [visibility, setVisibility] = useState("VISIBLE");
+  const [allowedGender, setAllowedGender] = useState("ALL");
 
   // Custom Form Builder state
   const [customFields, setCustomFields] = useState<FormField[]>([]);
@@ -151,6 +152,7 @@ export default function CreateEventPage() {
       clientId: clientId || null,
       customFormFields: customFields,
       visibility,
+      allowedGender,
     };
 
     try {
@@ -194,22 +196,31 @@ export default function CreateEventPage() {
           
           {/* General Details */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide border-b border-slate-200 pb-2">General Details</h2>
+            <div className="border-b border-slate-200 pb-2 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900 uppercase tracking-wide">General Details</h2>
+              <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold">
+                All Fields Optional
+              </span>
+            </div>
             
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Name (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Event Name (Optional)
+              </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Grand Corporate Buffet Coordination"
+                placeholder="e.g. Grand Corporate Buffet Coordination (Default: New Event Draft)"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Date (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                  Event Date (Optional)
+                </label>
                 <input
                   type="date"
                   value={date}
@@ -218,7 +229,9 @@ export default function CreateEventPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Work Type / Category (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                  Work Type / Category (Optional)
+                </label>
                 <input
                   type="text"
                   value={workType}
@@ -231,21 +244,27 @@ export default function CreateEventPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Reporting Time (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                  Reporting Time (Optional)
+                </label>
                 <TimePicker12Hour
                   value={reportingTime}
                   onChange={setReportingTime}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty Start Time (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                  Duty Start Time (Optional)
+                </label>
                 <TimePicker12Hour
                   value={startTime}
                   onChange={setStartTime}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Duty End Time (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                  Duty End Time (Optional)
+                </label>
                 <TimePicker12Hour
                   value={endTime}
                   onChange={setEndTime}
@@ -254,18 +273,22 @@ export default function CreateEventPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Location Details (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Location / Venue Details (Optional)
+              </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="Aura Resort, Chandigarh-Ambala Highway"
+                placeholder="e.g. Aura Resort, Chandigarh-Ambala Highway (Default: Venue to be announced)"
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Google Maps Link</label>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Google Maps Link (Optional)
+              </label>
               <input
                 type="url"
                 value={googleMapsUrl}
@@ -276,7 +299,9 @@ export default function CreateEventPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Event Description (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Event Description (Optional)
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -457,6 +482,21 @@ export default function CreateEventPage() {
               >
                 <option value="VISIBLE">VISIBLE</option>
                 <option value="HIDDEN">HIDDEN</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                Target Candidate Eligibility
+              </label>
+              <select
+                value={allowedGender}
+                onChange={(e) => setAllowedGender(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm font-semibold"
+              >
+                <option value="ALL">👥 Open to All (Male & Female)</option>
+                <option value="FEMALE_ONLY">👩 Female Only (Girls Exclusive)</option>
+                <option value="MALE_ONLY">👨 Male Only (Boys Exclusive)</option>
               </select>
             </div>
           </div>

@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { connectToDatabase } from "@/lib/db";
-import { Setting } from "@/models";
+import { prisma } from "@/lib/prisma";
 import { CheckCircle2, AlertOctagon } from "lucide-react";
 
 export const revalidate = 0; // Disable static caching so modifications in admin panel show immediately
@@ -24,10 +23,14 @@ export default async function DosDontsPage() {
   ];
 
   try {
-    await connectToDatabase();
-    const config = await Setting.findOne({ key: "homepage_content" });
-    if (config?.value?.dos) dos = config.value.dos;
-    if (config?.value?.donts) donts = config.value.donts;
+    const config = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
+    if (config?.value && typeof config.value === "object") {
+      const val: any = config.value;
+      if (Array.isArray(val.dos)) dos = val.dos;
+      if (Array.isArray(val.donts)) donts = val.donts;
+    }
   } catch (error) {
     console.error("Failed to load dos/donts from database", error);
   }

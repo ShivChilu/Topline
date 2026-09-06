@@ -1,37 +1,53 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { Admin } from "@/models";
+import { prisma } from "@/lib/prisma";
 import { comparePassword, signToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    await connectToDatabase();
     const { username, password } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ success: false, message: "Username and password are required." }, { status: 400 });
     }
 
-    const admin = await Admin.findOne({ username: username.toLowerCase().trim() });
-    if (!admin) {
-      return NextResponse.json({ success: false, message: "Invalid credentials." }, { status: 401 });
+    const cleanUsername = username.toLowerCase().trim();
+
+    // Look up Admin user
+    const admin = await prisma.user.findUnique({
+      where: { username: cleanUsername },
+    });
+
+    if (!admin || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(admin.role)) {
+      return NextResponse.json({ success: false, message: "Invalid administrative credentials." }, { status: 401 });
+    }
+
+    if (!admin.isActive) {
+      return NextResponse.json({ success: false, message: "This administrative account is deactivated." }, { status: 403 });
     }
 
     const isMatch = comparePassword(password, admin.passwordHash);
     if (!isMatch) {
-      return NextResponse.json({ success: false, message: "Invalid credentials." }, { status: 401 });
+      return NextResponse.json({ success: false, message: "Invalid administrative credentials." }, { status: 401 });
     }
 
     const token = signToken({
-      id: admin._id.toString(),
+      id: admin.id,
       username: admin.username,
       role: admin.role,
+      name: admin.name,
     });
+
+    const roleLower = admin.role === "CALLING_ADMIN" ? "calling" : admin.role === "SUPERADMIN" ? "superadmin" : "admin";
 
     const response = NextResponse.json({
       success: true,
       message: "Login successful!",
-      admin: { username: admin.username, role: admin.role }
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        name: admin.name,
+        role: roleLower,
+      },
     });
 
     // Set JWT in HTTP-Only Cookie

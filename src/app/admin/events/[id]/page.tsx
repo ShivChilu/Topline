@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import Link from "next/link";
+import EventPhotoGalleryManager from "@/components/EventPhotoGalleryManager";
 import {
   ArrowLeft,
   Calendar,
@@ -15,7 +16,28 @@ import {
   Share2,
   DollarSign,
   Briefcase,
-  QrCode
+  QrCode,
+  LayoutGrid,
+  List,
+  Search,
+  Camera,
+  GraduationCap,
+  Phone,
+  Mail,
+  Trash2,
+  Check,
+  X,
+  ExternalLink,
+  ChevronRight,
+  ChevronLeft,
+  Sparkles,
+  UserCheck,
+  UserX,
+  ShieldAlert,
+  ArrowUpDown,
+  Sliders,
+  AlertCircle,
+  Info
 } from "lucide-react";
 
 function formatTime12(timeStr: string) {
@@ -32,86 +54,6 @@ function formatTime12(timeStr: string) {
   return `${strHours}:${minutes} ${ampm}`;
 }
 
-const isReservedField = (label: string) => {
-  const norm = label.toLowerCase().trim();
-  const reservedNames = ["name", "full name", "student name", "candidate name", "applicant name"];
-  const reservedMobiles = ["phone", "phone number", "mobile", "mobile number", "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"];
-  const reservedRegs = ["registration number", "registration no", "registration no.", "roll no", "roll no.", "roll number", "university id", "university roll no", "university registration number"];
-  return reservedNames.includes(norm) || reservedMobiles.includes(norm) || reservedRegs.includes(norm);
-};
-
-const getApplicantName = (app: any, eventCustomFormFields?: any[]) => {
-  if (app.name) return app.name;
-  
-  if (app.customFieldsData) {
-    const data = app.customFieldsData;
-    const nameKeys = ["name", "full name", "student name", "candidate name", "applicant name"];
-    for (const key of Object.keys(data)) {
-      if (nameKeys.includes(key.toLowerCase().trim())) {
-        const val = typeof data.get === 'function' ? data.get(key) : data[key];
-        if (val) return String(val).trim();
-      }
-    }
-    if (eventCustomFormFields) {
-      const field = eventCustomFormFields.find(f => nameKeys.includes(f.label.toLowerCase().trim()));
-      if (field) {
-        const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
-        if (val) return String(val).trim();
-      }
-    }
-  }
-
-  if (app.studentId?.name) return app.studentId.name;
-  return `Student ${app.registrationNumber || "N/A"}`;
-};
-
-const getApplicantMobile = (app: any, eventCustomFormFields?: any[]) => {
-  const regNo = (app.registrationNumber || app.studentId?.universityId || "").trim();
-  
-  const isValid = (val: string) => {
-    if (!val) return false;
-    const cleanVal = val.trim();
-    if (cleanVal === regNo) return false;
-    const digits = cleanVal.replace(/[^0-9]/g, "");
-    return digits.length >= 10;
-  };
-
-  if (app.mobileNumber && isValid(app.mobileNumber)) {
-    return app.mobileNumber.trim();
-  }
-
-  if (app.customFieldsData) {
-    const data = app.customFieldsData;
-    const phoneKeys = [
-      "phone", "phone number", "phone no", "phone no.", "phone no:",
-      "mobile", "mobile number", "mobile no", "mobile no.", "mobile no:",
-      "contact", "contact number", "whatsapp", "whatsapp number", "whatsapp phone number"
-    ];
-    for (const key of Object.keys(data)) {
-      const normKey = key.toLowerCase().trim();
-      if (phoneKeys.some(k => normKey.startsWith(k) || normKey.includes(k))) {
-        const val = typeof data.get === 'function' ? data.get(key) : data[key];
-        if (val && isValid(String(val))) return String(val).trim();
-      }
-    }
-    if (eventCustomFormFields) {
-      const field = eventCustomFormFields.find(f => {
-        const normLabel = f.label.toLowerCase().trim();
-        return phoneKeys.some(k => normLabel.startsWith(k) || normLabel.includes(k));
-      });
-      if (field) {
-        const val = typeof data.get === 'function' ? data.get(field.id) : data[field.id];
-        if (val && isValid(String(val))) return String(val).trim();
-      }
-    }
-  }
-
-  if (app.studentId?.phone && isValid(app.studentId.phone)) {
-    return app.studentId.phone.trim();
-  }
-  return "";
-};
-
 export default function AdminEventDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -120,32 +62,59 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // View state: photo gallery (default), table, event photos
+  const [activeView, setActiveView] = useState<"gallery" | "table" | "eventPhotos">("gallery");
+
+  // Selection & bulk
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
-  // Custom payout override input state
-  const [tempPayouts, setTempPayouts] = useState<Record<string, number>>({});
-  const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
-  const toggleCardDetails = (id: string) => {
-    setExpandedCardIds(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [sendEmailToggle, setSendEmailToggle] = useState(true);
+
+  // Sorting & Queue workflow
+  const [pendingFirstQueue, setPendingFirstQueue] = useState(true);
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [photoFilter, setPhotoFilter] = useState("ALL");
+  const [profileFilter, setProfileFilter] = useState("ALL");
+  const [whatsappFilter, setWhatsappFilter] = useState("ALL");
+  const [paymentFilter, setPaymentFilter] = useState("ALL");
+
+  // Candidate Inspection Modal & Lightbox
+  const [inspectCandidate, setInspectCandidate] = useState<any>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [callingNote, setCallingNote] = useState("");
+
+  // Delete Confirmation Modal
+  const [deleteCandidate, setDeleteCandidate] = useState<any>(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+
+  // Add Manual Candidate Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addFormData, setAddFormData] = useState<Record<string, any>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [addModalError, setAddModalError] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   const fetchEventData = async (silent = false) => {
     try {
-      if (!silent) {
-        setLoading(true);
-      }
+      if (!silent) setLoading(true);
       setErrorMsg(null);
-      
+
       const eventRes = await fetch(`/api/admin/events/${eventId}?t=${Date.now()}`, { cache: "no-store" });
       if (eventRes.status === 403) {
         setErrorMsg("403 Access Denied. You do not have permission to view this event.");
         setLoading(false);
         return;
       }
-      
+
       const eventData = await eventRes.json();
       if (!eventData.success) {
         setErrorMsg(eventData.message || "Failed to load event.");
@@ -157,14 +126,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       const appData = await appRes.json();
 
       setEvent(eventData.event);
-      if (appData.success) setApplications(appData.applications);
+      if (appData.success) setApplications(appData.applications || []);
     } catch (err) {
       console.error(err);
       setErrorMsg("An error occurred while loading event details.");
     } finally {
-      if (!silent) {
-        setLoading(false);
-      }
+      if (!silent) setLoading(false);
     }
   };
 
@@ -172,1099 +139,817 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     fetchEventData();
   }, [eventId]);
 
-  if (loading) return <div className="text-slate-900 text-center py-12">Loading event management portal...</div>;
-  
+  // Handle single candidate status update with optimistic UI
+  const handleUpdateStatus = async (
+    appId: string,
+    nextStatus: string,
+    notes?: string
+  ) => {
+    try {
+      setActionLoadingId(appId);
+
+      // Optimistic update
+      setApplications((prev) =>
+        prev.map((app) =>
+          app._id === appId || app.id === appId
+            ? { ...app, status: nextStatus.toUpperCase() }
+            : app
+        )
+      );
+
+      if (inspectCandidate && (inspectCandidate._id === appId || inspectCandidate.id === appId)) {
+        setInspectCandidate((prev: any) =>
+          prev ? { ...prev, status: nextStatus.toUpperCase() } : null
+        );
+      }
+
+      const res = await fetch(`/api/admin/applications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: [appId],
+          status: nextStatus,
+          notes: notes || callingNote || undefined,
+          sendEmail: sendEmailToggle,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Candidate status updated to ${nextStatus.toUpperCase()}${sendEmailToggle ? " & email dispatched" : ""}.`);
+        fetchEventData(true);
+      } else {
+        showToast(`Warning: ${data.message}`);
+        fetchEventData(true);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to update status.");
+      fetchEventData(true);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Bulk update
+  const handleBulkUpdate = async (updatePayload: {
+    status?: string;
+    paymentStatus?: string;
+    messageStatus?: string;
+    whatsappGroupAdded?: boolean;
+  }) => {
+    if (selectedIds.length === 0) return;
+
+    try {
+      setActionLoadingId("bulk");
+      const res = await fetch(`/api/admin/applications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: selectedIds,
+          ...updatePayload,
+          sendEmail: sendEmailToggle,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message);
+        setSelectedIds([]);
+        fetchEventData(true);
+      } else {
+        showToast(data.message || "Bulk update failed.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Network error during bulk update.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Safe delete application
+  const handleDeleteApplication = async (appId: string) => {
+    try {
+      setActionLoadingId(appId);
+      const res = await fetch(`/api/admin/applications?id=${appId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Application deleted. Student account remains intact.");
+        setDeleteCandidate(null);
+        if (inspectCandidate && (inspectCandidate._id === appId || inspectCandidate.id === appId)) {
+          setInspectCandidate(null);
+        }
+        fetchEventData(true);
+      } else {
+        showToast(data.message || "Failed to delete application.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Delete error.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Safe bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      setActionLoadingId("bulk");
+      const res = await fetch(`/api/admin/applications?ids=${selectedIds.join(",")}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Removed ${selectedIds.length} application(s).`);
+        setSelectedIds([]);
+        setIsBulkDeleteModalOpen(false);
+        fetchEventData(true);
+      } else {
+        showToast(data.message || "Failed to delete applications.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Bulk delete error.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Filter & Queue Sorting
+  const filteredAndSortedApplications = useMemo(() => {
+    let list = [...applications];
+
+    // Search filter
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      list = list.filter((app) => {
+        const name = (app.name || app.studentId?.name || "").toLowerCase();
+        const reg = (app.registrationNumber || app.studentId?.registrationNumber || "").toLowerCase();
+        const phone = (app.mobileNumber || app.studentId?.phone || "").toLowerCase();
+        const email = (app.studentId?.email || "").toLowerCase();
+        const uni = (app.studentId?.university || "").toLowerCase();
+        const city = (app.studentId?.city || "").toLowerCase();
+        return name.includes(q) || reg.includes(q) || phone.includes(q) || email.includes(q) || uni.includes(q) || city.includes(q);
+      });
+    }
+
+    // Status filter
+    if (statusFilter !== "ALL") {
+      list = list.filter((a) => (a.status || "").toUpperCase() === statusFilter);
+    }
+
+    // Photo filter
+    if (photoFilter === "WITH_PHOTOS") {
+      list = list.filter((a) => a.photoUrl || (a.studentId?.studentPhotos && a.studentId.studentPhotos.length > 0));
+    } else if (photoFilter === "WITHOUT_PHOTOS") {
+      list = list.filter((a) => !a.photoUrl && (!a.studentId?.studentPhotos || a.studentId.studentPhotos.length === 0));
+    }
+
+    // Profile filter
+    if (profileFilter === "COMPLETE") {
+      list = list.filter((a) => (a.completenessScore || 0) >= 80);
+    } else if (profileFilter === "INCOMPLETE") {
+      list = list.filter((a) => (a.completenessScore || 0) < 80);
+    }
+
+    // WhatsApp filter
+    if (whatsappFilter === "ADDED") {
+      list = list.filter((a) => a.whatsappGroupAdded === true);
+    } else if (whatsappFilter === "NOT_ADDED") {
+      list = list.filter((a) => a.whatsappGroupAdded !== true);
+    }
+
+    // Payment filter
+    if (paymentFilter === "PAID") {
+      list = list.filter((a) => a.paymentStatus === "PAID");
+    } else if (paymentFilter === "UNPAID") {
+      list = list.filter((a) => a.paymentStatus !== "PAID");
+    }
+
+    // Calling queue priority sorting:
+    // When pendingFirstQueue is active:
+    // APPLIED & UNDER_REVIEW -> Top
+    // SELECTED, NOT_SELECTED, CONFIRMED, ATTENDED, CANCELLED -> Bottom
+    if (pendingFirstQueue) {
+      const getPriority = (statusStr: string) => {
+        const s = (statusStr || "").toUpperCase();
+        if (s === "APPLIED") return 1;
+        if (s === "UNDER_REVIEW") return 2;
+        if (s === "SELECTED") return 3;
+        if (s === "CONFIRMED") return 4;
+        if (s === "NOT_SELECTED" || s === "REJECTED") return 5;
+        if (s === "ATTENDED") return 6;
+        if (s === "ABSENT") return 7;
+        if (s === "CANCELLED") return 8;
+        return 9;
+      };
+
+      list.sort((a, b) => {
+        const prioA = getPriority(a.status);
+        const prioB = getPriority(b.status);
+        if (prioA !== prioB) return prioA - prioB;
+        // Secondary stable sort: createdAt
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateA - dateB;
+      });
+    }
+
+    return list;
+  }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, pendingFirstQueue]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    const total = applications.length;
+    const applied = applications.filter((a) => (a.status || "").toUpperCase() === "APPLIED").length;
+    const underReview = applications.filter((a) => (a.status || "").toUpperCase() === "UNDER_REVIEW").length;
+    const selected = applications.filter((a) => (a.status || "").toUpperCase() === "SELECTED").length;
+    const notSelected = applications.filter((a) => ["NOT_SELECTED", "REJECTED"].includes((a.status || "").toUpperCase())).length;
+    const confirmed = applications.filter((a) => (a.status || "").toUpperCase() === "CONFIRMED").length;
+    const attended = applications.filter((a) => (a.status || "").toUpperCase() === "ATTENDED").length;
+    const absent = applications.filter((a) => (a.status || "").toUpperCase() === "ABSENT").length;
+    const cancelled = applications.filter((a) => (a.status || "").toUpperCase() === "CANCELLED").length;
+    const paid = applications.filter((a) => a.paymentStatus === "PAID").length;
+    const unpaid = total - paid;
+    return { total, applied, underReview, selected, notSelected, confirmed, attended, absent, cancelled, paid, unpaid };
+  }, [applications]);
+
+  // Financials
+  const financials = useMemo(() => {
+    if (!event) return { revenue: 0, expenses: 0, workerPayments: 0, profit: 0, profitMargin: 0 };
+    let workerTotal = 0;
+    applications.forEach((app) => {
+      const s = (app.status || "").toUpperCase();
+      if (["SELECTED", "CONFIRMED", "ATTENDED", "PAID"].includes(s)) {
+        workerTotal += app.paymentOverride ?? event.paymentPerStudent ?? 0;
+      }
+    });
+    const rev = event.clientRevenue || 0;
+    const exp = event.otherExpenses || 0;
+    const prof = rev - workerTotal - exp;
+    const margin = rev > 0 ? Math.round((prof / rev) * 100) : 0;
+    return { revenue: rev, expenses: exp, workerPayments: workerTotal, profit: prof, profitMargin: margin };
+  }, [event, applications]);
+
+  // Next candidate in queue helper for Drawer
+  const handleNextCandidate = () => {
+    if (!inspectCandidate) return;
+    const currentIndex = filteredAndSortedApplications.findIndex(
+      (a) => a._id === inspectCandidate._id || a.id === inspectCandidate.id
+    );
+    if (currentIndex >= 0 && currentIndex < filteredAndSortedApplications.length - 1) {
+      setInspectCandidate(filteredAndSortedApplications[currentIndex + 1]);
+    } else {
+      showToast("You have reached the end of the candidate queue!");
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredAndSortedApplications.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredAndSortedApplications.map((a) => a._id || a.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-24">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-red-600 border-t-transparent mb-3"></div>
+        <p className="text-sm font-semibold text-slate-500">Loading event management workspace...</p>
+      </div>
+    );
+  }
+
   if (errorMsg) {
     return (
       <div className="max-w-md mx-auto text-center py-16 bg-white border border-slate-200 rounded-3xl p-8 space-y-4 shadow-sm mt-8">
-        <div className="text-rose-600 text-lg font-bold uppercase">403 Access Denied</div>
+        <ShieldAlert className="w-12 h-12 text-rose-600 mx-auto" />
+        <h3 className="text-lg font-bold text-slate-900 uppercase">Access Notice</h3>
         <p className="text-slate-500 text-sm">{errorMsg}</p>
-        <Link href="/admin/calling" className="inline-block bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
-          Return to Dashboard
+        <Link href="/admin/events" className="inline-block bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition">
+          Return to Events
         </Link>
       </div>
     );
   }
 
-  if (!event) return <div className="text-slate-900 text-center py-12">Event not found.</div>;
-
-  // Compute application statistics
-  const totalApps = applications.length;
-  const appliedCount = applications.filter((a) => a.status === "applied").length;
-  const selectedCount = applications.filter((a) => a.status === "selected").length;
-  const confirmedCount = applications.filter((a) => a.status === "confirmed").length;
-  const attendedCount = applications.filter((a) => a.status === "attended").length;
-  const absentCount = applications.filter((a) => a.status === "absent").length;
-  const whatsappSentCount = applications.filter((a) => a.messageStatus === "SENT").length;
-  const whatsappAddedCount = applications.filter((a) => a.whatsappGroupAdded === true).length;
-  const paidCount = applications.filter((a) => a.paymentStatus === "PAID").length;
-  const unpaidCount = applications.filter((a) => a.paymentStatus !== "PAID").length;
-
-  // Compute live financials
-  let workerPaymentsTotal = 0;
-  applications.forEach((app) => {
-    if (["selected", "confirmed", "attended", "paid"].includes(app.status)) {
-      workerPaymentsTotal += app.paymentOverride ?? event.paymentPerStudent ?? 0;
-    }
-  });
-
-  const revenue = event.clientRevenue || 0;
-  const expenses = event.otherExpenses || 0;
-  const profit = revenue - workerPaymentsTotal - expenses;
-  const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
-
-  // Toggle selection checkbox
-  const handleToggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((x) => x !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
-  };
-
-  const handleSelectAll = () => {
-    if (selectedIds.length === applications.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(applications.map((a) => a._id));
-    }
-  };
-
-  // Bulk update applications (status, payment, message)
-  const handleBulkUpdate = async (updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number; whatsappGroupAdded?: boolean }) => {
-    if (selectedIds.length === 0) {
-      alert("No student applications selected.");
-      return;
-    }
-
-    let confirmationMsg = "Update selected applications?";
-    if (updatePayload.status) {
-      confirmationMsg = `Update status to ${updatePayload.status.toUpperCase()} for ${selectedIds.length} students?`;
-    } else if (updatePayload.paymentStatus) {
-      confirmationMsg = `Mark ${selectedIds.length} selected students as ${updatePayload.paymentStatus.toUpperCase()}?`;
-    } else if (updatePayload.messageStatus) {
-      confirmationMsg = `Send message to ${selectedIds.length} selected students?`;
-    } else if (updatePayload.paymentOverride) {
-      confirmationMsg = `Apply payment of ₹${updatePayload.paymentOverride} to ${selectedIds.length} selected students?`;
-    } else if (updatePayload.whatsappGroupAdded !== undefined) {
-      confirmationMsg = updatePayload.whatsappGroupAdded
-        ? `Mark ${selectedIds.length} selected students as ADDED to WhatsApp Group?`
-        : `Revert WhatsApp Group status to NOT ADDED for ${selectedIds.length} selected students?`;
-    }
-
-    if (!confirm(confirmationMsg)) return;
-
-    const previousApplications = [...applications];
-    // Optimistically update applications
-    setApplications((prev) =>
-      prev.map((app) => {
-        if (selectedIds.includes(app._id)) {
-          return {
-            ...app,
-            ...updatePayload,
-            ...(updatePayload.whatsappGroupAdded !== undefined ? {
-              whatsappGroupAddedAt: updatePayload.whatsappGroupAdded ? new Date() : undefined
-            } : {})
-          };
-        }
-        return app;
-      })
-    );
-
-    try {
-      const res = await fetch("/api/admin/applications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedIds, ...updatePayload }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSelectedIds([]);
-        fetchEventData(true);
-      } else {
-        setApplications(previousApplications);
-        alert(data.message || "Failed to update applications.");
-      }
-    } catch (err) {
-      console.error(err);
-      setApplications(previousApplications);
-      alert("Network error. Failed to update applications.");
-    }
-  };
-
-  // Single update application
-  const handleSingleUpdate = async (id: string, updatePayload: { status?: string; paymentStatus?: string; messageStatus?: string; paymentOverride?: number; whatsappGroupAdded?: boolean }) => {
-    const previousApplications = [...applications];
-    // Optimistically update application
-    setApplications((prev) =>
-      prev.map((app) => {
-        if (app._id === id) {
-          return {
-            ...app,
-            ...updatePayload,
-            ...(updatePayload.whatsappGroupAdded !== undefined ? {
-              whatsappGroupAddedAt: updatePayload.whatsappGroupAdded ? new Date() : undefined
-            } : {})
-          };
-        }
-        return app;
-      })
-    );
-
-    try {
-      const res = await fetch("/api/admin/applications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [id], ...updatePayload }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchEventData(true);
-      } else {
-        setApplications(previousApplications);
-        alert(data.message || "Failed to update application.");
-      }
-    } catch (err) {
-      console.error(err);
-      setApplications(previousApplications);
-      alert("Network error. Failed to update application.");
-    }
-  };
-
-  const handleDeleteApplicant = async (appId: string, studentName: string, regNo: string) => {
-    if (!confirm(`Delete Applicant?\n\nAre you sure you want to permanently delete:\n${studentName}\nRegistration No: ${regNo}\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    const previousApplications = [...applications];
-    setApplications(prev => prev.filter(app => app._id !== appId));
-
-    try {
-      const res = await fetch(`/api/admin/applications?id=${appId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchEventData(true);
-      } else {
-        setApplications(previousApplications);
-        alert(data.message || "Failed to delete student.");
-      }
-    } catch (err) {
-      console.error(err);
-      setApplications(previousApplications);
-      alert("Network error. Failed to delete student.");
-    }
-  };
-
-  const handleAddStudentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAdding(true);
-    setAddModalError(null);
-
-    try {
-      const res = await fetch("/api/admin/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId,
-          customFields: addFormData,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIsAddModalOpen(false);
-        setAddFormData({});
-        setApplications(prev => [data.application, ...prev]);
-        fetchEventData(true);
-      } else {
-        setAddModalError(data.message || "Failed to add student.");
-      }
-    } catch (err) {
-      console.error(err);
-      setAddModalError("Network error. Failed to add student.");
-    } finally {
-      setIsAdding(false);
-    }
-  };
-
-  // Submit payment override for a specific student
-  const handleSavePayoutOverride = async (appId: string) => {
-    const amt = tempPayouts[appId];
-    if (amt === undefined || isNaN(amt)) return;
-    await handleSingleUpdate(appId, { paymentOverride: amt });
-    alert("Payment override saved!");
-  };
-
-  // Change Event status
-  const handleUpdateEventStatus = async (newStatus: string) => {
-    if (!confirm(`Are you sure you want to transition this event to ${newStatus}?`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Event status updated!");
-        fetchEventData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Generate WhatsApp message and open link
-  const handleWhatsAppShare = () => {
-    const dateStr = new Date(event.date).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-
-    const publicUrl = `${window.location.origin}/events/${eventId}`;
-
-    const text = `*TOPLINE ODC*\n🔔 New Hospitality Opportunity\n\n📅 *Date:* ${dateStr}\n📍 *Location:* ${event.location}\n👨🍳 *Work:* ${event.workType}\n💰 *Payment:* ₹${event.paymentPerStudent}\n👥 *Required:* ${event.workersRequired}\n⏰ *Reporting:* ${formatTime12(event.reportingTime)}\n\nApply here:\n${publicUrl}`;
-    
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, "_blank");
-  };
-
-  // Export to CSV
-  const handleExportCSV = () => {
-    let csvContent = "";
-    
-    // Build Headers
-    const headers = ["S.No.", "Registration No.", "Name", "Mobile No."];
-    const customFieldsFiltered = event.customFormFields?.filter((field: any) => !isReservedField(field.label)) || [];
-    customFieldsFiltered.forEach((field: any) => {
-      headers.push(field.label);
-    });
-    headers.push("Application Status", "WhatsApp Message", "WhatsApp Group Added", "Payment Amount", "Payment Status");
-    
-    csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
-
-    // Build Rows
-    applications.forEach((app, index) => {
-      const student = app.studentId || {};
-      const regNo = app.registrationNumber || student.universityId || "N/A";
-      const resolvedName = getApplicantName(app, event.customFormFields);
-      const resolvedMobile = getApplicantMobile(app, event.customFormFields);
-      const payout = app.paymentOverride ?? event.paymentPerStudent;
-      
-      const row = [
-        index + 1,
-        regNo,
-        resolvedName,
-        resolvedMobile || "N/A"
-      ];
-      
-      customFieldsFiltered.forEach((field: any) => {
-        const val = (globalThis as any).getCustomValue ? (globalThis as any).getCustomValue(app, field.id) : "";
-        row.push(val);
-      });
-      
-      row.push(
-        app.status,
-        app.messageStatus || "PENDING",
-        app.whatsappGroupAdded ? "ADDED" : "NOT_ADDED",
-        `₹${payout}`,
-        app.paymentStatus || "UNPAID"
-      );
-      
-      csvContent += row.map(r => `"${String(r).replace(/"/g, '""')}"`).join(",") + "\n";
-    });
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${event.name.replace(/\s+/g, "_")}_StaffList.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  if (!event) return null;
 
   return (
-    <div className="space-y-8 text-slate-900">
-      {/* Title block */}
-      <div className="flex items-center space-x-3">
-        <Link href="/admin/events" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">{event.name}</h1>
-          <p className="text-slate-500 text-sm mt-1">Status: <span className="text-red-600 font-bold">{event.status}</span></p>
-        </div>
-      </div>
-
-      {/* Grid of logistics and action panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Logistics card */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-          <h2 className="text-lg font-bold border-b border-slate-200 pb-2">Event Logistics</h2>
-          <div className="space-y-3 text-sm text-slate-650">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-red-600" />
-              <span>Date: {new Date(event.date).toLocaleDateString("en-GB")}</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <MapPin className="w-4 h-4 text-red-600 mt-0.5" />
-              <span>Location: {event.location}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-red-600" />
-              <span>Reporting: {formatTime12(event.reportingTime)}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-red-600" />
-              <span>Workers Required: {event.workersRequired} candidates</span>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-200 flex flex-wrap gap-2">
-            <button
-              onClick={handleWhatsAppShare}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-xs font-bold transition flex items-center space-x-1"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>WhatsApp Message</span>
-            </button>
-            <button
-              onClick={handleExportCSV}
-              className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded text-xs font-bold transition flex items-center space-x-1"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Change event status and application rules */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-          <h2 className="text-lg font-bold border-b border-slate-200 pb-2">Operational Controls</h2>
-          <p className="text-xs text-slate-500">Current application limits: {event.applicationsCount} / {event.maxApplications}</p>
-          
-          <div className="flex flex-wrap gap-2 pt-2">
-            {event.status === "DRAFT" && (
-              <button
-                onClick={() => handleUpdateEventStatus("OPEN")}
-                className="bg-emerald-600 text-white px-4 py-2 rounded text-xs font-bold transition"
-              >
-                Publish Form (OPEN)
-              </button>
-            )}
-            {event.status === "OPEN" && (
-              <>
-                <button
-                  onClick={() => handleUpdateEventStatus("CLOSED")}
-                  className="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold transition"
-                >
-                  Close Form manually
-                </button>
-                <button
-                  onClick={() => handleUpdateEventStatus("FULL")}
-                  className="bg-red-700 text-white px-4 py-2 rounded text-xs font-bold transition"
-                >
-                  Mark FULL
-                </button>
-              </>
-            )}
-            {event.status === "FULL" && (
-              <button
-                onClick={() => handleUpdateEventStatus("OPEN")}
-                className="bg-emerald-600 text-white px-4 py-2 rounded text-xs font-bold transition"
-              >
-                Reopen applications
-              </button>
-            )}
-            {["OPEN", "FULL", "CLOSED"].includes(event.status) && (
-              <button
-                onClick={() => handleUpdateEventStatus("COMPLETED")}
-                className="bg-purple-650 text-white px-4 py-2 rounded text-xs font-bold transition w-full"
-              >
-                Mark Event as COMPLETED
-              </button>
-            )}
-
-            <div className="pt-4 border-t border-slate-200 w-full">
-              <Link
-                href={`/admin/events/${eventId}/attendance`}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 w-full shadow-sm"
-              >
-                <QrCode className="w-4 h-4" />
-                <span>Open Attendance QR & Tracker</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Financials details - admin only */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-          <h2 className="text-lg font-bold text-red-600 border-b border-slate-200 pb-2 uppercase tracking-wide">Event Financials</h2>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Client Revenue:</span>
-              <span className="font-bold text-slate-900">₹{revenue.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Worker Payouts:</span>
-              <span className="font-bold text-red-400">₹{workerPaymentsTotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Other Expenses:</span>
-              <span className="font-bold text-red-400">₹{expenses.toLocaleString()}</span>
-            </div>
-            <hr className="border-slate-200" />
-            <div className="flex justify-between text-sm">
-              <span className="font-semibold text-emerald-400">Net Profit:</span>
-              <span className="font-bold text-emerald-400">₹{profit.toLocaleString()} ({profitMargin}%)</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Helper function to get custom fields values dynamically */}
-      {(() => {
-        (globalThis as any).getCustomValue = (app: any, fieldId: string) => {
-          if (!app.customFieldsData) return "";
-          const data = app.customFieldsData;
-          // Plain object or Map lookup
-          let val = typeof data.get === 'function' ? data.get(fieldId) : data[fieldId];
-          if (val === undefined) {
-            // Also try resolving by lowercased field label mapping to cover cases where keys are labels
-            const fieldObj = event.customFormFields?.find((f: any) => f.id === fieldId);
-            if (fieldObj) {
-              val = typeof data.get === 'function' ? data.get(fieldObj.label) : data[fieldObj.label];
-            }
-          }
-          return val !== undefined ? String(val) : "";
-        };
-        return null;
-      })()}
-
-      {/* Bulk actions toolbar */}
-      {selectedIds.length > 0 && (
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between animate-fade-in shadow-sm">
-          <div>
-            <span className="text-sm font-semibold text-slate-600">
-              Selected: <span className="text-red-650 font-extrabold">{selectedIds.length}</span> students
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <button
-              onClick={() => handleBulkUpdate({ status: "confirmed" })}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Confirm Selected
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ messageStatus: "SENT" })}
-              className="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Send Selected
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ paymentStatus: "PAID" })}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Mark Paid
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ status: "attended" })}
-              className="bg-purple-650 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Mark Attended
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ status: "absent" })}
-              className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Mark Absent
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ status: "cancelled" })}
-              className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Cancel Selected
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ whatsappGroupAdded: true })}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Mark Added to Group
-            </button>
-            <button
-              onClick={() => handleBulkUpdate({ whatsappGroupAdded: false })}
-              className="bg-slate-500 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-            >
-              Revert Group Added
-            </button>
-            
-            {/* Bulk Payment Apply */}
-            <div className="flex items-center space-x-1 border border-slate-200 rounded-lg p-1 bg-white text-xs">
-              <input
-                type="number"
-                placeholder="₹800"
-                id="bulk_pay_val"
-                className="w-14 bg-slate-50 border border-slate-100 rounded px-1 py-0.5 text-center focus:outline-none focus:border-red-600"
-              />
-              <button
-                onClick={() => {
-                  const val = Number((document.getElementById("bulk_pay_val") as HTMLInputElement)?.value);
-                  if (isNaN(val) || val <= 0) {
-                    alert("Please enter a valid payment amount.");
-                    return;
-                  }
-                  handleBulkUpdate({ paymentOverride: val });
-                }}
-                className="bg-slate-900 hover:bg-slate-800 text-white px-2 py-0.5 rounded transition font-bold"
-              >
-                Apply Pay
-              </button>
-            </div>
-          </div>
+    <div className="space-y-6 text-slate-900 pb-20">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
+          <Sparkles className="w-5 h-5 text-red-500" />
+          <span className="text-sm font-semibold">{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} className="ml-2 text-slate-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {/* Applicant Summary Statistics Panel */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Total</span>
-          <span className="text-2xl font-bold text-slate-800">{totalApps}</span>
+      {/* Top Breadcrumb & Actions Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/events"
+            className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">{event.name}</h1>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase border ${
+                event.status === "OPEN"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : event.status === "FULL"
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-slate-100 text-slate-700 border-slate-200"
+              }`}>
+                {event.status}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+              <span>{new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+              <span>•</span>
+              <span>{event.location}</span>
+              <span>•</span>
+              <span>Reporting: {formatTime12(event.reportingTime)}</span>
+            </p>
+          </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Applied</span>
-          <span className="text-2xl font-bold text-slate-650">{appliedCount}</span>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">Confirmed</span>
-          <span className="text-2xl font-bold text-emerald-650">{confirmedCount}</span>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center col-span-2 md:col-span-1 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-0">
-          <div className="text-center">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">WA Sent</span>
-            <span className="text-lg font-bold text-blue-600">{whatsappSentCount}</span>
-          </div>
-          <div className="text-center border-l md:border-l-0 md:border-t border-slate-100 md:pt-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">WA Added</span>
-            <span className="text-lg font-bold text-emerald-700">{whatsappAddedCount}</span>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center col-span-2 md:col-span-1 grid grid-cols-4 md:grid-cols-2 gap-2">
-          <div className="text-center col-span-2 md:col-span-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">Paid</span>
-            <span className="text-base font-bold text-emerald-600">{paidCount}</span>
-          </div>
-          <div className="text-center col-span-2 md:col-span-1 border-l md:border-l-0 border-slate-100">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">Unpaid</span>
-            <span className="text-base font-bold text-slate-500">{unpaidCount}</span>
-          </div>
-          <div className="text-center col-span-2 md:col-span-1 border-t border-slate-100 pt-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">Attended</span>
-            <span className="text-base font-bold text-purple-600">{attendedCount}</span>
-          </div>
-          <div className="text-center col-span-2 md:col-span-1 border-t border-l border-slate-100 pt-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block mb-0.5">Absent</span>
-            <span className="text-base font-bold text-rose-600">{absentCount}</span>
-          </div>
+
+        {/* Quick Operations Links */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={`/admin/events/${eventId}/attendance`}
+            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+          >
+            <QrCode className="w-3.5 h-3.5 text-slate-500" />
+            QR Attendance
+          </Link>
+          <a
+            href={`/events/${eventId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-slate-900 hover:bg-black text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Public Page
+          </a>
         </div>
       </div>
 
-      {/* Applications list table */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 border-b border-slate-200 pb-2 gap-2">
-          <h2 className="text-lg font-bold uppercase tracking-wider">
-            Registered Applicants ({totalApps})
-          </h2>
-          <button
-            onClick={() => {
-              setAddFormData({});
-              setAddModalError(null);
-              setIsAddModalOpen(true);
-            }}
-            className="bg-red-655 hover:bg-red-750 text-white font-extrabold px-3 py-2 rounded-lg text-xs transition shadow-sm uppercase tracking-wider self-start sm:self-center"
-          >
-            + Add Student
-          </button>
+      {/* Financials & Quota Card */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Workers Required</span>
+          <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.workersRequired}</span>
         </div>
-        {applications.length === 0 ? (
-          <p className="text-slate-450 text-center py-6 text-sm">No applications submitted yet.</p>
-        ) : (
-          <>
-            <div className="hidden md:block overflow-x-auto max-w-full">
-              <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
-                <thead>
-                  <tr className="text-slate-400 border-b border-slate-200 uppercase text-xs">
-                    <th className="pb-3 text-center w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.length === applications.length && applications.length > 0}
-                        onChange={handleSelectAll}
-                        className="rounded border-slate-200 text-red-655 focus:ring-red-655"
-                      />
-                    </th>
-                    <th className="pb-3 px-2 text-slate-400 w-12 font-bold">S.No.</th>
-                    <th className="pb-3 pl-3">Registration No.</th>
-                    <th className="pb-3 px-3">Name</th>
-                    <th className="pb-3 px-3">Mobile No.</th>
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Max Applications</span>
+          <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.maxApplications}</span>
+        </div>
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Pay / Student</span>
+          <span className="text-xl font-extrabold text-red-600 font-mono mt-0.5 block">₹{event.paymentPerStudent}</span>
+        </div>
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Client Revenue</span>
+          <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">₹{financials.revenue.toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Worker Payout</span>
+          <span className="text-xl font-extrabold text-slate-700 font-mono mt-0.5 block">₹{financials.workerPayments.toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="text-[11px] font-bold text-emerald-600 uppercase block">Est. Net Profit</span>
+          <span className="text-xl font-extrabold text-emerald-600 font-mono mt-0.5 block">
+            ₹{financials.profit.toLocaleString()} ({financials.profitMargin}%)
+          </span>
+        </div>
+      </div>
 
-                    {/* Dynamic Header Columns from Form Schema */}
-                    {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => (
-                      <th key={field.id} className="pb-3 px-3">{field.label}</th>
-                    ))}
+      {/* Dynamic Statistics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <button
+          onClick={() => setStatusFilter("ALL")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "ALL" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-800 border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase opacity-70 block">Total</span>
+          <span className="text-lg font-extrabold mt-0.5 block">{stats.total}</span>
+        </button>
 
-                    <th className="pb-3 px-3">Status</th>
-                    <th className="pb-3 px-3">WhatsApp Message</th>
-                    <th className="pb-3 px-3">Payment</th>
-                    <th className="pb-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {applications.map((app, index) => {
-                    const s = app.studentId || {};
-                    return (
-                      <tr key={app._id} className="hover:bg-slate-50/50 transition">
-                        <td className="py-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(app._id)}
-                            onChange={() => handleToggleSelect(app._id)}
-                            className="rounded border-slate-200 text-red-655 focus:ring-red-655"
-                          />
-                        </td>
-                        <td className="py-4 px-2 font-mono text-xs text-slate-450 font-bold">
-                          {index + 1}
-                        </td>
-                        <td className="py-4 pl-3 font-mono font-bold text-slate-800">
-                          {s.universityId || app.registrationNumber || "N/A"}
-                        </td>
-                        <td className="py-4 px-3 font-semibold text-slate-850">
-                          {getApplicantName(app, event.customFormFields)}
-                        </td>
-                        <td className="py-4 px-3 font-mono text-slate-650">
-                          {getApplicantMobile(app, event.customFormFields) || "N/A"}
-                        </td>
+        <button
+          onClick={() => setStatusFilter("APPLIED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "APPLIED" ? "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-slate-500 block">Applied</span>
+          <span className="text-lg font-extrabold text-slate-900 mt-0.5 block">{stats.applied}</span>
+        </button>
 
-                        {/* Dynamic Field Values */}
-                        {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
-                          const val = (globalThis as any).getCustomValue(app, field.id);
-                          return (
-                            <td key={field.id} className="py-4 px-3 font-medium text-slate-800">
-                              {val || "-"}
-                            </td>
-                          );
-                        })}
+        <button
+          onClick={() => setStatusFilter("UNDER_REVIEW")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "UNDER_REVIEW" ? "bg-amber-600 text-white border-amber-600" : "bg-amber-50/60 text-amber-900 border-amber-200 hover:border-amber-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-amber-700 block">Under Review</span>
+          <span className="text-lg font-extrabold text-amber-800 mt-0.5 block">{stats.underReview}</span>
+        </button>
 
-                        {/* Status badge */}
-                        <td className="py-4 px-3">
-                          <span
-                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${
-                              app.status === "confirmed"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : app.status === "attended"
-                                ? "bg-purple-50 text-purple-700 border-purple-200"
-                                : app.status === "absent"
-                                ? "bg-rose-50 text-rose-700 border-rose-200"
-                                : app.status === "cancelled"
-                                ? "bg-slate-100 text-slate-600 border-slate-200"
-                                : "bg-red-50 text-red-655 border-red-200"
-                            }`}
-                          >
-                            {app.status}
-                          </span>
-                        </td>
+        <button
+          onClick={() => setStatusFilter("SELECTED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "SELECTED" ? "bg-emerald-600 text-white border-emerald-600" : "bg-emerald-50/60 text-emerald-900 border-emerald-200 hover:border-emerald-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-emerald-700 block">Selected</span>
+          <span className="text-lg font-extrabold text-emerald-700 mt-0.5 block">{stats.selected}</span>
+        </button>
 
-                        {/* WhatsApp Sent Action & Group Added */}
-                        <td className="py-4 px-3">
-                          <div className="flex flex-col space-y-1.5 items-start text-xs">
-                            <div className="flex items-center space-x-1">
-                              {app.messageStatus === "SENT" ? (
-                                <span className="text-blue-600 font-bold border border-blue-200 bg-blue-50 px-2 py-0.5 rounded text-[10px] uppercase">
-                                  ✓ Sent
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleSingleUpdate(app._id, { messageStatus: "SENT" })}
-                                  className="text-red-650 hover:text-red-750 font-bold border border-red-200 hover:bg-red-50 px-2 py-0.5 rounded text-[10px] transition uppercase"
-                                >
-                                  Send
-                                </button>
-                              )}
-                            </div>
-                            
-                            {app.whatsappGroupAdded ? (
-                              <div className="flex items-center space-x-1.5">
-                                <span className="text-emerald-750 font-bold border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">
-                                  ✓ Added
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
-                                      handleSingleUpdate(app._id, { whatsappGroupAdded: false });
-                                    }
-                                  }}
-                                  className="text-[10px] text-slate-400 hover:text-red-655 font-semibold underline"
-                                >
-                                  Revert
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleSingleUpdate(app._id, { whatsappGroupAdded: true })}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-0.5 rounded text-[10px] transition shadow-sm"
-                              >
-                                + Added
-                              </button>
-                            )}
-                          </div>
-                        </td>
+        <button
+          onClick={() => setStatusFilter("NOT_SELECTED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "NOT_SELECTED" ? "bg-rose-600 text-white border-rose-600" : "bg-rose-50/60 text-rose-900 border-rose-200 hover:border-rose-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-rose-700 block">Not Selected</span>
+          <span className="text-lg font-extrabold text-rose-700 mt-0.5 block">{stats.notSelected}</span>
+        </button>
 
-                        {/* Payment Status & Override */}
-                        <td className="py-4 px-3">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center space-x-2">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                                app.paymentStatus === "PAID"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : "bg-slate-100 text-slate-500 border-slate-200"
-                              }`}>
-                                {app.paymentStatus === "PAID" ? "✓ PAID" : "UNPAID"}
-                              </span>
-                              {app.paymentStatus === "PAID" ? (
-                                <button
-                                  onClick={() => {
-                                    if (confirm(`Revert payment status for ${s.name || "student"}?`)) {
-                                      handleSingleUpdate(app._id, { paymentStatus: "UNPAID" });
-                                    }
-                                  }}
-                                  className="text-[10px] text-slate-400 hover:text-slate-655 underline"
-                                >
-                                  Revert
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleSingleUpdate(app._id, { paymentStatus: "PAID" })}
-                                  className="text-[10px] text-red-655 hover:text-red-750 font-bold"
-                                >
-                                  Mark Paid
-                                </button>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center space-x-1.5">
-                              <input
-                                type="number"
-                                placeholder={event.paymentPerStudent}
-                                value={tempPayouts[app._id] !== undefined ? tempPayouts[app._id] : (app.paymentOverride ?? "")}
-                                onChange={(e) => setTempPayouts({ ...tempPayouts, [app._id]: Number(e.target.value) })}
-                                className="w-16 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-slate-900 text-xs text-center focus:outline-none"
-                              />
-                              <button
-                                onClick={() => handleSavePayoutOverride(app._id)}
-                                className="bg-slate-150 hover:bg-slate-250 text-slate-655 text-[10px] px-1.5 py-0.5 rounded transition"
-                              >
-                                Set
-                              </button>
-                            </div>
-                          </div>
-                        </td>
+        <button
+          onClick={() => setStatusFilter("CONFIRMED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "CONFIRMED" ? "bg-teal-600 text-white border-teal-600" : "bg-teal-50/60 text-teal-900 border-teal-200 hover:border-teal-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-teal-700 block">Confirmed</span>
+          <span className="text-lg font-extrabold text-teal-700 mt-0.5 block">{stats.confirmed}</span>
+        </button>
 
-                        {/* Row actions */}
-                        <td className="py-4 text-right">
-                          <div className="flex justify-end gap-1.5">
-                            {app.status !== "confirmed" ? (
-                              <button
-                                onClick={() => handleSingleUpdate(app._id, { status: "confirmed" })}
-                                className="px-2 py-1 bg-red-655/10 hover:bg-red-600 hover:text-white border border-red-600/20 rounded text-red-655 text-xs font-bold transition"
-                              >
-                                Confirm
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Revert status to applied for ${s.name || "student"}?`)) {
-                                    handleSingleUpdate(app._id, { status: "applied" });
-                                  }
-                                }}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 text-xs font-bold transition border border-slate-200"
-                              >
-                                Revert
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleSingleUpdate(app._id, { status: "attended" })}
-                              className="px-2 py-1 bg-purple-50 hover:bg-purple-650 hover:text-white border border-purple-200 rounded text-purple-750 text-xs font-bold transition"
-                            >
-                              Attended
-                            </button>
-                            <button
-                              onClick={() => handleSingleUpdate(app._id, { status: "absent" })}
-                              className="px-2 py-1 bg-rose-50 hover:bg-rose-650 hover:text-white border border-rose-200 rounded text-rose-700 text-xs font-bold transition"
-                            >
-                              Absent
-                            </button>
-                            <button
-                              onClick={() => handleDeleteApplicant(app._id, s.name || `Student ${s.universityId || app.registrationNumber || "N/A"}`, s.universityId || app.registrationNumber || "N/A")}
-                              className="px-2 py-1 bg-red-655 hover:bg-red-750 text-white rounded text-xs font-bold transition shadow-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        <button
+          onClick={() => setStatusFilter("ATTENDED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "ATTENDED" ? "bg-blue-600 text-white border-blue-600" : "bg-blue-50/60 text-blue-900 border-blue-200 hover:border-blue-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-blue-700 block">Attended</span>
+          <span className="text-lg font-extrabold text-blue-700 mt-0.5 block">{stats.attended}</span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("CANCELLED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "CANCELLED" ? "bg-slate-600 text-white border-slate-600" : "bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-slate-500 block">Cancelled</span>
+          <span className="text-lg font-extrabold text-slate-600 mt-0.5 block">{stats.cancelled}</span>
+        </button>
+      </div>
+
+      {/* FILTER & VIEW TOOLBAR */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
+        <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
+          {/* Search bar */}
+          <div className="relative w-full lg:w-80">
+            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search candidate, roll no, phone..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
+            />
+          </div>
+
+          {/* Filters & Queue Switch */}
+          <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+            {/* Queue Mode Toggle */}
+            <button
+              onClick={() => setPendingFirstQueue(!pendingFirstQueue)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                pendingFirstQueue
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+              }`}
+              title="When enabled, unreviewed candidates stay on top; selected/rejected candidates automatically move to bottom"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              <span>Queue: {pendingFirstQueue ? "Pending First" : "Default Order"}</span>
+            </button>
+
+            {/* Photo filter */}
+            <select
+              value={photoFilter}
+              onChange={(e) => setPhotoFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
+            >
+              <option value="ALL">All Photos</option>
+              <option value="WITH_PHOTOS">📸 With Photos</option>
+              <option value="WITHOUT_PHOTOS">⚠️ Without Photos</option>
+            </select>
+
+            {/* Profile completeness filter */}
+            <select
+              value={profileFilter}
+              onChange={(e) => setProfileFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
+            >
+              <option value="ALL">All Profiles</option>
+              <option value="COMPLETE">Complete (80%+)</option>
+              <option value="INCOMPLETE">Incomplete</option>
+            </select>
+
+            {/* View Switcher */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 ml-auto">
+              <button
+                onClick={() => setActiveView("gallery")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  activeView === "gallery" ? "bg-white text-red-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                Photo Gallery
+              </button>
+              <button
+                onClick={() => setActiveView("table")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  activeView === "table" ? "bg-white text-red-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                Table View
+              </button>
+              <button
+                onClick={() => setActiveView("eventPhotos")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  activeView === "eventPhotos" ? "bg-white text-red-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                Event Photos
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Actions Bar */}
+        {selectedIds.length > 0 && activeView !== "eventPhotos" && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-red-800 bg-red-200 px-2.5 py-1 rounded-full">
+                {selectedIds.length} Selected
+              </span>
+              <button
+                onClick={toggleSelectAll}
+                className="text-xs font-semibold text-red-700 hover:underline"
+              >
+                {selectedIds.length === filteredAndSortedApplications.length ? "Deselect All" : "Select All"}
+              </button>
+              <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer ml-3">
+                <input
+                  type="checkbox"
+                  checked={sendEmailToggle}
+                  onChange={(e) => setSendEmailToggle(e.target.checked)}
+                  className="accent-red-600 rounded"
+                />
+                Send automated email on status change
+              </label>
             </div>
 
-            <div className="block md:hidden space-y-4">
-              {/* Mobile Header Toolbar for Bulk Selection */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
-                <label className="flex items-center space-x-2 text-xs text-slate-700 font-semibold cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length === applications.length && applications.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-slate-200 text-red-655 focus:ring-red-655"
-                  />
-                  <span>Select All ({applications.length})</span>
-                </label>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={actionLoadingId === "bulk"}
+                onClick={() => handleBulkUpdate({ status: "SELECTED" })}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                Mark Selected ({selectedIds.length})
+              </button>
 
-              {/* List of cards */}
-              {applications.map((app, index) => {
-                const s = app.studentId || {};
-                const name = getApplicantName(app, event.customFormFields);
-                const phone = getApplicantMobile(app, event.customFormFields);
-                const isExpanded = !!expandedCardIds[app._id];
-                const payout = app.paymentOverride ?? event.paymentPerStudent;
+              <button
+                disabled={actionLoadingId === "bulk"}
+                onClick={() => handleBulkUpdate({ status: "NOT_SELECTED" })}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+              >
+                <UserX className="w-3.5 h-3.5" />
+                Mark Not Selected ({selectedIds.length})
+              </button>
+
+              <button
+                disabled={actionLoadingId === "bulk"}
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+                className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete ({selectedIds.length})
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ---------------------------------------------------- */}
+      {/* VIEW 1: EVENT CANDIDATE PHOTO GALLERY */}
+      {/* ---------------------------------------------------- */}
+      {activeView === "gallery" && (
+        <>
+          {filteredAndSortedApplications.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <Camera className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-slate-800">No event applicants found</h3>
+              <p className="text-sm text-slate-500 mt-1">Try adjusting your search criteria or filters.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredAndSortedApplications.map((app) => {
+                const isSelectedCheckbox = selectedIds.includes(app._id || app.id);
+                const sStatus = (app.status || "").toUpperCase();
+                const student = app.studentId || {};
+                const photosList = student.studentPhotos || [];
 
                 return (
-                  <div key={app._id} className="bg-slate-50/50 p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 relative">
-                    {/* Card Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(app._id)}
-                          onChange={() => handleToggleSelect(app._id)}
-                          className="rounded border-slate-200 text-red-655 focus:ring-red-655 mt-1"
+                  <div
+                    key={app._id || app.id}
+                    className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md ${
+                      isSelectedCheckbox
+                        ? "border-red-500 ring-2 ring-red-500/20"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    {/* Top Photo Section */}
+                    <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden group">
+                      {app.photoUrl ? (
+                        <img
+                          src={app.photoUrl}
+                          alt={app.name}
+                          className="w-full h-full object-cover object-top cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                          onClick={() => setLightboxPhoto(app.photoUrl)}
                         />
-                        <div>
-                          <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {name}</h3>
-                          <p className="text-xs text-slate-500 font-mono">Reg No: {s.universityId || app.registrationNumber || "N/A"}</p>
-                          {phone ? (
-                            <a href={`tel:${phone}`} className="text-xs text-red-655 font-bold hover:underline inline-flex items-center mt-1">
-                              📞 {phone}
-                            </a>
-                          ) : (
-                            <span className="text-xs text-slate-450 block mt-1">Mobile number not available</span>
-                          )}
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+                          <Camera className="w-10 h-10 stroke-1 mb-1" />
+                          <span className="text-xs font-semibold">No Photo Uploaded</span>
                         </div>
-                      </div>
+                      )}
 
-                      <span
-                        className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${
-                          app.status === "confirmed"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : app.status === "attended"
-                            ? "bg-purple-50 text-purple-700 border-purple-200"
-                            : app.status === "absent"
-                            ? "bg-rose-50 text-rose-700 border-rose-200"
-                            : app.status === "cancelled"
-                            ? "bg-slate-100 text-slate-600 border-slate-200"
-                            : "bg-red-50 text-red-655 border-red-200"
-                        }`}
-                      >
-                        {app.status}
-                      </span>
-                    </div>
-
-                    {/* Status Grid info */}
-                    <div className="grid grid-cols-2 gap-3 text-xs border-t border-slate-100 pt-3">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-extrabold block uppercase tracking-wider mb-1">WhatsApp Status</span>
-                        <div className="flex flex-col space-y-1 items-start">
-                          {app.messageStatus === "SENT" ? (
-                            <span className="text-blue-600 font-bold border border-blue-200 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] uppercase">
-                              ✓ Sent
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleSingleUpdate(app._id, { messageStatus: "SENT" })}
-                              className="text-red-650 hover:text-red-750 font-bold border border-red-200 hover:bg-red-50 px-1.5 py-0.5 rounded text-[10px] uppercase"
-                            >
-                              Send
-                            </button>
-                          )}
-                          {app.whatsappGroupAdded ? (
-                            <span className="text-emerald-750 font-bold border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] uppercase">
-                              ✓ Added to Group
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleSingleUpdate(app._id, { whatsappGroupAdded: true })}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-1.5 py-0.5 rounded text-[10px] transition shadow-sm uppercase"
-                            >
-                              + Added to Group
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-extrabold block uppercase tracking-wider mb-1">Payment info</span>
-                        <div className="space-y-1">
-                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${
-                            app.paymentStatus === "PAID"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-slate-100 text-slate-500 border-slate-200"
-                          }`}>
-                            {app.paymentStatus === "PAID" ? "✓ PAID" : "UNPAID"}
-                          </span>
-                          <div className="text-xs font-bold text-slate-800">
-                            Payout: ₹{payout}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Expandable Custom Form Details */}
-                    <div className="border-t border-slate-100 pt-2">
+                      {/* Multi-Select Checkbox */}
                       <button
-                        onClick={() => toggleCardDetails(app._id)}
-                        className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-700 py-1 bg-slate-100/50 rounded hover:bg-slate-100 transition"
+                        onClick={() => toggleSelectOne(app._id || app.id)}
+                        className="absolute top-3 left-3 z-10 w-6 h-6 rounded-md bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:bg-black/70 transition"
                       >
-                        {isExpanded ? "Hide Details ▲" : "View All Details ▼"}
+                        {isSelectedCheckbox && <Check className="w-4 h-4 text-red-400 stroke-3" />}
                       </button>
 
-                      {isExpanded && (
-                        <div className="mt-3 bg-white p-3 rounded-lg border border-slate-200 space-y-2 text-xs">
-                          <h4 className="font-extrabold text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1 mb-2">
-                            Custom form details
-                          </h4>
-                          {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
-                            const val = (globalThis as any).getCustomValue(app, field.id);
-                            return (
-                              <div key={field.id} className="flex flex-col sm:flex-row justify-between sm:items-center py-1 border-b border-slate-50 last:border-0 gap-1">
-                                <span className="text-slate-500 font-semibold">{field.label}:</span>
-                                <span className="text-slate-800 font-bold overflow-wrap break-word max-w-full">{val || "-"}</span>
-                              </div>
-                            );
-                          })}
+                      {/* Event Application Status Badge */}
+                      <div className="absolute top-3 right-3 z-10">
+                        {sStatus === "SELECTED" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-md flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-3" /> Selected
+                          </span>
+                        )}
+                        {sStatus === "UNDER_REVIEW" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Under Review
+                          </span>
+                        )}
+                        {(sStatus === "NOT_SELECTED" || sStatus === "REJECTED") && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-md flex items-center gap-1">
+                            <X className="w-3 h-3 stroke-3" /> Not Selected
+                          </span>
+                        )}
+                        {sStatus === "CONFIRMED" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-teal-500 text-white shadow-md flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Confirmed
+                          </span>
+                        )}
+                        {sStatus === "ATTENDED" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-500 text-white shadow-md flex items-center gap-1">
+                            Attended
+                          </span>
+                        )}
+                        {sStatus === "APPLIED" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-white shadow-md">
+                            Applied
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Permanent Photos Count Pill */}
+                      {photosList.length > 1 && (
+                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1">
+                          <Camera className="w-3 h-3" />
+                          +{photosList.length} Photos
                         </div>
                       )}
                     </div>
 
-                    {/* Actions Grid */}
-                    <div className="border-t border-slate-100 pt-3">
-                      <span className="text-[10px] text-slate-400 font-extrabold block uppercase tracking-wider mb-2">Management Actions</span>
-                      <div className="flex flex-wrap gap-2">
-                        {/* Confirm/Revert */}
-                        {app.status !== "confirmed" ? (
-                          <button
-                            onClick={() => handleSingleUpdate(app._id, { status: "confirmed" })}
-                            className="px-3 py-1.5 bg-red-655/10 hover:bg-red-600 hover:text-white border border-red-600/20 rounded-lg text-red-655 text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center"
+                    {/* Body Information */}
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3
+                            onClick={() => setInspectCandidate(app)}
+                            className="font-bold text-slate-900 text-base leading-tight hover:text-red-600 transition cursor-pointer"
                           >
-                            Confirm
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              if (confirm(`Revert status to applied for ${s.name || "student"}?`)) {
-                                handleSingleUpdate(app._id, { status: "applied" });
-                              }
-                            }}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-slate-700 text-xs font-bold transition border border-slate-200 flex-1 min-h-[40px] flex items-center justify-center"
-                          >
-                            Revert
-                          </button>
-                        )}
+                            {app.name || student.name}
+                          </h3>
+                        </div>
 
-                        {/* Attended */}
-                        <button
-                          onClick={() => handleSingleUpdate(app._id, { status: "attended" })}
-                          className="px-3 py-1.5 bg-purple-50 hover:bg-purple-650 hover:text-white border border-purple-200 rounded-lg text-purple-750 text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center"
-                        >
-                          Attended
-                        </button>
+                        {/* Identification numbers & authoritiative details */}
+                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 font-medium">
+                          <span className="font-bold text-slate-700 uppercase font-mono">
+                            {app.registrationNumber || student.registrationNumber || "NO REG"}
+                          </span>
+                          {student.gender && <span>• {student.gender}</span>}
+                          {student.height && <span>• {student.height}</span>}
+                        </div>
 
-                        {/* Absent */}
-                        <button
-                          onClick={() => handleSingleUpdate(app._id, { status: "absent" })}
-                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-650 hover:text-white border border-rose-200 rounded-lg text-rose-700 text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center"
-                        >
-                          Absent
-                        </button>
-                        
-                        {/* Delete */}
-                        <button
-                          onClick={() => handleDeleteApplicant(app._id, name, s.universityId || app.registrationNumber || "N/A")}
-                          className="px-3 py-1.5 bg-red-655 hover:bg-red-750 text-white rounded-lg text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center shadow-sm"
-                        >
-                          Delete
-                        </button>
+                        <div className="mt-2 space-y-1 text-xs text-slate-600">
+                          {student.university && (
+                            <div className="flex items-center gap-1.5 truncate">
+                              <GraduationCap className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{student.university}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="font-semibold text-slate-800">{app.mobileNumber}</span>
+                          </div>
+                        </div>
+
+                        {/* Permanent profile status indicator */}
+                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400 font-medium">Student Profile:</span>
+                          <span className="font-bold text-slate-700">
+                            {student.selectionStatus === "SELECTED"
+                              ? "✓ Verified Selected"
+                              : student.selectionStatus === "NOT_SELECTED"
+                              ? "Profile Not Selected"
+                              : "Under Review"}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {/* Revert WhatsApp Group Added if already added */}
-                        {app.whatsappGroupAdded && (
+                      {/* Action Buttons */}
+                      <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                        {/* 1-Click Event Selection */}
+                        <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => {
-                              if (confirm("Are you sure you want to revert this student's WhatsApp group status?")) {
-                                handleSingleUpdate(app._id, { whatsappGroupAdded: false });
-                              }
-                            }}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-slate-700 text-xs font-semibold transition border border-slate-200 flex-1 min-h-[40px] flex items-center justify-center"
+                            disabled={actionLoadingId === (app._id || app.id)}
+                            onClick={() => handleUpdateStatus(app._id || app.id, "SELECTED")}
+                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
+                              sStatus === "SELECTED"
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                            }`}
                           >
-                            Revert Group Added
+                            <Check className="w-3.5 h-3.5" />
+                            {sStatus === "SELECTED" ? "Selected" : "Select"}
                           </button>
-                        )}
 
-                        {/* Payment Toggle/Override */}
-                        {app.paymentStatus === "PAID" ? (
                           <button
-                            onClick={() => {
-                              if (confirm(`Revert payment status for ${s.name || "student"}?`)) {
-                                handleSingleUpdate(app._id, { paymentStatus: "UNPAID" });
-                              }
-                            }}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-slate-700 text-xs font-bold transition border border-slate-200 flex-1 min-h-[40px] flex items-center justify-center"
+                            disabled={actionLoadingId === (app._id || app.id)}
+                            onClick={() => handleUpdateStatus(app._id || app.id, "NOT_SELECTED")}
+                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
+                              sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
+                                ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                : "bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-700"
+                            }`}
                           >
-                            Revert Payment
+                            <X className="w-3.5 h-3.5" />
+                            {sStatus === "NOT_SELECTED" || sStatus === "REJECTED" ? "Not Selected" : "Deselect"}
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => handleSingleUpdate(app._id, { paymentStatus: "PAID" })}
-                            className="px-3 py-1.5 bg-emerald-55 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition flex-1 min-h-[40px] flex items-center justify-center"
-                          >
-                            Mark Paid
-                          </button>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Set Custom payout */}
-                      <div className="flex items-center space-x-2 mt-2 bg-white p-2 rounded-lg border border-slate-200 justify-between">
-                        <span className="text-xs text-slate-500 font-semibold">Set Custom Payout:</span>
-                        <div className="flex items-center space-x-1.5">
-                          <input
-                            type="number"
-                            placeholder={event.paymentPerStudent}
-                            value={tempPayouts[app._id] !== undefined ? tempPayouts[app._id] : (app.paymentOverride ?? "")}
-                            onChange={(e) => setTempPayouts({ ...tempPayouts, [app._id]: Number(e.target.value) })}
-                            className="w-16 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-900 text-xs text-center focus:outline-none focus:border-red-655"
-                          />
+                        {/* View Full Profile & Safe Delete */}
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => handleSavePayoutOverride(app._id)}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-750 text-xs font-bold px-3 py-1.5 rounded transition border border-slate-200 min-h-[30px]"
+                            onClick={() => setInspectCandidate(app)}
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center"
                           >
-                            Set
+                            View Full Profile & Photos
+                          </button>
+                          <button
+                            onClick={() => setDeleteCandidate(app)}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition"
+                            title="Remove Application from Event"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1273,180 +958,488 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 );
               })}
             </div>
-          </>
-        )}
-      {/* Add Student Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden my-8">
-            <div className="px-6 py-4 border-b border-slate-150 flex items-center justify-between bg-slate-50">
-              <h3 className="font-extrabold text-slate-800 text-base uppercase tracking-wider">
-                Add Student / Applicant
-              </h3>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-450 hover:text-slate-650 font-bold text-xl"
-              >
-                &times;
-              </button>
-            </div>
+          )}
+        </>
+      )}
 
-            <form onSubmit={handleAddStudentSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {addModalError && (
-                <div className="bg-red-50 border border-red-200 text-red-655 p-3 rounded-lg text-xs font-semibold">
-                  ⚠️ {addModalError}
-                </div>
-              )}
+      {/* ---------------------------------------------------- */}
+      {/* VIEW 2: OPERATIONAL TABLE VIEW */}
+      {/* ---------------------------------------------------- */}
+      {activeView === "table" && (
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead>
+                <tr className="text-slate-400 bg-slate-50/75 border-b border-slate-200 uppercase text-xs">
+                  <th className="p-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filteredAndSortedApplications.length > 0 && selectedIds.length === filteredAndSortedApplications.length}
+                      onChange={toggleSelectAll}
+                      className="accent-red-600 rounded"
+                    />
+                  </th>
+                  <th className="p-4">Candidate</th>
+                  <th className="p-4">Event Status</th>
+                  <th className="p-4">Mobile Number</th>
+                  <th className="p-4">University</th>
+                  <th className="p-4">WhatsApp</th>
+                  <th className="p-4">Payment</th>
+                  <th className="p-4">Attendance</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredAndSortedApplications.map((app) => {
+                  const sStatus = (app.status || "").toUpperCase();
+                  const isChecked = selectedIds.includes(app._id || app.id);
+                  const student = app.studentId || {};
 
-              {/* Default System fields */}
-              <div className="space-y-1 text-left">
-                <label className="block text-xs font-bold text-slate-700 uppercase">
-                  Registration Number *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 12510114"
-                  value={addFormData["registrationNumber"] || ""}
-                  onChange={(e) => setAddFormData({ ...addFormData, "registrationNumber": e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
-                />
-              </div>
-
-              <div className="space-y-1 text-left">
-                <label className="block text-xs font-bold text-slate-700 uppercase">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sachin Raj Gupta"
-                  value={addFormData["name"] || ""}
-                  onChange={(e) => setAddFormData({ ...addFormData, "name": e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
-                />
-              </div>
-
-              <div className="space-y-1 text-left">
-                <label className="block text-xs font-bold text-slate-700 uppercase">
-                  Mobile Number *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 9334670202"
-                  value={addFormData["phone"] || ""}
-                  onChange={(e) => setAddFormData({ ...addFormData, "phone": e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
-                />
-              </div>
-
-              {/* Dynamic form field loops */}
-              {event.customFormFields?.filter((field: any) => !isReservedField(field.label)).map((field: any) => {
-                const isRequired = field.required;
-                const value = addFormData[field.id] !== undefined ? addFormData[field.id] : "";
-
-                return (
-                  <div key={field.id} className="space-y-1 text-left">
-                    <label className="block text-xs font-bold text-slate-700 uppercase">
-                      {field.label} {isRequired && <span className="text-red-500">*</span>}
-                    </label>
-                    {field.description && (
-                      <p className="text-[10px] text-slate-450">{field.description}</p>
-                    )}
-
-                    {field.type === "yesno" && (
-                      <div className="flex gap-4 pt-1">
-                        {["Yes", "No"].map((opt) => (
-                          <label key={opt} className="inline-flex items-center space-x-2 text-xs text-slate-700 font-semibold cursor-pointer">
-                            <input
-                              type="radio"
-                              name={field.id}
-                              required={isRequired}
-                              checked={value === opt}
-                              onChange={() => setAddFormData({ ...addFormData, [field.id]: opt })}
-                              className="text-red-655 focus:ring-red-655 border-slate-200"
-                            />
-                            <span>{opt}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-
-                    {field.type === "select" && (
-                      <select
-                        required={isRequired}
-                        value={value}
-                        onChange={(e) => setAddFormData({ ...addFormData, [field.id]: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
-                      >
-                        <option value="">Choose an option...</option>
-                        {field.options?.map((opt: string) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    {(field.type === "text" || field.type === "phone" || field.type === "email") && (
-                      <input
-                        type={field.type === "email" ? "email" : "text"}
-                        required={isRequired}
-                        placeholder={field.placeholder || ""}
-                        value={value}
-                        onChange={(e) => setAddFormData({ ...addFormData, [field.id]: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
-                      />
-                    )}
-
-                    {field.type === "number" && (
-                      <input
-                        type="number"
-                        required={isRequired}
-                        min={field.min}
-                        max={field.max}
-                        placeholder={field.placeholder || ""}
-                        value={value}
-                        onChange={(e) => setAddFormData({ ...addFormData, [field.id]: e.target.value ? Number(e.target.value) : "" })}
-                        className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20"
-                      />
-                    )}
-
-                    {field.type === "paragraph" && (
-                      <textarea
-                        required={isRequired}
-                        placeholder={field.placeholder || ""}
-                        value={value}
-                        onChange={(e) => setAddFormData({ ...addFormData, [field.id]: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-250 rounded-lg px-3 py-2 text-slate-800 text-xs focus:outline-none focus:border-red-655 focus:ring-1 focus:ring-red-655/20 h-20 resize-none"
-                      ></textarea>
-                    )}
-                  </div>
-                );
-              })}
-
-              <div className="pt-4 border-t border-slate-150 flex items-center justify-end space-x-2 bg-slate-50 -mx-6 -mb-6 p-4">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 border border-slate-250 text-slate-650 hover:bg-slate-100 rounded-lg text-xs font-bold transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isAdding}
-                  className="px-4 py-2 bg-red-655 hover:bg-red-750 text-white rounded-lg text-xs font-bold transition shadow-sm disabled:opacity-50"
-                >
-                  {isAdding ? "Adding Student..." : "Add Student"}
-                </button>
-              </div>
-            </form>
+                  return (
+                    <tr key={app._id || app.id} className="hover:bg-slate-50/80 transition">
+                      <td className="p-4">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectOne(app._id || app.id)}
+                          className="accent-red-600 rounded"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
+                            {app.photoUrl ? (
+                              <img src={app.photoUrl} alt={app.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-slate-400 font-bold">
+                                {app.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div
+                              onClick={() => setInspectCandidate(app)}
+                              className="font-bold text-slate-900 cursor-pointer hover:text-red-600 transition"
+                            >
+                              {app.name || student.name}
+                            </div>
+                            <div className="text-xs text-slate-400 font-mono font-semibold">
+                              {app.registrationNumber || student.registrationNumber}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
+                          sStatus === "SELECTED"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : sStatus === "UNDER_REVIEW"
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
+                            ? "bg-rose-50 text-rose-800 border-rose-200"
+                            : sStatus === "CONFIRMED"
+                            ? "bg-teal-50 text-teal-800 border-teal-200"
+                            : sStatus === "ATTENDED"
+                            ? "bg-blue-50 text-blue-800 border-blue-200"
+                            : "bg-slate-100 text-slate-700 border-slate-200"
+                        }`}>
+                          {sStatus}
+                        </span>
+                      </td>
+                      <td className="p-4 font-semibold text-xs text-slate-800 font-mono">
+                        {app.mobileNumber}
+                      </td>
+                      <td className="p-4 text-xs text-slate-600">
+                        {student.university || "N/A"}
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          app.whatsappGroupAdded ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {app.whatsappGroupAdded ? "Added" : "Pending"}
+                        </span>
+                      </td>
+                      <td className="p-4 font-mono text-xs">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          app.paymentStatus === "PAID" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {app.paymentStatus}
+                        </span>
+                      </td>
+                      <td className="p-4 text-xs">
+                        {app.attendance?.attendanceStatus ? (
+                          <span className="font-bold text-emerald-700">{app.attendance.attendanceStatus}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setInspectCandidate(app)}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
+                            title="Inspect Profile & Responses"
+                          >
+                            <Sliders className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(app._id || app.id, sStatus === "SELECTED" ? "NOT_SELECTED" : "SELECTED")}
+                            className={`p-1.5 rounded-lg text-xs font-bold ${
+                              sStatus === "SELECTED"
+                                ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                            }`}
+                            title={sStatus === "SELECTED" ? "Deselect" : "Select"}
+                          >
+                            {sStatus === "SELECTED" ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => setDeleteCandidate(app)}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100"
+                            title="Remove Application"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
-      </div>
+
+      {/* ---------------------------------------------------- */}
+      {/* VIEW 3: EVENT PHOTO GALLERY (EVENT / SETUP PHOTOS) */}
+      {/* ---------------------------------------------------- */}
+      {activeView === "eventPhotos" && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <EventPhotoGalleryManager eventId={eventId} />
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* CANDIDATE INSPECTION DRAWER & MODAL */}
+      {/* ---------------------------------------------------- */}
+      {inspectCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-200 flex items-start justify-between bg-slate-50/75 rounded-t-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-slate-200 overflow-hidden border-2 border-white shadow">
+                  {inspectCandidate.photoUrl ? (
+                    <img src={inspectCandidate.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-extrabold text-slate-500 text-xl">
+                      {inspectCandidate.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-extrabold text-slate-900">{inspectCandidate.name}</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-slate-900 text-white">
+                      {inspectCandidate.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                    <span className="font-mono font-bold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">
+                      {inspectCandidate.registrationNumber || inspectCandidate.studentId?.registrationNumber}
+                    </span>
+                    <span>• {inspectCandidate.studentId?.university || "University Unspecified"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setInspectCandidate(null)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Photo Showcase Carousel / Grid */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-red-600" />
+                  Permanent Student Photos ({inspectCandidate.studentId?.studentPhotos?.length || (inspectCandidate.photoUrl ? 1 : 0)})
+                </h4>
+
+                {inspectCandidate.studentId?.studentPhotos && inspectCandidate.studentId.studentPhotos.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {inspectCandidate.studentId.studentPhotos.map((photo: any) => (
+                      <div
+                        key={photo.id}
+                        onClick={() => setLightboxPhoto(photo.url)}
+                        className="relative aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 cursor-pointer shadow-sm"
+                      >
+                        <img src={photo.url} alt="Grooming" className="w-full h-full object-cover transition duration-300 group-hover:scale-105" />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600 px-1.5 py-0.5 rounded">
+                            {photo.photoType}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : inspectCandidate.photoUrl ? (
+                  <div
+                    onClick={() => setLightboxPhoto(inspectCandidate.photoUrl)}
+                    className="w-48 aspect-3/4 rounded-xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm"
+                  >
+                    <img src={inspectCandidate.photoUrl} alt="Photo" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
+                    No grooming photos uploaded by student yet.
+                  </div>
+                )}
+              </div>
+
+              {/* Authoritative Student Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
+                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block font-mono">{inspectCandidate.mobileNumber}</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Email</span>
+                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block truncate">{inspectCandidate.studentId?.email || "N/A"}</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase block">City / Gender</span>
+                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
+                    {inspectCandidate.studentId?.city || "-"} / {inspectCandidate.studentId?.gender || "-"}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Height / Age</span>
+                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
+                    {inspectCandidate.studentId?.height || "-"} / {inspectCandidate.studentId?.age ? `${inspectCandidate.studentId.age} yrs` : "-"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dynamic Permanent Profile Attributes */}
+              {inspectCandidate.studentId?.dynamicProfileFields && inspectCandidate.studentId.dynamicProfileFields.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Sliders className="w-4 h-4 text-red-600" />
+                    Permanent Profile Attributes
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {inspectCandidate.studentId.dynamicProfileFields.map((df: any, idx: number) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                        <span className="font-bold text-slate-500 block">{df.label}</span>
+                        <span className="font-semibold text-slate-900 mt-1 block">{df.value || "Not provided"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Event-Specific Custom Form Responses */}
+              {inspectCandidate.dynamicEventResponses && inspectCandidate.dynamicEventResponses.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4 text-red-600" />
+                    Event Application Form Responses
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {inspectCandidate.dynamicEventResponses.map((ef: any, idx: number) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                        <span className="font-bold text-slate-500 block">{ef.label}</span>
+                        <span className="font-semibold text-slate-900 mt-1 block">{ef.value || "Not answered"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Event Selection & Calling Workflow Box */}
+              <div className="p-5 bg-slate-900 text-white rounded-2xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="font-extrabold text-base text-white">Calling & Selection Decision</h4>
+                    <p className="text-xs text-slate-400">Update event application status and dispatch branded notification email.</p>
+                  </div>
+                  <button
+                    onClick={handleNextCandidate}
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto"
+                  >
+                    <span>Next Candidate</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Coordinator Remarks / Call Notes</label>
+                  <input
+                    type="text"
+                    value={callingNote}
+                    onChange={(e) => setCallingNote(e.target.value)}
+                    placeholder="e.g. Confirmed attendance for evening shift, uniform ready..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendEmailToggle}
+                      onChange={(e) => setSendEmailToggle(e.target.checked)}
+                      className="accent-red-600 rounded"
+                    />
+                    Dispatch automated notification email
+                  </label>
+
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED")}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      Approve & Select
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
+                      className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                    >
+                      <UserX className="w-4 h-4" />
+                      Not Selected
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
+                      className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "UNDER_REVIEW")}
+                      className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
+                    >
+                      Under Review
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* PHOTO LIGHTBOX MODAL */}
+      {/* ---------------------------------------------------- */}
+      {lightboxPhoto && (
+        <div
+          onClick={() => setLightboxPhoto(null)}
+          className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4 animate-in fade-in cursor-pointer"
+        >
+          <div className="relative max-w-3xl max-h-[90vh]">
+            <img src={lightboxPhoto} alt="Zoom" className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl" />
+            <button
+              onClick={() => setLightboxPhoto(null)}
+              className="absolute top-3 right-3 bg-black/70 hover:bg-black text-white p-2 rounded-full transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* SINGLE DELETE CONFIRMATION MODAL */}
+      {/* ---------------------------------------------------- */}
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-bold text-slate-900">Remove Application from Event?</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Are you sure you want to remove <strong className="text-slate-900">{deleteCandidate.name}</strong> from this event?
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 flex items-start gap-2">
+              <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Data Safe:</strong> This will delete only this event application. The student's permanent account, photos, and other event applications will remain completely intact.
+              </span>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setDeleteCandidate(null)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={actionLoadingId === (deleteCandidate._id || deleteCandidate.id)}
+                onClick={() => handleDeleteApplication(deleteCandidate._id || deleteCandidate.id)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition shadow-sm disabled:opacity-50"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {/* ---------------------------------------------------- */}
+      {isBulkDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-bold text-slate-900">Delete {selectedIds.length} Applications?</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                You are about to remove <strong className="text-slate-900">{selectedIds.length} candidate applications</strong> from this event.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 flex items-start gap-2">
+              <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Data Safe:</strong> Student accounts, uploaded profile photos, and other event history will NOT be deleted.
+              </span>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={actionLoadingId === "bulk"}
+                onClick={handleBulkDelete}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition shadow-sm disabled:opacity-50"
+              >
+                Delete Applications
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

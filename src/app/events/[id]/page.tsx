@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { connectToDatabase } from "@/lib/db";
-import { Event } from "@/models";
+import { prisma } from "@/lib/prisma";
 import EventApplicationForm from "@/components/EventApplicationForm";
 import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -26,11 +25,22 @@ export default async function EventDetailsPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const params = await props.params;
-  let event = null;
+  let event: any = null;
 
   try {
-    await connectToDatabase();
-    event = await Event.findById(params.id).lean();
+    event = await prisma.event.findUnique({
+      where: { id: params.id },
+      include: {
+        eventFormFields: {
+          include: {
+            formField: true,
+          },
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
+      },
+    });
   } catch (error) {
     console.error("Error loading event details:", error);
   }
@@ -38,6 +48,21 @@ export default async function EventDetailsPage(props: {
   if (!event || event.visibility === "HIDDEN") {
     notFound();
   }
+
+  const customFormFields = event.eventFormFields.map((eff: any) => ({
+    id: eff.formField.id,
+    key: eff.formField.key,
+    name: eff.formField.key,
+    label: eff.formField.label,
+    type: (eff.formField.type || "text").toLowerCase(),
+    required: eff.isRequired ?? false,
+    options: Array.isArray(eff.formField.options) ? eff.formField.options : [],
+    placeholder: eff.formField.placeholder || "",
+    description: eff.formField.description || "",
+    order: eff.displayOrder,
+  }));
+
+  const dosAndDonts = Array.isArray(event.dosAndDonts) ? event.dosAndDonts : [];
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
@@ -51,9 +76,26 @@ export default async function EventDetailsPage(props: {
         {/* Left Column: Event details */}
         <div className="lg:col-span-2 space-y-8">
           <div>
-            <span className="bg-red-600/10 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full border border-red-600/20 uppercase tracking-widest">
-              {event.workType}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="bg-red-600/10 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full border border-red-600/20 uppercase tracking-widest">
+                {event.workType}
+              </span>
+              {event.allowedGender === "FEMALE_ONLY" && (
+                <span className="bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  👩 Female Candidates Only
+                </span>
+              )}
+              {event.allowedGender === "MALE_ONLY" && (
+                <span className="bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  👨 Male Candidates Only
+                </span>
+              )}
+              {(!event.allowedGender || event.allowedGender === "ALL") && (
+                <span className="bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  👥 Open to All Candidates
+                </span>
+              )}
+            </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-4 uppercase tracking-wider">
               {event.name}
             </h1>
@@ -86,14 +128,14 @@ export default async function EventDetailsPage(props: {
                   if (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED") {
                     return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">FULL</span>;
                   }
-                  if (remainingSlots >= 1 && remainingSlots <= 4) {
+                  if (remainingSlots >= 1 && remainingSlots <= 5) {
                     return (
                       <span className="font-extrabold text-[#ED0000] text-xs uppercase tracking-wider flex items-center space-x-1">
                         <span>🔥 {remainingSlots} {remainingSlots === 1 ? "Slot" : "Slots"} Left — Hurry!</span>
                       </span>
                     );
                   }
-                  return <span className="font-bold text-emerald-400 text-xs uppercase tracking-wider">Slots Available</span>;
+                  return <span className="font-bold text-emerald-600 text-xs uppercase tracking-wider">🟢 Slots Open / Hiring Active</span>;
                 })()}
               </div>
             </div>
@@ -154,11 +196,11 @@ export default async function EventDetailsPage(props: {
           )}
 
           {/* Do's & Don'ts */}
-          {event.dosAndDonts && event.dosAndDonts.length > 0 && (
+          {dosAndDonts.length > 0 && (
             <div className="light-panel p-6 rounded-2xl">
               <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wide mb-4">Event Rules & Instructions</h3>
               <ul className="space-y-2 text-sm text-slate-650">
-                {event.dosAndDonts.map((instruction: string, idx: number) => (
+                {dosAndDonts.map((instruction: string, idx: number) => (
                   <li key={idx} className="flex items-start space-x-2">
                     <span className="text-red-600">•</span>
                     <span>{instruction}</span>
@@ -179,9 +221,10 @@ export default async function EventDetailsPage(props: {
                 : event.status;
               return (
                 <EventApplicationForm
-                  eventId={event._id.toString()}
-                  customFields={JSON.parse(JSON.stringify(event.customFormFields))}
+                  eventId={event.id}
+                  customFields={customFormFields}
                   status={formStatus}
+                  allowedGender={event.allowedGender || "ALL"}
                 />
               );
             })()}
