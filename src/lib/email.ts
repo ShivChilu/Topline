@@ -37,7 +37,73 @@ function getTransporter() {
   });
 }
 
-const FROM_ADDRESS = process.env.SMTP_FROM || "Topline ODC <noreply@toplineodc.com>";
+// Helper to send emails via Resend HTTPS REST API (Preferred on Render) or Nodemailer SMTP fallback
+async function sendEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM || process.env.SMTP_FROM || "Topline ODC <onboarding@resend.dev>";
+
+  // 1. Primary: Resend HTTPS REST API (Port 443, never blocked on Render)
+  if (resendApiKey) {
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${resendApiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [to],
+          subject: subject,
+          html: html,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.id) {
+        console.log(`[RESEND SUCCESS] Email sent to ${to} (ID: ${data.id})`);
+        return { success: true };
+      } else {
+        console.error("[RESEND ERROR]", data);
+        // If from address restriction occurs on test key, log clearly
+        if (data.message) {
+          console.warn(`Resend API Warning: ${data.message}`);
+        }
+      }
+    } catch (err: any) {
+      console.error("[RESEND FETCH FAILED]", err);
+    }
+  }
+
+  // 2. Secondary Fallback: SMTP / Nodemailer
+  const transporter = getTransporter();
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: fromAddress,
+        to,
+        subject,
+        html,
+      });
+      return { success: true };
+    } catch (err: any) {
+      console.error("[SMTP ERROR]", err);
+      return { success: false, message: err.message };
+    }
+  }
+
+  // 3. Simulation Mode
+  console.log(`[EMAIL SIMULATION] Sent to ${to}: ${subject}`);
+  return { success: true, simulated: true };
+}
 
 /**
  * Global Student Profile Selection Confirmation Email Template
@@ -114,20 +180,11 @@ export async function sendStudentSelectionEmail({
     </html>
     `;
 
-    const transporter = getTransporter();
-    if (!transporter) {
-      console.log(`[EMAIL SIMULATION] Selection email dispatched to ${email} for student ${studentName}`);
-      return { success: true, simulated: true };
-    }
-
-    await transporter.sendMail({
-      from: FROM_ADDRESS,
+    return await sendEmail({
       to: email,
       subject: `🎉 Congratulations! Your Topline ODC Profile Has Been Selected`,
       html: htmlContent,
     });
-
-    return { success: true };
   } catch (error: any) {
     console.error("Failed to send selection email:", error);
     return { success: false, message: error.message };
@@ -203,20 +260,11 @@ export async function sendStudentDeselectionEmail({
     </html>
     `;
 
-    const transporter = getTransporter();
-    if (!transporter) {
-      console.log(`[EMAIL SIMULATION] Deselection email dispatched to ${email} for student ${studentName}`);
-      return { success: true, simulated: true };
-    }
-
-    await transporter.sendMail({
-      from: FROM_ADDRESS,
+    return await sendEmail({
       to: email,
       subject: `Topline ODC — Profile Selection Status Update`,
       html: htmlContent,
     });
-
-    return { success: true };
   } catch (error: any) {
     console.error("Failed to send deselection email:", error);
     return { success: false, message: error.message };
@@ -306,20 +354,11 @@ export async function sendEventSelectionEmail({
     </html>
     `;
 
-    const transporter = getTransporter();
-    if (!transporter) {
-      console.log(`[EMAIL SIMULATION] Event selection email dispatched to ${email} for event ${eventName} (${studentName})`);
-      return { success: true, simulated: true };
-    }
-
-    await transporter.sendMail({
-      from: FROM_ADDRESS,
+    return await sendEmail({
       to: email,
       subject: `🎉 Congratulations! Selected for ${eventName} — Topline ODC`,
       html: htmlContent,
     });
-
-    return { success: true };
   } catch (error: any) {
     console.error("Failed to send event selection email:", error);
     return { success: false, message: error.message };
@@ -401,20 +440,11 @@ export async function sendEventDeselectionEmail({
     </html>
     `;
 
-    const transporter = getTransporter();
-    if (!transporter) {
-      console.log(`[EMAIL SIMULATION] Event deselection email dispatched to ${email} for event ${eventName} (${studentName})`);
-      return { success: true, simulated: true };
-    }
-
-    await transporter.sendMail({
-      from: FROM_ADDRESS,
+    return await sendEmail({
       to: email,
       subject: `Topline ODC — Application Status Update: ${eventName}`,
       html: htmlContent,
     });
-
-    return { success: true };
   } catch (error: any) {
     console.error("Failed to send event deselection email:", error);
     return { success: false, message: error.message };
