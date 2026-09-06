@@ -669,11 +669,22 @@ export default function AdminStudentsPage() {
                     {/* Top Image Section */}
                     <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden group">
                       {student.profilePhotoUrl ? (
-                        <img
-                          src={student.profilePhotoUrl}
-                          alt={student.name}
-                          className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
-                        />
+                        <>
+                          <img
+                            src={student.profilePhotoUrl}
+                            alt={student.name}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = "none";
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = "flex";
+                            }}
+                            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="hidden w-full h-full flex-col items-center justify-center bg-slate-100 text-slate-400">
+                            <Camera className="w-10 h-10 stroke-1 mb-1" />
+                            <span className="text-xs font-semibold">Photo Unavailable</span>
+                          </div>
+                        </>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
                           <Camera className="w-10 h-10 stroke-1 mb-1" />
@@ -1149,7 +1160,14 @@ export default function AdminStudentsPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {inspectStudent.photos.map((photo) => (
                       <div key={photo.id} className="relative aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group bg-slate-100">
-                        <img src={photo.url} alt="Profile" className="w-full h-full object-cover" />
+                        <img
+                          src={photo.url}
+                          alt="Profile"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                          className="w-full h-full object-cover"
+                        />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white">
                           <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600/80 px-1.5 py-0.5 rounded">
                             {photo.photoType}
@@ -1165,7 +1183,14 @@ export default function AdminStudentsPage() {
                   </div>
                 ) : inspectStudent.profilePhotoUrl ? (
                   <div className="w-48 aspect-3/4 rounded-xl overflow-hidden border border-slate-200">
-                    <img src={inspectStudent.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                    <img
+                      src={inspectStudent.profilePhotoUrl}
+                      alt="Profile"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = "none";
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 ) : (
                   <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">

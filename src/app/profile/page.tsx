@@ -506,7 +506,14 @@ export default function StudentProfilePage() {
                   key={photo.id}
                   className="relative aspect-3/4 rounded-2xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-sm"
                 >
-                  <img src={photo.url} alt="Grooming" className="w-full h-full object-cover" />
+                  <img
+                    src={photo.url}
+                    alt="Grooming"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = "none";
+                    }}
+                    className="w-full h-full object-cover"
+                  />
                   
                   {/* Category Pill */}
                   <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">

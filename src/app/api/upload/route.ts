@@ -36,28 +36,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "File size exceeds 5MB limit." }, { status: 400 });
     }
 
-    // Save to public/uploads directory
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
+    const mimeType = file.type || "image/jpeg";
+    const base64Data = buffer.toString("base64");
+    const dataUrl = `data:${mimeType};base64,${base64Data}`;
 
-    const ext = path.extname(file.name) || ".jpg";
-    const uniqueName = `profile_${decoded.id}_${Date.now()}${ext}`;
-    const filePath = path.join(uploadDir, uniqueName);
+    // Optional: write to local disk as backup
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await mkdir(uploadDir, { recursive: true });
+      const ext = path.extname(file.name) || ".jpg";
+      const uniqueName = `profile_${decoded.id}_${Date.now()}${ext}`;
+      const filePath = path.join(uploadDir, uniqueName);
+      await writeFile(filePath, buffer);
+    } catch (diskErr) {
+      console.warn("Disk cache write skipped:", diskErr);
+    }
 
-    await writeFile(filePath, buffer);
-
-    const publicUrl = `/uploads/${uniqueName}`;
-
-    // Update user profilePhotoUrl in database
+    // Update user profilePhotoUrl in PostgreSQL database with persistent image
     await prisma.user.update({
       where: { id: decoded.id },
-      data: { profilePhotoUrl: publicUrl },
+      data: { profilePhotoUrl: dataUrl },
     });
 
     return NextResponse.json({
       success: true,
       message: "Photo uploaded successfully!",
-      url: publicUrl,
+      url: dataUrl,
     });
   } catch (error: any) {
     console.error("File upload error:", error);
