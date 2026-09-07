@@ -36,6 +36,13 @@ import {
   FileText
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
+import {
+  matchesGender,
+  matchesHeight,
+  matchesAge,
+  matchesWeight,
+  parseHeightInCm,
+} from "@/lib/candidate-filters";
 
 interface StudentPhoto {
   id: string;
@@ -120,6 +127,13 @@ export default function AdminStudentsPage() {
   const [photoFilter, setPhotoFilter] = useState("ALL");
   const [profileFilter, setProfileFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [genderFilter, setGenderFilter] = useState("ALL");
+  const [heightFilter, setHeightFilter] = useState("ALL");
+  const [ageFilter, setAgeFilter] = useState("ALL");
+  const [weightFilter, setWeightFilter] = useState("ALL");
+  const [cityFilter, setCityFilter] = useState("ALL");
+  const [universityFilter, setUniversityFilter] = useState("ALL");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Selection & Bulk
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -600,11 +614,134 @@ export default function AdminStudentsPage() {
     return { total, selected, underReview, notSelected, withPhotos, pending100 };
   }, [students]);
 
+  const availableCities = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) {
+      if (s.city && s.city.trim() && s.city !== "N/A") set.add(s.city.trim());
+    }
+    return Array.from(set).sort();
+  }, [students]);
+
+  const availableUniversities = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) {
+      if (s.university && s.university.trim() && s.university !== "N/A") set.add(s.university.trim());
+    }
+    return Array.from(set).sort();
+  }, [students]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (search.trim()) count++;
+    if (selectionFilter !== "ALL") count++;
+    if (photoFilter !== "ALL") count++;
+    if (profileFilter !== "ALL") count++;
+    if (statusFilter !== "ALL") count++;
+    if (genderFilter !== "ALL") count++;
+    if (heightFilter !== "ALL") count++;
+    if (ageFilter !== "ALL") count++;
+    if (weightFilter !== "ALL") count++;
+    if (cityFilter !== "ALL") count++;
+    if (universityFilter !== "ALL") count++;
+    return count;
+  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setSelectionFilter("ALL");
+    setPhotoFilter("ALL");
+    setProfileFilter("ALL");
+    setStatusFilter("ALL");
+    setGenderFilter("ALL");
+    setHeightFilter("ALL");
+    setAgeFilter("ALL");
+    setWeightFilter("ALL");
+    setCityFilter("ALL");
+    setUniversityFilter("ALL");
+  };
+
+  // Client-side reactive filtered students list
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      // Search
+      if (search.trim()) {
+        const q = search.toLowerCase().trim();
+        const name = (s.name || "").toLowerCase();
+        const reg = (s.registrationNumber || "").toLowerCase();
+        const phone = (s.phone || "").toLowerCase();
+        const email = (s.email || "").toLowerCase();
+        const uni = (s.university || "").toLowerCase();
+        const city = (s.city || "").toLowerCase();
+        const matchesSearch = name.includes(q) || reg.includes(q) || phone.includes(q) || email.includes(q) || uni.includes(q) || city.includes(q);
+        if (!matchesSearch) return false;
+      }
+
+      // Selection Status
+      if (selectionFilter !== "ALL" && s.selectionStatus !== selectionFilter) {
+        return false;
+      }
+
+      // Photos
+      if (photoFilter === "WITH_PHOTOS" && !s.profilePhotoUrl && s.photos.length === 0) {
+        return false;
+      }
+      if (photoFilter === "WITHOUT_PHOTOS" && (s.profilePhotoUrl || s.photos.length > 0)) {
+        return false;
+      }
+
+      // Profile Completeness
+      if (profileFilter === "100_READY") {
+        if (s.completenessScore < 100 || s.selectionStatus !== "UNDER_REVIEW") return false;
+      } else if (profileFilter === "COMPLETE") {
+        if (s.completenessScore < 80) return false;
+      } else if (profileFilter === "INCOMPLETE") {
+        if (s.completenessScore >= 80) return false;
+      }
+
+      // Account Status
+      if (statusFilter !== "ALL" && s.status !== statusFilter) {
+        return false;
+      }
+
+      // Gender (supports "Female", "Girl", "Male", "Boy", etc.)
+      if (!matchesGender(s.gender, genderFilter)) {
+        return false;
+      }
+
+      // Height (supports 5'4", 5.4, 165cm, min height thresholds)
+      if (!matchesHeight(s.height, heightFilter)) {
+        return false;
+      }
+
+      // Age
+      if (!matchesAge(s.age, ageFilter)) {
+        return false;
+      }
+
+      // Weight
+      if (!matchesWeight(s.weight, weightFilter)) {
+        return false;
+      }
+
+      // City
+      if (cityFilter !== "ALL" && (s.city || "").toLowerCase() !== cityFilter.toLowerCase()) {
+        return false;
+      }
+
+      // University
+      if (universityFilter !== "ALL" && (s.university || "").toLowerCase() !== universityFilter.toLowerCase()) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [students, search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+
   const toggleSelectAll = () => {
-    if (selectedStudentIds.length === students.length) {
+    if (selectedStudentIds.length === filteredStudents.length) {
       setSelectedStudentIds([]);
     } else {
-      setSelectedStudentIds(students.map((s) => s.id));
+      setSelectedStudentIds(filteredStudents.map((s) => s.id));
     }
   };
 
@@ -779,11 +916,50 @@ export default function AdminStudentsPage() {
             </div>
 
             {/* Quick Filter Buttons */}
-            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+            <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+              {/* Gender Filter (e.g. Girls Only) */}
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
+                  genderFilter !== "ALL"
+                    ? "bg-purple-50 text-purple-700 border-purple-300 ring-2 ring-purple-500/20"
+                    : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                }`}
+              >
+                <option value="ALL">All Genders</option>
+                <option value="FEMALE">👩 Girls Only (Female)</option>
+                <option value="MALE">👨 Boys Only (Male)</option>
+                <option value="OTHER">Other</option>
+              </select>
+
+              {/* Height Filter (e.g. > 5ft, > 5'4") */}
+              <select
+                value={heightFilter}
+                onChange={(e) => setHeightFilter(e.target.value)}
+                className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
+                  heightFilter !== "ALL"
+                    ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500/20"
+                    : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                }`}
+              >
+                <option value="ALL">All Heights</option>
+                <option value="5_0">📏 ≥ 5&apos;0&quot; (152 cm+)</option>
+                <option value="5_2">📏 ≥ 5&apos;2&quot; (157 cm+)</option>
+                <option value="5_3">📏 ≥ 5&apos;3&quot; (160 cm+)</option>
+                <option value="5_4">📏 ≥ 5&apos;4&quot; (162 cm+)</option>
+                <option value="5_5">📏 ≥ 5&apos;5&quot; (165 cm+)</option>
+                <option value="5_6">📏 ≥ 5&apos;6&quot; (167 cm+)</option>
+                <option value="5_8">📏 ≥ 5&apos;8&quot; (172 cm+)</option>
+                <option value="5_10">📏 ≥ 5&apos;10&quot; (178 cm+)</option>
+                <option value="6_0">📏 ≥ 6&apos;0&quot; (183 cm+)</option>
+              </select>
+
+              {/* Selection Status */}
               <select
                 value={selectionFilter}
                 onChange={(e) => setSelectionFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
+                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
               >
                 <option value="ALL">All Selection Statuses</option>
                 <option value="SELECTED">✓ Selected Only</option>
@@ -791,37 +967,129 @@ export default function AdminStudentsPage() {
                 <option value="NOT_SELECTED">✗ Not Selected</option>
               </select>
 
-              <select
-                value={photoFilter}
-                onChange={(e) => setPhotoFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
+              {/* More Filters Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowMoreFilters(!showMoreFilters)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                  showMoreFilters || activeFilterCount > 0
+                    ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                }`}
               >
-                <option value="ALL">All Photos</option>
-                <option value="WITH_PHOTOS">📸 With Photos Only</option>
-                <option value="WITHOUT_PHOTOS">⚠️ Without Photos</option>
-              </select>
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ""}</span>
+              </button>
 
-              <select
-                value={profileFilter}
-                onChange={(e) => setProfileFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All Profiles</option>
-                <option value="COMPLETE">Complete Profiles</option>
-                <option value="INCOMPLETE">Incomplete Profiles</option>
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All Accounts</option>
-                <option value="active">Active Only</option>
-                <option value="blocked">Blocked</option>
-              </select>
+              {/* Reset All Filters Button */}
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-2.5 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition"
+                  title="Clear all active filters"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
+
+          {/* EXPANDABLE ADVANCED FILTERS PANEL */}
+          {showMoreFilters && (
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-in fade-in">
+              {/* City Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">City / Region</label>
+                <select
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+                >
+                  <option value="ALL">All Cities</option>
+                  {availableCities.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* University Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">University / College</label>
+                <select
+                  value={universityFilter}
+                  onChange={(e) => setUniversityFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600 truncate"
+                >
+                  <option value="ALL">All Universities</option>
+                  {availableUniversities.map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Age Range */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Age Range</label>
+                <select
+                  value={ageFilter}
+                  onChange={(e) => setAgeFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+                >
+                  <option value="ALL">All Ages</option>
+                  <option value="18_20">18 - 20 years</option>
+                  <option value="21_23">21 - 23 years</option>
+                  <option value="24_26">24 - 26 years</option>
+                  <option value="27_PLUS">27+ years</option>
+                </select>
+              </div>
+
+              {/* Weight Range */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weight Range</label>
+                <select
+                  value={weightFilter}
+                  onChange={(e) => setWeightFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+                >
+                  <option value="ALL">All Weights</option>
+                  <option value="UNDER_50">&lt; 50 kg</option>
+                  <option value="50_60">50 - 60 kg</option>
+                  <option value="60_70">60 - 70 kg</option>
+                  <option value="70_PLUS">70+ kg</option>
+                </select>
+              </div>
+
+              {/* Photos */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Profile Photo</label>
+                <select
+                  value={photoFilter}
+                  onChange={(e) => setPhotoFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+                >
+                  <option value="ALL">All Photos</option>
+                  <option value="WITH_PHOTOS">📸 With Photos Only</option>
+                  <option value="WITHOUT_PHOTOS">⚠️ Without Photos</option>
+                </select>
+              </div>
+
+              {/* Profile Completeness */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Completeness</label>
+                <select
+                  value={profileFilter}
+                  onChange={(e) => setProfileFilter(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+                >
+                  <option value="ALL">All Profiles</option>
+                  <option value="100_READY">✨ 100% Ready (Review)</option>
+                  <option value="COMPLETE">≥ 80% Complete</option>
+                  <option value="INCOMPLETE">&lt; 80% Incomplete</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Bulk Selection Bar */}
           {selectedStudentIds.length > 0 && (
@@ -906,15 +1174,23 @@ export default function AdminStudentsPage() {
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-red-600 border-t-transparent mb-3"></div>
               <p className="text-sm font-semibold text-slate-500">Loading student photo gallery...</p>
             </div>
-          ) : students.length === 0 ? (
+          ) : filteredStudents.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
               <Camera className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-slate-800">No student profiles found</h3>
-              <p className="text-sm text-slate-500 mt-1">Try adjusting your filters or search keywords.</p>
+              <h3 className="text-lg font-bold text-slate-800">No student profiles match your filters</h3>
+              <p className="text-sm text-slate-500 mt-1">Try adjusting your gender, height, search, or status criteria.</p>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={handleResetFilters}
+                  className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                >
+                  Reset All Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
-              {students.map((student) => {
+              {filteredStudents.map((student) => {
                 const isSelected = selectedStudentIds.includes(student.id);
                 return (
                   <div
@@ -1131,7 +1407,7 @@ export default function AdminStudentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {students.map((student) => (
+                {filteredStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-slate-50/80 transition">
                     <td className="p-4">
                       <input

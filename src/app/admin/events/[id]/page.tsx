@@ -46,6 +46,12 @@ import {
   Plus
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
+import {
+  matchesGender,
+  matchesHeight,
+  matchesAge,
+  matchesWeight,
+} from "@/lib/candidate-filters";
 
 const EVENT_PLACEHOLDER_TAGS = [
   { tag: "{{name}}", label: "Candidate Name", example: "Rahul Sharma", desc: "Candidate's full name" },
@@ -106,6 +112,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [profileFilter, setProfileFilter] = useState("ALL");
   const [whatsappFilter, setWhatsappFilter] = useState("ALL");
   const [paymentFilter, setPaymentFilter] = useState("ALL");
+  const [genderFilter, setGenderFilter] = useState("ALL");
+  const [heightFilter, setHeightFilter] = useState("ALL");
+  const [ageFilter, setAgeFilter] = useState("ALL");
+  const [weightFilter, setWeightFilter] = useState("ALL");
+  const [cityFilter, setCityFilter] = useState("ALL");
+  const [universityFilter, setUniversityFilter] = useState("ALL");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Candidate Inspection Modal & Lightbox
   const [inspectCandidate, setInspectCandidate] = useState<any>(null);
@@ -554,6 +567,36 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       list = list.filter((a) => a.paymentStatus !== "PAID");
     }
 
+    // Gender filter (e.g. Girls only)
+    if (genderFilter !== "ALL") {
+      list = list.filter((a) => matchesGender(a.studentId?.gender || a.gender, genderFilter));
+    }
+
+    // Height filter (e.g. >= 5'0", 5'4")
+    if (heightFilter !== "ALL") {
+      list = list.filter((a) => matchesHeight(a.studentId?.height || a.height, heightFilter));
+    }
+
+    // Age filter
+    if (ageFilter !== "ALL") {
+      list = list.filter((a) => matchesAge(a.studentId?.age || a.age, ageFilter));
+    }
+
+    // Weight filter
+    if (weightFilter !== "ALL") {
+      list = list.filter((a) => matchesWeight(a.studentId?.weight || a.weight, weightFilter));
+    }
+
+    // City filter
+    if (cityFilter !== "ALL") {
+      list = list.filter((a) => (a.studentId?.city || a.city || "").toLowerCase() === cityFilter.toLowerCase());
+    }
+
+    // University filter
+    if (universityFilter !== "ALL") {
+      list = list.filter((a) => (a.studentId?.university || a.university || "").toLowerCase() === universityFilter.toLowerCase());
+    }
+
     // Priority sorting:
     // NOT_SELECTED & REJECTED -> Priority 1 (Top)
     // APPLIED & UNDER_REVIEW -> Priority 2 & 3
@@ -588,7 +631,57 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     });
 
     return list;
-  }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, pendingFirstQueue]);
+  }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue]);
+
+  const availableCities = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of applications) {
+      const c = a.studentId?.city || a.city;
+      if (c && c.trim() && c !== "N/A") set.add(c.trim());
+    }
+    return Array.from(set).sort();
+  }, [applications]);
+
+  const availableUniversities = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of applications) {
+      const u = a.studentId?.university || a.university;
+      if (u && u.trim() && u !== "N/A") set.add(u.trim());
+    }
+    return Array.from(set).sort();
+  }, [applications]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (search.trim()) count++;
+    if (statusFilter !== "ALL") count++;
+    if (photoFilter !== "ALL") count++;
+    if (profileFilter !== "ALL") count++;
+    if (whatsappFilter !== "ALL") count++;
+    if (paymentFilter !== "ALL") count++;
+    if (genderFilter !== "ALL") count++;
+    if (heightFilter !== "ALL") count++;
+    if (ageFilter !== "ALL") count++;
+    if (weightFilter !== "ALL") count++;
+    if (cityFilter !== "ALL") count++;
+    if (universityFilter !== "ALL") count++;
+    return count;
+  }, [search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("ALL");
+    setPhotoFilter("ALL");
+    setProfileFilter("ALL");
+    setWhatsappFilter("ALL");
+    setPaymentFilter("ALL");
+    setGenderFilter("ALL");
+    setHeightFilter("ALL");
+    setAgeFilter("ALL");
+    setWeightFilter("ALL");
+    setCityFilter("ALL");
+    setUniversityFilter("ALL");
+  };
 
   // Statistics
   const stats = useMemo(() => {
@@ -885,6 +978,44 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
           {/* Filters & Queue Switch */}
           <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+            {/* Gender Filter (e.g. Girls Only) */}
+            <select
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
+                genderFilter !== "ALL"
+                  ? "bg-purple-50 text-purple-700 border-purple-300 ring-2 ring-purple-500/20"
+                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+              }`}
+            >
+              <option value="ALL">All Genders</option>
+              <option value="FEMALE">👩 Girls Only (Female)</option>
+              <option value="MALE">👨 Boys Only (Male)</option>
+              <option value="OTHER">Other</option>
+            </select>
+
+            {/* Height Filter (e.g. > 5ft, > 5'4") */}
+            <select
+              value={heightFilter}
+              onChange={(e) => setHeightFilter(e.target.value)}
+              className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
+                heightFilter !== "ALL"
+                  ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500/20"
+                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+              }`}
+            >
+              <option value="ALL">All Heights</option>
+              <option value="5_0">📏 ≥ 5&apos;0&quot; (152 cm+)</option>
+              <option value="5_2">📏 ≥ 5&apos;2&quot; (157 cm+)</option>
+              <option value="5_3">📏 ≥ 5&apos;3&quot; (160 cm+)</option>
+              <option value="5_4">📏 ≥ 5&apos;4&quot; (162 cm+)</option>
+              <option value="5_5">📏 ≥ 5&apos;5&quot; (165 cm+)</option>
+              <option value="5_6">📏 ≥ 5&apos;6&quot; (167 cm+)</option>
+              <option value="5_8">📏 ≥ 5&apos;8&quot; (172 cm+)</option>
+              <option value="5_10">📏 ≥ 5&apos;10&quot; (178 cm+)</option>
+              <option value="6_0">📏 ≥ 6&apos;0&quot; (183 cm+)</option>
+            </select>
+
             {/* Queue Mode Toggle */}
             <button
               onClick={() => setPendingFirstQueue(!pendingFirstQueue)}
@@ -896,30 +1027,34 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               title="When enabled, unreviewed candidates stay on top; selected/rejected candidates automatically move to bottom"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
-              <span>Queue: {pendingFirstQueue ? "Pending First" : "Default Order"}</span>
+              <span>Queue: {pendingFirstQueue ? "Not Selected First" : "Default Order"}</span>
             </button>
 
-            {/* Photo filter */}
-            <select
-              value={photoFilter}
-              onChange={(e) => setPhotoFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
+            {/* More Filters Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowMoreFilters(!showMoreFilters)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                showMoreFilters || activeFilterCount > 0
+                  ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+              }`}
             >
-              <option value="ALL">All Photos</option>
-              <option value="WITH_PHOTOS">📸 With Photos</option>
-              <option value="WITHOUT_PHOTOS">⚠️ Without Photos</option>
-            </select>
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ""}</span>
+            </button>
 
-            {/* Profile completeness filter */}
-            <select
-              value={profileFilter}
-              onChange={(e) => setProfileFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
-            >
-              <option value="ALL">All Profiles</option>
-              <option value="COMPLETE">Complete (80%+)</option>
-              <option value="INCOMPLETE">Incomplete</option>
-            </select>
+            {/* Reset All Filters Button */}
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="px-2.5 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition"
+                title="Clear all active filters"
+              >
+                Reset
+              </button>
+            )}
 
             {/* View Switcher */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 ml-auto">
@@ -953,6 +1088,101 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+
+        {/* EXPANDABLE ADVANCED FILTERS PANEL */}
+        {showMoreFilters && (
+          <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-in fade-in">
+            {/* City Filter */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">City / Region</label>
+              <select
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+              >
+                <option value="ALL">All Cities</option>
+                {availableCities.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* University Filter */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">University / College</label>
+              <select
+                value={universityFilter}
+                onChange={(e) => setUniversityFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600 truncate"
+              >
+                <option value="ALL">All Universities</option>
+                {availableUniversities.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Age Range */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Age Range</label>
+              <select
+                value={ageFilter}
+                onChange={(e) => setAgeFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+              >
+                <option value="ALL">All Ages</option>
+                <option value="18_20">18 - 20 years</option>
+                <option value="21_23">21 - 23 years</option>
+                <option value="24_26">24 - 26 years</option>
+                <option value="27_PLUS">27+ years</option>
+              </select>
+            </div>
+
+            {/* Weight Range */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weight Range</label>
+              <select
+                value={weightFilter}
+                onChange={(e) => setWeightFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+              >
+                <option value="ALL">All Weights</option>
+                <option value="UNDER_50">&lt; 50 kg</option>
+                <option value="50_60">50 - 60 kg</option>
+                <option value="60_70">60 - 70 kg</option>
+                <option value="70_PLUS">70+ kg</option>
+              </select>
+            </div>
+
+            {/* WhatsApp Group */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Group</label>
+              <select
+                value={whatsappFilter}
+                onChange={(e) => setWhatsappFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+              >
+                <option value="ALL">All WhatsApp Status</option>
+                <option value="ADDED">💬 Added to WhatsApp</option>
+                <option value="NOT_ADDED">⏳ Not Added Yet</option>
+              </select>
+            </div>
+
+            {/* Payment Filter */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Payment Status</label>
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+              >
+                <option value="ALL">All Payouts</option>
+                <option value="PAID">💰 Paid</option>
+                <option value="UNPAID">⏳ Unpaid</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Bulk Actions Bar */}
         {selectedIds.length > 0 && activeView !== "eventPhotos" && (
