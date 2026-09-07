@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, UserPlus, Key, Users, Mail, Trash2, Edit2, Shield, Calendar, Sparkles, Check, Send } from "lucide-react";
+import { Save, UserPlus, Key, Users, Mail, Trash2, Edit2, Shield, Calendar, Sparkles, Check, Send, Plus, RefreshCw, X, ExternalLink, Search, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -27,6 +27,7 @@ export default function AdminSettingsPage() {
   const [newRole, setNewRole] = useState("event_admin");
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [assignedEventsInput, setAssignedEventsInput] = useState<string[]>([]);
+  const [createEventToAdd, setCreateEventToAdd] = useState("");
   const [sendCredentialsEmailToggle, setSendCredentialsEmailToggle] = useState(true);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
 
@@ -39,11 +40,20 @@ export default function AdminSettingsPage() {
   const [editingPassword, setEditingPassword] = useState("");
   const [editingRole, setEditingRole] = useState("event_admin");
   const [editingAssignedEvents, setEditingAssignedEvents] = useState<string[]>([]);
+  const [editEventToAdd, setEditEventToAdd] = useState("");
+  const [editEventSearchQuery, setEditEventSearchQuery] = useState("");
+  const [isRefreshingEvents, setIsRefreshingEvents] = useState(false);
   const [editingIsActive, setEditingIsActive] = useState(true);
   const [resendCredentialsToggle, setResendCredentialsToggle] = useState(false);
 
   const [myUsername, setMyUsername] = useState("");
   const [myPassword, setMyPassword] = useState("");
+
+  const handleRefreshEvents = async () => {
+    setIsRefreshingEvents(true);
+    await fetchAllEvents();
+    setIsRefreshingEvents(false);
+  };
 
   const fetchSettings = async () => {
     try {
@@ -470,82 +480,206 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            {/* Event Multi-Select Checkboxes for Event Admin / Calling Admin */}
+            {/* Event Multi-Select & Management for Event Admin / Calling Admin */}
             {["event_admin", "calling"].includes(newRole) && (
-              <div className="space-y-2 border border-slate-200 rounded-2xl p-4 bg-slate-50/80">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                    Assign Managed Events ({assignedEventsInput.length} Selected)
-                  </label>
-                  <div className="flex gap-2 text-[11px] font-bold">
+              <div className="space-y-3 border border-slate-200 rounded-2xl p-4 bg-slate-50/80">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                      🎪 Assign Managed Events ({assignedEventsInput.length} Selected)
+                    </label>
+                    <span className="text-[11px] text-slate-500">
+                      Select which events this administrator is allowed to view and manage.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleRefreshEvents}
+                      disabled={isRefreshingEvents}
+                      className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm transition"
+                      title="Refresh latest events from database"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isRefreshingEvents ? "animate-spin text-red-600" : ""}`} />
+                      Refresh
+                    </button>
                     <button
                       type="button"
                       onClick={() => setAssignedEventsInput(allEvents.map((e) => e._id || e.id))}
-                      className="text-red-600 hover:underline"
+                      className="text-[11px] font-bold text-red-600 hover:text-red-700 bg-white border border-red-200 px-2 py-1 rounded-lg shadow-sm transition"
                     >
-                      Select All
+                      + Add All ({allEvents.length})
                     </button>
-                    <span>•</span>
                     <button
                       type="button"
                       onClick={() => setAssignedEventsInput([])}
-                      className="text-slate-500 hover:underline"
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-white border border-slate-200 px-2 py-1 rounded-lg shadow-sm transition"
                     >
-                      Clear
+                      Clear All
                     </button>
                   </div>
                 </div>
 
-                <input
-                  type="text"
-                  value={eventSearchQuery}
-                  onChange={(e) => setEventSearchQuery(e.target.value)}
-                  placeholder="Filter events list..."
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600 mb-2"
-                />
+                {/* Quick Add Event Dropdown & Button */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                    ➕ Add Event (Present in system at this time)
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={createEventToAdd}
+                      onChange={(e) => setCreateEventToAdd(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-red-600 truncate"
+                    >
+                      <option value="">
+                        -- Select an available event to add ({allEvents.filter((e) => !assignedEventsInput.includes(e._id || e.id)).length} unassigned) --
+                      </option>
+                      {allEvents
+                        .filter((e) => !assignedEventsInput.includes(e._id || e.id))
+                        .map((ev) => {
+                          const id = ev._id || ev.id;
+                          const evDate = ev.date ? new Date(ev.date).toLocaleDateString("en-GB") : "";
+                          return (
+                            <option key={id} value={id}>
+                              {ev.name} {evDate ? `(${evDate})` : ""} {ev.location ? `— ${ev.location}` : ""}
+                            </option>
+                          );
+                        })}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!createEventToAdd}
+                      onClick={() => {
+                        if (createEventToAdd && !assignedEventsInput.includes(createEventToAdd)) {
+                          setAssignedEventsInput([...assignedEventsInput, createEventToAdd]);
+                          setCreateEventToAdd("");
+                        }
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Event
+                    </button>
+                  </div>
+                </div>
 
-                <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
-                  {filteredEventsForPicker.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-2">No matching events found.</p>
-                  ) : (
-                    filteredEventsForPicker.map((ev) => {
-                      const id = ev._id || ev.id;
-                      const isChecked = assignedEventsInput.includes(id);
-                      return (
-                        <label
-                          key={id}
-                          className={`flex items-start gap-2.5 p-2 rounded-xl border text-xs cursor-pointer transition ${
-                            isChecked
-                              ? "bg-red-50/60 border-red-200 text-slate-900"
-                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) setAssignedEventsInput([...assignedEventsInput, id]);
-                              else setAssignedEventsInput(assignedEventsInput.filter((x) => x !== id));
-                            }}
-                            className="rounded border-slate-300 text-red-600 mt-0.5 accent-red-600"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-extrabold text-slate-900">{ev.name}</span>
-                              <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold uppercase ${
-                                ev.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
-                              }`}>
-                                {ev.status}
+                {/* Assigned Events Chips / List with Delete Button */}
+                {assignedEventsInput.length > 0 && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5">
+                      Assigned Events ({assignedEventsInput.length}):
+                    </label>
+                    <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                      {assignedEventsInput.map((eventId) => {
+                        const ev = allEvents.find((e) => (e._id || e.id) === eventId);
+                        const evName = ev ? ev.name : `Event (${eventId})`;
+                        const evDate = ev && ev.date ? new Date(ev.date).toLocaleDateString("en-GB") : null;
+                        const evLocation = ev?.location;
+                        const evStatus = ev?.status;
+
+                        return (
+                          <div
+                            key={eventId}
+                            className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-red-200 transition text-xs"
+                          >
+                            <div className="flex-1 min-w-0 pr-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900 truncate">{evName}</span>
+                                {evStatus && (
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${
+                                      evStatus === "OPEN"
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : evStatus === "DRAFT"
+                                        ? "bg-amber-100 text-amber-800"
+                                        : "bg-slate-100 text-slate-600"
+                                    }`}
+                                  >
+                                    {evStatus}
+                                  </span>
+                                )}
+                              </div>
+                              {(evDate || evLocation) && (
+                                <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                                  {evDate && <span>📅 {evDate}</span>}
+                                  {evDate && evLocation && <span> • </span>}
+                                  {evLocation && <span>📍 {evLocation}</span>}
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setAssignedEventsInput(assignedEventsInput.filter((id) => id !== eventId))}
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition shrink-0"
+                              title="Delete/remove this event"
+                            >
+                              <Trash2 className="w-3 h-3 text-rose-600" />
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter and Checklist for Quick Multi-Selection */}
+                <div className="pt-2 border-t border-slate-200/80">
+                  <div className="relative mb-2">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      value={eventSearchQuery}
+                      onChange={(e) => setEventSearchQuery(e.target.value)}
+                      placeholder="Search and toggle all present events..."
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600"
+                    />
+                  </div>
+
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                    {filteredEventsForPicker.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic py-2">No matching events found.</p>
+                    ) : (
+                      filteredEventsForPicker.map((ev) => {
+                        const id = ev._id || ev.id;
+                        const isChecked = assignedEventsInput.includes(id);
+                        return (
+                          <label
+                            key={id}
+                            className={`flex items-start gap-2.5 p-2 rounded-xl border text-xs cursor-pointer transition ${
+                              isChecked
+                                ? "bg-red-50/60 border-red-200 text-slate-900"
+                                : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setAssignedEventsInput([...assignedEventsInput, id]);
+                                else setAssignedEventsInput(assignedEventsInput.filter((x) => x !== id));
+                              }}
+                              className="rounded border-slate-300 text-red-600 mt-0.5 accent-red-600"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="font-extrabold text-slate-900 truncate">{ev.name}</span>
+                                <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold uppercase shrink-0 ${
+                                  ev.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                                }`}>
+                                  {ev.status}
+                                </span>
+                              </div>
+                              <span className="text-slate-500 text-[11px] block mt-0.5 truncate">
+                                📅 {new Date(ev.date).toLocaleDateString("en-GB")} — 📍 {ev.location}
                               </span>
                             </div>
-                            <span className="text-slate-500 text-[11px] block mt-0.5">
-                              📅 {new Date(ev.date).toLocaleDateString("en-GB")} — 📍 {ev.location}
-                            </span>
-                          </div>
-                        </label>
-                      );
-                    })
-                  )}
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -749,7 +883,7 @@ export default function AdminSettingsPage() {
       {/* Edit Admin Modal */}
       {editingAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl p-6 relative my-8">
+          <div className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl p-6 relative my-8">
             <h3 className="text-lg font-bold border-b border-slate-200 pb-3 text-slate-900 uppercase">
               Edit Admin Settings — {editingAdmin.username}
             </h3>
@@ -829,29 +963,227 @@ export default function AdminSettingsPage() {
 
               {/* Event assignment in edit modal */}
               {["event_admin", "calling"].includes(editingRole) && (
-                <div className="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50">
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Managed Events ({editingAssignedEvents.length} Assigned)
-                  </label>
-                  <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
-                    {allEvents.map((ev) => {
-                      const id = ev._id || ev.id;
-                      const isChecked = editingAssignedEvents.includes(id);
-                      return (
-                        <label key={id} className="flex items-center gap-2 p-1.5 rounded-lg text-xs hover:bg-white cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) setEditingAssignedEvents([...editingAssignedEvents, id]);
-                              else setEditingAssignedEvents(editingAssignedEvents.filter((x) => x !== id));
-                            }}
-                            className="rounded border-slate-300 text-red-600 accent-red-600"
-                          />
-                          <span className="font-semibold text-slate-900">{ev.name}</span>
-                        </label>
-                      );
-                    })}
+                <div className="space-y-3 border border-slate-200 rounded-2xl p-4 bg-slate-50">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                        🎪 Managed Events ({editingAssignedEvents.length} Assigned)
+                      </label>
+                      <span className="text-[11px] text-slate-500">
+                        Assign or delete event access permissions for this administrator.
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleRefreshEvents}
+                        disabled={isRefreshingEvents}
+                        className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm transition"
+                        title="Refresh latest events from database"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isRefreshingEvents ? "animate-spin text-red-600" : ""}`} />
+                        Refresh
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingAssignedEvents(allEvents.map((e) => e._id || e.id))}
+                        className="text-[11px] font-bold text-red-600 hover:text-red-700 bg-white border border-red-200 px-2 py-1 rounded-lg shadow-sm transition"
+                      >
+                        + Add All ({allEvents.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingAssignedEvents([])}
+                        className="text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-white border border-slate-200 px-2 py-1 rounded-lg shadow-sm transition"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Add Event Dropdown & Button */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                      ➕ Add Event (Present in system at this time)
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={editEventToAdd}
+                        onChange={(e) => setEditEventToAdd(e.target.value)}
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-red-600 truncate"
+                      >
+                        <option value="">
+                          -- Select an available event to add ({allEvents.filter((e) => !editingAssignedEvents.includes(e._id || e.id)).length} unassigned) --
+                        </option>
+                        {allEvents
+                          .filter((e) => !editingAssignedEvents.includes(e._id || e.id))
+                          .map((ev) => {
+                            const id = ev._id || ev.id;
+                            const evDate = ev.date ? new Date(ev.date).toLocaleDateString("en-GB") : "";
+                            return (
+                              <option key={id} value={id}>
+                                {ev.name} {evDate ? `(${evDate})` : ""} {ev.location ? `— ${ev.location}` : ""}
+                              </option>
+                            );
+                          })}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!editEventToAdd}
+                        onClick={() => {
+                          if (editEventToAdd && !editingAssignedEvents.includes(editEventToAdd)) {
+                            setEditingAssignedEvents([...editingAssignedEvents, editEventToAdd]);
+                            setEditEventToAdd("");
+                          }
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Event
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List of Currently Assigned Events with Delete/Remove Buttons */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 uppercase">
+                        Currently Assigned Events ({editingAssignedEvents.length}):
+                      </label>
+                      <a
+                        href="/admin/events/create"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-red-600 hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" /> Create new event in system
+                      </a>
+                    </div>
+
+                    {editingAssignedEvents.length === 0 ? (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                        <p className="text-xs font-bold text-amber-800">⚠️ No events currently assigned</p>
+                        <p className="text-[11px] text-amber-600 mt-0.5">
+                          Select an event above and click &quot;+ Add Event&quot;, or click &quot;+ Add All&quot; to assign events.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                        {editingAssignedEvents.map((eventId) => {
+                          const ev = allEvents.find((e) => (e._id || e.id) === eventId);
+                          const evName = ev ? ev.name : `Event (${eventId})`;
+                          const evDate = ev && ev.date ? new Date(ev.date).toLocaleDateString("en-GB") : null;
+                          const evLocation = ev?.location;
+                          const evStatus = ev?.status;
+
+                          return (
+                            <div
+                              key={eventId}
+                              className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-red-200 transition text-xs"
+                            >
+                              <div className="flex-1 min-w-0 pr-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-900 truncate">{evName}</span>
+                                  {evStatus && (
+                                    <span
+                                      className={`px-1.5 py-0.2 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${
+                                        evStatus === "OPEN"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : evStatus === "DRAFT"
+                                          ? "bg-amber-100 text-amber-800"
+                                          : "bg-slate-100 text-slate-600"
+                                      }`}
+                                    >
+                                      {evStatus}
+                                    </span>
+                                  )}
+                                </div>
+                                {(evDate || evLocation) && (
+                                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                                    {evDate && <span>📅 {evDate}</span>}
+                                    {evDate && evLocation && <span> • </span>}
+                                    {evLocation && <span>📍 {evLocation}</span>}
+                                  </div>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setEditingAssignedEvents(editingAssignedEvents.filter((id) => id !== eventId))}
+                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition shrink-0"
+                                title="Delete/remove this event from this admin"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-600" />
+                                Remove / Delete
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Filter and Checklist for Quick Multi-Selection */}
+                  <div className="pt-2 border-t border-slate-200/80">
+                    <div className="relative mb-2">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                      <input
+                        type="text"
+                        value={editEventSearchQuery}
+                        onChange={(e) => setEditEventSearchQuery(e.target.value)}
+                        placeholder="Search and toggle all present events..."
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600"
+                      />
+                    </div>
+
+                    <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                      {allEvents
+                        .filter(
+                          (ev) =>
+                            ev.name.toLowerCase().includes(editEventSearchQuery.toLowerCase()) ||
+                            (ev.location && ev.location.toLowerCase().includes(editEventSearchQuery.toLowerCase()))
+                        )
+                        .map((ev) => {
+                          const id = ev._id || ev.id;
+                          const isChecked = editingAssignedEvents.includes(id);
+                          return (
+                            <label
+                              key={id}
+                              className={`flex items-start gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition ${
+                                isChecked
+                                  ? "bg-red-50/60 border-red-200 text-slate-900"
+                                  : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) setEditingAssignedEvents([...editingAssignedEvents, id]);
+                                  else setEditingAssignedEvents(editingAssignedEvents.filter((x) => x !== id));
+                                }}
+                                className="rounded border-slate-300 text-red-600 mt-0.5 accent-red-600"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-slate-900 truncate">{ev.name}</span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold uppercase shrink-0 ${
+                                      ev.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                                    }`}
+                                  >
+                                    {ev.status}
+                                  </span>
+                                </div>
+                                <span className="text-slate-500 text-[10px] block truncate">
+                                  📅 {new Date(ev.date).toLocaleDateString("en-GB")} — 📍 {ev.location}
+                                </span>
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
               )}
