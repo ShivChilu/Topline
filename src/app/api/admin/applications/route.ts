@@ -296,6 +296,26 @@ export async function GET(request: Request) {
       };
     });
 
+    // Prioritize NOT_SELECTED / REJECTED at the top, then APPLIED & UNDER_REVIEW, then others
+    formattedApplications.sort((a: any, b: any) => {
+      const getPriority = (statusStr: string) => {
+        const s = (statusStr || "").toUpperCase();
+        if (s === "NOT_SELECTED" || s === "REJECTED") return 1;
+        if (s === "APPLIED") return 2;
+        if (s === "UNDER_REVIEW") return 3;
+        if (s === "SELECTED") return 4;
+        if (s === "CONFIRMED") return 5;
+        if (s === "ATTENDED") return 6;
+        if (s === "ABSENT") return 7;
+        if (s === "CANCELLED") return 8;
+        return 9;
+      };
+      const prioA = getPriority(a.status);
+      const prioB = getPriority(b.status);
+      if (prioA !== prioB) return prioA - prioB;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
     return NextResponse.json({ success: true, applications: formattedApplications });
   } catch (error: any) {
     console.error("Admin applications GET error:", error);

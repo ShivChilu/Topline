@@ -554,34 +554,38 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       list = list.filter((a) => a.paymentStatus !== "PAID");
     }
 
-    // Calling queue priority sorting:
-    // When pendingFirstQueue is active:
-    // APPLIED & UNDER_REVIEW -> Top
-    // SELECTED, NOT_SELECTED, CONFIRMED, ATTENDED, CANCELLED -> Bottom
-    if (pendingFirstQueue) {
-      const getPriority = (statusStr: string) => {
-        const s = (statusStr || "").toUpperCase();
-        if (s === "APPLIED") return 1;
-        if (s === "UNDER_REVIEW") return 2;
-        if (s === "SELECTED") return 3;
-        if (s === "CONFIRMED") return 4;
-        if (s === "NOT_SELECTED" || s === "REJECTED") return 5;
-        if (s === "ATTENDED") return 6;
-        if (s === "ABSENT") return 7;
-        if (s === "CANCELLED") return 8;
-        return 9;
-      };
+    // Priority sorting:
+    // NOT_SELECTED & REJECTED -> Priority 1 (Top)
+    // APPLIED & UNDER_REVIEW -> Priority 2 & 3
+    // SELECTED, CONFIRMED, ATTENDED, CANCELLED -> Priority 4+
+    const getPriority = (statusStr: string) => {
+      const s = (statusStr || "").toUpperCase();
+      if (s === "NOT_SELECTED" || s === "REJECTED") return 1;
+      if (s === "APPLIED") return 2;
+      if (s === "UNDER_REVIEW") return 3;
+      if (s === "SELECTED") return 4;
+      if (s === "CONFIRMED") return 5;
+      if (s === "ATTENDED") return 6;
+      if (s === "ABSENT") return 7;
+      if (s === "CANCELLED") return 8;
+      return 9;
+    };
 
-      list.sort((a, b) => {
+    list.sort((a, b) => {
+      if (pendingFirstQueue) {
         const prioA = getPriority(a.status);
         const prioB = getPriority(b.status);
         if (prioA !== prioB) return prioA - prioB;
-        // Secondary stable sort: createdAt
-        const dateA = new Date(a.createdAt || 0).getTime();
-        const dateB = new Date(b.createdAt || 0).getTime();
-        return dateA - dateB;
-      });
-    }
+      } else {
+        const isNotSelectedA = ["NOT_SELECTED", "REJECTED"].includes((a.status || "").toUpperCase()) ? 0 : 1;
+        const isNotSelectedB = ["NOT_SELECTED", "REJECTED"].includes((b.status || "").toUpperCase()) ? 0 : 1;
+        if (isNotSelectedA !== isNotSelectedB) return isNotSelectedA - isNotSelectedB;
+      }
+      // Secondary sort: most recent first
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
 
     return list;
   }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, pendingFirstQueue]);

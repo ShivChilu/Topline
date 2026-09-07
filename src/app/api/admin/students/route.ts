@@ -217,6 +217,27 @@ export async function GET(request: Request) {
       };
     });
 
+    // Custom Priority Sort:
+    // 1. 100% completed profiles that are UNDER_REVIEW -> Very Top
+    // 2. Other UNDER_REVIEW candidates
+    // 3. Higher completenessScore
+    // 4. Most recent createdAt
+    formattedStudents.sort((a, b) => {
+      const aReady100 = a.completenessScore >= 100 && a.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
+      const bReady100 = b.completenessScore >= 100 && b.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
+      if (aReady100 !== bReady100) return bReady100 - aReady100;
+
+      const aReview = a.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
+      const bReview = b.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
+      if (aReview !== bReview) return bReview - aReview;
+
+      if (b.completenessScore !== a.completenessScore) {
+        return b.completenessScore - a.completenessScore;
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
     return NextResponse.json({ success: true, students: formattedStudents });
   } catch (error: any) {
     console.error("Admin students fetch error:", error);

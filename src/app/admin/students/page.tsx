@@ -596,7 +596,8 @@ export default function AdminStudentsPage() {
     const underReview = students.filter((s) => s.selectionStatus === "UNDER_REVIEW").length;
     const notSelected = students.filter((s) => s.selectionStatus === "NOT_SELECTED").length;
     const withPhotos = students.filter((s) => s.profilePhotoUrl || s.photos.length > 0).length;
-    return { total, selected, underReview, notSelected, withPhotos };
+    const pending100 = students.filter((s) => (s.completenessScore >= 100) && s.selectionStatus === "UNDER_REVIEW").length;
+    return { total, selected, underReview, notSelected, withPhotos, pending100 };
   }, [students]);
 
   const toggleSelectAll = () => {
@@ -673,6 +674,44 @@ export default function AdminStudentsPage() {
           </button>
         </div>
       </div>
+
+      {/* 100% Completed Profile & Pending Review Notification Banner */}
+      {stats.pending100 > 0 && activeTab !== "fields" && (
+        <div className="bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-50 border-2 border-amber-300 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex flex-col items-center justify-center font-black shadow-md shrink-0">
+              <span className="text-xl leading-none">{stats.pending100}</span>
+              <span className="text-[9px] uppercase font-extrabold tracking-tighter mt-0.5">READY</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-extrabold text-amber-950">
+                  {stats.pending100} {stats.pending100 === 1 ? "Candidate is" : "Candidates are"} Pending for Review (100% Profile Complete)
+                </h3>
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
+                  ★ Prioritized at Top
+                </span>
+              </div>
+              <p className="text-xs text-amber-800 mt-0.5">
+                These candidates have completed 100% of their profiles (full photo, contact, college details) and are sorted at the top for priority evaluation.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+            <button
+              onClick={() => {
+                setSelectionFilter("UNDER_REVIEW");
+                setProfileFilter("COMPLETE");
+              }}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Show 100% Complete Only</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Banner */}
       {activeTab !== "fields" && (
@@ -928,9 +967,15 @@ export default function AdminStudentsPage() {
                           </span>
                         )}
                         {student.selectionStatus === "UNDER_REVIEW" && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Review
-                          </span>
+                          student.completenessScore >= 100 ? (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-white shadow-md flex items-center gap-1 ring-2 ring-amber-300">
+                              <Sparkles className="w-3 h-3 text-amber-100" /> 100% Ready
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> Review
+                            </span>
+                          )
                         )}
                         {student.selectionStatus === "NOT_SELECTED" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-md flex items-center gap-1">
@@ -1127,9 +1172,15 @@ export default function AdminStudentsPage() {
                         </span>
                       )}
                       {student.selectionStatus === "UNDER_REVIEW" && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                          ⏳ Under Review
-                        </span>
+                        student.completenessScore >= 100 ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit">
+                            <Sparkles className="w-3 h-3 text-amber-600" /> 100% Ready
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            ⏳ Under Review
+                          </span>
+                        )
                       )}
                       {student.selectionStatus === "NOT_SELECTED" && (
                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
