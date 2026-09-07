@@ -20,8 +20,7 @@ interface EventEmailPayload {
 }
 
 function getAppBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://toplineodc.co.in";
-  return url.replace(/\/$/, "");
+  return "https://toplineodc.co.in";
 }
 
 function getTransporter() {
