@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   Search,
   CheckCircle,
@@ -26,7 +26,13 @@ import {
   X,
   Sparkles,
   Camera,
-  AlertCircle
+  AlertCircle,
+  Send,
+  Eye,
+  Edit3,
+  GripVertical,
+  Copy,
+  Layers
 } from "lucide-react";
 
 interface StudentPhoto {
@@ -91,6 +97,18 @@ interface AdminProfileField {
   _count?: { values: number };
 }
 
+const PLACEHOLDER_TAGS = [
+  { tag: "{{name}}", label: "Student Name", example: "Rahul Sharma", desc: "Full name of candidate" },
+  { tag: "{{registrationNumber}}", label: "Roll / Reg No", example: "2023CSE1042", desc: "University Reg / Roll number" },
+  { tag: "{{university}}", label: "University", example: "SRM University", desc: "College / University name" },
+  { tag: "{{city}}", label: "City", example: "Jalandhar", desc: "Student home/campus city" },
+  { tag: "{{phone}}", label: "Phone", example: "9876543210", desc: "Contact mobile number" },
+  { tag: "{{gender}}", label: "Gender", example: "Male", desc: "Candidate gender" },
+  { tag: "{{selectionStatus}}", label: "Selection Status", example: "SELECTED", desc: "Current status" },
+  { tag: "{{age}}", label: "Age", example: "21", desc: "Student age" },
+  { tag: "{{upiId}}", label: "UPI ID", example: "name@upi", desc: "Payment UPI ID" },
+];
+
 export default function AdminStudentsPage() {
   const [activeTab, setActiveTab] = useState<"gallery" | "table" | "fields">("gallery");
   const [students, setStudents] = useState<Student[]>([]);
@@ -110,6 +128,20 @@ export default function AdminStudentsPage() {
   const [inspectStudent, setInspectStudent] = useState<Student | null>(null);
   const [customNote, setCustomNote] = useState("");
   const [sendEmailToggle, setSendEmailToggle] = useState(true);
+
+  // Custom Email Broadcast & Single Message Modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailTargetStudents, setEmailTargetStudents] = useState<Student[]>([]);
+  const [customEmailSubject, setCustomEmailSubject] = useState("Important Update from Topline ODC — {{name}}");
+  const [customEmailBody, setCustomEmailBody] = useState(
+    "Hi {{name}},\n\nWe have an important update regarding your Topline ODC profile (Roll No: {{registrationNumber}}).\n\nPlease log in to the student portal to review the latest schedule and updates.\n\nBest regards,\nTopline Operations Team"
+  );
+  const [customEmailBranding, setCustomEmailBranding] = useState(true);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailTab, setEmailTab] = useState<"compose" | "preview">("compose");
+  const messageTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const subjectInputRef = useRef<HTMLInputElement | null>(null);
+  const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("body");
 
   // Fields Management
   const [fields, setFields] = useState<AdminProfileField[]>([]);
@@ -321,6 +353,135 @@ export default function AdminStudentsPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Open Custom Email Modal for single or multiple students
+  const openCustomEmailModal = (targetList: Student[]) => {
+    if (!targetList || targetList.length === 0) return;
+    setEmailTargetStudents(targetList);
+    setEmailTab("compose");
+    setEmailModalOpen(true);
+  };
+
+  // Insert placeholder tag into subject or message body
+  const insertTag = (tag: string) => {
+    if (lastFocusedField === "subject") {
+      const input = subjectInputRef.current;
+      if (!input) {
+        setCustomEmailSubject((prev) => (prev ? prev + " " + tag : tag));
+        return;
+      }
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const text = customEmailSubject;
+      const before = text.substring(0, start);
+      const after = text.substring(end, text.length);
+      setCustomEmailSubject(before + tag + after);
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + tag.length, start + tag.length);
+      }, 0);
+    } else {
+      const textarea = messageTextareaRef.current;
+      if (!textarea) {
+        setCustomEmailBody((prev) => (prev ? prev + " " + tag : tag));
+        return;
+      }
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const text = customEmailBody;
+      const before = text.substring(0, start);
+      const after = text.substring(end, text.length);
+      setCustomEmailBody(before + tag + after);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + tag.length, start + tag.length);
+      }, 0);
+    }
+  };
+
+  // Dispatch custom email broadcast / single email
+  const handleSendCustomEmail = async () => {
+    if (emailTargetStudents.length === 0) return;
+    if (!customEmailSubject.trim()) {
+      showToast("Please enter an email subject.");
+      return;
+    }
+    if (!customEmailBody.trim()) {
+      showToast("Please enter email message content.");
+      return;
+    }
+
+    try {
+      setEmailSending(true);
+      const res = await fetch("/api/admin/students/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentIds: emailTargetStudents.map((s) => s.id),
+          subject: customEmailSubject,
+          message: customEmailBody,
+          includeBranding: customEmailBranding,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Email successfully sent to ${emailTargetStudents.length} student(s).`);
+        setEmailModalOpen(false);
+      } else {
+        showToast(`Warning: ${data.message}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message || "Failed to dispatch emails.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  // Helper to interpolate tags for live preview
+  const getPreviewText = (template: string) => {
+    if (!template) return "";
+    const student = emailTargetStudents[0] || students[0] || {
+      name: "Rahul Sharma",
+      registrationNumber: "2023CSE1042",
+      university: "SRM University",
+      city: "Jalandhar",
+      phone: "9876543210",
+      gender: "Male",
+      selectionStatus: "SELECTED",
+      age: 21,
+      upiId: "rahul@okaxis",
+      email: "rahul@example.com",
+    };
+
+    const replacements: Record<string, string> = {
+      name: student.name || "Student",
+      studentName: student.name || "Student",
+      registrationNumber: student.registrationNumber || "N/A",
+      regNo: student.registrationNumber || "N/A",
+      rollNo: student.registrationNumber || "N/A",
+      university: student.university || "N/A",
+      college: student.university || "N/A",
+      city: student.city || "N/A",
+      phone: student.phone || "N/A",
+      mobile: student.phone || "N/A",
+      gender: student.gender || "N/A",
+      selectionStatus: student.selectionStatus || "UNDER_REVIEW",
+      status: student.selectionStatus || "UNDER_REVIEW",
+      age: student.age ? String(student.age) : "N/A",
+      upiId: student.upiId || "N/A",
+      email: student.email || "",
+    };
+
+    let result = template;
+    for (const [key, value] of Object.entries(replacements)) {
+      const regexDouble = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi");
+      const regexSingle = new RegExp(`\\{\\s*${key}\\s*\\}`, "gi");
+      result = result.replace(regexDouble, value).replace(regexSingle, value);
+    }
+    return result;
   };
 
 
@@ -617,6 +778,15 @@ export default function AdminStudentsPage() {
               <div className="flex items-center gap-2">
                 <button
                   disabled={actionLoading === "bulk"}
+                  onClick={() => openCustomEmailModal(students.filter((s) => selectedStudentIds.includes(s.id)))}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  title="Send custom broadcast email with dynamic tags to selected students"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  Send Custom Message ({selectedStudentIds.length})
+                </button>
+                <button
+                  disabled={actionLoading === "bulk"}
                   onClick={() => handleBulkSelection("SELECTED")}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
                 >
@@ -818,18 +988,28 @@ export default function AdminStudentsPage() {
                           </button>
                         </div>
 
-                        {/* Inspect full profile & Delete button */}
-                        <div className="flex gap-2">
+                        {/* Inspect full profile, Send Custom Message, & Delete button */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => openCustomEmailModal([student])}
+                            className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 text-blue-700 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
+                            title="Send Custom Message / Email"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            <span>Message</span>
+                          </button>
+
                           <button
                             onClick={() => setInspectStudent(student)}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center truncate"
                           >
-                            View Full Profile & Photos
+                            Full Profile
                           </button>
+
                           <button
                             disabled={actionLoading === student.id}
                             onClick={() => handleDeleteStudent(student.id, student.name)}
-                            className="p-1.5 bg-rose-50 hover:bg-red-600 border border-rose-200 text-rose-600 hover:text-white rounded-lg transition"
+                            className="p-1.5 bg-rose-50 hover:bg-red-600 border border-rose-200 text-rose-600 hover:text-white rounded-lg transition shrink-0"
                             title="Permanently Delete Student Account"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -937,6 +1117,13 @@ export default function AdminStudentsPage() {
                     <td className="p-4 font-extrabold text-red-600">₹{student.totalEarnings.toLocaleString()}</td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openCustomEmailModal([student])}
+                          className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition"
+                          title="Send Custom Message / Email"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => setInspectStudent(student)}
                           className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
@@ -1314,7 +1501,19 @@ export default function AdminStudentsPage() {
                     Dispatch branded selection / status email to student
                   </label>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const target = inspectStudent;
+                        setInspectStudent(null);
+                        openCustomEmailModal([target]);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                      title="Send custom email with placeholder tags to this student"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Send Custom Message
+                    </button>
                     <button
                       onClick={() => handleUpdateSelection(inspectStudent.id, "SELECTED")}
                       className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
@@ -1350,6 +1549,303 @@ export default function AdminStudentsPage() {
           </div>
         </div>
       )}
+
+      {/* ---------------------------------------------------- */}
+      {/* CUSTOM EMAIL BROADCAST & MESSAGE MODAL               */}
+      {/* ---------------------------------------------------- */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400 shadow-inner">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold flex items-center gap-2">
+                    Custom Email Dispatch
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-600/40 border border-blue-400/50 text-blue-300">
+                      {emailTargetStudents.length === 1
+                        ? `1 Recipient: ${emailTargetStudents[0]?.name}`
+                        : `${emailTargetStudents.length} Selected Students`}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Personalized messaging with drag-and-drop placeholder tags.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 text-slate-900">
+              {/* PLACEHOLDER TAGS TOOLBAR */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    Interactive Placeholder Tags
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    💡 Click to insert or drag & drop into Subject / Body
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {PLACEHOLDER_TAGS.map((tagItem) => (
+                    <button
+                      key={tagItem.tag}
+                      type="button"
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", tagItem.tag);
+                      }}
+                      onClick={() => insertTag(tagItem.tag)}
+                      className="group bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs hover:shadow-xs active:scale-95 cursor-grab"
+                      title={`${tagItem.desc} (Example: ${tagItem.example})`}
+                    >
+                      <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                      <code className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">
+                        {tagItem.tag}
+                      </code>
+                      <span className="text-slate-500 text-[11px] group-hover:text-blue-800">
+                        ({tagItem.label})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Template Presets */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-slate-500 uppercase text-[11px]">Quick Templates:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("Important Notice for {{name}} — Topline ODC");
+                    setCustomEmailBody(
+                      "Hi {{name}},\n\nWe have an important announcement for all Topline candidates from {{university}}.\n\nPlease review your portal dashboard for upcoming schedules and duty confirmations.\n\nBest regards,\nTopline Operations Team"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
+                >
+                  General Notice
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("Profile Update Reminder — {{name}} (Topline ODC)");
+                    setCustomEmailBody(
+                      "Hello {{name}},\n\nYour profile status is currently {{selectionStatus}}.\n\nTo ensure rapid selection for premium catering and banquet assignments in {{city}}, please ensure your formal full-length photos and academic information (Roll No: {{registrationNumber}}) are up-to-date on your student portal.\n\nBest regards,\nTopline Recruitment Coordination"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
+                >
+                  Photo Verification
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("Grooming & Shift Readiness Checklist — {{name}}");
+                    setCustomEmailBody(
+                      "Dear {{name}},\n\nAs a registered Topline team member, please maintain the mandatory grooming standards for all upcoming events:\n\n1. Clean pressed black formal trousers and white shirt\n2. Polished black formal shoes and socks\n3. Neatly groomed hair and clean personal presentation\n4. Carry your college ID (Roll No: {{registrationNumber}})\n\nThank you,\nTopline Operations Team"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
+                >
+                  Grooming Checklist
+                </button>
+              </div>
+
+              {/* TAB TOGGLE: COMPOSE VS PREVIEW */}
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setEmailTab("compose")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    emailTab === "compose"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Compose Message
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailTab("preview")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    emailTab === "preview"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Live Preview ({emailTargetStudents[0]?.name || "Student"})
+                </button>
+              </div>
+
+              {/* COMPOSE VIEW */}
+              {emailTab === "compose" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Email Subject Line *
+                    </label>
+                    <input
+                      ref={subjectInputRef}
+                      type="text"
+                      required
+                      value={customEmailSubject}
+                      onFocus={() => setLastFocusedField("subject")}
+                      onChange={(e) => setCustomEmailSubject(e.target.value)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const tag = e.dataTransfer.getData("text/plain");
+                        if (tag) insertTag(tag);
+                      }}
+                      placeholder="e.g. Important Update for {{name}} — Topline ODC"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase">
+                        Email Message Body *
+                      </label>
+                      <span className="text-[11px] text-slate-400">
+                        Line breaks will be preserved as paragraphs
+                      </span>
+                    </div>
+                    <textarea
+                      ref={messageTextareaRef}
+                      rows={9}
+                      required
+                      value={customEmailBody}
+                      onFocus={() => setLastFocusedField("body")}
+                      onChange={(e) => setCustomEmailBody(e.target.value)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const tag = e.dataTransfer.getData("text/plain");
+                        if (tag) insertTag(tag);
+                      }}
+                      placeholder="Type your message here or drag & drop tags..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-900 font-normal leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition font-mono"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={customEmailBranding}
+                      onChange={(e) => setCustomEmailBranding(e.target.checked)}
+                      className="accent-blue-600 rounded"
+                    />
+                    <span className="font-semibold">
+                      Include Topline ODC official header banner and portal link button
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {/* LIVE PREVIEW VIEW */}
+              {emailTab === "preview" && (
+                <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 text-white space-y-4">
+                  <div className="text-xs text-slate-400 border-b border-slate-800 pb-3 space-y-1">
+                    <div>
+                      <span className="font-bold text-slate-300">To: </span>
+                      <span className="text-blue-400">
+                        {emailTargetStudents[0]?.name || "Student"} &lt;
+                        {emailTargetStudents[0]?.email || "student@example.com"}&gt;
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-300">Subject: </span>
+                      <span className="text-white font-semibold">{getPreviewText(customEmailSubject)}</span>
+                    </div>
+                  </div>
+
+                  {/* Simulated Email Container */}
+                  <div className="bg-[#111827] border border-slate-700 rounded-xl overflow-hidden max-w-xl mx-auto shadow-lg">
+                    {customEmailBranding && (
+                      <div className="bg-[#ED0000] p-4 text-center">
+                        <h1 className="m-0 text-white text-lg font-extrabold tracking-wider">TOPLINE ODC</h1>
+                      </div>
+                    )}
+                    <div className="p-6">
+                      <div className="inline-block bg-blue-600 text-white text-[11px] font-bold px-3 py-1 rounded-full mb-4">
+                        OFFICIAL NOTIFICATION
+                      </div>
+                      <h2 className="text-white text-lg font-bold mb-3">
+                        Dear {getPreviewText("{{name}}")},
+                      </h2>
+                      <div className="text-slate-300 text-sm leading-relaxed space-y-3 whitespace-pre-wrap">
+                        {getPreviewText(customEmailBody)}
+                      </div>
+                      <div className="text-center mt-6">
+                        <span className="inline-block bg-[#ED0000] text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow">
+                          Go to Topline Portal
+                        </span>
+                      </div>
+                    </div>
+                    {customEmailBranding && (
+                      <div className="p-4 bg-slate-900 text-center text-[11px] text-slate-500 border-t border-slate-800">
+                        &copy; {new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition"
+              >
+                Cancel
+              </button>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500 font-medium">
+                  {emailTargetStudents.length} email{emailTargetStudents.length > 1 ? "s" : ""} will be sent
+                </span>
+                <button
+                  type="button"
+                  disabled={emailSending}
+                  onClick={handleSendCustomEmail}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2 disabled:opacity-50"
+                >
+                  {emailSending ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Dispatching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send to {emailTargetStudents.length} Student{emailTargetStudents.length > 1 ? "s" : ""}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

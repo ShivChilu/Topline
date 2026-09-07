@@ -450,3 +450,88 @@ export async function sendEventDeselectionEmail({
     return { success: false, message: error.message };
   }
 }
+
+/**
+ * Custom Broadcast / Single Message Email Template
+ */
+export async function sendCustomBroadcastEmail({
+  to,
+  studentName,
+  subject,
+  messageBody,
+  includeBranding = true,
+}: {
+  to: string;
+  studentName: string;
+  subject: string;
+  messageBody: string;
+  includeBranding?: boolean;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!to) {
+      return { success: false, message: "No recipient email address provided." };
+    }
+
+    // Convert newlines in messageBody to clean HTML paragraphs/breaks
+    const formattedBody = messageBody
+      .split("\n\n")
+      .map((para) => `<p style="margin-top: 0; margin-bottom: 16px; color: #d1d5db; line-height: 1.7;">${para.replace(/\n/g, "<br/>")}</p>`)
+      .join("");
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
+        .header { background: #ED0000; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 32px 24px; }
+        .badge { display: inline-block; background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        ${includeBranding ? `
+        <div class="header">
+          <h1>TOPLINE ODC</h1>
+        </div>
+        ` : ""}
+        <div class="content">
+          <div class="badge">OFFICIAL NOTIFICATION</div>
+          <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 20px; font-size: 20px;">Dear ${studentName || "Student"},</h2>
+          
+          <div style="font-size: 15px; color: #e5e7eb;">
+            ${formattedBody}
+          </div>
+
+          <div style="text-align: center; margin-top: 28px;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/events" class="btn" style="color: #ffffff;">Go to Topline Portal</a>
+          </div>
+        </div>
+        ${includeBranding ? `
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
+          This is an official communication from Topline ODC Administration.
+        </div>
+        ` : ""}
+      </div>
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to,
+      subject: subject || "Notification from Topline ODC",
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send custom broadcast email:", error);
+    return { success: false, message: error.message };
+  }
+}
+
