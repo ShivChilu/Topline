@@ -41,8 +41,11 @@ import {
   Send,
   Eye,
   Edit3,
-  GripVertical
+  GripVertical,
+  FileText,
+  Plus
 } from "lucide-react";
+import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 
 const EVENT_PLACEHOLDER_TAGS = [
   { tag: "{{name}}", label: "Candidate Name", example: "Rahul Sharma", desc: "Candidate's full name" },
@@ -133,6 +136,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const subjectInputRef = useRef<HTMLInputElement | null>(null);
   const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("body");
 
+  // Template Manager Modal
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [customTemplates, setCustomTemplates] = useState<CustomEmailTemplate[]>([]);
+
+  const fetchEmailTemplates = async () => {
+    try {
+      const res = await fetch("/api/admin/email-templates?category=EVENT");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.templates)) {
+        setCustomTemplates(data.templates);
+      }
+    } catch (err) {
+      console.error("Error fetching email templates:", err);
+    }
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -180,6 +199,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   useEffect(() => {
     fetchEventData();
+    fetchEmailTemplates();
   }, [eventId]);
 
   // Handle single candidate status update with optimistic UI
@@ -818,16 +838,27 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       {/* FILTER & VIEW TOOLBAR */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
-          {/* Search bar */}
-          <div className="relative w-full lg:w-80">
-            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search candidate, roll no, phone..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
-            />
+          {/* Search bar & Create Template Button */}
+          <div className="flex items-center gap-2.5 w-full lg:w-auto flex-1 max-w-lg">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search candidate, roll no, phone..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setTemplateModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
+              title="Create or manage reusable email templates"
+            >
+              <FileText className="w-3.5 h-3.5 text-red-600" />
+              <span>Create Template</span>
+            </button>
           </div>
 
           {/* Filters & Queue Switch */}
@@ -1749,7 +1780,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
               {/* Quick Template Presets */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="font-bold text-slate-500 uppercase text-[11px]">Quick Templates:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-500 uppercase text-[11px]">Quick Templates:</span>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateModalOpen(true)}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Manage
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -1786,6 +1827,23 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 >
                   Payment & Bank Info
                 </button>
+
+                {/* Dynamic Custom Templates */}
+                {customTemplates.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => {
+                      setCustomEmailSubject(tpl.subject);
+                      setCustomEmailBody(tpl.body);
+                    }}
+                    className="px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-lg font-bold transition flex items-center gap-1 shadow-2xs"
+                    title={`Custom Template: ${tpl.subject}`}
+                  >
+                    <Sparkles className="w-3 h-3 text-red-500" />
+                    {tpl.name}
+                  </button>
+                ))}
               </div>
 
               {/* TAB TOGGLE: COMPOSE VS PREVIEW */}
@@ -1969,6 +2027,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           </div>
         </div>
       )}
+
+      {/* Email Template Manager Modal */}
+      <EmailTemplateManagerModal
+        isOpen={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        scope="EVENT"
+        placeholderTags={EVENT_PLACEHOLDER_TAGS}
+        onTemplatesUpdated={(tpls) => setCustomTemplates(tpls)}
+        onSelectTemplate={(tpl) => {
+          setCustomEmailSubject(tpl.subject);
+          setCustomEmailBody(tpl.body);
+        }}
+      />
     </div>
   );
 }
