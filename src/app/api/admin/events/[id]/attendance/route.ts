@@ -13,8 +13,9 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
+    include: { assignedEvents: { select: { eventId: true } } },
   });
-  if (!user || user.isActive === false) return null;
+  if (!user || user.isActive === false || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -30,15 +31,17 @@ export async function GET(
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    // Calling Admins cannot access attendance data
-    if (admin.role === "CALLING_ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden. Calling Admins cannot view attendance logs." },
-        { status: 403 }
-      );
-    }
-
     const eventId = params.id;
+
+    if (admin.role === "EVENT_ADMIN") {
+      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
+      if (!isAssigned) {
+        return NextResponse.json(
+          { success: false, message: "Forbidden. You do not have access to this event." },
+          { status: 403 }
+        );
+      }
+    }
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
@@ -147,15 +150,17 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    // Calling Admins cannot mark attendance
-    if (admin.role === "CALLING_ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden. Calling Admins cannot record attendance." },
-        { status: 403 }
-      );
-    }
-
     const eventId = params.id;
+
+    if (admin.role === "EVENT_ADMIN") {
+      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
+      if (!isAssigned) {
+        return NextResponse.json(
+          { success: false, message: "Forbidden. You do not have access to this event." },
+          { status: 403 }
+        );
+      }
+    }
     const body = await request.json();
     let { studentId, applicationId, status, remarks } = body;
 

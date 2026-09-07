@@ -17,7 +17,7 @@ async function getLoggedInAdmin() {
     where: { id: decoded.id },
     include: { assignedEvents: { select: { eventId: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -32,9 +32,9 @@ export async function GET(request: Request) {
     const eventId = searchParams.get("eventId");
     const status = searchParams.get("status");
 
-    if (admin.role === "CALLING_ADMIN") {
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
       if (!eventId) {
-        return NextResponse.json({ success: false, message: "Forbidden. Event ID is required for Calling Admin queries." }, { status: 403 });
+        return NextResponse.json({ success: false, message: "Forbidden. Event ID is required for scoped admin queries." }, { status: 403 });
       }
       const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
       if (!isAssigned) {
@@ -347,7 +347,7 @@ export async function PATCH(request: Request) {
       });
       if (!app) continue;
 
-      if (admin.role === "CALLING_ADMIN") {
+      if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
         const isAssigned = admin.assignedEvents.some((a) => a.eventId === app.eventId);
         if (!isAssigned) {
           return NextResponse.json({ success: false, message: "Forbidden. Attempted access to unassigned event data." }, { status: 403 });
@@ -487,7 +487,7 @@ export async function DELETE(request: Request) {
       });
       if (!app) continue;
 
-      if (admin.role === "CALLING_ADMIN") {
+      if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
         const isAssigned = admin.assignedEvents.some((a) => a.eventId === app.eventId);
         if (!isAssigned) {
           return NextResponse.json({ success: false, message: "Forbidden. You cannot remove applicants from this event." }, { status: 403 });
