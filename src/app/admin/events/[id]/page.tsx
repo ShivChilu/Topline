@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useMemo } from "react";
+import { useEffect, useState, use, useMemo, useRef } from "react";
 import Link from "next/link";
 import EventPhotoGalleryManager from "@/components/EventPhotoGalleryManager";
 import {
@@ -37,8 +37,29 @@ import {
   ArrowUpDown,
   Sliders,
   AlertCircle,
-  Info
+  Info,
+  Send,
+  Eye,
+  Edit3,
+  GripVertical
 } from "lucide-react";
+
+const EVENT_PLACEHOLDER_TAGS = [
+  { tag: "{{name}}", label: "Candidate Name", example: "Rahul Sharma", desc: "Candidate's full name" },
+  { tag: "{{registrationNumber}}", label: "Roll / Reg No", example: "2023CSE1042", desc: "Roll or registration number" },
+  { tag: "{{eventName}}", label: "Event Name", example: "Grand Royal Banquet", desc: "Current event title" },
+  { tag: "{{eventDate}}", label: "Event Date", example: "Saturday, 12 October 2026", desc: "Event date" },
+  { tag: "{{eventLocation}}", label: "Location / Venue", example: "Radisson Blu, Jalandhar", desc: "Event venue address" },
+  { tag: "{{reportingTime}}", label: "Reporting Time", example: "04:30 PM", desc: "Shift reporting time" },
+  { tag: "{{applicationStatus}}", label: "Status", example: "SELECTED", desc: "Current application status" },
+  { tag: "{{paymentPerStudent}}", label: "Payout", example: "₹650", desc: "Payment rate per student" },
+  { tag: "{{university}}", label: "University", example: "SRM University", desc: "College / University" },
+  { tag: "{{city}}", label: "City", example: "Jalandhar", desc: "City / Location" },
+  { tag: "{{phone}}", label: "Phone", example: "9876543210", desc: "Contact mobile number" },
+  { tag: "{{gender}}", label: "Gender", example: "Male", desc: "Candidate gender" },
+  { tag: "{{attendanceStatus}}", label: "Attendance", example: "PRESENT", desc: "Attendance status" },
+  { tag: "{{callingRemarks}}", label: "Remarks", example: "Confirmed lead steward", desc: "Calling remarks" },
+];
 
 function formatTime12(timeStr: string) {
   if (!timeStr) return "";
@@ -97,6 +118,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [addFormData, setAddFormData] = useState<Record<string, any>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [addModalError, setAddModalError] = useState<string | null>(null);
+
+  // Custom Email Broadcast & Single Message Modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailTargetApps, setEmailTargetApps] = useState<any[]>([]);
+  const [customEmailSubject, setCustomEmailSubject] = useState("Duty Instructions & Confirmation: {{eventName}} — {{name}}");
+  const [customEmailBody, setCustomEmailBody] = useState(
+    "Dear {{name}},\n\nYou are scheduled for {{eventName}}.\n\n📅 Date: {{eventDate}}\n📍 Venue: {{eventLocation}}\n⏰ Reporting Time: {{reportingTime}}\n💰 Payout: {{paymentPerStudent}}\n\nPlease report on time in formal grooming (pressed black formal trousers, clean white shirt, polished black shoes).\n\nBest regards,\nTopline Operations Team"
+  );
+  const [customEmailBranding, setCustomEmailBranding] = useState(true);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailTab, setEmailTab] = useState<"compose" | "preview">("compose");
+  const messageTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const subjectInputRef = useRef<HTMLInputElement | null>(null);
+  const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("body");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -281,6 +316,157 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     } finally {
       setActionLoadingId(null);
     }
+  };
+
+  // Open Custom Email Modal for single or multiple event applications
+  const openCustomEmailModal = (targetList: any[]) => {
+    if (!targetList || targetList.length === 0) return;
+    setEmailTargetApps(targetList);
+    setEmailTab("compose");
+    setEmailModalOpen(true);
+  };
+
+  // Insert placeholder tag into subject or message body
+  const insertTag = (tag: string) => {
+    if (lastFocusedField === "subject") {
+      const input = subjectInputRef.current;
+      if (!input) {
+        setCustomEmailSubject((prev) => (prev ? prev + " " + tag : tag));
+        return;
+      }
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const text = customEmailSubject;
+      const before = text.substring(0, start);
+      const after = text.substring(end, text.length);
+      setCustomEmailSubject(before + tag + after);
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + tag.length, start + tag.length);
+      }, 0);
+    } else {
+      const textarea = messageTextareaRef.current;
+      if (!textarea) {
+        setCustomEmailBody((prev) => (prev ? prev + " " + tag : tag));
+        return;
+      }
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const text = customEmailBody;
+      const before = text.substring(0, start);
+      const after = text.substring(end, text.length);
+      setCustomEmailBody(before + tag + after);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + tag.length, start + tag.length);
+      }, 0);
+    }
+  };
+
+  // Dispatch custom email to event candidates
+  const handleSendCustomEmail = async () => {
+    if (emailTargetApps.length === 0) return;
+    if (!customEmailSubject.trim()) {
+      showToast("Please enter an email subject.");
+      return;
+    }
+    if (!customEmailBody.trim()) {
+      showToast("Please enter email message content.");
+      return;
+    }
+
+    try {
+      setEmailSending(true);
+      const res = await fetch(`/api/admin/events/${eventId}/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationIds: emailTargetApps.map((a) => a._id || a.id),
+          subject: customEmailSubject,
+          message: customEmailBody,
+          includeBranding: customEmailBranding,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Email successfully dispatched to ${emailTargetApps.length} candidate(s).`);
+        setEmailModalOpen(false);
+      } else {
+        showToast(`Warning: ${data.message}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message || "Failed to dispatch emails.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  // Helper to interpolate tags for live preview
+  const getPreviewText = (template: string) => {
+    if (!template) return "";
+    const app = emailTargetApps[0] || applications[0] || {
+      name: "Rahul Sharma",
+      registrationNumber: "2023CSE1042",
+      mobileNumber: "9876543210",
+      status: "SELECTED",
+      callingRemarks: "Lead Steward",
+      attendanceStatus: "PENDING",
+      studentId: {
+        name: "Rahul Sharma",
+        registrationNumber: "2023CSE1042",
+        university: "SRM University",
+        city: "Jalandhar",
+        phone: "9876543210",
+        gender: "Male",
+        selectionStatus: "SELECTED",
+        age: 21,
+        upiId: "rahul@okaxis",
+        email: "rahul@example.com",
+      },
+    };
+
+    const student = app.studentId || {};
+    const formattedDate = event?.date
+      ? new Date(event.date).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+      : "";
+
+    const replacements: Record<string, string> = {
+      name: app.name || student.name || "Candidate",
+      studentName: app.name || student.name || "Candidate",
+      registrationNumber: app.registrationNumber || student.registrationNumber || "N/A",
+      regNo: app.registrationNumber || student.registrationNumber || "N/A",
+      rollNo: app.registrationNumber || student.registrationNumber || "N/A",
+      university: student.university || "N/A",
+      college: student.university || "N/A",
+      city: student.city || "N/A",
+      phone: app.mobileNumber || student.phone || "N/A",
+      mobile: app.mobileNumber || student.phone || "N/A",
+      gender: student.gender || "N/A",
+      applicationStatus: app.status || "APPLIED",
+      status: app.status || "APPLIED",
+      selectionStatus: student.selectionStatus || "UNDER_REVIEW",
+      eventName: event?.name || "Event",
+      eventDate: formattedDate || (event?.date ? String(event.date) : "N/A"),
+      eventLocation: event?.location || "N/A",
+      reportingTime: event?.reportingTime || "N/A",
+      workType: event?.workType || "N/A",
+      paymentPerStudent: event?.paymentPerStudent ? `₹${event.paymentPerStudent}` : "N/A",
+      callingRemarks: app.callingRemarks || "None",
+      attendanceStatus: app.attendanceStatus || "PENDING",
+      age: student.age ? String(student.age) : "N/A",
+      upiId: student.upiId || "N/A",
+      email: student.email || "",
+    };
+
+    let result = template;
+    for (const [key, value] of Object.entries(replacements)) {
+      const regexDouble = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi");
+      const regexSingle = new RegExp(`\\{\\s*${key}\\s*\\}`, "gi");
+      result = result.replace(regexDouble, value).replace(regexSingle, value);
+    }
+    return result;
   };
 
   // Filter & Queue Sorting
@@ -742,6 +928,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <div className="flex items-center gap-2">
               <button
                 disabled={actionLoadingId === "bulk"}
+                onClick={() => openCustomEmailModal(applications.filter((a) => selectedIds.includes(a.id || a._id)))}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                title="Send personalized custom email to selected candidates"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Send Custom Message ({selectedIds.length})
+              </button>
+
+              <button
+                disabled={actionLoadingId === "bulk"}
                 onClick={() => handleBulkUpdate({ status: "SELECTED" })}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
               >
@@ -944,17 +1140,27 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </button>
                         </div>
 
-                        {/* View Full Profile & Safe Delete */}
-                        <div className="flex gap-2">
+                        {/* View Full Profile, Send Custom Message, & Safe Delete */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => openCustomEmailModal([app])}
+                            className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 text-blue-700 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
+                            title="Send Custom Message / Email"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            <span>Message</span>
+                          </button>
+
                           <button
                             onClick={() => setInspectCandidate(app)}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center"
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center truncate"
                           >
-                            View Full Profile & Photos
+                            Full Profile
                           </button>
+
                           <button
                             onClick={() => setDeleteCandidate(app)}
-                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition"
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition shrink-0"
                             title="Remove Application from Event"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1083,6 +1289,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openCustomEmailModal([app])}
+                            className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition"
+                            title="Send Custom Message / Email"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => setInspectCandidate(app)}
                             className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
@@ -1310,6 +1523,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
                   <div className="flex gap-2 flex-wrap">
                     <button
+                      onClick={() => {
+                        const target = inspectCandidate;
+                        setInspectCandidate(null);
+                        openCustomEmailModal([target]);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                      title="Send custom email with placeholder tags to this candidate"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Send Custom Message
+                    </button>
+                    <button
                       onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED")}
                       className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
                     >
@@ -1448,6 +1673,303 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           </div>
         </div>
       )}
+
+      {/* ---------------------------------------------------- */}
+      {/* CUSTOM EMAIL BROADCAST & MESSAGE MODAL (EVENT SCOPED) */}
+      {/* ---------------------------------------------------- */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400 shadow-inner">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold flex items-center gap-2">
+                    Event Custom Email Dispatch
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-600/40 border border-blue-400/50 text-blue-300">
+                      {emailTargetApps.length === 1
+                        ? `1 Candidate: ${emailTargetApps[0]?.name || emailTargetApps[0]?.studentId?.name}`
+                        : `${emailTargetApps.length} Selected Candidates`}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Targeted event messaging with interactive candidate & event placeholder tags.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 text-slate-900">
+              {/* PLACEHOLDER TAGS TOOLBAR */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    Interactive Candidate & Event Tags
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    💡 Click to insert or drag & drop into Subject / Body
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {EVENT_PLACEHOLDER_TAGS.map((tagItem) => (
+                    <button
+                      key={tagItem.tag}
+                      type="button"
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", tagItem.tag);
+                      }}
+                      onClick={() => insertTag(tagItem.tag)}
+                      className="group bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs hover:shadow-xs active:scale-95 cursor-grab"
+                      title={`${tagItem.desc} (Example: ${tagItem.example})`}
+                    >
+                      <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                      <code className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">
+                        {tagItem.tag}
+                      </code>
+                      <span className="text-slate-500 text-[11px] group-hover:text-blue-800">
+                        ({tagItem.label})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Template Presets */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-slate-500 uppercase text-[11px]">Quick Templates:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("Duty & Reporting Instructions: {{eventName}} — {{name}}");
+                    setCustomEmailBody(
+                      "Dear {{name}},\n\nYou are scheduled for duty at {{eventName}}.\n\n📅 Date: {{eventDate}}\n📍 Venue: {{eventLocation}}\n⏰ Mandatory Reporting Time: {{reportingTime}}\n💰 Payout: {{paymentPerStudent}}\n\n📋 Mandatory Instructions & Grooming Checklist:\n1. Arrive 15 minutes before the reporting time.\n2. Wear clean pressed black formal trousers, plain white formal shirt, and polished black formal shoes.\n3. Bring your college ID card (Roll No: {{registrationNumber}}).\n\nPlease confirm receipt of this schedule.\n\nBest regards,\nTopline Operations & Coordination Team"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
+                >
+                  Reporting & Duty Instructions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("Selection Notice & Shift Confirmation: {{eventName}} — {{name}}");
+                    setCustomEmailBody(
+                      "Congratulations {{name}}!\n\nYour application status for {{eventName}} is currently {{applicationStatus}}.\n\n📅 Date: {{eventDate}}\n📍 Venue: {{eventLocation}}\n\nPlease log in to your Topline Student Portal to confirm your attendance pass and view check-in details.\n\nBest regards,\nTopline Operations Team"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
+                >
+                  Selection Confirmation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("Payment & Payout Confirmation: {{eventName}} — {{name}}");
+                    setCustomEmailBody(
+                      "Hi {{name}},\n\nRegarding your completed assignment for {{eventName}}:\n\nAttendance Record: {{attendanceStatus}}\nPayout Amount: {{paymentPerStudent}}\n\nPlease verify that your UPI ID ({{upiId}}) is active on your portal profile for automated direct bank transfer.\n\nThank you for your dedicated service!\nTopline Accounts & Coordination"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition"
+                >
+                  Payment & Bank Info
+                </button>
+              </div>
+
+              {/* TAB TOGGLE: COMPOSE VS PREVIEW */}
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setEmailTab("compose")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    emailTab === "compose"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Compose Message
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailTab("preview")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    emailTab === "preview"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Live Preview ({emailTargetApps[0]?.name || emailTargetApps[0]?.studentId?.name || "Candidate"})
+                </button>
+              </div>
+
+              {/* COMPOSE VIEW */}
+              {emailTab === "compose" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Email Subject Line *
+                    </label>
+                    <input
+                      ref={subjectInputRef}
+                      type="text"
+                      required
+                      value={customEmailSubject}
+                      onFocus={() => setLastFocusedField("subject")}
+                      onChange={(e) => setCustomEmailSubject(e.target.value)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const tag = e.dataTransfer.getData("text/plain");
+                        if (tag) insertTag(tag);
+                      }}
+                      placeholder="e.g. Duty Instructions & Confirmation: {{eventName}} — {{name}}"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase">
+                        Email Message Body *
+                      </label>
+                      <span className="text-[11px] text-slate-400">
+                        Line breaks will be preserved as clean paragraphs
+                      </span>
+                    </div>
+                    <textarea
+                      ref={messageTextareaRef}
+                      rows={9}
+                      required
+                      value={customEmailBody}
+                      onFocus={() => setLastFocusedField("body")}
+                      onChange={(e) => setCustomEmailBody(e.target.value)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const tag = e.dataTransfer.getData("text/plain");
+                        if (tag) insertTag(tag);
+                      }}
+                      placeholder="Type your message here or drag & drop tags..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-900 font-normal leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition font-mono"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={customEmailBranding}
+                      onChange={(e) => setCustomEmailBranding(e.target.checked)}
+                      className="accent-blue-600 rounded"
+                    />
+                    <span className="font-semibold">
+                      Include Topline ODC official header banner and portal link button
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {/* LIVE PREVIEW VIEW */}
+              {emailTab === "preview" && (
+                <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 text-white space-y-4">
+                  <div className="text-xs text-slate-400 border-b border-slate-800 pb-3 space-y-1">
+                    <div>
+                      <span className="font-bold text-slate-300">To: </span>
+                      <span className="text-blue-400">
+                        {emailTargetApps[0]?.name || emailTargetApps[0]?.studentId?.name || "Candidate"} &lt;
+                        {emailTargetApps[0]?.studentId?.email || "candidate@example.com"}&gt;
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-300">Subject: </span>
+                      <span className="text-white font-semibold">{getPreviewText(customEmailSubject)}</span>
+                    </div>
+                  </div>
+
+                  {/* Simulated Email Container */}
+                  <div className="bg-[#111827] border border-slate-700 rounded-xl overflow-hidden max-w-xl mx-auto shadow-lg">
+                    {customEmailBranding && (
+                      <div className="bg-[#ED0000] p-4 text-center">
+                        <h1 className="m-0 text-white text-lg font-extrabold tracking-wider">TOPLINE ODC</h1>
+                      </div>
+                    )}
+                    <div className="p-6">
+                      <div className="inline-block bg-blue-600 text-white text-[11px] font-bold px-3 py-1 rounded-full mb-4">
+                        OFFICIAL NOTIFICATION
+                      </div>
+                      <h2 className="text-white text-lg font-bold mb-3">
+                        Dear {getPreviewText("{{name}}")},
+                      </h2>
+                      <div className="text-slate-300 text-sm leading-relaxed space-y-3 whitespace-pre-wrap">
+                        {getPreviewText(customEmailBody)}
+                      </div>
+                      <div className="text-center mt-6">
+                        <span className="inline-block bg-[#ED0000] text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow">
+                          Go to Topline Portal
+                        </span>
+                      </div>
+                    </div>
+                    {customEmailBranding && (
+                      <div className="p-4 bg-slate-900 text-center text-[11px] text-slate-500 border-t border-slate-800">
+                        &copy; {new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition"
+              >
+                Cancel
+              </button>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500 font-medium">
+                  {emailTargetApps.length} email{emailTargetApps.length > 1 ? "s" : ""} will be sent
+                </span>
+                <button
+                  type="button"
+                  disabled={emailSending}
+                  onClick={handleSendCustomEmail}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2 disabled:opacity-50"
+                >
+                  {emailSending ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Dispatching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send to {emailTargetApps.length} Candidate{emailTargetApps.length > 1 ? "s" : ""}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
