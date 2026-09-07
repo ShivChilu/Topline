@@ -10,6 +10,7 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("ALL");
+  const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
 
   // Delete modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -17,6 +18,18 @@ export default function AdminEventsPage() {
   const [deleteStats, setDeleteStats] = useState<any>(null);
   const [confirmNameInput, setConfirmNameInput] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchUserRole = async () => {
+    try {
+      const res = await fetch("/api/admin/users/me");
+      const data = await res.json();
+      if (data.success) {
+        setCurrentAdminRole(data.role);
+      }
+    } catch (err) {
+      console.error("Error fetching user role:", err);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -36,6 +49,7 @@ export default function AdminEventsPage() {
 
   useEffect(() => {
     fetchEvents();
+    fetchUserRole();
   }, []);
 
   useEffect(() => {
@@ -144,17 +158,23 @@ export default function AdminEventsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
-            Manage Events
+            {currentAdminRole === "event_admin" ? "Assigned Events" : "Manage Events"}
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Create, publish, and monitor catering schedules</p>
+          <p className="text-slate-500 text-sm mt-1">
+            {currentAdminRole === "event_admin"
+              ? "View candidate rosters and manage shift attendance for your assigned events"
+              : "Create, publish, and monitor catering schedules"}
+          </p>
         </div>
-        <Link
-          href="/admin/events/create"
-          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Event</span>
-        </Link>
+        {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+          <Link
+            href="/admin/events/create"
+            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Event</span>
+          </Link>
+        )}
       </div>
 
       {/* Filter toolbar */}
@@ -259,40 +279,42 @@ export default function AdminEventsPage() {
                     <Copy className="w-4 h-4 text-slate-600" />
                   </button>
                 </div>
-                <div className="flex gap-2 items-center">
-                  {event.status === "DRAFT" && (
+                {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                  <div className="flex gap-2 items-center">
+                    {event.status === "DRAFT" && (
+                      <button
+                        onClick={() => handleUpdateStatus(event._id, "OPEN")}
+                        className="bg-emerald-600/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-emerald-600 hover:text-white"
+                      >
+                        Publish
+                      </button>
+                    )}
+                    {event.status === "OPEN" && (
+                      <button
+                        onClick={() => handleUpdateStatus(event._id, "CLOSED")}
+                        className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
+                      >
+                        Close Form
+                      </button>
+                    )}
+                    {event.status !== "ARCHIVED" && (
+                      <button
+                        onClick={() => handleArchive(event._id)}
+                        className="p-2 bg-amber-50 hover:bg-amber-600 border border-amber-200 text-amber-700 hover:text-white rounded transition"
+                        title="Archive Event"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleUpdateStatus(event._id, "OPEN")}
-                      className="bg-emerald-600/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-emerald-600 hover:text-white"
+                      onClick={() => openDeleteModal(event)}
+                      className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
+                      title="Delete Event"
                     >
-                      Publish
+                      <Trash2 className="w-4 h-4" />
                     </button>
-                  )}
-                  {event.status === "OPEN" && (
-                    <button
-                      onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                      className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
-                    >
-                      Close Form
-                    </button>
-                  )}
-                  {event.status !== "ARCHIVED" && (
-                    <button
-                      onClick={() => handleArchive(event._id)}
-                      className="p-2 bg-amber-50 hover:bg-amber-600 border border-amber-200 text-amber-700 hover:text-white rounded transition"
-                      title="Archive Event"
-                    >
-                      <Archive className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => openDeleteModal(event)}
-                    className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
-                    title="Delete Event"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
