@@ -14,7 +14,7 @@ async function getLoggedInAdmin() {
     where: { id: decoded.id },
     include: { assignedEvents: { select: { eventId: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -31,7 +31,7 @@ export async function GET(
 
     const eventId = params.id;
 
-    if (admin.role === "CALLING_ADMIN") {
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
       const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
       if (!isAssigned) {
         return NextResponse.json({ success: false, message: "Forbidden. You do not have access to this event." }, { status: 403 });
@@ -106,8 +106,8 @@ export async function PATCH(
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    if (admin.role === "CALLING_ADMIN") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot edit events." }, { status: 403 });
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
+      return NextResponse.json({ success: false, message: "Forbidden. Event Admins cannot edit master event settings." }, { status: 403 });
     }
 
     const eventId = params.id;
@@ -163,8 +163,8 @@ export async function DELETE(
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    if (admin.role === "CALLING_ADMIN") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot delete events." }, { status: 403 });
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
+      return NextResponse.json({ success: false, message: "Forbidden. Event Admins cannot delete events." }, { status: 403 });
     }
 
     const eventId = params.id;

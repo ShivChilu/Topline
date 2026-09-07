@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       where: { username: cleanUsername },
     });
 
-    if (!admin || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(admin.role)) {
+    if (!admin || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(admin.role)) {
       return NextResponse.json({ success: false, message: "Invalid administrative credentials." }, { status: 401 });
     }
 
@@ -37,7 +37,14 @@ export async function POST(request: Request) {
       name: admin.name,
     });
 
-    const roleLower = admin.role === "CALLING_ADMIN" ? "calling" : admin.role === "SUPERADMIN" ? "superadmin" : "admin";
+    const roleLower =
+      admin.role === "EVENT_ADMIN"
+        ? "event_admin"
+        : admin.role === "CALLING_ADMIN"
+        ? "calling"
+        : admin.role === "SUPERADMIN"
+        ? "superadmin"
+        : "admin";
 
     const response = NextResponse.json({
       success: true,

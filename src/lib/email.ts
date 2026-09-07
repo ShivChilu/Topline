@@ -539,3 +539,117 @@ export async function sendCustomBroadcastEmail({
   }
 }
 
+/**
+ * Dispatches login credentials to newly registered admin / event admin.
+ */
+export async function sendAdminCredentialsEmail({
+  adminName,
+  email,
+  username,
+  password,
+  role,
+  assignedEventNames = [],
+}: {
+  adminName: string;
+  email: string;
+  username: string;
+  password: string;
+  role: string;
+  assignedEventNames?: string[];
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    const roleLabel =
+      role === "EVENT_ADMIN" || role === "event_admin"
+        ? "Event Administrator"
+        : role === "CALLING_ADMIN" || role === "calling"
+        ? "Calling Operator"
+        : role === "SUPERADMIN" || role === "superadmin"
+        ? "Super Administrator"
+        : "Operations Admin";
+
+    const loginUrl = `${getAppBaseUrl()}/admin/login`;
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
+        .header { background: #ED0000; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 32px 24px; }
+        .badge { display: inline-block; background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
+        .cred-box { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 18px; margin: 20px 0; }
+        .cred-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .cred-label { color: #9ca3af; font-weight: 600; }
+        .cred-val { color: #f9fafb; font-family: monospace; font-weight: bold; }
+        .events-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin: 16px 0; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; margin-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE ODC</h1>
+        </div>
+        <div class="content">
+          <div class="badge">ADMINISTRATOR ONBOARDING</div>
+          <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 12px; font-size: 20px;">Welcome, ${adminName}!</h2>
+          <p style="color: #9ca3af; font-size: 14px; line-height: 1.6; margin-top: 0;">
+            You have been granted <strong>${roleLabel}</strong> access to the Topline ODC management portal.
+          </p>
+
+          <div class="cred-box">
+            <h3 style="margin-top: 0; margin-bottom: 12px; color: #f3f4f6; font-size: 15px; border-bottom: 1px solid #374151; padding-bottom: 6px;">
+              Your Login Credentials
+            </h3>
+            <div style="font-size: 14px; line-height: 1.8;">
+              <div><strong style="color: #9ca3af;">Username:</strong> <code style="color: #38bdf8; background: #111827; padding: 2px 6px; border-radius: 4px;">${username}</code></div>
+              <div><strong style="color: #9ca3af;">Password:</strong> <code style="color: #38bdf8; background: #111827; padding: 2px 6px; border-radius: 4px;">${password}</code></div>
+              <div><strong style="color: #9ca3af;">Role:</strong> <span style="color: #4ade80;">${roleLabel}</span></div>
+            </div>
+          </div>
+
+          ${assignedEventNames.length > 0 ? `
+          <div class="events-box">
+            <div style="font-size: 12px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">
+              Assigned Event Management Scope
+            </div>
+            <ul style="margin: 0; padding-left: 20px; color: #e2e8f0; font-size: 13px; line-height: 1.7;">
+              ${assignedEventNames.map(name => `<li><strong>${name}</strong></li>`).join("")}
+            </ul>
+          </div>
+          ` : ""}
+
+          <p style="color: #9ca3af; font-size: 13px; line-height: 1.6;">
+            Please log in at the link below to access candidate rosters and manage your assigned events:
+          </p>
+
+          <div style="text-align: center; margin-top: 24px; margin-bottom: 10px;">
+            <a href="${loginUrl}" class="btn" style="color: #ffffff;">Log In to Admin Portal</a>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
+          For security, please change your password after logging in.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: email,
+      subject: `Your Topline ODC Admin Access Credentials (${roleLabel})`,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send admin credentials email:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+

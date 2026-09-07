@@ -25,13 +25,20 @@ export async function GET() {
       },
     });
 
-    if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) {
+    if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role)) {
       const response = NextResponse.json({ success: false, message: "Account disabled or unauthorized." }, { status: 401 });
       response.cookies.delete("admin_token");
       return response;
     }
 
-    const roleLower = user.role === "CALLING_ADMIN" ? "calling" : user.role === "SUPERADMIN" ? "superadmin" : "admin";
+    const roleLower =
+      user.role === "EVENT_ADMIN"
+        ? "event_admin"
+        : user.role === "CALLING_ADMIN"
+        ? "calling"
+        : user.role === "SUPERADMIN"
+        ? "superadmin"
+        : "admin";
     const assignedEvents = user.assignedEvents.map((a) => a.eventId);
 
     return NextResponse.json({

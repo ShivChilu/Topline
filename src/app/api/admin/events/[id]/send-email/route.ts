@@ -16,7 +16,7 @@ async function getLoggedInAdmin() {
     where: { id: decoded.id },
     include: { assignedEvents: { select: { eventId: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -81,7 +81,7 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Event ID is required." }, { status: 400 });
     }
 
-    if (admin.role === "CALLING_ADMIN") {
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
       const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
       if (!isAssigned) {
         return NextResponse.json({ success: false, message: "Forbidden. You do not have access to this event." }, { status: 403 });

@@ -44,6 +44,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           if (data.role !== "calling" && pathname.startsWith("/admin/calling")) {
             router.push("/admin/dashboard");
           }
+          // Block event admin from accessing non-event pages
+          if (data.role === "event_admin" && !pathname.startsWith("/admin/events")) {
+            router.push("/admin/events");
+          }
         } else {
           router.push("/admin/login");
         }
@@ -71,19 +75,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const menuItems = adminRole === "calling"
-    ? [
-        { name: "Calling Dashboard", href: "/admin/calling", icon: <Users2 className="w-5 h-5" /> }
-      ]
-    : [
-        { name: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
-        { name: "Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
-        { name: "Applications", href: "/admin/applications", icon: <FileSpreadsheet className="w-5 h-5" /> },
-        { name: "Students", href: "/admin/students", icon: <Users2 className="w-5 h-5" /> },
-        { name: "Clients", href: "/admin/clients", icon: <Building2 className="w-5 h-5" /> },
-        { name: "Gallery", href: "/admin/gallery", icon: <Image className="w-5 h-5" /> },
-        { name: "Website settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },
-      ];
+  const menuItems =
+    adminRole === "calling"
+      ? [
+          { name: "Calling Dashboard", href: "/admin/calling", icon: <Users2 className="w-5 h-5" /> },
+        ]
+      : adminRole === "event_admin"
+      ? [
+          { name: "Assigned Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
+        ]
+      : [
+          { name: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+          { name: "Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
+          { name: "Applications", href: "/admin/applications", icon: <FileSpreadsheet className="w-5 h-5" /> },
+          { name: "Students", href: "/admin/students", icon: <Users2 className="w-5 h-5" /> },
+          { name: "Clients", href: "/admin/clients", icon: <Building2 className="w-5 h-5" /> },
+          { name: "Gallery", href: "/admin/gallery", icon: <Image className="w-5 h-5" /> },
+          { name: "Website settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },
+        ];
 
   const handleLogout = async () => {
     if (confirm("Are you sure you want to log out?")) {

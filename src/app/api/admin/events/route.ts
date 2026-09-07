@@ -14,7 +14,7 @@ async function getLoggedInAdmin() {
     where: { id: decoded.id },
     include: { assignedEvents: { select: { eventId: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -25,8 +25,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    if (admin.role === "CALLING_ADMIN") {
-      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot create events." }, { status: 403 });
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
+      return NextResponse.json({ success: false, message: "Forbidden. Only Super Admins and Admins can create events." }, { status: 403 });
     }
 
     const body = await request.json();
@@ -169,7 +169,7 @@ export async function GET(request: Request) {
 
     const whereClause: any = {};
 
-    if (admin.role === "CALLING_ADMIN") {
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
       const assignedIds = admin.assignedEvents.map((a) => a.eventId);
       whereClause.id = { in: assignedIds };
     }

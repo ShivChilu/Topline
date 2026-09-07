@@ -136,7 +136,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const subjectInputRef = useRef<HTMLInputElement | null>(null);
   const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("body");
 
-  // Template Manager Modal
+  // Admin Role & Template Manager Modal
+  const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomEmailTemplate[]>([]);
 
@@ -149,6 +150,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       }
     } catch (err) {
       console.error("Error fetching email templates:", err);
+    }
+  };
+
+  const fetchUserRole = async () => {
+    try {
+      const res = await fetch("/api/admin/users/me");
+      const data = await res.json();
+      if (data.success) {
+        setCurrentAdminRole(data.role);
+      }
+    } catch (err) {
+      console.error("Error fetching admin role:", err);
     }
   };
 
@@ -200,6 +213,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   useEffect(() => {
     fetchEventData();
     fetchEmailTemplates();
+    fetchUserRole();
   }, [eventId]);
 
   // Handle single candidate status update with optimistic UI
@@ -850,15 +864,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setTemplateModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
-              title="Create or manage reusable email templates"
-            >
-              <FileText className="w-3.5 h-3.5 text-red-600" />
-              <span>Create Template</span>
-            </button>
+            {currentAdminRole !== "event_admin" && (
+              <button
+                type="button"
+                onClick={() => setTemplateModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
+                title="Create or manage reusable email templates"
+              >
+                <FileText className="w-3.5 h-3.5 text-red-600" />
+                <span>Create Template</span>
+              </button>
+            )}
           </div>
 
           {/* Filters & Queue Switch */}
@@ -1741,55 +1757,74 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
             {/* Scrollable Modal Content */}
             <div className="p-6 overflow-y-auto space-y-5 flex-1 text-slate-900">
-              {/* PLACEHOLDER TAGS TOOLBAR */}
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    Interactive Candidate & Event Tags
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    💡 Click to insert or drag & drop into Subject / Body
-                  </span>
-                </div>
+              {/* PLACEHOLDER TAGS TOOLBAR (Hidden for Event Admin) */}
+              {currentAdminRole !== "event_admin" && (
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                      Interactive Candidate & Event Tags
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      💡 Click to insert or drag & drop into Subject / Body
+                    </span>
+                  </div>
 
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {EVENT_PLACEHOLDER_TAGS.map((tagItem) => (
-                    <button
-                      key={tagItem.tag}
-                      type="button"
-                      draggable={true}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", tagItem.tag);
-                      }}
-                      onClick={() => insertTag(tagItem.tag)}
-                      className="group bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs hover:shadow-xs active:scale-95 cursor-grab"
-                      title={`${tagItem.desc} (Example: ${tagItem.example})`}
-                    >
-                      <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
-                      <code className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">
-                        {tagItem.tag}
-                      </code>
-                      <span className="text-slate-500 text-[11px] group-hover:text-blue-800">
-                        ({tagItem.label})
-                      </span>
-                    </button>
-                  ))}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {EVENT_PLACEHOLDER_TAGS.map((tagItem) => (
+                      <button
+                        key={tagItem.tag}
+                        type="button"
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", tagItem.tag);
+                        }}
+                        onClick={() => insertTag(tagItem.tag)}
+                        className="group bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs hover:shadow-xs active:scale-95 cursor-grab"
+                        title={`${tagItem.desc} (Example: ${tagItem.example})`}
+                      >
+                        <GripVertical className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                        <code className="text-[11px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">
+                          {tagItem.tag}
+                        </code>
+                        <span className="text-slate-500 text-[11px] group-hover:text-blue-800">
+                          ({tagItem.label})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Event Admin Notice */}
+              {currentAdminRole === "event_admin" && (
+                <div className="bg-purple-50/70 border border-purple-200 p-4 rounded-2xl flex items-center gap-3 text-xs text-purple-900">
+                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-extrabold block">Pre-Approved Template Mode (Event Admin)</span>
+                    <p className="text-[11px] text-purple-700 mt-0.5">
+                      Select one of the pre-approved Quick Templates below to dispatch official event communications. Freeform editing and custom template creation are restricted to Super Administrators.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Quick Template Presets */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-slate-500 uppercase text-[11px]">Quick Templates:</span>
-                  <button
-                    type="button"
-                    onClick={() => setTemplateModalOpen(true)}
-                    className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Manage
-                  </button>
+                  {currentAdminRole !== "event_admin" && (
+                    <button
+                      type="button"
+                      onClick={() => setTemplateModalOpen(true)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Manage
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -1885,17 +1920,23 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       ref={subjectInputRef}
                       type="text"
                       required
+                      readOnly={currentAdminRole === "event_admin"}
                       value={customEmailSubject}
                       onFocus={() => setLastFocusedField("subject")}
                       onChange={(e) => setCustomEmailSubject(e.target.value)}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
+                        if (currentAdminRole === "event_admin") return;
                         e.preventDefault();
                         const tag = e.dataTransfer.getData("text/plain");
                         if (tag) insertTag(tag);
                       }}
                       placeholder="e.g. Duty Instructions & Confirmation: {{eventName}} — {{name}}"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition"
+                      className={`w-full border rounded-xl px-3.5 py-2.5 text-sm transition ${
+                        currentAdminRole === "event_admin"
+                          ? "bg-slate-100/90 text-slate-700 font-semibold cursor-not-allowed border-slate-200"
+                          : "bg-slate-50 border-slate-200 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                      }`}
                     />
                   </div>
 
@@ -1912,17 +1953,23 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       ref={messageTextareaRef}
                       rows={9}
                       required
+                      readOnly={currentAdminRole === "event_admin"}
                       value={customEmailBody}
                       onFocus={() => setLastFocusedField("body")}
                       onChange={(e) => setCustomEmailBody(e.target.value)}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
+                        if (currentAdminRole === "event_admin") return;
                         e.preventDefault();
                         const tag = e.dataTransfer.getData("text/plain");
                         if (tag) insertTag(tag);
                       }}
-                      placeholder="Type your message here or drag & drop tags..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-900 font-normal leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition font-mono"
+                      placeholder="Type your message here or select a template..."
+                      className={`w-full border rounded-xl p-3.5 text-sm leading-relaxed transition font-mono ${
+                        currentAdminRole === "event_admin"
+                          ? "bg-slate-100/90 text-slate-700 cursor-not-allowed border-slate-200"
+                          : "bg-slate-50 border-slate-200 text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                      }`}
                     />
                   </div>
 

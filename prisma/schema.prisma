@@ -12,6 +12,7 @@ enum Role {
   ADMIN
   SUPERADMIN
   CALLING_ADMIN
+  EVENT_ADMIN
 }
 
 enum EventStatus {
