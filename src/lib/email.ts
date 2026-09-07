@@ -19,6 +19,11 @@ interface EventEmailPayload {
   notes?: string | null;
 }
 
+function getAppBaseUrl(): string {
+  const url = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://toplineodc.co.in";
+  return url.replace(/\/$/, "");
+}
+
 function getTransporter() {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || "587", 10);
@@ -168,7 +173,7 @@ export async function sendStudentSelectionEmail({
           </p>
 
           <div style="text-align: center;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/events" class="btn" style="color: #ffffff;">View Available Events</a>
+            <a href="${getAppBaseUrl()}/events" class="btn" style="color: #ffffff;">View Available Events</a>
           </div>
         </div>
         <div class="footer">
@@ -342,7 +347,7 @@ export async function sendEventSelectionEmail({
           </p>
 
           <div style="text-align: center;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/profile" class="btn" style="color: #ffffff;">View My Assignment</a>
+            <a href="${getAppBaseUrl()}/profile" class="btn" style="color: #ffffff;">View My Assignment</a>
           </div>
         </div>
         <div class="footer">
@@ -429,7 +434,7 @@ export async function sendEventDeselectionEmail({
           </p>
 
           <div style="text-align: center;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/events" class="btn" style="color: #ffffff;">Browse Other Events</a>
+            <a href="${getAppBaseUrl()}/events" class="btn" style="color: #ffffff;">Browse Other Events</a>
           </div>
         </div>
         <div class="footer">
@@ -510,7 +515,7 @@ export async function sendCustomBroadcastEmail({
           </div>
 
           <div style="text-align: center; margin-top: 28px;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/events" class="btn" style="color: #ffffff;">Go to Topline Portal</a>
+            <a href="${getAppBaseUrl()}/events" class="btn" style="color: #ffffff;">Go to Topline Portal</a>
           </div>
         </div>
         ${includeBranding ? `
