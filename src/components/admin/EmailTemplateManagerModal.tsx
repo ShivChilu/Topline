@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Check,
   Search,
-  Filter,
+  Bookmark,
+  ArrowRight,
 } from "lucide-react";
 
 export interface CustomEmailTemplate {
@@ -25,6 +26,7 @@ export interface CustomEmailTemplate {
   subject: string;
   body: string;
   category: "STUDENT" | "EVENT" | "GLOBAL";
+  isPredefined?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -45,6 +47,59 @@ interface EmailTemplateManagerModalProps {
   onSelectTemplate?: (template: CustomEmailTemplate) => void;
 }
 
+export const SYSTEM_PREDEFINED_TEMPLATES: CustomEmailTemplate[] = [
+  // Student templates
+  {
+    id: "predefined_student_general_notice",
+    name: "General Notice",
+    subject: "Important Notice for {{name}} — Topline ODC",
+    body: "Hi {{name}},\n\nWe have an important announcement for all Topline candidates from {{university}}.\n\nPlease review your portal dashboard for upcoming schedules and duty confirmations.\n\nBest regards,\nTopline Operations Team",
+    category: "STUDENT",
+    isPredefined: true,
+  },
+  {
+    id: "predefined_student_photo_verification",
+    name: "Photo Verification",
+    subject: "Profile Update Reminder — {{name}} (Topline ODC)",
+    body: "Hello {{name}},\n\nYour profile status is currently {{selectionStatus}}.\n\nTo ensure rapid selection for premium catering and banquet assignments in {{city}}, please ensure your formal full-length photos and academic information (Roll No: {{registrationNumber}}) are up-to-date on your student portal.\n\nBest regards,\nTopline Recruitment Coordination",
+    category: "STUDENT",
+    isPredefined: true,
+  },
+  {
+    id: "predefined_student_grooming_checklist",
+    name: "Grooming Checklist",
+    subject: "Grooming & Shift Readiness Checklist — {{name}}",
+    body: "Dear {{name}},\n\nAs a registered Topline team member, please maintain the mandatory grooming standards for all upcoming events:\n\n1. Clean pressed black formal trousers and white shirt\n2. Polished black formal shoes and socks\n3. Neatly groomed hair and clean personal presentation\n4. Carry your college ID (Roll No: {{registrationNumber}})\n\nThank you,\nTopline Operations Team",
+    category: "STUDENT",
+    isPredefined: true,
+  },
+  // Event templates
+  {
+    id: "predefined_event_duty_instructions",
+    name: "Reporting & Duty Instructions",
+    subject: "Duty & Reporting Instructions: {{eventName}} — {{name}}",
+    body: "Dear {{name}},\n\nYou are scheduled for duty at {{eventName}}.\n\n📅 Date: {{eventDate}}\n📍 Venue: {{eventLocation}}\n⏰ Mandatory Reporting Time: {{reportingTime}}\n💰 Payout: {{paymentPerStudent}}\n\n📋 Mandatory Instructions & Grooming Checklist:\n1. Arrive 15 minutes before the reporting time.\n2. Wear clean pressed black formal trousers, plain white formal shirt, and polished black formal shoes.\n3. Bring your college ID card (Roll No: {{registrationNumber}}).\n\nPlease confirm receipt of this schedule.\n\nBest regards,\nTopline Operations & Coordination Team",
+    category: "EVENT",
+    isPredefined: true,
+  },
+  {
+    id: "predefined_event_selection_confirmation",
+    name: "Selection Confirmation",
+    subject: "Selection Notice & Shift Confirmation: {{eventName}} — {{name}}",
+    body: "Congratulations {{name}}!\n\nYour application status for {{eventName}} is currently {{applicationStatus}}.\n\n📅 Date: {{eventDate}}\n📍 Venue: {{eventLocation}}\n\nPlease log in to your Topline Student Portal to confirm your attendance pass and view check-in details.\n\nBest regards,\nTopline Operations Team",
+    category: "EVENT",
+    isPredefined: true,
+  },
+  {
+    id: "predefined_event_payment_info",
+    name: "Payment & Bank Info",
+    subject: "Payment & Payout Confirmation: {{eventName}} — {{name}}",
+    body: "Hi {{name}},\n\nRegarding your completed assignment for {{eventName}}:\n\nAttendance Record: {{attendanceStatus}}\nPayout Amount: {{paymentPerStudent}}\n\nPlease verify that your UPI ID ({{upiId}}) is active on your portal profile for automated direct bank transfer.\n\nThank you for your dedicated service!\nTopline Accounts & Coordination",
+    category: "EVENT",
+    isPredefined: true,
+  },
+];
+
 export default function EmailTemplateManagerModal({
   isOpen,
   onClose,
@@ -53,10 +108,11 @@ export default function EmailTemplateManagerModal({
   onTemplatesUpdated,
   onSelectTemplate,
 }: EmailTemplateManagerModalProps) {
-  const [templates, setTemplates] = useState<CustomEmailTemplate[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<CustomEmailTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"ALL" | "CUSTOM" | "PREDEFINED">("ALL");
   const [activeTab, setActiveTab] = useState<"list" | "edit">("list");
 
   // Form State
@@ -83,7 +139,7 @@ export default function EmailTemplateManagerModal({
       const res = await fetch("/api/admin/email-templates?category=ALL");
       const data = await res.json();
       if (data.success && Array.isArray(data.templates)) {
-        setTemplates(data.templates);
+        setCustomTemplates(data.templates);
         if (onTemplatesUpdated) {
           onTemplatesUpdated(data.templates);
         }
@@ -101,6 +157,16 @@ export default function EmailTemplateManagerModal({
     }
   }, [isOpen]);
 
+  // Combined relevant templates: Predefined (matching scope) + Custom templates
+  const relevantPredefined = SYSTEM_PREDEFINED_TEMPLATES.filter(
+    (t) => scope === "GLOBAL" || t.category === "GLOBAL" || t.category === scope
+  );
+
+  const allTemplates: CustomEmailTemplate[] = [
+    ...customTemplates,
+    ...relevantPredefined,
+  ];
+
   const handleStartCreate = () => {
     setEditingId(null);
     setName("");
@@ -112,11 +178,21 @@ export default function EmailTemplateManagerModal({
   };
 
   const handleStartEdit = (tpl: CustomEmailTemplate) => {
-    setEditingId(tpl.id);
-    setName(tpl.name);
-    setSubject(tpl.subject);
-    setBody(tpl.body);
-    setCategory(tpl.category || "GLOBAL");
+    if (tpl.isPredefined) {
+      // For predefined templates, load as a clone so user can customize and save as new
+      setEditingId(null);
+      setName(`${tpl.name} (Custom)`);
+      setSubject(tpl.subject);
+      setBody(tpl.body);
+      setCategory(tpl.category || scope);
+      showToast(`Loaded "${tpl.name}". Edit and click Save to create your custom version.`);
+    } else {
+      setEditingId(tpl.id);
+      setName(tpl.name);
+      setSubject(tpl.subject);
+      setBody(tpl.body);
+      setCategory(tpl.category || "GLOBAL");
+    }
     setEditorSubTab("compose");
     setActiveTab("edit");
   };
@@ -149,7 +225,7 @@ export default function EmailTemplateManagerModal({
       const data = await res.json();
       if (data.success) {
         showToast(data.message || "Template saved successfully!");
-        setTemplates(data.templates || []);
+        setCustomTemplates(data.templates || []);
         if (onTemplatesUpdated) {
           onTemplatesUpdated(data.templates || []);
         }
@@ -175,7 +251,7 @@ export default function EmailTemplateManagerModal({
       const data = await res.json();
       if (data.success) {
         showToast("Template deleted.");
-        setTemplates(data.templates || []);
+        setCustomTemplates(data.templates || []);
         if (onTemplatesUpdated) {
           onTemplatesUpdated(data.templates || []);
         }
@@ -232,7 +308,9 @@ export default function EmailTemplateManagerModal({
 
   if (!isOpen) return null;
 
-  const filteredTemplates = templates.filter((t) => {
+  const filteredTemplates = allTemplates.filter((t) => {
+    if (filterType === "CUSTOM" && t.isPredefined) return false;
+    if (filterType === "PREDEFINED" && !t.isPredefined) return false;
     const matchesSearch =
       t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -269,11 +347,11 @@ export default function EmailTemplateManagerModal({
                   Email Template Manager
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                  {templates.length} Saved
+                  {allTemplates.length} Available
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Create reusable email templates with interactive placeholder tags that reflect in Quick Templates across dashboards.
+                Manage predefined presets & create custom email templates that reflect across Quick Templates in both dashboards.
               </p>
             </div>
           </div>
@@ -287,8 +365,8 @@ export default function EmailTemplateManagerModal({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="px-6 pt-3 pb-2 border-b border-slate-200 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2">
+        <div className="px-6 pt-3 pb-2 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab("list")}
               className={`px-4 py-2 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 ${
@@ -298,7 +376,7 @@ export default function EmailTemplateManagerModal({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              Saved Templates ({templates.length})
+              Templates List ({allTemplates.length})
             </button>
             <button
               onClick={handleStartCreate}
@@ -311,20 +389,49 @@ export default function EmailTemplateManagerModal({
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
-              {editingId ? "Edit Template" : "Create New Template"}
+              {editingId ? "Edit Custom Template" : "Create New Template"}
             </button>
           </div>
 
           {activeTab === "list" && (
-            <div className="relative w-48 sm:w-64">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search templates..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
-              />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
+                <button
+                  onClick={() => setFilterType("ALL")}
+                  className={`px-2 py-1 rounded-md transition ${
+                    filterType === "ALL" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500"
+                  }`}
+                >
+                  All ({allTemplates.length})
+                </button>
+                <button
+                  onClick={() => setFilterType("CUSTOM")}
+                  className={`px-2 py-1 rounded-md transition ${
+                    filterType === "CUSTOM" ? "bg-white text-red-600 shadow-xs" : "text-slate-500"
+                  }`}
+                >
+                  Custom ({customTemplates.length})
+                </button>
+                <button
+                  onClick={() => setFilterType("PREDEFINED")}
+                  className={`px-2 py-1 rounded-md transition ${
+                    filterType === "PREDEFINED" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
+                  }`}
+                >
+                  Predefined ({relevantPredefined.length})
+                </button>
+              </div>
+
+              <div className="relative w-40 sm:w-48">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 transition"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -336,23 +443,23 @@ export default function EmailTemplateManagerModal({
               {loading ? (
                 <div className="text-center py-16">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-red-600 border-t-transparent mb-3"></div>
-                  <p className="text-xs font-semibold text-slate-500">Loading custom templates...</p>
+                  <p className="text-xs font-semibold text-slate-500">Loading templates...</p>
                 </div>
               ) : filteredTemplates.length === 0 ? (
                 <div className="text-center py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-8 space-y-3">
                   <FileText className="w-10 h-10 text-slate-300 mx-auto" />
-                  <h4 className="text-sm font-bold text-slate-800">No Custom Templates Found</h4>
+                  <h4 className="text-sm font-bold text-slate-800">No Templates Found</h4>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
                     {searchTerm
                       ? "No templates match your search query."
-                      : "You haven't created any custom templates yet. Click '+ Create New Template' above to build your first reusable email template!"}
+                      : "No templates in this category."}
                   </p>
                   <button
                     onClick={handleStartCreate}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
                   >
                     <Plus className="w-4 h-4" />
-                    Create First Template
+                    Create New Template
                   </button>
                 </div>
               ) : (
@@ -360,18 +467,36 @@ export default function EmailTemplateManagerModal({
                   {filteredTemplates.map((tpl) => (
                     <div
                       key={tpl.id}
-                      className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-3 relative group"
+                      className={`border rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-3 relative group ${
+                        tpl.isPredefined
+                          ? "bg-slate-50/70 border-slate-200 hover:border-blue-300"
+                          : "bg-white border-slate-200 hover:border-red-300"
+                      }`}
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h4 className="font-extrabold text-slate-900 text-sm">{tpl.name}</h4>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="font-extrabold text-slate-900 text-sm">{tpl.name}</h4>
+                              {tpl.isPredefined ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                  <Bookmark className="w-2.5 h-2.5" />
+                                  Predefined Preset
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+                                  <Sparkles className="w-2.5 h-2.5 text-red-500" />
+                                  Custom Template
+                                </span>
+                              )}
+                            </div>
+
                             <span
-                              className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                                 tpl.category === "EVENT"
                                   ? "bg-purple-50 text-purple-700 border border-purple-200"
                                   : tpl.category === "STUDENT"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
                                   : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               }`}
                             >
@@ -380,46 +505,72 @@ export default function EmailTemplateManagerModal({
                           </div>
 
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleStartEdit(tpl)}
-                              className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-                              title="Edit Template"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(tpl.id, tpl.name)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                              title="Delete Template"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {tpl.isPredefined ? (
+                              <button
+                                onClick={() => handleStartEdit(tpl)}
+                                className="px-2.5 py-1 text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition flex items-center gap-1"
+                                title="Customize this predefined template into a new custom template"
+                              >
+                                <Copy className="w-3 h-3 text-blue-600" />
+                                Customize / Clone
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleStartEdit(tpl)}
+                                  className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+                                  title="Edit Template"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(tpl.id, tpl.name)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                  title="Delete Template"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
-                        <div className="mt-2.5 bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1 text-xs">
-                          <p className="font-bold text-slate-700 truncate">
+                        <div className="mt-2.5 bg-white rounded-xl p-3 border border-slate-200 space-y-1 text-xs shadow-2xs">
+                          <p className="font-bold text-slate-800 truncate">
                             <span className="text-slate-400 font-normal">Subject: </span>
                             {tpl.subject}
                           </p>
-                          <p className="text-slate-500 line-clamp-3 font-mono text-[11px] whitespace-pre-line">
+                          <p className="text-slate-600 line-clamp-3 font-mono text-[11px] whitespace-pre-line leading-relaxed">
                             {tpl.body}
                           </p>
                         </div>
                       </div>
 
-                      {onSelectTemplate && (
-                        <button
-                          onClick={() => {
-                            onSelectTemplate(tpl);
-                            onClose();
-                          }}
-                          className="w-full py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          Apply to Email Compose
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        {onSelectTemplate && (
+                          <button
+                            onClick={() => {
+                              onSelectTemplate(tpl);
+                              onClose();
+                            }}
+                            className="flex-1 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            Apply to Email
+                          </button>
+                        )}
+
+                        {tpl.isPredefined && (
+                          <button
+                            onClick={() => handleStartEdit(tpl)}
+                            className="py-2 px-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1"
+                            title="Edit this preset to create a new custom template"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Edit & Save as New
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -606,7 +757,7 @@ export default function EmailTemplateManagerModal({
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        {editingId ? "Update Template" : "Save Template"}
+                        {editingId ? "Update Template" : "Save as New Template"}
                       </>
                     )}
                   </button>
