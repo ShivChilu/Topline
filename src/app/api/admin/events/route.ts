@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         status: EventStatus.DRAFT,
         visibility: visibility === "HIDDEN" ? EventVisibility.HIDDEN : EventVisibility.VISIBLE,
         allowedGender: body.allowedGender === "FEMALE_ONLY" ? "FEMALE_ONLY" : body.allowedGender === "MALE_ONLY" ? "MALE_ONLY" : "ALL",
+        whatsappGroupLink: body.whatsappGroupLink && body.whatsappGroupLink.trim() ? body.whatsappGroupLink.trim() : null,
         clientId: clientId || null,
       },
     });

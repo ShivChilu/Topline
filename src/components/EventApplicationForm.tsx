@@ -34,11 +34,13 @@ export default function EventApplicationForm({
   customFields,
   status,
   allowedGender = "ALL",
+  whatsappGroupLink,
 }: {
   eventId: string;
   customFields: FormField[];
   status: string;
   allowedGender?: string;
+  whatsappGroupLink?: string | null;
 }) {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
@@ -297,6 +299,30 @@ export default function EventApplicationForm({
           <span className="font-semibold text-slate-400">Registered Student:</span>
           <span className="font-bold text-white">{loggedInUser.name} ({loggedInUser.registrationNumber})</span>
         </div>
+
+        {appStatus === "SELECTED" && (
+          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/40 p-5 rounded-2xl space-y-3 text-center shadow-lg">
+            <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-sm uppercase tracking-wide">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>🎉 Congratulations! You are Selected</span>
+            </div>
+            <p className="text-xs text-emerald-200/90 leading-relaxed">
+              Please join the official event WhatsApp group immediately to receive live briefings, shift timings, and reporting instructions:
+            </p>
+            {whatsappGroupLink ? (
+              <a
+                href={whatsappGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-extrabold text-xs px-6 py-3 rounded-xl shadow-lg transition"
+              >
+                <span>📲 Join Official Event WhatsApp Group</span>
+              </a>
+            ) : (
+              <span className="text-slate-400 text-xs italic block">WhatsApp group link pending coordinator update</span>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <Link

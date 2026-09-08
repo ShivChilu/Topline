@@ -455,6 +455,7 @@ export async function PATCH(request: Request) {
               reportingTime: app.event.reportingTime,
               instructions: app.event.instructions,
               notes,
+              whatsappGroupLink: app.event.whatsappGroupLink || undefined,
             }).catch((err) => console.error("Event selection email dispatch error:", err));
           } else if (nextStatus === "NOT_SELECTED" || nextStatus === "REJECTED") {
             sendEventDeselectionEmail({

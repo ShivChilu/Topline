@@ -94,6 +94,7 @@ export async function GET() {
           reportingTime: app.event.reportingTime,
           payment: app.paymentOverride ?? app.event.paymentPerStudent,
           status: app.status.toLowerCase(),
+          whatsappGroupLink: app.event.whatsappGroupLink || null,
           attendanceStatus: app.attendance?.attendanceStatus || null,
           checkInTime: app.attendance?.checkInTime || null,
           createdAt: app.createdAt,

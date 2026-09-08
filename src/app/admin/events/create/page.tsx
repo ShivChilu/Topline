@@ -29,6 +29,7 @@ export default function CreateEventPage() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [workType, setWorkType] = useState("Catering Staff");
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
   const [dressCode, setDressCode] = useState("");
@@ -153,6 +154,7 @@ export default function CreateEventPage() {
       customFormFields: customFields,
       visibility,
       allowedGender,
+      whatsappGroupLink: whatsappGroupLink.trim() || undefined,
     };
 
     try {
@@ -296,6 +298,22 @@ export default function CreateEventPage() {
                 placeholder="https://maps.google.com/..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center gap-1.5">
+                <span>📲 Event WhatsApp Group Link (Optional)</span>
+              </label>
+              <input
+                type="url"
+                value={whatsappGroupLink}
+                onChange={(e) => setWhatsappGroupLink(e.target.value)}
+                placeholder="https://chat.whatsapp.com/ABCxyz123..."
+                className="w-full bg-emerald-50/40 border border-emerald-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-emerald-600 text-sm"
+              />
+              <span className="text-[11px] text-slate-500 block mt-1">
+                When you mark candidates as <strong>SELECTED</strong>, this link is automatically sent in confirmation emails and displayed on student portal passes.
+              </span>
             </div>
 
             <div>

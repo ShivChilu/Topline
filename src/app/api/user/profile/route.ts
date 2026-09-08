@@ -48,6 +48,7 @@ export async function GET() {
                 date: true,
                 location: true,
                 status: true,
+                whatsappGroupLink: true,
               },
             },
           },

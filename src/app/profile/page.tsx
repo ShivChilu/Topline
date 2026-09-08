@@ -823,18 +823,45 @@ export default function StudentProfilePage() {
             ) : (
               <div className="space-y-3">
                 {user.recentApplications.map((app: any) => (
-                  <div key={app.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+                  <div key={app.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <Link href={`/events/${app.event?.id}`} className="font-bold text-slate-900 hover:text-red-600 truncate">
                         {app.event?.name}
                       </Link>
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                        app.status === "SELECTED"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          : app.status === "NOT_SELECTED" || app.status === "REJECTED"
+                          ? "bg-rose-100 text-rose-800 border border-rose-200"
+                          : "bg-slate-200 text-slate-700"
+                      }`}>
                         {app.status}
                       </span>
                     </div>
                     <div className="text-slate-400 text-[11px]">
                       {app.event?.date ? new Date(app.event.date).toLocaleDateString("en-GB") : ""} • {app.event?.location}
                     </div>
+
+                    {app.status === "SELECTED" && (
+                      <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
+                        <div>
+                          <span className="text-emerald-800 font-extrabold text-[11px] block">🎉 You are Selected!</span>
+                          <span className="text-emerald-700 text-[10px]">Join the official WhatsApp group for live event updates.</span>
+                        </div>
+                        {app.event?.whatsappGroupLink ? (
+                          <a
+                            href={app.event.whatsappGroupLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition whitespace-nowrap"
+                          >
+                            <span>📲 Join WhatsApp Group</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-[10px] italic">WhatsApp group link pending coordinator update</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

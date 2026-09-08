@@ -106,14 +106,26 @@ export async function PATCH(
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
-      return NextResponse.json({ success: false, message: "Forbidden. Event Admins cannot edit master event settings." }, { status: 403 });
-    }
-
     const eventId = params.id;
     const body = await request.json();
 
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
+      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
+      if (!isAssigned) {
+        return NextResponse.json({ success: false, message: "Forbidden. You are not assigned to this event." }, { status: 403 });
+      }
+
+      // Event admin is allowed to update whatsappGroupLink
+      const onlyUpdatingWhatsapp = Object.keys(body).every((k) => ["whatsappGroupLink"].includes(k));
+      if (!onlyUpdatingWhatsapp) {
+        return NextResponse.json({ success: false, message: "Forbidden. Event Admins can only update WhatsApp group settings." }, { status: 403 });
+      }
+    }
+
     const allowedData: any = {};
+    if (body.whatsappGroupLink !== undefined) {
+      allowedData.whatsappGroupLink = body.whatsappGroupLink && body.whatsappGroupLink.trim() ? body.whatsappGroupLink.trim() : null;
+    }
     if (body.name !== undefined) allowedData.name = body.name;
     if (body.date !== undefined) allowedData.date = new Date(body.date);
     if (body.location !== undefined) allowedData.location = body.location;

@@ -54,6 +54,9 @@ function interpolateTags(template: string, app: any, event: any): string {
     age: user.age ? String(user.age) : "N/A",
     upiId: user.upiId || "N/A",
     email: user.email || "",
+    whatsappGroupLink: event?.whatsappGroupLink || "",
+    whatsappLink: event?.whatsappGroupLink || "",
+    groupLink: event?.whatsappGroupLink || "",
   };
 
   let result = template;

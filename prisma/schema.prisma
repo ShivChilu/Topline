@@ -209,6 +209,7 @@ model Event {
   status                      EventStatus          @default(DRAFT)
   visibility                  EventVisibility      @default(VISIBLE)
   allowedGender               AllowedGender        @default(ALL)
+  whatsappGroupLink           String?
   
   clientId                    String?
   client                      Client?              @relation(fields: [clientId], references: [id], onDelete: SetNull)

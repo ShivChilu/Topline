@@ -17,6 +17,7 @@ interface EventEmailPayload {
   reportingTime?: string | null;
   instructions?: string | null;
   notes?: string | null;
+  whatsappGroupLink?: string | null;
 }
 
 function getAppBaseUrl(): string {
@@ -287,6 +288,7 @@ export async function sendEventSelectionEmail({
   reportingTime,
   instructions,
   notes,
+  whatsappGroupLink,
 }: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
@@ -314,6 +316,7 @@ export async function sendEventSelectionEmail({
         .value { color: #ffffff; font-weight: 600; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
         .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
+        .btn-wa { display: inline-block; background: #25D366; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 15px; margin-top: 12px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); }
       </style>
     </head>
     <body>
@@ -336,6 +339,22 @@ export async function sendEventSelectionEmail({
             ${reportingTime ? `<div class="row"><span class="label">Reporting Time:</span> <span class="value">${reportingTime}</span></div>` : ""}
             <div class="row"><span class="label">Application Status:</span> <span class="value" style="color: #10b981;">Selected</span></div>
           </div>
+
+          ${
+            whatsappGroupLink
+              ? `
+          <div style="background: #064e3b; border: 1px solid #059669; border-radius: 10px; padding: 22px; text-align: center; margin: 24px 0;">
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">📲 Official Event WhatsApp Group</div>
+            <p style="font-size: 13px; color: #a7f3d0; margin: 0 0 14px 0; line-height: 1.4;">
+              All live briefings, reporting gate numbers, shift coordinators, and duty updates are shared in this group. Please join immediately:
+            </p>
+            <a href="${whatsappGroupLink}" class="btn-wa" target="_blank">
+              👉 Join Event WhatsApp Group Now
+            </a>
+          </div>
+          `
+              : ""
+          }
 
           ${instructions ? `<div style="background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 8px; font-size: 13px; color: #cbd5e1; margin: 16px 0;"><strong>Instructions:</strong> ${instructions}</div>` : ""}
 

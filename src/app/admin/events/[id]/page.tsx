@@ -43,7 +43,10 @@ import {
   Edit3,
   GripVertical,
   FileText,
-  Plus
+  Plus,
+  Download,
+  Copy,
+  Save,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import {
@@ -68,6 +71,7 @@ const EVENT_PLACEHOLDER_TAGS = [
   { tag: "{{gender}}", label: "Gender", example: "Male", desc: "Candidate gender" },
   { tag: "{{attendanceStatus}}", label: "Attendance", example: "PRESENT", desc: "Attendance status" },
   { tag: "{{callingRemarks}}", label: "Remarks", example: "Confirmed lead steward", desc: "Calling remarks" },
+  { tag: "{{whatsappGroupLink}}", label: "WhatsApp Group Link", example: "https://chat.whatsapp.com/...", desc: "Event official WhatsApp group invite link" },
 ];
 
 function formatTime12(timeStr: string) {
@@ -149,6 +153,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const subjectInputRef = useRef<HTMLInputElement | null>(null);
   const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("body");
 
+  // WhatsApp Group Link State & Quick Actions
+  const [whatsappGroupLinkInput, setWhatsappGroupLinkInput] = useState("");
+  const [savingWhatsappLink, setSavingWhatsappLink] = useState(false);
+  const [copiedWhatsappLink, setCopiedWhatsappLink] = useState(false);
+  const [copiedPhoneNumbers, setCopiedPhoneNumbers] = useState(false);
+
   // Admin Role & Template Manager Modal
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -183,6 +193,83 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const handleSaveWhatsappGroupLink = async () => {
+    try {
+      setSavingWhatsappLink(true);
+      const res = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappGroupLink: whatsappGroupLinkInput.trim() || null }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEvent((prev: any) => ({ ...prev, whatsappGroupLink: whatsappGroupLinkInput.trim() || null }));
+        showToast("WhatsApp group link saved successfully! Selection emails and student portal will now use this link.");
+      } else {
+        showToast(data.message || "Failed to save WhatsApp group link.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error saving WhatsApp group link.");
+    } finally {
+      setSavingWhatsappLink(false);
+    }
+  };
+
+  // Export .vcf contacts for fast import into phone / WhatsApp
+  const handleExportVcf = (targetApps?: any[]) => {
+    const list = targetApps || (statusFilter === "ALL" ? applications.filter(a => a.status === "SELECTED" || a.status === "CONFIRMED") : filteredAndSortedApplications);
+    if (list.length === 0) {
+      showToast("No candidate contacts available to export.");
+      return;
+    }
+    
+    let vcfContent = "";
+    list.forEach((app) => {
+      const name = app.name || app.user?.name || "Candidate";
+      const phone = app.mobileNumber || app.user?.phone || "";
+      const reg = app.registrationNumber || app.user?.registrationNumber || "";
+      if (!phone) return;
+      
+      const cleanPhone = phone.replace(/[^0-9+]/g, "");
+      vcfContent += "BEGIN:VCARD\r\nVERSION:3.0\r\n";
+      vcfContent += `FN:Topline ${event?.name ? `[${event.name.slice(0, 12)}] ` : ""}${name}${reg ? ` (${reg})` : ""}\r\n`;
+      vcfContent += `TEL;TYPE=CELL:${cleanPhone.startsWith("+") ? cleanPhone : `+91${cleanPhone}`}\r\n`;
+      if (app.user?.email) vcfContent += `EMAIL:${app.user.email}\r\n`;
+      vcfContent += `NOTE:Event: ${event?.name || "Topline"} | Status: ${app.status}\r\n`;
+      vcfContent += "END:VCARD\r\n";
+    });
+
+    const blob = new Blob([vcfContent], { type: "text/vcard;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${event?.name ? event.name.replace(/[^a-z0-9]/gi, "_") : "event"}_contacts.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Downloaded .vcf file with ${list.length} candidate contacts!`);
+  };
+
+  // Copy all phone numbers (comma-separated or lines)
+  const handleCopyAllPhones = (targetApps?: any[]) => {
+    const list = targetApps || (statusFilter === "ALL" ? applications.filter(a => a.status === "SELECTED" || a.status === "CONFIRMED") : filteredAndSortedApplications);
+    const phones = list
+      .map(a => a.mobileNumber || a.user?.phone || "")
+      .filter(p => p.length > 0);
+    
+    if (phones.length === 0) {
+      showToast("No phone numbers found.");
+      return;
+    }
+
+    navigator.clipboard.writeText(phones.join(", "));
+    setCopiedPhoneNumbers(true);
+    setTimeout(() => setCopiedPhoneNumbers(false), 3000);
+    showToast(`Copied ${phones.length} phone numbers to clipboard!`);
+  };
+
   const fetchEventData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -203,6 +290,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       }
 
       setEvent(eventData.event);
+      if (eventData.event?.whatsappGroupLink) {
+        setWhatsappGroupLinkInput(eventData.event.whatsappGroupLink);
+      }
 
       try {
         const appRes = await fetch(`/api/admin/applications?eventId=${eventId}&t=${Date.now()}`, { cache: "no-store" });
@@ -830,6 +920,119 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <ExternalLink className="w-3.5 h-3.5" />
             Public Page
           </a>
+        </div>
+      </div>
+
+      {/* WhatsApp Group Integration & Automation Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 rounded-2xl p-4 sm:p-5 border border-emerald-600/40 shadow-xl text-white space-y-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#25D366]/20 border border-[#25D366]/40 flex items-center justify-center text-[#25D366] shrink-0 shadow-inner">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-extrabold text-white tracking-wide uppercase">
+                  Event WhatsApp Group Link
+                </h3>
+                {event.whatsappGroupLink ? (
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse"></span>
+                    Live & Automated
+                  </span>
+                ) : (
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    ⚠️ Link Not Set
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-emerald-200/80 mt-0.5">
+                Paste your event WhatsApp group link below. It is <strong>automatically included in all selection confirmation emails</strong> and candidate portal passes.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Contact Actions */}
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+            <button
+              onClick={() => handleExportVcf()}
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm"
+              title="Download .vcf contact file of all selected candidates to save to phone in 1-click"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Export Contacts (.vcf)</span>
+            </button>
+
+            <button
+              onClick={() => handleCopyAllPhones()}
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm"
+              title="Copy all candidate mobile numbers separated by comma"
+            >
+              {copiedPhoneNumbers ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-emerald-400" />}
+              <span>{copiedPhoneNumbers ? "Copied!" : "Copy Numbers"}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+          <div className="relative flex-1">
+            <input
+              type="url"
+              value={whatsappGroupLinkInput}
+              onChange={(e) => setWhatsappGroupLinkInput(e.target.value)}
+              placeholder="https://chat.whatsapp.com/ABCxyz123..."
+              className="w-full bg-slate-950/80 border border-emerald-500/40 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#25D366] focus:ring-1 focus:ring-[#25D366]"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSaveWhatsappGroupLink}
+              disabled={savingWhatsappLink}
+              className="bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 text-slate-950 font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition shadow-md whitespace-nowrap"
+            >
+              {savingWhatsappLink ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Group Link</span>
+                </>
+              )}
+            </button>
+
+            {event.whatsappGroupLink && (
+              <>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(event.whatsappGroupLink);
+                    setCopiedWhatsappLink(true);
+                    setTimeout(() => setCopiedWhatsappLink(false), 2500);
+                    showToast("WhatsApp Group Link copied to clipboard!");
+                  }}
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 border border-white/20 transition"
+                  title="Copy Link"
+                >
+                  {copiedWhatsappLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedWhatsappLink ? "Copied" : "Copy"}</span>
+                </button>
+
+                <a
+                  href={event.whatsappGroupLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white/10 hover:bg-white/20 text-emerald-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 border border-emerald-500/30 transition"
+                  title="Open WhatsApp Group in Web/App"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open</span>
+                </a>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
