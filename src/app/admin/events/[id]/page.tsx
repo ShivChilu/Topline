@@ -1512,6 +1512,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <Check className="w-3 h-3 stroke-3" /> Selected
                           </span>
                         )}
+                        {sStatus === "CONFIRMED" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-teal-600 text-white shadow-md flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Confirmed (Attending)
+                          </span>
+                        )}
+                        {sStatus === "CANCELLED" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-600 text-white shadow-md flex items-center gap-1">
+                            <X className="w-3 h-3 stroke-3" /> Declined / Cancelled
+                          </span>
+                        )}
                         {sStatus === "UNDER_REVIEW" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
                             <Clock className="w-3 h-3" /> Under Review
@@ -1520,11 +1530,6 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         {(sStatus === "NOT_SELECTED" || sStatus === "REJECTED") && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-md flex items-center gap-1">
                             <X className="w-3 h-3 stroke-3" /> Not Selected
-                          </span>
-                        )}
-                        {sStatus === "CONFIRMED" && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-teal-500 text-white shadow-md flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Confirmed
                           </span>
                         )}
                         {sStatus === "ATTENDED" && (
@@ -1731,19 +1736,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       </td>
                       <td className="p-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
-                          sStatus === "SELECTED"
+                          sStatus === "CONFIRMED"
+                            ? "bg-teal-50 text-teal-800 border-teal-300 font-extrabold"
+                            : sStatus === "SELECTED"
                             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : sStatus === "CANCELLED"
+                            ? "bg-rose-50 text-rose-800 border-rose-200"
                             : sStatus === "UNDER_REVIEW"
                             ? "bg-amber-50 text-amber-800 border-amber-200"
                             : sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
                             ? "bg-rose-50 text-rose-800 border-rose-200"
-                            : sStatus === "CONFIRMED"
-                            ? "bg-teal-50 text-teal-800 border-teal-200"
                             : sStatus === "ATTENDED"
                             ? "bg-blue-50 text-blue-800 border-blue-200"
                             : "bg-slate-100 text-slate-700 border-slate-200"
                         }`}>
-                          {sStatus}
+                          {sStatus === "CONFIRMED" ? "✅ Confirmed" : sStatus === "CANCELLED" ? "❌ Declined" : sStatus}
                         </span>
                       </td>
                       <td className="p-4 font-semibold text-xs text-slate-800 font-mono">

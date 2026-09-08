@@ -18,6 +18,7 @@ interface EventEmailPayload {
   instructions?: string | null;
   notes?: string | null;
   whatsappGroupLink?: string | null;
+  applicationId?: string | null;
 }
 
 function getAppBaseUrl(): string {
@@ -289,6 +290,7 @@ export async function sendEventSelectionEmail({
   instructions,
   notes,
   whatsappGroupLink,
+  applicationId,
 }: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
@@ -296,6 +298,8 @@ export async function sendEventSelectionEmail({
     }
 
     const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
+    const confirmUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=CONFIRM` : `${getAppBaseUrl()}/profile`;
+    const declineUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=DECLINE` : `${getAppBaseUrl()}/profile`;
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -315,8 +319,9 @@ export async function sendEventSelectionEmail({
         .label { color: #9ca3af; font-weight: 500; }
         .value { color: #ffffff; font-weight: 600; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
-        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
-        .btn-wa { display: inline-block; background: #25D366; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 15px; margin-top: 12px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); }
+        .btn-confirm { display: inline-block; background: #059669; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 15px; margin: 6px 4px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4); }
+        .btn-decline { display: inline-block; background: #374151; color: #f87171 !important; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: 700; font-size: 13px; margin: 6px 4px; border: 1px solid #4b5563; }
+        .btn-portal { display: inline-block; background: #ED0000; color: #ffffff !important; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; margin-top: 16px; }
       </style>
     </head>
     <body>
@@ -328,7 +333,7 @@ export async function sendEventSelectionEmail({
           <div class="badge">✓ SELECTED FOR EVENT DUTY</div>
           <h2 style="color: #ffffff; margin-top: 0;">Congratulations, ${studentName}!</h2>
           <p style="color: #d1d5db; line-height: 1.6;">
-            You have been officially <strong>SELECTED</strong> for the upcoming catering & hospitality assignment:
+            You have been shortlisted and <strong>SELECTED</strong> for the upcoming event duty assignment:
           </p>
 
           <div class="card">
@@ -337,40 +342,43 @@ export async function sendEventSelectionEmail({
             ${formattedDate ? `<div class="row"><span class="label">Date:</span> <span class="value">${formattedDate}</span></div>` : ""}
             ${eventLocation ? `<div class="row"><span class="label">Location / Venue:</span> <span class="value">${eventLocation}</span></div>` : ""}
             ${reportingTime ? `<div class="row"><span class="label">Reporting Time:</span> <span class="value">${reportingTime}</span></div>` : ""}
-            <div class="row"><span class="label">Application Status:</span> <span class="value" style="color: #10b981;">Selected</span></div>
+            <div class="row"><span class="label">Selection Status:</span> <span class="value" style="color: #10b981;">Selected (Awaiting RSVP)</span></div>
           </div>
 
-          ${
-            whatsappGroupLink
-              ? `
-          <div style="background: #064e3b; border: 1px solid #059669; border-radius: 10px; padding: 22px; text-align: center; margin: 24px 0;">
-            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">📲 Official Event WhatsApp Group</div>
-            <p style="font-size: 13px; color: #a7f3d0; margin: 0 0 14px 0; line-height: 1.4;">
-              All live briefings, reporting gate numbers, shift coordinators, and duty updates are shared in this group. Please join immediately:
+          <!-- AVAILABILITY RSVP ACTION BOX -->
+          <div style="background: #0f172a; border: 2px solid #3b82f6; border-radius: 12px; padding: 24px; text-align: center; margin: 26px 0;">
+            <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">⚡ Are you available to attend this duty?</div>
+            <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 18px 0; line-height: 1.5;">
+              Please confirm your availability immediately. Selecting <strong>YES</strong> confirms your slot on the duty roster and unlocks the <strong>Official WhatsApp Group link</strong> for briefing updates.
             </p>
-            <a href="${whatsappGroupLink}" class="btn-wa" target="_blank">
-              👉 Join Event WhatsApp Group Now
-            </a>
+
+            <div style="margin: 12px 0;">
+              <a href="${confirmUrl}" class="btn-confirm" target="_blank">
+                ✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)
+              </a>
+            </div>
+            <div style="margin-top: 8px;">
+              <a href="${declineUrl}" class="btn-decline" target="_blank">
+                ❌ NO, NOT AVAILABLE (Decline & Release Slot)
+              </a>
+            </div>
           </div>
-          `
-              : ""
-          }
 
           ${instructions ? `<div style="background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 8px; font-size: 13px; color: #cbd5e1; margin: 16px 0;"><strong>Instructions:</strong> ${instructions}</div>` : ""}
 
           ${notes ? `<div style="background: #374151; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #e5e7eb; margin-bottom: 20px;"><strong>Admin / Coordinator Note:</strong> ${notes}</div>` : ""}
 
-          <p style="color: #9ca3af; font-size: 14px; line-height: 1.5;">
-            Please ensure you are punctual, in required formal grooming and uniform. You can view your event confirmation and digital pass on your student portal.
+          <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin-top: 20px;">
+            Please ensure you are punctual, groomed as per standards, and carry your college / government photo ID.
           </p>
 
-          <div style="text-align: center;">
-            <a href="${getAppBaseUrl()}/profile" class="btn" style="color: #ffffff;">View My Assignment</a>
+          <div style="text-align: center; margin-top: 10px;">
+            <a href="${getAppBaseUrl()}/profile" class="btn-portal">Open Student Portal</a>
           </div>
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
-          This is an automated system notification. Please do not reply directly to this email.
+          This is an automated system notification.
         </div>
       </div>
     </body>

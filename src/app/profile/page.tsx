@@ -27,7 +27,9 @@ import {
   Star,
   Sliders,
   ShieldCheck,
-  Info
+  Info,
+  MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
 import { compressImage } from "@/lib/image-compress";
@@ -83,10 +85,30 @@ export default function StudentProfilePage() {
   });
 
   const [dynamicResponses, setDynamicResponses] = useState<Record<string, string>>({});
+  const [rsvpLoadingId, setRsvpLoadingId] = useState<string | null>(null);
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 5000);
+  };
+
+  const handleRsvpAction = async (appId: string, action: "CONFIRM" | "DECLINE") => {
+    try {
+      setRsvpLoadingId(appId);
+      const query = new URLSearchParams({ appId, action });
+      const res = await fetch(`/api/rsvp?` + query.toString());
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showFeedback("success", action === "CONFIRM" ? "Duty attendance confirmed! WhatsApp group unlocked." : "Duty declined and slot released.");
+        fetchProfile();
+      } else {
+        showFeedback("error", json.message || "Failed to update attendance.");
+      }
+    } catch (err: any) {
+      showFeedback("error", err.message || "Error updating attendance.");
+    } finally {
+      setRsvpLoadingId(null);
+    }
   };
 
   const fetchProfile = async () => {
@@ -829,24 +851,61 @@ export default function StudentProfilePage() {
                         {app.event?.name}
                       </Link>
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                        app.status === "SELECTED"
+                        app.status === "CONFIRMED"
+                          ? "bg-teal-100 text-teal-800 border border-teal-200"
+                          : app.status === "SELECTED"
                           ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : app.status === "NOT_SELECTED" || app.status === "REJECTED"
+                          : app.status === "NOT_SELECTED" || app.status === "REJECTED" || app.status === "CANCELLED"
                           ? "bg-rose-100 text-rose-800 border border-rose-200"
                           : "bg-slate-200 text-slate-700"
                       }`}>
-                        {app.status}
+                        {app.status === "CONFIRMED" ? "✅ Confirmed" : app.status === "CANCELLED" ? "❌ Declined" : app.status}
                       </span>
                     </div>
                     <div className="text-slate-400 text-[11px]">
                       {app.event?.date ? new Date(app.event.date).toLocaleDateString("en-GB") : ""} • {app.event?.location}
                     </div>
 
+                    {/* Action banner when SELECTED (Awaiting Response) */}
                     {app.status === "SELECTED" && (
-                      <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
+                      <div className="pt-2 border-t border-slate-200 flex flex-col gap-2.5 bg-emerald-50/80 p-3 rounded-xl border border-emerald-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-emerald-900 font-black text-xs block">🎉 Selected for Event Duty!</span>
+                            <span className="text-emerald-700 text-[11px]">Are you available to attend this assignment?</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleRsvpAction(app.id, "CONFIRM")}
+                            disabled={rsvpLoadingId === app.id}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {rsvpLoadingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-3" />}
+                            <span>✅ YES, I AM AVAILABLE</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRsvpAction(app.id, "DECLINE")}
+                            disabled={rsvpLoadingId === app.id}
+                            className="bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 transition disabled:opacity-50 cursor-pointer"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>❌ NO (Decline)</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Banner when CONFIRMED (Attendance Locked + WhatsApp Group) */}
+                    {app.status === "CONFIRMED" && (
+                      <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-teal-50 p-2.5 rounded-lg border border-teal-200">
                         <div>
-                          <span className="text-emerald-800 font-extrabold text-[11px] block">🎉 You are Selected!</span>
-                          <span className="text-emerald-700 text-[10px]">Join the official WhatsApp group for live event updates.</span>
+                          <span className="text-teal-900 font-extrabold text-[11px] block flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 inline" /> Attendance Confirmed & Roster Locked
+                          </span>
+                          <span className="text-teal-700 text-[10px]">Duty confirmed. Live updates and gate entry are posted in WhatsApp:</span>
                         </div>
                         {app.event?.whatsappGroupLink ? (
                           <a
@@ -855,11 +914,26 @@ export default function StudentProfilePage() {
                             rel="noopener noreferrer"
                             className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition whitespace-nowrap"
                           >
+                            <MessageCircle className="w-3.5 h-3.5 fill-white" />
                             <span>📲 Join WhatsApp Group</span>
                           </a>
                         ) : (
                           <span className="text-slate-400 text-[10px] italic">WhatsApp group link pending coordinator update</span>
                         )}
+                      </div>
+                    )}
+
+                    {/* Banner when CANCELLED / DECLINED */}
+                    {app.status === "CANCELLED" && (
+                      <div className="pt-2 border-t border-slate-200 flex items-center justify-between bg-rose-50 p-2 rounded-lg border border-rose-200">
+                        <span className="text-rose-800 text-[11px] font-medium">Assignment declined / cancelled</span>
+                        <button
+                          onClick={() => handleRsvpAction(app.id, "CONFIRM")}
+                          disabled={rsvpLoadingId === app.id}
+                          className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline cursor-pointer disabled:opacity-50"
+                        >
+                          Re-confirm Availability
+                        </button>
                       </div>
                     )}
                   </div>
