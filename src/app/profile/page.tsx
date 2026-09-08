@@ -925,15 +925,11 @@ export default function StudentProfilePage() {
 
                     {/* Banner when CANCELLED / DECLINED */}
                     {app.status === "CANCELLED" && (
-                      <div className="pt-2 border-t border-slate-200 flex items-center justify-between bg-rose-50 p-2 rounded-lg border border-rose-200">
-                        <span className="text-rose-800 text-[11px] font-medium">Assignment declined / cancelled</span>
-                        <button
-                          onClick={() => handleRsvpAction(app.id, "CONFIRM")}
-                          disabled={rsvpLoadingId === app.id}
-                          className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline cursor-pointer disabled:opacity-50"
-                        >
-                          Re-confirm Availability
-                        </button>
+                      <div className="pt-2 border-t border-slate-200 flex items-center justify-between bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                        <span className="text-rose-800 text-[11px] font-semibold flex items-center gap-1">
+                          <XCircle className="w-3.5 h-3.5 text-rose-500 inline" /> Duty Assignment Permanently Declined
+                        </span>
+                        <span className="text-[10px] text-rose-600 italic">Slot released</span>
                       </div>
                     )}
                   </div>

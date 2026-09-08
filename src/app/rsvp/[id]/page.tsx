@@ -296,30 +296,25 @@ export default function CandidateRSVPPage({
                       <div className="w-14 h-14 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto text-rose-400 mb-3">
                         <XCircle className="w-8 h-8" />
                       </div>
-                      <h3 className="text-xl font-extrabold text-white">Duty Declined</h3>
+                      <h3 className="text-xl font-extrabold text-white">Duty Permanently Declined</h3>
                       <p className="text-rose-300 text-xs mt-1 leading-relaxed max-w-md mx-auto">
-                        You have indicated that you are not available for this assignment. Your slot has been released for standby candidates.
+                        You have declined this duty assignment. Your slot has been released to standby candidates.
                       </p>
                     </div>
 
                     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center space-y-3">
-                      <p className="text-xs text-slate-400">
-                        Made a mistake or your schedule cleared up? You can re-confirm your attendance below.
+                      <div className="text-xs text-slate-400 leading-relaxed">
+                        ⚠️ <strong className="text-slate-300">Permanent Status:</strong> Once declined, duty slots cannot be reclaimed or re-confirmed online.
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        If you believe this was submitted by mistake, please contact your event coordinator directly.
                       </p>
-                      <button
-                        onClick={() => handleAction("CONFIRM")}
-                        disabled={submitting}
-                        className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow disabled:opacity-50 cursor-pointer"
-                      >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        Re-confirm My Availability
-                      </button>
                     </div>
 
-                    <div className="text-center">
+                    <div className="text-center pt-2">
                       <Link
                         href="/profile"
-                        className="text-xs font-semibold text-slate-400 hover:text-white transition"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition border border-slate-700"
                       >
                         ← Back to Student Portal
                       </Link>

@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApplicationStatus } from "@prisma/client";
 
@@ -32,6 +32,29 @@ export async function GET(request: Request) {
 
     if (!application) {
       return NextResponse.json({ success: false, message: "Application not found." }, { status: 404 });
+    }
+
+    // If application was already declined / cancelled, candidate cannot re-confirm (Permanent Decline)
+    if (application.status === ApplicationStatus.CANCELLED) {
+      if (action === "CONFIRM" || action === "YES") {
+        return NextResponse.json({
+          success: false,
+          status: "CANCELLED",
+          message: "This duty assignment has been permanently declined and the slot was released. It cannot be re-confirmed.",
+          candidateName: application.name || application.user?.name,
+          eventName: application.event.name,
+          eventDate: application.event.date,
+        }, { status: 400 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        status: "CANCELLED",
+        message: "You have permanently declined this duty assignment. Your slot has been released.",
+        candidateName: application.name || application.user?.name,
+        eventName: application.event.name,
+        eventDate: application.event.date,
+      });
     }
 
     // If an action was provided, process the response
@@ -91,16 +114,14 @@ export async function GET(request: Request) {
         },
       });
 
-      if (oldStatus !== ApplicationStatus.CANCELLED) {
-        await prisma.applicationStatusHistory.create({
-          data: {
-            applicationId: appId,
-            oldStatus,
-            newStatus: ApplicationStatus.CANCELLED,
-            notes: "Candidate declined availability via email/portal RSVP (NO)",
-          },
-        });
-      }
+      await prisma.applicationStatusHistory.create({
+        data: {
+          applicationId: appId,
+          oldStatus,
+          newStatus: ApplicationStatus.CANCELLED,
+          notes: "Candidate declined availability via email/portal RSVP (NO)",
+        },
+      });
 
       return NextResponse.json({
         success: true,
@@ -150,6 +171,15 @@ export async function POST(request: Request) {
 
     if (!application) {
       return NextResponse.json({ success: false, message: "Application not found." }, { status: 404 });
+    }
+
+    // Permanently locked if declined
+    if (application.status === ApplicationStatus.CANCELLED) {
+      return NextResponse.json({
+        success: false,
+        status: "CANCELLED",
+        message: "This assignment has been permanently declined and the slot was released. It cannot be modified.",
+      }, { status: 400 });
     }
 
     const now = new Date();
