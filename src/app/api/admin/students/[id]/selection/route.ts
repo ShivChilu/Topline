@@ -12,14 +12,14 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { selectionStatus, notes, sendEmail = true } = body;
+    const { selectionStatus, notes, adminRemarks, sendEmail = true } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, message: "Student ID is required." }, { status: 400 });
     }
 
-    const validStatuses: StudentSelectionStatus[] = ["UNDER_REVIEW", "SELECTED", "NOT_SELECTED"];
-    if (!validStatuses.includes(selectionStatus)) {
+    const validStatuses: StudentSelectionStatus[] = ["UNDER_REVIEW", "SELECTED", "NOT_SELECTED", "ON_HOLD"];
+    if (selectionStatus && !validStatuses.includes(selectionStatus)) {
       return NextResponse.json(
         { success: false, message: `Invalid status. Must be one of: ${validStatuses.join(", ")}` },
         { status: 400 }
@@ -38,18 +38,27 @@ export async function PATCH(
     }
 
     const oldStatus = currentStudent.selectionStatus;
-    const isStatusChanged = oldStatus !== selectionStatus;
+    const nextStatus = selectionStatus || oldStatus;
+    const isStatusChanged = selectionStatus ? oldStatus !== selectionStatus : false;
 
     const now = new Date();
+    const updateData: any = {
+      selectionStatus: nextStatus,
+      ...(nextStatus === "SELECTED" && {
+        selectedAt: now,
+        ...(sendEmail && { selectionEmailSentAt: now }),
+      }),
+    };
+
+    if (notes !== undefined) {
+      updateData.adminRemarks = notes;
+    } else if (adminRemarks !== undefined) {
+      updateData.adminRemarks = adminRemarks;
+    }
+
     const updatedStudent = await prisma.user.update({
       where: { id },
-      data: {
-        selectionStatus,
-        ...(selectionStatus === "SELECTED" && {
-          selectedAt: now,
-          ...(sendEmail && { selectionEmailSentAt: now }),
-        }),
-      },
+      data: updateData,
     });
 
     // Only dispatch email if status genuinely changed and student has an email address

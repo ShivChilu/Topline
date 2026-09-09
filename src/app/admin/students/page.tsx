@@ -90,8 +90,9 @@ interface Student {
   age: number | null;
   upiId: string;
   bio: string;
+  adminRemarks?: string | null;
   profilePhotoUrl: string | null;
-  selectionStatus: "UNDER_REVIEW" | "SELECTED" | "NOT_SELECTED";
+  selectionStatus: "UNDER_REVIEW" | "SELECTED" | "NOT_SELECTED" | "ON_HOLD";
   selectedAt: string | null;
   selectionEmailSentAt: string | null;
   status: "active" | "blocked";
@@ -160,6 +161,7 @@ export default function AdminStudentsPage() {
   // Detail Modal
   const [inspectStudent, setInspectStudent] = useState<Student | null>(null);
   const [customNote, setCustomNote] = useState("");
+  const [savingRemarks, setSavingRemarks] = useState(false);
   const [sendEmailToggle, setSendEmailToggle] = useState(true);
 
   // Custom Email Broadcast & Single Message Modal
@@ -170,6 +172,7 @@ export default function AdminStudentsPage() {
     "Hi {{name}},\n\nWe have an important update regarding your Topline ODC profile (Roll No: {{registrationNumber}}).\n\nPlease log in to the student portal to review the latest schedule and updates.\n\nBest regards,\nTopline Operations Team"
   );
   const [customEmailBranding, setCustomEmailBranding] = useState(true);
+  const [sendTestEmailCopy, setSendTestEmailCopy] = useState(true);
   const [emailSending, setEmailSending] = useState(false);
   const [emailTab, setEmailTab] = useState<"compose" | "preview">("compose");
   const messageTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -254,7 +257,7 @@ export default function AdminStudentsPage() {
         setFields(data.fields || []);
       }
     } catch (err) {
-      console.error("Error fetching profile fields:", err);
+      console.error(err);
     } finally {
       setFieldsLoading(false);
     }
@@ -272,10 +275,16 @@ export default function AdminStudentsPage() {
     }
   }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, activeTab]);
 
+  // Open inspect student modal and populate current remarks
+  const openInspectStudent = (student: Student) => {
+    setInspectStudent(student);
+    setCustomNote(student.adminRemarks || "");
+  };
+
   // Handle single candidate selection change with optimistic update
   const handleUpdateSelection = async (
     studentId: string,
-    nextStatus: "SELECTED" | "NOT_SELECTED" | "UNDER_REVIEW",
+    nextStatus: "SELECTED" | "NOT_SELECTED" | "UNDER_REVIEW" | "ON_HOLD",
     notes?: string
   ) => {
     try {
@@ -294,7 +303,7 @@ export default function AdminStudentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           selectionStatus: nextStatus,
-          notes: notes || customNote || undefined,
+          notes: notes !== undefined ? notes : customNote || undefined,
           sendEmail: sendEmailToggle,
         }),
       });
@@ -312,6 +321,39 @@ export default function AdminStudentsPage() {
       fetchStudents();
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Save remarks note for a student
+  const handleSaveRemarks = async (studentId: string, noteText: string) => {
+    try {
+      setSavingRemarks(true);
+      setStudents((prev) =>
+        prev.map((s) => (s.id === studentId ? { ...s, adminRemarks: noteText } : s))
+      );
+      if (inspectStudent && inspectStudent.id === studentId) {
+        setInspectStudent((prev) => (prev ? { ...prev, adminRemarks: noteText } : null));
+      }
+
+      const res = await fetch(`/api/admin/students`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId,
+          adminRemarks: noteText,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("✓ Remarks saved successfully.");
+      } else {
+        showToast(data.message || "Failed to save remarks.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error saving remarks.");
+    } finally {
+      setSavingRemarks(false);
     }
   };
 
@@ -475,6 +517,7 @@ export default function AdminStudentsPage() {
           subject: customEmailSubject,
           message: customEmailBody,
           includeBranding: customEmailBranding,
+          sendTestCopy: sendTestEmailCopy,
         }),
       });
 
@@ -1379,6 +1422,11 @@ export default function AdminStudentsPage() {
                             <Check className="w-3 h-3 stroke-3" /> Selected
                           </span>
                         )}
+                        {student.selectionStatus === "ON_HOLD" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-600 text-white shadow-md flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> On Hold
+                          </span>
+                        )}
                         {student.selectionStatus === "UNDER_REVIEW" && (
                           student.completenessScore >= 100 ? (
                             <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-white shadow-md flex items-center gap-1 ring-2 ring-amber-300">
@@ -1410,7 +1458,7 @@ export default function AdminStudentsPage() {
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-slate-900 text-base leading-tight hover:text-red-600 transition cursor-pointer" onClick={() => setInspectStudent(student)}>
+                          <h3 className="font-bold text-slate-900 text-base leading-tight hover:text-red-600 transition cursor-pointer" onClick={() => openInspectStudent(student)}>
                             {student.name}
                           </h3>
                           {student.status === "blocked" && (
@@ -1447,9 +1495,21 @@ export default function AdminStudentsPage() {
                           )}
                         </div>
 
+                        {/* Admin remarks preview snippet if present */}
+                        {student.adminRemarks && (
+                          <div
+                            onClick={() => openInspectStudent(student)}
+                            className="mt-2 text-[11px] bg-amber-50/90 border border-amber-200 text-amber-900 px-2 py-1 rounded-lg flex items-start gap-1 cursor-pointer hover:bg-amber-100 transition"
+                            title="Click to view or edit remarks"
+                          >
+                            <span className="font-bold shrink-0">📝 Note:</span>
+                            <span className="truncate">{student.adminRemarks}</span>
+                          </div>
+                        )}
+
                         {/* Email Communication & Engagement Summary */}
                         <div
-                          onClick={() => setInspectStudent(student)}
+                          onClick={() => openInspectStudent(student)}
                           className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg transition"
                           title="Click to view full email communication, open tracking, and button clicks"
                         >
@@ -1490,32 +1550,48 @@ export default function AdminStudentsPage() {
 
                       {/* Action Buttons */}
                       <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                        {/* 1-Click Select / Deselect */}
-                        <div className="grid grid-cols-2 gap-2">
+                        {/* 1-Click Select / Hold / Deselect */}
+                        <div className="grid grid-cols-3 gap-1.5">
                           <button
                             disabled={actionLoading === student.id}
                             onClick={() => handleUpdateSelection(student.id, "SELECTED")}
-                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                               student.selectionStatus === "SELECTED"
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                                 : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                             }`}
+                            title="Approve & Select Candidate"
                           >
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="w-3 h-3" />
                             {student.selectionStatus === "SELECTED" ? "Selected" : "Select"}
                           </button>
 
                           <button
                             disabled={actionLoading === student.id}
+                            onClick={() => handleUpdateSelection(student.id, "ON_HOLD")}
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                              student.selectionStatus === "ON_HOLD"
+                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                : "bg-slate-100 hover:bg-amber-600 hover:text-white text-slate-700"
+                            }`}
+                            title="Mark Candidate On Hold / Waitlist"
+                          >
+                            <Clock className="w-3 h-3" />
+                            {student.selectionStatus === "ON_HOLD" ? "On Hold" : "Hold"}
+                          </button>
+
+                          <button
+                            disabled={actionLoading === student.id}
                             onClick={() => handleUpdateSelection(student.id, "NOT_SELECTED")}
-                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                               student.selectionStatus === "NOT_SELECTED"
                                 ? "bg-rose-100 text-rose-800 border border-rose-300"
                                 : "bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-700"
                             }`}
+                            title="Reject / Not Selected"
                           >
-                            <X className="w-3.5 h-3.5" />
-                            {student.selectionStatus === "NOT_SELECTED" ? "Not Selected" : "Deselect"}
+                            <X className="w-3 h-3" />
+                            {student.selectionStatus === "NOT_SELECTED" ? "Rejected" : "Reject"}
                           </button>
                         </div>
 
@@ -1531,7 +1607,7 @@ export default function AdminStudentsPage() {
                           </button>
 
                           <button
-                            onClick={() => setInspectStudent(student)}
+                            onClick={() => openInspectStudent(student)}
                             className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center truncate"
                           >
                             Full Profile
@@ -1607,7 +1683,7 @@ export default function AdminStudentsPage() {
                         </div>
                         <div>
                           <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <span onClick={() => setInspectStudent(student)} className="cursor-pointer hover:text-red-600">
+                            <span onClick={() => openInspectStudent(student)} className="cursor-pointer hover:text-red-600">
                               {student.name}
                             </span>
                             {student.status === "blocked" && (
@@ -1615,6 +1691,15 @@ export default function AdminStudentsPage() {
                             )}
                           </div>
                           <div className="text-xs text-slate-400 font-semibold">{student.registrationNumber}</div>
+                          {student.adminRemarks && (
+                            <div
+                              onClick={() => openInspectStudent(student)}
+                              className="mt-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded cursor-pointer max-w-[220px] truncate hover:bg-amber-100 transition"
+                              title={`Remarks: ${student.adminRemarks}`}
+                            >
+                              📝 {student.adminRemarks}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -1622,6 +1707,11 @@ export default function AdminStudentsPage() {
                       {student.selectionStatus === "SELECTED" && (
                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                           ✓ Selected
+                        </span>
+                      )}
+                      {student.selectionStatus === "ON_HOLD" && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                          ⏸ On Hold / Waitlist
                         </span>
                       )}
                       {student.selectionStatus === "UNDER_REVIEW" && (
@@ -1662,7 +1752,7 @@ export default function AdminStudentsPage() {
                           <Mail className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setInspectStudent(student)}
+                          onClick={() => openInspectStudent(student)}
                           className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
                           title="Inspect Profile"
                         >
@@ -2095,30 +2185,65 @@ export default function AdminStudentsPage() {
                 )}
               </div>
 
-              {/* Selection Decision Box */}
+              {/* Selection Decision & Admin Remarks Box */}
               <div className="p-5 bg-slate-900 text-white rounded-2xl space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-extrabold text-base text-white">Selection Decision</h4>
-                    <p className="text-xs text-slate-400">Update global candidate eligibility and dispatch automated email.</p>
+                    <h4 className="font-extrabold text-base text-white">Selection Decision & Evaluation</h4>
+                    <p className="text-xs text-slate-400">Update candidate remarks, eligibility status, or dispatch notification.</p>
                   </div>
-                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
-                    Current: {inspectStudent.selectionStatus}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
+                      Status: {inspectStudent.selectionStatus}
+                    </span>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Admin Remarks / Evaluation Notes (Optional)</label>
-                  <input
-                    type="text"
-                    value={customNote}
-                    onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder="e.g. Excellent grooming, confirmed for lead steward roles..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
-                  />
+                {/* Dedicated Remarks Text Box with Save Button */}
+                <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <span>📝 Admin Remarks / Candidate Notes</span>
+                    </label>
+                    {savingRemarks && (
+                      <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customNote}
+                      onChange={(e) => setCustomNote(e.target.value)}
+                      placeholder="e.g. Excellent communication, waitlisted for morning batch, on hold..."
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+                    />
+                    <button
+                      type="button"
+                      disabled={savingRemarks}
+                      onClick={() => handleSaveRemarks(inspectStudent.id, customNote)}
+                      className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shrink-0 shadow"
+                    >
+                      {savingRemarks ? "Saving..." : "Save Remarks"}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                {/* Quick Status Dropdown & Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-slate-300">Mark Status:</label>
+                    <select
+                      value={inspectStudent.selectionStatus}
+                      onChange={(e) => handleUpdateSelection(inspectStudent.id, e.target.value as any)}
+                      className="bg-slate-800 border border-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
+                    >
+                      <option value="SELECTED">✓ Selected (Approved)</option>
+                      <option value="UNDER_REVIEW">⏳ Under Review</option>
+                      <option value="ON_HOLD">⏸ Mark as Hold / Waitlist</option>
+                      <option value="NOT_SELECTED">✗ Rejected / Not Selected</option>
+                    </select>
+                  </div>
+
                   <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2126,51 +2251,58 @@ export default function AdminStudentsPage() {
                       onChange={(e) => setSendEmailToggle(e.target.checked)}
                       className="accent-red-600 rounded"
                     />
-                    Dispatch branded selection / status email to student
+                    Dispatch status email to student
                   </label>
+                </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        const target = inspectStudent;
-                        setInspectStudent(null);
-                        openCustomEmailModal([target]);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                      title="Send custom email with placeholder tags to this student"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Send Custom Message
-                    </button>
-                    <button
-                      onClick={() => handleUpdateSelection(inspectStudent.id, "SELECTED")}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      Approve & Select
-                    </button>
-                    <button
-                      onClick={() => handleUpdateSelection(inspectStudent.id, "NOT_SELECTED")}
-                      className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                    >
-                      <UserX className="w-4 h-4" />
-                      Mark Not Selected
-                    </button>
-                    <button
-                      onClick={() => handleUpdateSelection(inspectStudent.id, "UNDER_REVIEW")}
-                      className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
-                    >
-                      Under Review
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStudent(inspectStudent.id, inspectStudent.name)}
-                      className="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
-                      title="Permanently Delete Student Profile & Records"
-                    >
-                      <Trash2 className="w-4 h-4 text-rose-400" />
-                      Delete Account
-                    </button>
-                  </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    onClick={() => {
+                      const target = inspectStudent;
+                      setInspectStudent(null);
+                      openCustomEmailModal([target]);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                    title="Send custom email with placeholder tags to this student"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Send Custom Message
+                  </button>
+                  <button
+                    onClick={() => handleUpdateSelection(inspectStudent.id, "SELECTED")}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    Approve & Select
+                  </button>
+                  <button
+                    onClick={() => handleUpdateSelection(inspectStudent.id, "ON_HOLD")}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Mark as Hold
+                  </button>
+                  <button
+                    onClick={() => handleUpdateSelection(inspectStudent.id, "NOT_SELECTED")}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                  >
+                    <UserX className="w-4 h-4" />
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleUpdateSelection(inspectStudent.id, "UNDER_REVIEW")}
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
+                  >
+                    Under Review
+                  </button>
+                  <button
+                    onClick={() => handleDeleteStudent(inspectStudent.id, inspectStudent.name)}
+                    className="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
+                    title="Permanently Delete Student Profile & Records"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                    Delete Account
+                  </button>
                 </div>
               </div>
             </div>
@@ -2464,7 +2596,7 @@ export default function AdminStudentsPage() {
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setEmailModalOpen(false)}
@@ -2473,9 +2605,19 @@ export default function AdminStudentsPage() {
                 Cancel
               </button>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-500 font-medium">
-                  {emailTargetStudents.length} email{emailTargetStudents.length > 1 ? "s" : ""} will be sent
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-slate-700 font-semibold cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-300 transition">
+                  <input
+                    type="checkbox"
+                    checked={sendTestEmailCopy}
+                    onChange={(e) => setSendTestEmailCopy(e.target.checked)}
+                    className="accent-blue-600 rounded w-3.5 h-3.5"
+                  />
+                  <span>Send test copy to <code className="text-blue-700 bg-blue-50 px-1 py-0.5 rounded text-[11px]">chiluverushivaprasad01@gmail.com</code></span>
+                </label>
+
+                <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                  {emailTargetStudents.length} email{emailTargetStudents.length > 1 ? "s" : ""}
                 </span>
                 <button
                   type="button"

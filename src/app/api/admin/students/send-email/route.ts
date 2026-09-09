@@ -136,6 +136,39 @@ export async function POST(request: Request) {
       }
     }
 
+    // Optional admin test email copy
+    let testEmailSent = false;
+    if (body.sendTestCopy || body.sendTestToAdmin) {
+      try {
+        const sampleStudent = students[0] || {
+          name: "Shiva Prasad (Admin Test)",
+          registrationNumber: "ADMIN-TEST",
+          university: "Topline HQ",
+          city: "Hyderabad",
+          phone: "9876543210",
+          gender: "Male",
+          selectionStatus: "SELECTED",
+          age: 22,
+          upiId: "admin@upi",
+          email: "chiluverushivaprasad01@gmail.com",
+        };
+        const sampleSubject = interpolateTags(subject, sampleStudent);
+        const sampleBody = interpolateTags(message, sampleStudent);
+
+        const testRes = await sendCustomBroadcastEmail({
+          to: "chiluverushivaprasad01@gmail.com",
+          studentName: "Shiva Prasad [Admin Test Copy]",
+          subject: `[TEST COPY] ${sampleSubject}`,
+          messageBody: sampleBody,
+          includeBranding,
+          templateName: `${body.templateName || "Custom Message"} (Test to chiluverushivaprasad01@gmail.com)`,
+        });
+        testEmailSent = Boolean(testRes.success);
+      } catch (testErr) {
+        console.error("Test email dispatch error:", testErr);
+      }
+    }
+
     // Record audit trail
     await prisma.auditLog.create({
       data: {
@@ -147,6 +180,7 @@ export async function POST(request: Request) {
           sentCount,
           failedCount,
           subject,
+          testEmailSent,
           errors: errors.slice(0, 10),
         },
       },
@@ -154,9 +188,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully dispatched email to ${sentCount} student(s).${failedCount > 0 ? ` (${failedCount} failed or skipped)` : ""}`,
+      message: `Successfully dispatched email to ${sentCount} student(s)${testEmailSent ? " + test copy sent to chiluverushivaprasad01@gmail.com" : ""}.${failedCount > 0 ? ` (${failedCount} failed or skipped)` : ""}`,
       sentCount,
       failedCount,
+      testEmailSent,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error: any) {

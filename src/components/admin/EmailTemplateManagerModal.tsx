@@ -18,6 +18,7 @@ import {
   Search,
   Bookmark,
   ArrowRight,
+  Send,
 } from "lucide-react";
 
 export interface CustomEmailTemplate {
@@ -131,6 +132,7 @@ export default function EmailTemplateManagerModal({
   const [category, setCategory] = useState<"STUDENT" | "EVENT" | "GLOBAL">(scope);
   const [editorSubTab, setEditorSubTab] = useState<"compose" | "preview">("compose");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
 
   const subjectRef = useRef<HTMLInputElement | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
@@ -139,6 +141,38 @@ export default function EmailTemplateManagerModal({
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!subject.trim() || !body.trim()) {
+      showToast("Please enter subject and message body before testing.");
+      return;
+    }
+    try {
+      setSendingTestEmail(true);
+      const res = await fetch("/api/admin/email-templates/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: subject.trim(),
+          message: body.trim(),
+          templateName: name.trim() || "Email Template Test",
+          targetEmail: "chiluverushivaprasad01@gmail.com",
+          includeBranding: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || "Test email dispatched to chiluverushivaprasad01@gmail.com!");
+      } else {
+        showToast(data.message || "Failed to dispatch test email.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast("Error dispatching test email.");
+    } finally {
+      setSendingTestEmail(false);
+    }
   };
 
   const fetchTemplates = async () => {
@@ -742,7 +776,7 @@ export default function EmailTemplateManagerModal({
               )}
 
               {/* Form Action Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setActiveTab("list")}
@@ -751,7 +785,27 @@ export default function EmailTemplateManagerModal({
                   Cancel
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={sendingTestEmail}
+                    onClick={handleSendTestEmail}
+                    className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-2xs"
+                    title="Send a sample test email to chiluverushivaprasad01@gmail.com"
+                  >
+                    {sendingTestEmail ? (
+                      <>
+                        <div className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-blue-600 border-t-transparent"></div>
+                        <span>Sending Test...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Send Test Copy</span>
+                      </>
+                    )}
+                  </button>
+
                   <button
                     type="submit"
                     disabled={saving}
@@ -760,12 +814,12 @@ export default function EmailTemplateManagerModal({
                     {saving ? (
                       <>
                         <div className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></div>
-                        Saving Template...
+                        <span>Saving Template...</span>
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        {editingId ? "Update Template" : "Save as New Template"}
+                        <span>{editingId ? "Update Template" : "Save as New Template"}</span>
                       </>
                     )}
                   </button>

@@ -46,6 +46,7 @@ enum ApplicationStatus {
   ATTENDED
   ABSENT
   PAID
+  ON_HOLD
 }
 
 enum PaymentStatus {
@@ -94,6 +95,7 @@ enum StudentSelectionStatus {
   UNDER_REVIEW
   SELECTED
   NOT_SELECTED
+  ON_HOLD
 }
 
 enum StudentPhotoType {
@@ -127,6 +129,7 @@ model User {
   age                 Int?
   upiId               String?
   bio                 String?
+  adminRemarks        String?
 
   // Global Student Selection Status & History
   selectionStatus     StudentSelectionStatus @default(UNDER_REVIEW)

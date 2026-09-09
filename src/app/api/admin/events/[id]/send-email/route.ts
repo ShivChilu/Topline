@@ -174,6 +174,46 @@ export async function POST(
       }
     }
 
+    // Optional admin test email copy
+    let testEmailSent = false;
+    if (body.sendTestCopy || body.sendTestToAdmin) {
+      try {
+        const sampleApp = applications[0] || {
+          name: "Shiva Prasad (Admin Test)",
+          mobileNumber: "9876543210",
+          registrationNumber: "ADMIN-TEST",
+          status: "SELECTED",
+          user: {
+            name: "Shiva Prasad (Admin Test)",
+            registrationNumber: "ADMIN-TEST",
+            university: "Topline HQ",
+            city: "Hyderabad",
+            phone: "9876543210",
+            gender: "Male",
+            selectionStatus: "SELECTED",
+            age: 22,
+            upiId: "admin@upi",
+            email: "chiluverushivaprasad01@gmail.com",
+          },
+        };
+        const sampleSubject = interpolateTags(subject, sampleApp, event);
+        const sampleBody = interpolateTags(message, sampleApp, event);
+
+        const testRes = await sendCustomBroadcastEmail({
+          to: "chiluverushivaprasad01@gmail.com",
+          studentName: "Shiva Prasad [Admin Test Copy]",
+          subject: `[TEST COPY] ${sampleSubject}`,
+          messageBody: sampleBody,
+          includeBranding,
+          eventId: event.id,
+          templateName: `${body.templateName || "Event Message"} (Test to chiluverushivaprasad01@gmail.com)`,
+        });
+        testEmailSent = Boolean(testRes.success);
+      } catch (testErr) {
+        console.error("Event test email dispatch error:", testErr);
+      }
+    }
+
     // Record audit trail
     await prisma.auditLog.create({
       data: {
@@ -187,6 +227,7 @@ export async function POST(
           sentCount,
           failedCount,
           subject,
+          testEmailSent,
           errors: errors.slice(0, 10),
         },
       },
@@ -194,9 +235,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Successfully dispatched email to ${sentCount} candidate(s).${failedCount > 0 ? ` (${failedCount} skipped/failed)` : ""}`,
+      message: `Successfully dispatched email to ${sentCount} candidate(s)${testEmailSent ? " + test copy sent to chiluverushivaprasad01@gmail.com" : ""}.${failedCount > 0 ? ` (${failedCount} skipped/failed)` : ""}`,
       sentCount,
       failedCount,
+      testEmailSent,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error: any) {

@@ -164,10 +164,14 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   );
   const [customEmailBranding, setCustomEmailBranding] = useState(true);
   const [emailSending, setEmailSending] = useState(false);
+  const [sendTestEmailCopy, setSendTestEmailCopy] = useState(false);
   const [emailTab, setEmailTab] = useState<"compose" | "preview">("compose");
   const messageTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const subjectInputRef = useRef<HTMLInputElement | null>(null);
   const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("body");
+
+  // Candidate Remarks Saving State
+  const [savingCandidateRemarks, setSavingCandidateRemarks] = useState(false);
 
   // WhatsApp Group Link State & Quick Actions
   const [whatsappGroupLinkInput, setWhatsappGroupLinkInput] = useState("");
@@ -207,6 +211,61 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const openInspectCandidate = (candidate: any) => {
+    setInspectCandidate(candidate);
+    const initialRemarks = candidate.callingRemarks || candidate.user?.adminRemarks || candidate.studentId?.adminRemarks || "";
+    setCallingNote(initialRemarks);
+  };
+
+  const handleSaveRemarks = async (appId: string, remarks: string) => {
+    try {
+      setSavingCandidateRemarks(true);
+      const res = await fetch(`/api/admin/applications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: [appId],
+          notes: remarks,
+          sendEmail: false,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Candidate remarks saved successfully.");
+        setApplications((prev) =>
+          prev.map((app) =>
+            app._id === appId || app.id === appId
+              ? {
+                  ...app,
+                  callingRemarks: remarks,
+                  user: app.user ? { ...app.user, adminRemarks: remarks } : { adminRemarks: remarks },
+                  studentId: app.studentId ? { ...app.studentId, adminRemarks: remarks } : { adminRemarks: remarks },
+                }
+              : app
+          )
+        );
+        if (inspectCandidate && (inspectCandidate._id === appId || inspectCandidate.id === appId)) {
+          setInspectCandidate((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  callingRemarks: remarks,
+                  studentId: prev.studentId ? { ...prev.studentId, adminRemarks: remarks } : { adminRemarks: remarks },
+                }
+              : null
+          );
+        }
+      } else {
+        showToast(data.message || "Failed to save remarks.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error saving remarks.");
+    } finally {
+      setSavingCandidateRemarks(false);
+    }
   };
 
   const handleSaveWhatsappGroupLink = async () => {
@@ -538,6 +597,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           subject: customEmailSubject,
           message: customEmailBody,
           includeBranding: customEmailBranding,
+          sendTestCopy: sendTestEmailCopy,
         }),
       });
 
@@ -879,7 +939,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       (a) => a._id === inspectCandidate._id || a.id === inspectCandidate.id
     );
     if (currentIndex >= 0 && currentIndex < filteredAndSortedApplications.length - 1) {
-      setInspectCandidate(filteredAndSortedApplications[currentIndex + 1]);
+      openInspectCandidate(filteredAndSortedApplications[currentIndex + 1]);
     } else {
       showToast("You have reached the end of the candidate queue!");
     }
@@ -968,8 +1028,65 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* Quick Operations Links */}
+        {/* Quick Operations & Create Dropdown for All Admins */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* + Create / Actions Dropdown */}
+          <div className="relative group">
+            <button
+              type="button"
+              className="bg-red-600 hover:bg-red-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Create / Actions</span>
+              <ChevronRight className="w-3 h-3 rotate-90" />
+            </button>
+
+            <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
+              <div className="py-1">
+                <Link
+                  href="/admin/events/create"
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
+                >
+                  <Plus className="w-3.5 h-3.5 text-red-600" />
+                  <span>Create New Event</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setTemplateModalOpen(true)}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Create / Manage Templates</span>
+                </button>
+              </div>
+              <div className="py-1">
+                <Link
+                  href={`/admin/events/${eventId}/attendance`}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-purple-600" />
+                  <span>QR Attendance Scanner</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleExportVcf()}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Export Contacts (.vcf)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyAllPhones()}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Copy Phone Numbers</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <Link
             href={`/admin/events/${eventId}/attendance`}
             className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
@@ -1303,17 +1420,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
               />
             </div>
-            {currentAdminRole !== "event_admin" && (
-              <button
-                type="button"
-                onClick={() => setTemplateModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
-                title="Create or manage reusable email templates"
-              >
-                <FileText className="w-3.5 h-3.5 text-red-600" />
-                <span>Create Template</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setTemplateModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
+              title="Create or manage reusable email templates"
+            >
+              <FileText className="w-3.5 h-3.5 text-red-600" />
+              <span>Create Template</span>
+            </button>
           </div>
 
           {/* Filters & Queue Switch */}
@@ -1642,11 +1757,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         {isSelectedCheckbox && <Check className="w-4 h-4 text-red-400 stroke-3" />}
                       </button>
 
-                      {/* Event Application Status Badge */}
+                        {/* Event Application Status Badge */}
                       <div className="absolute top-3 right-3 z-10">
                         {sStatus === "SELECTED" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-md flex items-center gap-1">
                             <Check className="w-3 h-3 stroke-3" /> Selected
+                          </span>
+                        )}
+                        {sStatus === "ON_HOLD" && (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> On Hold / Waitlist
                           </span>
                         )}
                         {sStatus === "CONFIRMED" && (
@@ -1695,7 +1815,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <h3
-                            onClick={() => setInspectCandidate(app)}
+                            onClick={() => openInspectCandidate(app)}
                             className="font-bold text-slate-900 text-base leading-tight hover:text-red-600 transition cursor-pointer"
                           >
                             {app.name || student.name}
@@ -1724,12 +1844,26 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </div>
                         </div>
 
+                        {/* Candidate Remarks Note Preview Snippet */}
+                        {(app.callingRemarks || app.user?.adminRemarks || student.adminRemarks) && (
+                          <div
+                            onClick={() => openInspectCandidate(app)}
+                            className="mt-2 text-[11px] bg-amber-50/90 border border-amber-200 text-amber-900 px-2 py-1 rounded-lg flex items-start gap-1 cursor-pointer hover:bg-amber-100 transition"
+                            title="Click to view or edit remarks"
+                          >
+                            <span className="font-bold shrink-0">📝 Note:</span>
+                            <span className="truncate">{app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}</span>
+                          </div>
+                        )}
+
                         {/* Permanent profile status indicator */}
                         <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
                           <span className="text-slate-400 font-medium">Student Profile:</span>
                           <span className="font-bold text-slate-700">
                             {student.selectionStatus === "SELECTED"
                               ? "✓ Verified Selected"
+                              : student.selectionStatus === "ON_HOLD"
+                              ? "⏸ On Hold"
                               : student.selectionStatus === "NOT_SELECTED"
                               ? "Profile Not Selected"
                               : "Under Review"}
@@ -1738,7 +1872,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
                         {/* Email Communication & Delivery Summary */}
                         <div
-                          onClick={() => setInspectCandidate(app)}
+                          onClick={() => openInspectCandidate(app)}
                           className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg transition"
                           title="Click to view full email communication, open tracking, and button clicks"
                         >
@@ -1796,32 +1930,48 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
                       {/* Action Buttons */}
                       <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                        {/* 1-Click Event Selection */}
-                        <div className="grid grid-cols-2 gap-2">
+                        {/* 1-Click Event Selection / Hold / Reject */}
+                        <div className="grid grid-cols-3 gap-1.5">
                           <button
                             disabled={actionLoadingId === (app._id || app.id)}
                             onClick={() => handleUpdateStatus(app._id || app.id, "SELECTED")}
-                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                               sStatus === "SELECTED"
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                                 : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                             }`}
+                            title="Approve & Select Candidate"
                           >
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="w-3 h-3" />
                             {sStatus === "SELECTED" ? "Selected" : "Select"}
                           </button>
 
                           <button
                             disabled={actionLoadingId === (app._id || app.id)}
+                            onClick={() => handleUpdateStatus(app._id || app.id, "ON_HOLD")}
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                              sStatus === "ON_HOLD"
+                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                : "bg-slate-100 hover:bg-amber-600 hover:text-white text-slate-700"
+                            }`}
+                            title="Mark Candidate On Hold / Waitlist"
+                          >
+                            <Clock className="w-3 h-3" />
+                            {sStatus === "ON_HOLD" ? "On Hold" : "Hold"}
+                          </button>
+
+                          <button
+                            disabled={actionLoadingId === (app._id || app.id)}
                             onClick={() => handleUpdateStatus(app._id || app.id, "NOT_SELECTED")}
-                            className={`w-full py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                               sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
                                 ? "bg-rose-100 text-rose-800 border border-rose-300"
                                 : "bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-700"
                             }`}
+                            title="Reject Candidate"
                           >
-                            <X className="w-3.5 h-3.5" />
-                            {sStatus === "NOT_SELECTED" || sStatus === "REJECTED" ? "Not Selected" : "Deselect"}
+                            <X className="w-3 h-3" />
+                            {sStatus === "NOT_SELECTED" || sStatus === "REJECTED" ? "Rejected" : "Reject"}
                           </button>
                         </div>
 
@@ -1837,7 +1987,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </button>
 
                           <button
-                            onClick={() => setInspectCandidate(app)}
+                            onClick={() => openInspectCandidate(app)}
                             className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center truncate"
                           >
                             Full Profile
@@ -1917,7 +2067,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </div>
                           <div>
                             <div
-                              onClick={() => setInspectCandidate(app)}
+                              onClick={() => openInspectCandidate(app)}
                               className="font-bold text-slate-900 cursor-pointer hover:text-red-600 transition"
                             >
                               {app.name || student.name}
@@ -1925,6 +2075,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <div className="text-xs text-slate-400 font-mono font-semibold">
                               {app.registrationNumber || student.registrationNumber}
                             </div>
+                            {(app.callingRemarks || app.user?.adminRemarks || student.adminRemarks) && (
+                              <div
+                                onClick={() => openInspectCandidate(app)}
+                                className="mt-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded cursor-pointer max-w-[220px] truncate hover:bg-amber-100 transition"
+                                title={`Remarks: ${app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}`}
+                              >
+                                📝 {app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}
+                              </div>
+                            )}
                             {((app.emailLogs && app.emailLogs.length > 0) || (app.user?.emailLogs && app.user.emailLogs.length > 0)) && (
                               <div className="mt-1 flex items-center gap-1.5 text-[10px]">
                                 {(() => {
@@ -1957,6 +2116,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             ? "bg-teal-50 text-teal-800 border-teal-300 font-extrabold"
                             : sStatus === "SELECTED"
                             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : sStatus === "ON_HOLD"
+                            ? "bg-amber-50 text-amber-800 border-amber-300 font-bold"
                             : sStatus === "CANCELLED"
                             ? "bg-rose-50 text-rose-800 border-rose-200"
                             : sStatus === "UNDER_REVIEW"
@@ -1967,7 +2128,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             ? "bg-blue-50 text-blue-800 border-blue-200"
                             : "bg-slate-100 text-slate-700 border-slate-200"
                         }`}>
-                          {sStatus === "CONFIRMED" ? "✅ Confirmed" : sStatus === "CANCELLED" ? "❌ Declined" : sStatus}
+                          {sStatus === "CONFIRMED" ? "✅ Confirmed" : sStatus === "ON_HOLD" ? "⏸ On Hold" : sStatus === "CANCELLED" ? "❌ Declined" : sStatus}
                         </span>
                       </td>
                       <td className="p-4 font-semibold text-xs text-slate-800 font-mono">
@@ -2007,7 +2168,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <Mail className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => setInspectCandidate(app)}
+                            onClick={() => openInspectCandidate(app)}
                             className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
                             title="Inspect Profile & Responses"
                           >
@@ -2288,30 +2449,71 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <div className="p-5 bg-slate-900 text-white rounded-2xl space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-extrabold text-base text-white">Calling & Selection Decision</h4>
-                    <p className="text-xs text-slate-400">Update event application status and dispatch branded notification email.</p>
+                    <h4 className="font-extrabold text-base text-white">Calling, Remarks & Selection Decision</h4>
+                    <p className="text-xs text-slate-400">Update candidate remarks, event application status, and dispatch notifications.</p>
                   </div>
-                  <button
-                    onClick={handleNextCandidate}
-                    className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto"
-                  >
-                    <span>Next Candidate</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
+                      Status: {inspectCandidate.status}
+                    </span>
+                    <button
+                      onClick={handleNextCandidate}
+                      className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Coordinator Remarks / Call Notes</label>
-                  <input
-                    type="text"
-                    value={callingNote}
-                    onChange={(e) => setCallingNote(e.target.value)}
-                    placeholder="e.g. Confirmed attendance for evening shift, uniform ready..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
-                  />
+                {/* Dedicated Remarks Text Box with Save Button */}
+                <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <span>📝 Candidate Remarks / Call Evaluation Notes</span>
+                    </label>
+                    {savingCandidateRemarks && (
+                      <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={callingNote}
+                      onChange={(e) => setCallingNote(e.target.value)}
+                      placeholder="e.g. Confirmed attendance for evening shift, lead steward, on hold..."
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+                    />
+                    <button
+                      type="button"
+                      disabled={savingCandidateRemarks}
+                      onClick={() => handleSaveRemarks(inspectCandidate._id || inspectCandidate.id, callingNote)}
+                      className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shrink-0 shadow"
+                    >
+                      {savingCandidateRemarks ? "Saving..." : "Save Remarks"}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                {/* Status Dropdown & Automation Toggle */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-slate-300">Mark Status:</label>
+                    <select
+                      value={inspectCandidate.status}
+                      onChange={(e) => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, e.target.value)}
+                      className="bg-slate-800 border border-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
+                    >
+                      <option value="SELECTED">✓ Selected (Approved)</option>
+                      <option value="UNDER_REVIEW">⏳ Under Review</option>
+                      <option value="ON_HOLD">⏸ Mark as Hold / Waitlist</option>
+                      <option value="NOT_SELECTED">✗ Rejected / Not Selected</option>
+                      <option value="CONFIRMED">🎉 Confirmed (Attending)</option>
+                      <option value="CANCELLED">🚫 Cancelled / Declined</option>
+                      <option value="ATTENDED">✅ Attended</option>
+                    </select>
+                  </div>
+
                   <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2321,47 +2523,54 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     />
                     Dispatch automated notification email
                   </label>
+                </div>
 
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => {
-                        const target = inspectCandidate;
-                        setInspectCandidate(null);
-                        openCustomEmailModal([target]);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                      title="Send custom email with placeholder tags to this candidate"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Send Custom Message
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED")}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      Approve & Select
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
-                      className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                    >
-                      <UserX className="w-4 h-4" />
-                      Not Selected
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
-                      className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "UNDER_REVIEW")}
-                      className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
-                    >
-                      Under Review
-                    </button>
-                  </div>
+                <div className="flex gap-2 flex-wrap justify-end pt-2 border-t border-slate-800">
+                  <button
+                    onClick={() => {
+                      const target = inspectCandidate;
+                      setInspectCandidate(null);
+                      openCustomEmailModal([target]);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                    title="Send custom email with placeholder tags to this candidate"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Send Custom Message
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED")}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    Approve & Select
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "ON_HOLD")}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Mark as Hold
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                  >
+                    <UserX className="w-4 h-4" />
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
+                    className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "UNDER_REVIEW")}
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
+                  >
+                    Under Review
+                  </button>
                 </div>
               </div>
             </div>
@@ -2792,7 +3001,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setEmailModalOpen(false)}
@@ -2801,9 +3010,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 Cancel
               </button>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-500 font-medium">
-                  {emailTargetApps.length} email{emailTargetApps.length > 1 ? "s" : ""} will be sent
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-slate-700 font-semibold cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-300 transition">
+                  <input
+                    type="checkbox"
+                    checked={sendTestEmailCopy}
+                    onChange={(e) => setSendTestEmailCopy(e.target.checked)}
+                    className="accent-blue-600 rounded w-3.5 h-3.5"
+                  />
+                  <span>Send test copy to <code className="text-blue-700 bg-blue-50 px-1 py-0.5 rounded text-[11px]">chiluverushivaprasad01@gmail.com</code></span>
+                </label>
+
+                <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                  {emailTargetApps.length} email{emailTargetApps.length > 1 ? "s" : ""}
                 </span>
                 <button
                   type="button"

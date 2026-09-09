@@ -100,6 +100,7 @@ export async function GET(request: Request) {
         age: true,
         upiId: true,
         bio: true,
+        adminRemarks: true,
         profilePhotoUrl: true,
         selectionStatus: true,
         selectedAt: true,
@@ -208,6 +209,7 @@ export async function GET(request: Request) {
         age: s.age || null,
         upiId: s.upiId || "N/A",
         bio: s.bio || "",
+        adminRemarks: s.adminRemarks || "",
         profilePhotoUrl: displayPhotoUrl,
         selectionStatus: s.selectionStatus || "UNDER_REVIEW",
         selectedAt: s.selectedAt,
@@ -264,11 +266,12 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes } = body;
+    const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes, adminRemarks } = body;
+
+    const validStatuses: StudentSelectionStatus[] = ["UNDER_REVIEW", "SELECTED", "NOT_SELECTED", "ON_HOLD"];
 
     // Bulk selection update
     if (Array.isArray(studentIds) && studentIds.length > 0 && selectionStatus) {
-      const validStatuses: StudentSelectionStatus[] = ["UNDER_REVIEW", "SELECTED", "NOT_SELECTED"];
       if (!validStatuses.includes(selectionStatus)) {
         return NextResponse.json({ success: false, message: "Invalid selection status." }, { status: 400 });
       }
@@ -286,6 +289,7 @@ export async function PATCH(request: Request) {
             selectedAt: now,
             ...(sendEmail && { selectionEmailSentAt: now }),
           }),
+          ...(notes !== undefined ? { adminRemarks: notes } : adminRemarks !== undefined ? { adminRemarks } : {}),
         },
       });
 
@@ -299,7 +303,7 @@ export async function PATCH(request: Request) {
                 email: st.email,
                 registrationNumber: st.registrationNumber,
                 university: st.university,
-                notes,
+                notes: notes || adminRemarks,
                 userId: st.id,
               }).catch((e) => console.error("Bulk email error:", e));
             } else if (selectionStatus === "NOT_SELECTED") {
@@ -308,7 +312,7 @@ export async function PATCH(request: Request) {
                 email: st.email,
                 registrationNumber: st.registrationNumber,
                 university: st.university,
-                notes,
+                notes: notes || adminRemarks,
                 userId: st.id,
               }).catch((e) => console.error("Bulk email error:", e));
             }
@@ -319,13 +323,66 @@ export async function PATCH(request: Request) {
       await prisma.auditLog.create({
         data: {
           action: `BULK_STUDENT_SELECTION_${selectionStatus}`,
-          metadata: { count: studentIds.length, studentIds, notes },
+          metadata: { count: studentIds.length, studentIds, notes: notes || adminRemarks },
         },
       });
 
       return NextResponse.json({
         success: true,
         message: `Updated selection status for ${studentIds.length} student(s) to ${selectionStatus}.`,
+      });
+    }
+
+    // Single student status or remarks update
+    if (studentId && (selectionStatus !== undefined || notes !== undefined || adminRemarks !== undefined)) {
+      const updateData: any = {};
+      if (selectionStatus) {
+        if (!validStatuses.includes(selectionStatus)) {
+          return NextResponse.json({ success: false, message: "Invalid selection status." }, { status: 400 });
+        }
+        updateData.selectionStatus = selectionStatus;
+        if (selectionStatus === "SELECTED") {
+          updateData.selectedAt = new Date();
+          if (sendEmail) updateData.selectionEmailSentAt = new Date();
+        }
+      }
+      if (notes !== undefined) {
+        updateData.adminRemarks = notes;
+      } else if (adminRemarks !== undefined) {
+        updateData.adminRemarks = adminRemarks;
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: studentId },
+        data: updateData,
+      });
+
+      if (sendEmail && selectionStatus && updated.email) {
+        if (selectionStatus === "SELECTED") {
+          sendStudentSelectionEmail({
+            studentName: updated.name,
+            email: updated.email,
+            registrationNumber: updated.registrationNumber,
+            university: updated.university,
+            notes: updated.adminRemarks || undefined,
+            userId: updated.id,
+          }).catch((e) => console.error(e));
+        } else if (selectionStatus === "NOT_SELECTED") {
+          sendStudentDeselectionEmail({
+            studentName: updated.name,
+            email: updated.email,
+            registrationNumber: updated.registrationNumber,
+            university: updated.university,
+            notes: updated.adminRemarks || undefined,
+            userId: updated.id,
+          }).catch((e) => console.error(e));
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Student record updated successfully.",
+        student: { ...updated, _id: updated.id, adminRemarks: updated.adminRemarks || "" },
       });
     }
 
