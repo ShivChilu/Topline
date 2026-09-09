@@ -106,6 +106,23 @@ function formatTime12(timeStr: string) {
   return `${strHours}:${minutes} ${ampm}`;
 }
 
+function formatAppliedDateTime(dateStr?: string | Date | null) {
+  if (!dateStr) return "N/A";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "N/A";
+  const datePart = d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const timePart = d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${datePart}, ${timePart}`;
+}
+
 export default function AdminEventDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -126,6 +143,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   // Sorting & Queue workflow
   const [pendingFirstQueue, setPendingFirstQueue] = useState(true);
+  const [sortBy, setSortBy] = useState<"FIRST_FILLED" | "LATEST_FILLED" | "PENDING_QUEUE" | "NAME_ASC">("PENDING_QUEUE");
 
   // Filters
   const [search, setSearch] = useState("");
@@ -784,6 +802,23 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     };
 
     list.sort((a, b) => {
+      if (sortBy === "FIRST_FILLED") {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        if (dateA !== dateB) return dateA - dateB;
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (sortBy === "LATEST_FILLED") {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (sortBy === "NAME_ASC") {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+
+      // Default review queue mode
       if (pendingFirstQueue) {
         const prioA = getPriority(a.status);
         const prioB = getPriority(b.status);
@@ -800,7 +835,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     });
 
     return list;
-  }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue]);
+  }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
 
   const availableCities = useMemo(() => {
     const set = new Set<string>();
@@ -1520,19 +1555,62 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <option value="6_0">📏 ≥ 6&apos;0&quot; (183 cm+)</option>
             </select>
 
-            {/* Queue Mode Toggle */}
+            {/* Who Filled First FCFS Quick Button */}
             <button
-              onClick={() => setPendingFirstQueue(!pendingFirstQueue)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
-                pendingFirstQueue
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+              type="button"
+              onClick={() => {
+                if (sortBy === "FIRST_FILLED") {
+                  setSortBy("PENDING_QUEUE");
+                } else {
+                  setSortBy("FIRST_FILLED");
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                sortBy === "FIRST_FILLED"
+                  ? "bg-amber-500 text-white border-amber-600 shadow-md ring-2 ring-amber-500/30"
+                  : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
               }`}
-              title="When enabled, unreviewed candidates stay on top; selected/rejected candidates automatically move to bottom"
+              title="First-Come-First-Serve: Sort applicants by exact date & time they filled the form (who applied first)"
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-              <span>Queue: {pendingFirstQueue ? "Not Selected First" : "Default Order"}</span>
+              <Clock className="w-3.5 h-3.5" />
+              <span>{sortBy === "FIRST_FILLED" ? "✓ FCFS (Filled 1st)" : "⚡ Who Filled First"}</span>
             </button>
+
+            {/* Sort Mode Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className={`text-xs font-bold rounded-xl px-3 py-2 border transition cursor-pointer ${
+                sortBy === "FIRST_FILLED"
+                  ? "bg-amber-100 text-amber-900 border-amber-400 font-extrabold"
+                  : sortBy !== "PENDING_QUEUE"
+                  ? "bg-indigo-50 text-indigo-800 border-indigo-300"
+                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+              }`}
+              title="Choose applicant sorting order"
+            >
+              <option value="PENDING_QUEUE">⚡ Review Queue (Action First)</option>
+              <option value="FIRST_FILLED">⏳ Who Filled First (FCFS)</option>
+              <option value="LATEST_FILLED">🕒 Latest Submissions First</option>
+              <option value="NAME_ASC">🔤 Candidate Name (A-Z)</option>
+            </select>
+
+            {/* Queue Mode Toggle (when in review queue) */}
+            {sortBy === "PENDING_QUEUE" && (
+              <button
+                type="button"
+                onClick={() => setPendingFirstQueue(!pendingFirstQueue)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                  pendingFirstQueue
+                    ? "bg-red-50 text-red-700 border-red-200"
+                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                }`}
+                title="When enabled, unreviewed candidates stay on top; selected/rejected candidates automatically move to bottom"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                <span>{pendingFirstQueue ? "Not Selected First" : "Default Order"}</span>
+              </button>
+            )}
 
             {/* More Filters Toggle Button */}
             <button
@@ -1767,7 +1845,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filteredAndSortedApplications.map((app) => {
+              {filteredAndSortedApplications.map((app, index) => {
                 const isSelectedCheckbox = selectedIds.includes(app._id || app.id);
                 const sStatus = (app.status || "").toUpperCase();
                 const student = app.studentId || {};
@@ -1798,13 +1876,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         </div>
                       )}
 
-                      {/* Multi-Select Checkbox */}
-                      <button
-                        onClick={() => toggleSelectOne(app._id || app.id)}
-                        className="absolute top-3 left-3 z-10 w-6 h-6 rounded-md bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:bg-black/70 transition"
-                      >
-                        {isSelectedCheckbox && <Check className="w-4 h-4 text-red-400 stroke-3" />}
-                      </button>
+                      {/* Multi-Select Checkbox & Rank Badge */}
+                      <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleSelectOne(app._id || app.id)}
+                          className="w-6 h-6 rounded-md bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:bg-black/70 transition cursor-pointer"
+                        >
+                          {isSelectedCheckbox && <Check className="w-4 h-4 text-red-400 stroke-3" />}
+                        </button>
+                        {sortBy === "FIRST_FILLED" && (
+                          <span className="bg-amber-500 text-white text-[11px] font-extrabold px-2 py-0.5 rounded-md shadow-md flex items-center gap-0.5">
+                            <span>#{index + 1}</span>
+                            <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90">to apply</span>
+                          </span>
+                        )}
+                      </div>
 
                         {/* Event Application Status Badge */}
                       <div className="absolute top-3 right-3 z-10">
@@ -1891,6 +1977,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span className="font-semibold text-slate-800">{app.mobileNumber}</span>
                           </div>
+                        </div>
+
+                        {/* Form Application Date & Time */}
+                        <div className="mt-2 flex items-center justify-between text-[11px] bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg">
+                          <span className="text-slate-400 font-medium flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>Filled:</span>
+                          </span>
+                          <span className="font-bold text-slate-700 font-mono text-[10.5px]">
+                            {formatAppliedDateTime(app.createdAt)}
+                          </span>
                         </div>
 
                         {/* Candidate Remarks Note Preview Snippet */}
@@ -2077,7 +2174,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       className="accent-red-600 rounded"
                     />
                   </th>
+                  {sortBy === "FIRST_FILLED" && <th className="p-4 w-14 text-center">Rank</th>}
                   <th className="p-4">Candidate</th>
+                  <th className="p-4">Filled Date & Time</th>
                   <th className="p-4">Event Status</th>
                   <th className="p-4">Mobile Number</th>
                   <th className="p-4">University</th>
@@ -2088,7 +2187,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredAndSortedApplications.map((app) => {
+                {filteredAndSortedApplications.map((app, idx) => {
                   const sStatus = (app.status || "").toUpperCase();
                   const isChecked = selectedIds.includes(app._id || app.id);
                   const student = app.studentId || {};
@@ -2103,6 +2202,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           className="accent-red-600 rounded"
                         />
                       </td>
+                      {sortBy === "FIRST_FILLED" && (
+                        <td className="p-4 text-center">
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 font-black text-xs border border-amber-300">
+                            #{idx + 1}
+                          </span>
+                        </td>
+                      )}
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
@@ -2157,6 +2263,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               </div>
                             )}
                           </div>
+                        </div>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 font-mono bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-lg w-fit">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>{formatAppliedDateTime(app.createdAt)}</span>
                         </div>
                       </td>
                       <td className="p-4">
@@ -2305,6 +2417,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
             {/* Modal Body */}
             <div className="p-6 space-y-6">
+              {/* Form Submission Timestamp Banner */}
+              <div className="p-3.5 bg-amber-50/85 border border-amber-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-700">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-extrabold text-amber-950">Form Submitted Date & Time</div>
+                    <div className="text-[11px] text-amber-700 font-medium">Exact date and time this candidate applied for this event</div>
+                  </div>
+                </div>
+                <div className="text-xs font-extrabold text-amber-950 font-mono bg-white px-3.5 py-1.5 rounded-xl border border-amber-300 shadow-2xs">
+                  📅 {formatAppliedDateTime(inspectCandidate.createdAt)}
+                </div>
+              </div>
+
               {/* Photo Showcase Carousel / Grid */}
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
