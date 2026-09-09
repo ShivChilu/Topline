@@ -49,8 +49,10 @@ import {
   Save,
   Activity,
   MousePointerClick,
+  Unlock,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
+import ReopenEventModal from "@/components/admin/ReopenEventModal";
 import {
   matchesGender,
   matchesHeight,
@@ -151,6 +153,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   // Add Manual Candidate Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [addFormData, setAddFormData] = useState<Record<string, any>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [addModalError, setAddModalError] = useState<string | null>(null);
@@ -1040,6 +1043,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
         {/* Quick Operations & Create Dropdown for All Admins */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Reopen Event with Additional Slots Button */}
+          <button
+            type="button"
+            onClick={() => setIsReopenModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+            title="Reopen event or add additional candidate seats/slots"
+          >
+            <Unlock className="w-3.5 h-3.5" />
+            <span>Reopen (+Slots)</span>
+          </button>
+
           {/* Duplicate as New Button */}
           <Link
             href={`/admin/events/create?cloneFrom=${eventId}`}
@@ -1063,6 +1077,14 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
             <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
               <div className="py-1">
+                <button
+                  type="button"
+                  onClick={() => setIsReopenModalOpen(true)}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Reopen Event (+Add Slots)</span>
+                </button>
                 <Link
                   href={`/admin/events/create?cloneFrom=${eventId}`}
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
@@ -3087,6 +3109,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           setCustomEmailBody(tpl.body);
         }}
       />
+
+      {/* Reopen Event with Additional Slots Modal */}
+      {isReopenModalOpen && (
+        <ReopenEventModal
+          isOpen={isReopenModalOpen}
+          event={event}
+          onClose={() => setIsReopenModalOpen(false)}
+          onSuccess={(updatedEvent) => {
+            setEvent(updatedEvent);
+            showToast("Event successfully reopened and slots added!");
+            fetchEventData(true);
+          }}
+        />
+      )}
     </div>
   );
 }

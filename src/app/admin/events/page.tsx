@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock } from "lucide-react";
+import ReopenEventModal from "@/components/admin/ReopenEventModal";
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -9,6 +10,7 @@ export default function AdminEventsPage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("ALL");
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
+  const [reopenModalEvent, setReopenModalEvent] = useState<any>(null);
 
   // Delete modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -303,7 +305,19 @@ export default function AdminEventsPage() {
                     </button>
                   </div>
                   {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center flex-wrap">
+                      {/* Reopen Event with Additional Slots Button */}
+                      {(event.status === "CLOSED" || event.status === "FULL" || event.status === "COMPLETED") && (
+                        <button
+                          onClick={() => setReopenModalEvent(event)}
+                          className="bg-emerald-600/10 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                          title="Reopen event and add candidate seats"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Reopen (+Slots)</span>
+                        </button>
+                      )}
+
                       {(event.status === "DRAFT" || isScheduled) && (
                         <button
                           onClick={() => handleUpdateStatus(event._id, "OPEN")}
@@ -313,13 +327,24 @@ export default function AdminEventsPage() {
                           Publish Now
                         </button>
                       )}
+
                       {event.status === "OPEN" && (
-                        <button
-                          onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                          className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
-                        >
-                          Close Form
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setReopenModalEvent(event)}
+                            className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-300 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1"
+                            title="Add extra capacity / slots to this open event"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+Slots</span>
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(event._id, "CLOSED")}
+                            className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
+                          >
+                            Close Form
+                          </button>
+                        </>
                       )}
                       {event.status !== "ARCHIVED" && (
                         <button
@@ -463,6 +488,18 @@ export default function AdminEventsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reopen Event Modal with Slot Addition */}
+      {reopenModalEvent && (
+        <ReopenEventModal
+          isOpen={Boolean(reopenModalEvent)}
+          event={reopenModalEvent}
+          onClose={() => setReopenModalEvent(null)}
+          onSuccess={(updatedEvent) => {
+            fetchEvents();
+          }}
+        />
       )}
     </div>
   );
