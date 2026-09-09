@@ -80,6 +80,23 @@ export async function POST(request: Request) {
       }, { status: 404 });
     }
 
+    // STRICT ROSTER CHECK: Only CONFIRMED (or already ATTENDED) candidates can check in
+    if (matchedApplication.status !== ApplicationStatus.CONFIRMED && matchedApplication.status !== ApplicationStatus.ATTENDED) {
+      let statusExplanation = `Your current application status is: ${matchedApplication.status}.`;
+      if (matchedApplication.status === ApplicationStatus.SELECTED) {
+        statusExplanation = "You are selected, but must confirm your availability first on the Topline Student Portal before marking attendance.";
+      } else if (matchedApplication.status === ApplicationStatus.CANCELLED) {
+        statusExplanation = "Your duty for this event was declined or cancelled.";
+      } else if (matchedApplication.status === ApplicationStatus.NOT_SELECTED || matchedApplication.status === ApplicationStatus.REJECTED) {
+        statusExplanation = "Your application was not selected for this event roster.";
+      }
+
+      return NextResponse.json({
+        success: false,
+        message: `Access Denied: Only candidates with Confirmed (Attending) status can mark attendance. ${statusExplanation}`,
+      }, { status: 403 });
+    }
+
     // 3. Duplicate Check
     const existingAttendance = await prisma.attendance.findUnique({
       where: { applicationId: matchedApplication.id },

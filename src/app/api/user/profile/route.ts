@@ -41,6 +41,14 @@ export async function GET() {
             eventId: true,
             status: true,
             createdAt: true,
+            attendance: {
+              select: {
+                id: true,
+                attendanceStatus: true,
+                checkInTime: true,
+                manualRemarks: true,
+              },
+            },
             event: {
               select: {
                 id: true,
@@ -48,7 +56,10 @@ export async function GET() {
                 date: true,
                 location: true,
                 status: true,
+                reportingTime: true,
                 whatsappGroupLink: true,
+                attendanceToken: true,
+                attendanceTokenEnabled: true,
               },
             },
           },

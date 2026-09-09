@@ -30,9 +30,12 @@ import {
   Info,
   MessageCircle,
   Loader2,
+  QrCode,
+  Scan,
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
 import { compressImage } from "@/lib/image-compress";
+import StudentAttendanceScannerModal from "@/components/student/StudentAttendanceScannerModal";
 
 interface StudentPhoto {
   id: string;
@@ -86,6 +89,7 @@ export default function StudentProfilePage() {
 
   const [dynamicResponses, setDynamicResponses] = useState<Record<string, string>>({});
   const [rsvpLoadingId, setRsvpLoadingId] = useState<string | null>(null);
+  const [scannerEvent, setScannerEvent] = useState<any>(null);
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -851,20 +855,68 @@ export default function StudentProfilePage() {
                         {app.event?.name}
                       </Link>
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                        app.status === "CONFIRMED"
-                          ? "bg-teal-100 text-teal-800 border border-teal-200"
+                        app.status === "ATTENDED"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold"
+                          : app.status === "CONFIRMED"
+                          ? "bg-teal-100 text-teal-800 border border-teal-200 font-bold"
                           : app.status === "SELECTED"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold"
                           : app.status === "NOT_SELECTED" || app.status === "REJECTED" || app.status === "CANCELLED"
                           ? "bg-rose-100 text-rose-800 border border-rose-200"
                           : "bg-slate-200 text-slate-700"
                       }`}>
-                        {app.status === "CONFIRMED" ? "✅ Confirmed" : app.status === "CANCELLED" ? "❌ Declined" : app.status}
+                        {app.status === "ATTENDED"
+                          ? "🎉 Attended (Present)"
+                          : app.status === "CONFIRMED"
+                          ? "✅ Confirmed"
+                          : app.status === "CANCELLED"
+                          ? "❌ Declined"
+                          : app.status}
                       </span>
                     </div>
                     <div className="text-slate-400 text-[11px]">
                       {app.event?.date ? new Date(app.event.date).toLocaleDateString("en-GB") : ""} • {app.event?.location}
                     </div>
+
+                    {/* Banner when ATTENDED (Attendance Recorded) */}
+                    {app.status === "ATTENDED" && (
+                      <div className="pt-2 border-t border-slate-200 flex flex-col gap-2 bg-emerald-50/90 p-3 rounded-xl border border-emerald-300 shadow-2xs">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center font-extrabold text-sm shrink-0 border border-emerald-400">
+                              ✓
+                            </div>
+                            <div>
+                              <span className="text-emerald-950 font-black text-xs block flex items-center gap-1">
+                                🎉 Attendance Recorded: {app.attendance?.attendanceStatus || "PRESENT"}
+                              </span>
+                              <span className="text-emerald-800 text-[11px] font-medium">
+                                Checked in at {app.attendance?.checkInTime ? new Date(app.attendance.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }) : "Gate Desk"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white shadow-2xs flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Verified On Duty
+                          </span>
+                        </div>
+
+                        {app.event?.whatsappGroupLink && (
+                          <div className="pt-1.5 border-t border-emerald-200/70 flex items-center justify-between">
+                            <span className="text-[10px] text-emerald-800 font-semibold">Event official chat:</span>
+                            <a
+                              href={app.event.whatsappGroupLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition whitespace-nowrap"
+                            >
+                              <MessageCircle className="w-3 h-3 fill-white" />
+                              <span>Open WhatsApp</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Action banner when SELECTED (Awaiting Response) */}
                     {app.status === "SELECTED" && (
@@ -872,7 +924,7 @@ export default function StudentProfilePage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-emerald-900 font-black text-xs block">🎉 Selected for Event Duty!</span>
-                            <span className="text-emerald-700 text-[11px]">Are you available to attend this assignment?</span>
+                            <span className="text-emerald-700 text-[11px]">Are you available to attend this assignment? Confirm to unlock attendance check-in.</span>
                           </div>
                         </div>
 
@@ -898,28 +950,52 @@ export default function StudentProfilePage() {
                       </div>
                     )}
 
-                    {/* Banner when CONFIRMED (Attendance Locked + WhatsApp Group) */}
+                    {/* Banner when CONFIRMED (Attendance Ready + Mark Attendance Button) */}
                     {app.status === "CONFIRMED" && (
-                      <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-teal-50 p-2.5 rounded-lg border border-teal-200">
-                        <div>
-                          <span className="text-teal-900 font-extrabold text-[11px] block flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 inline" /> Attendance Confirmed & Roster Locked
-                          </span>
-                          <span className="text-teal-700 text-[10px]">Duty confirmed. Live updates and gate entry are posted in WhatsApp:</span>
-                        </div>
-                        {app.event?.whatsappGroupLink ? (
-                          <a
-                            href={app.event.whatsappGroupLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition whitespace-nowrap"
+                      <div className="pt-2 border-t border-slate-200 flex flex-col gap-2.5 bg-teal-50/90 p-3 rounded-xl border border-teal-200 shadow-2xs">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-teal-900 font-extrabold text-xs flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 inline" /> Duty Confirmed & Roster Locked
+                            </span>
+                            <span className="text-teal-700 text-[11px]">You are confirmed on this roster. Scan coordinator&apos;s QR code upon arrival:</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setScannerEvent({
+                              id: app.event?.id || app.eventId,
+                              name: app.event?.name,
+                              date: app.event?.date,
+                              location: app.event?.location,
+                              reportingTime: app.event?.reportingTime,
+                              attendanceToken: app.event?.attendanceToken,
+                              attendanceTokenEnabled: app.event?.attendanceTokenEnabled,
+                            })}
+                            className="bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition whitespace-nowrap cursor-pointer active:scale-95"
                           >
-                            <MessageCircle className="w-3.5 h-3.5 fill-white" />
-                            <span>📲 Join WhatsApp Group</span>
-                          </a>
-                        ) : (
-                          <span className="text-slate-400 text-[10px] italic">WhatsApp group link pending coordinator update</span>
-                        )}
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>📷 Mark Attendance</span>
+                          </button>
+                        </div>
+
+                        {/* WhatsApp Group Link */}
+                        <div className="pt-1.5 border-t border-teal-200/60 flex items-center justify-between">
+                          <span className="text-[10px] text-teal-800 font-semibold">Live duty coordination chat:</span>
+                          {app.event?.whatsappGroupLink ? (
+                            <a
+                              href={app.event.whatsappGroupLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition whitespace-nowrap"
+                            >
+                              <MessageCircle className="w-3 h-3 fill-white" />
+                              <span>📲 Join WhatsApp Group</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] italic">WhatsApp group link pending coordinator update</span>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -938,6 +1014,19 @@ export default function StudentProfilePage() {
             )}
           </div>
         </div>
+
+        {/* Student Attendance Camera QR Scanner Modal */}
+        {scannerEvent && (
+          <StudentAttendanceScannerModal
+            isOpen={!!scannerEvent}
+            onClose={() => setScannerEvent(null)}
+            event={scannerEvent}
+            onSuccess={(result) => {
+              showFeedback("success", `Attendance successfully recorded as ${result.status || "PRESENT"}!`);
+              fetchProfile();
+            }}
+          />
+        )}
       </main>
 
       <Footer />
