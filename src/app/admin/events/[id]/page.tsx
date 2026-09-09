@@ -47,6 +47,8 @@ import {
   Download,
   Copy,
   Save,
+  Activity,
+  MousePointerClick,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import {
@@ -55,6 +57,20 @@ import {
   matchesAge,
   matchesWeight,
 } from "@/lib/candidate-filters";
+
+export interface EventEmailLog {
+  id: string;
+  templateName?: string | null;
+  subject: string;
+  bodyPreview?: string | null;
+  sentAt: string;
+  openedAt?: string | null;
+  openCount: number;
+  clickedAt?: string | null;
+  clickCount: number;
+  clickedAction?: string | null;
+  clickedUrl?: string | null;
+}
 
 const EVENT_PLACEHOLDER_TAGS = [
   { tag: "{{name}}", label: "Candidate Name", example: "Rahul Sharma", desc: "Candidate's full name" },
@@ -806,6 +822,56 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     return { revenue: rev, expenses: exp, workerPayments: workerTotal, profit: prof, profitMargin: margin };
   }, [event, applications]);
 
+  // Email Engagement & Click Tracking Analytics
+  const emailAnalytics = useMemo(() => {
+    let totalEmailsSent = 0;
+    let openedEmailsCount = 0;
+    let unopenedEmailsCount = 0;
+    let clickedCount = 0;
+    let confirmedCount = 0;
+    let declinedCount = 0;
+    let whatsappJoinedCount = 0;
+    let candidatesEmailedCount = 0;
+
+    applications.forEach((app) => {
+      const logs: EventEmailLog[] = app.emailLogs || app.user?.emailLogs || [];
+      if (logs.length > 0) {
+        candidatesEmailedCount++;
+        totalEmailsSent += logs.length;
+        logs.forEach((log) => {
+          if (log.openedAt || log.openCount > 0) {
+            openedEmailsCount++;
+          } else {
+            unopenedEmailsCount++;
+          }
+
+          if (log.clickedAt || log.clickCount > 0) {
+            clickedCount++;
+            if (log.clickedAction === "CONFIRM_YES") confirmedCount++;
+            else if (log.clickedAction === "DECLINE_NO") declinedCount++;
+            else if (log.clickedAction === "JOIN_WHATSAPP") whatsappJoinedCount++;
+          }
+        });
+      }
+    });
+
+    const openRate = totalEmailsSent > 0 ? Math.round((openedEmailsCount / totalEmailsSent) * 100) : 0;
+    const clickRate = openedEmailsCount > 0 ? Math.round((clickedCount / openedEmailsCount) * 100) : 0;
+
+    return {
+      totalEmailsSent,
+      candidatesEmailedCount,
+      openedEmailsCount,
+      unopenedEmailsCount,
+      clickedCount,
+      confirmedCount,
+      declinedCount,
+      whatsappJoinedCount,
+      openRate,
+      clickRate,
+    };
+  }, [applications]);
+
   // Next candidate in queue helper for Drawer
   const handleNextCandidate = () => {
     if (!inspectCandidate) return;
@@ -1150,6 +1216,77 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           <span className="text-lg font-extrabold text-slate-600 mt-0.5 block">{stats.cancelled}</span>
         </button>
       </div>
+
+      {/* TOP EMAIL & ACTION ANALYTICS TRACKER */}
+      {emailAnalytics.totalEmailsSent > 0 && (
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-4 sm:p-5 text-white shadow-md space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-700/60">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Event Email & Candidate Availability Tracker</span>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Live Engagement</span>
+                </h3>
+                <p className="text-[11px] text-slate-400">Real-time delivery, open rates, and RSVP confirmation button clicks for dispatched event candidates.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+              <span className="text-slate-400 font-sans">Open Rate:</span>
+              <span className="font-extrabold text-emerald-400">{emailAnalytics.openRate}%</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            {/* 1. Emails Sent */}
+            <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+              <div className="flex items-center justify-between text-slate-400 mb-1">
+                <span className="font-semibold uppercase text-[10px]">Emails Sent</span>
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="text-xl font-black text-white">{emailAnalytics.totalEmailsSent}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">To {emailAnalytics.candidatesEmailedCount} candidates</div>
+            </div>
+
+            {/* 2. Opened */}
+            <div className="bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
+              <div className="flex items-center justify-between text-emerald-400 mb-1">
+                <span className="font-semibold uppercase text-[10px]">Opened / Read</span>
+                <Eye className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <div className="text-xl font-black text-emerald-300">{emailAnalytics.openedEmailsCount}</div>
+              <div className="text-[10px] text-emerald-400/80 mt-0.5">{emailAnalytics.openRate}% candidate open rate</div>
+            </div>
+
+            {/* 3. Pending / Unopened */}
+            <div className="bg-amber-950/30 p-3 rounded-xl border border-amber-900/50">
+              <div className="flex items-center justify-between text-amber-400 mb-1">
+                <span className="font-semibold uppercase text-[10px]">Pending / Unopened</span>
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <div className="text-xl font-black text-amber-300">{emailAnalytics.unopenedEmailsCount}</div>
+              <div className="text-[10px] text-amber-400/80 mt-0.5">Awaiting candidate open</div>
+            </div>
+
+            {/* 4. Button Actions Clicked */}
+            <div className="bg-blue-950/30 p-3 rounded-xl border border-blue-900/50">
+              <div className="flex items-center justify-between text-blue-400 mb-1">
+                <span className="font-semibold uppercase text-[10px]">Button Actions</span>
+                <MousePointerClick className="w-3.5 h-3.5 text-blue-400" />
+              </div>
+              <div className="text-xl font-black text-blue-300">{emailAnalytics.clickedCount} <span className="text-xs font-normal text-slate-400">clicks</span></div>
+              <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-0.5 flex-wrap">
+                <span className="text-emerald-400 font-bold">✓ {emailAnalytics.confirmedCount} Confirmed</span>
+                {emailAnalytics.declinedCount > 0 && <span className="text-rose-400 font-bold">✗ {emailAnalytics.declinedCount} Declined</span>}
+                {emailAnalytics.whatsappJoinedCount > 0 && <span className="text-[#25D366] font-bold">📲 {emailAnalytics.whatsappJoinedCount} WhatsApp</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FILTER & VIEW TOOLBAR */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
@@ -1598,6 +1735,63 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               : "Under Review"}
                           </span>
                         </div>
+
+                        {/* Email Communication & Delivery Summary */}
+                        <div
+                          onClick={() => setInspectCandidate(app)}
+                          className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg transition"
+                          title="Click to view full email communication, open tracking, and button clicks"
+                        >
+                          <div className="flex items-center gap-1 text-slate-500 font-semibold">
+                            <Mail className="w-3 h-3 text-slate-400" />
+                            <span>Emails:</span>
+                          </div>
+                          {((app.emailLogs && app.emailLogs.length > 0) || (app.user?.emailLogs && app.user.emailLogs.length > 0)) ? (
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                              {(() => {
+                                const logs: EventEmailLog[] = app.emailLogs || app.user?.emailLogs || [];
+                                const hasOpened = logs.some((l) => l.openedAt || l.openCount > 0);
+                                const hasConfirmed = logs.some((l) => l.clickedAction === "CONFIRM_YES");
+                                const hasDeclined = logs.some((l) => l.clickedAction === "DECLINE_NO");
+                                const hasJoinedWA = logs.some((l) => l.clickedAction === "JOIN_WHATSAPP");
+
+                                return (
+                                  <>
+                                    <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                                      {logs.length} Sent
+                                    </span>
+                                    {hasOpened ? (
+                                      <span className="font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
+                                        <Eye className="w-2.5 h-2.5" /> Opened
+                                      </span>
+                                    ) : (
+                                      <span className="font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+                                        Unopened
+                                      </span>
+                                    )}
+                                    {hasConfirmed && (
+                                      <span className="font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
+                                        <Check className="w-2.5 h-2.5" /> YES
+                                      </span>
+                                    )}
+                                    {hasDeclined && (
+                                      <span className="font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
+                                        <X className="w-2.5 h-2.5" /> NO
+                                      </span>
+                                    )}
+                                    {hasJoinedWA && (
+                                      <span className="font-extrabold text-[#25D366] bg-emerald-50 border border-[#25D366]/40 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
+                                        WA
+                                      </span>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 font-medium italic">No emails sent</span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Action Buttons */}
@@ -1731,6 +1925,29 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <div className="text-xs text-slate-400 font-mono font-semibold">
                               {app.registrationNumber || student.registrationNumber}
                             </div>
+                            {((app.emailLogs && app.emailLogs.length > 0) || (app.user?.emailLogs && app.user.emailLogs.length > 0)) && (
+                              <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+                                {(() => {
+                                  const logs: EventEmailLog[] = app.emailLogs || app.user?.emailLogs || [];
+                                  const hasOpened = logs.some((l) => l.openedAt || l.openCount > 0);
+                                  const hasConfirmed = logs.some((l) => l.clickedAction === "CONFIRM_YES");
+                                  const hasDeclined = logs.some((l) => l.clickedAction === "DECLINE_NO");
+                                  return (
+                                    <>
+                                      <span className="text-slate-400 font-semibold">{logs.length} mail{logs.length > 1 ? "s" : ""}</span>
+                                      <span>•</span>
+                                      {hasOpened ? (
+                                        <span className="text-emerald-600 font-bold flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> Opened</span>
+                                      ) : (
+                                        <span className="text-amber-600 font-medium">Unopened</span>
+                                      )}
+                                      {hasConfirmed && <span className="text-teal-700 font-extrabold bg-teal-50 border border-teal-200 px-1 rounded">✓ YES</span>}
+                                      {hasDeclined && <span className="text-rose-700 font-extrabold bg-rose-50 border border-rose-200 px-1 rounded">✗ NO</span>}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -1975,6 +2192,97 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   </div>
                 </div>
               )}
+
+              {/* Email Communication & Delivery History */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Mail className="w-4 h-4 text-blue-600" />
+                    Email Communication & Delivery History
+                  </h4>
+                  {((inspectCandidate.emailLogs && inspectCandidate.emailLogs.length > 0) || (inspectCandidate.user?.emailLogs && inspectCandidate.user.emailLogs.length > 0)) && (
+                    <span className="text-[11px] font-bold text-slate-500">
+                      {(inspectCandidate.emailLogs || inspectCandidate.user?.emailLogs || []).length} Sent
+                    </span>
+                  )}
+                </div>
+
+                {((inspectCandidate.emailLogs && inspectCandidate.emailLogs.length > 0) || (inspectCandidate.user?.emailLogs && inspectCandidate.user.emailLogs.length > 0)) ? (
+                  <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                    {(inspectCandidate.emailLogs || inspectCandidate.user?.emailLogs || []).map((log: EventEmailLog) => {
+                      const isOpened = log.openedAt || log.openCount > 0;
+                      const isClicked = log.clickedAt || log.clickCount > 0;
+
+                      return (
+                        <div key={log.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <div className="font-bold text-slate-900 truncate">
+                              {log.subject}
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-mono shrink-0">
+                              {new Date(log.sentAt).toLocaleString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
+
+                          {log.templateName && (
+                            <div className="text-[11px] text-slate-500">
+                              Template: <span className="font-semibold text-slate-700">{log.templateName}</span>
+                            </div>
+                          )}
+
+                          {log.bodyPreview && (
+                            <p className="text-[11px] text-slate-500 line-clamp-2 italic bg-white p-2 rounded border border-slate-100">
+                              &ldquo;{log.bodyPreview}&rdquo;
+                            </p>
+                          )}
+
+                          {/* Open & Click Tracking Indicators */}
+                          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
+                            {/* Open Status */}
+                            <div className="flex items-center gap-1">
+                              {isOpened ? (
+                                <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <Eye className="w-3 h-3 text-emerald-600" />
+                                  Opened ({log.openCount}x){log.openedAt ? ` • ${new Date(log.openedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                                </span>
+                              ) : (
+                                <span className="text-amber-700 font-medium bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-600" />
+                                  Pending candidate opening
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Button Click Action */}
+                            <div className="flex items-center gap-1">
+                              {isClicked ? (
+                                <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <MousePointerClick className="w-3 h-3 text-blue-600" />
+                                  Clicked: {log.clickedAction === "CONFIRM_YES" ? "YES, I AM AVAILABLE" : log.clickedAction === "DECLINE_NO" ? "NO, Decline" : log.clickedAction === "JOIN_WHATSAPP" ? "Joined WhatsApp Group" : log.clickedAction || "Button Link"}
+                                  {log.clickedAt ? ` at ${new Date(log.clickedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-medium">
+                                  ⚪ No button actions clicked
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-xs text-slate-400 italic bg-white rounded-xl border border-dashed border-slate-200">
+                    No recorded emails sent to this candidate yet.
+                  </div>
+                )}
+              </div>
 
               {/* Event Selection & Calling Workflow Box */}
               <div className="p-5 bg-slate-900 text-white rounded-2xl space-y-4">

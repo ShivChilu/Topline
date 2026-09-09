@@ -133,6 +133,22 @@ export async function GET(request: Request) {
             status: true,
           },
         },
+        emailLogs: {
+          select: {
+            id: true,
+            templateName: true,
+            subject: true,
+            bodyPreview: true,
+            sentAt: true,
+            openedAt: true,
+            openCount: true,
+            clickedAt: true,
+            clickCount: true,
+            clickedAction: true,
+            clickedUrl: true,
+          },
+          orderBy: { sentAt: "desc" },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -284,6 +300,7 @@ export async function PATCH(request: Request) {
                 registrationNumber: st.registrationNumber,
                 university: st.university,
                 notes,
+                userId: st.id,
               }).catch((e) => console.error("Bulk email error:", e));
             } else if (selectionStatus === "NOT_SELECTED") {
               sendStudentDeselectionEmail({
@@ -292,6 +309,7 @@ export async function PATCH(request: Request) {
                 registrationNumber: st.registrationNumber,
                 university: st.university,
                 notes,
+                userId: st.id,
               }).catch((e) => console.error("Bulk email error:", e));
             }
           }

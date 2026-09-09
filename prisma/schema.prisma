@@ -151,6 +151,9 @@ model User {
   // Photos uploaded (Legacy & Event)
   photos              Photo[]
   
+  // Email Communication & Delivery Logs
+  emailLogs           EmailLog[]
+  
   // Audit trail & actions
   auditLogs           AuditLog[]
   whatsappAdditions   Application[]        @relation("WhatsappAddedBy")
@@ -222,6 +225,7 @@ model Event {
   attendanceRecords           Attendance[]
   assignedCallingAdmins       AdminAssignedEvent[]
   photos                      Photo[]
+  emailLogs                   EmailLog[]
 
   attendanceToken             String?
   attendanceTokenEnabled      Boolean              @default(false)
@@ -332,6 +336,7 @@ model Application {
   attendance           Attendance?
   photos               Photo[]
   statusHistory        ApplicationStatusHistory[]
+  emailLogs            EmailLog[]
 
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
@@ -519,3 +524,41 @@ model StudentProfileFieldValue {
   @@unique([userId, fieldId])
   @@index([userId])
 }
+
+// -------------------------------------------------------------
+// EMAIL COMMUNICATION & ENGAGEMENT LOGS
+// -------------------------------------------------------------
+model EmailLog {
+  id             String       @id @default(uuid())
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId  String?
+  application    Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  eventId        String?
+  event          Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  recipientEmail String
+  recipientName  String?
+  templateName   String?      // e.g. "Event Selection & WhatsApp Invite", "Profile Verification", "Custom Broadcast"
+  subject        String
+  bodyPreview    String?
+  
+  // Engagement Tracking
+  sentAt         DateTime     @default(now())
+  openedAt       DateTime?
+  openCount      Int          @default(0)
+  clickedAt      DateTime?
+  clickCount     Int          @default(0)
+  clickedAction  String?      // e.g. "CONFIRM_YES", "DECLINE_NO", "JOIN_WHATSAPP", "PORTAL"
+  clickedUrl     String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([applicationId])
+  @@index([eventId])
+  @@index([recipientEmail])
+  @@index([sentAt])
+}
+

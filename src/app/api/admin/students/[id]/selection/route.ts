@@ -62,6 +62,7 @@ export async function PATCH(
           registrationNumber: currentStudent.registrationNumber,
           university: currentStudent.university,
           notes,
+          userId: currentStudent.id,
         });
       } else if (selectionStatus === "NOT_SELECTED") {
         emailResult = await sendStudentDeselectionEmail({
@@ -70,6 +71,7 @@ export async function PATCH(
           registrationNumber: currentStudent.registrationNumber,
           university: currentStudent.university,
           notes,
+          userId: currentStudent.id,
         });
       }
     }

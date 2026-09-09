@@ -160,6 +160,10 @@ export async function POST(
         subject: personalizedSubject,
         messageBody: personalizedMessage,
         includeBranding,
+        userId: app.userId,
+        applicationId: app.id,
+        eventId: event.id,
+        templateName: body.templateName || "Event Candidate Message",
       });
 
       if (result.success) {

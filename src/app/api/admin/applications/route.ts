@@ -149,6 +149,22 @@ export async function GET(request: Request) {
           orderBy: { createdAt: "desc" },
           take: 5,
         },
+        emailLogs: {
+          select: {
+            id: true,
+            templateName: true,
+            subject: true,
+            bodyPreview: true,
+            sentAt: true,
+            openedAt: true,
+            openCount: true,
+            clickedAt: true,
+            clickCount: true,
+            clickedAction: true,
+            clickedUrl: true,
+          },
+          orderBy: { sentAt: "desc" },
+        },
       },
       orderBy: [
         { callPriority: "desc" },
@@ -457,6 +473,8 @@ export async function PATCH(request: Request) {
               notes,
               whatsappGroupLink: app.event.whatsappGroupLink || undefined,
               applicationId: app.id,
+              userId: app.userId,
+              eventId: app.eventId,
             }).catch((err) => console.error("Event selection email dispatch error:", err));
           } else if (nextStatus === "NOT_SELECTED" || nextStatus === "REJECTED") {
             sendEventDeselectionEmail({
@@ -465,6 +483,9 @@ export async function PATCH(request: Request) {
               eventName: app.event.name,
               eventDate: app.event.date,
               notes,
+              applicationId: app.id,
+              userId: app.userId,
+              eventId: app.eventId,
             }).catch((err) => console.error("Event deselection email dispatch error:", err));
           }
         }

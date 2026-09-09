@@ -1,14 +1,17 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
 
-interface StudentEmailPayload {
+export interface StudentEmailPayload {
   studentName: string;
   email: string;
   registrationNumber?: string | null;
   university?: string | null;
   notes?: string | null;
+  userId?: string | null;
+  templateName?: string | null;
 }
 
-interface EventEmailPayload {
+export interface EventEmailPayload {
   studentName: string;
   email: string;
   eventName: string;
@@ -19,6 +22,9 @@ interface EventEmailPayload {
   notes?: string | null;
   whatsappGroupLink?: string | null;
   applicationId?: string | null;
+  userId?: string | null;
+  eventId?: string | null;
+  templateName?: string | null;
 }
 
 function getAppBaseUrl(): string {
@@ -79,7 +85,6 @@ async function sendEmail({
         return { success: true };
       } else {
         console.error("[RESEND ERROR]", data);
-        // If from address restriction occurs on test key, log clearly
         if (data.message) {
           console.warn(`Resend API Warning: ${data.message}`);
         }
@@ -112,6 +117,66 @@ async function sendEmail({
 }
 
 /**
+ * Creates an EmailLog entry and generates tracked click URLs & open tracking pixel
+ */
+export async function createTrackedEmailSession({
+  to,
+  recipientName,
+  userId,
+  applicationId,
+  eventId,
+  templateName,
+  subject,
+  bodyPreview,
+}: {
+  to: string;
+  recipientName?: string | null;
+  userId?: string | null;
+  applicationId?: string | null;
+  eventId?: string | null;
+  templateName?: string | null;
+  subject: string;
+  bodyPreview?: string | null;
+}): Promise<{
+  emailLogId: string | null;
+  getTrackedUrl: (action: string, destinationUrl: string) => string;
+  getTrackingPixelHtml: () => string;
+}> {
+  let emailLogId: string | null = null;
+
+  try {
+    const createdLog = await prisma.emailLog.create({
+      data: {
+        recipientEmail: to,
+        recipientName: recipientName || null,
+        userId: userId || null,
+        applicationId: applicationId || null,
+        eventId: eventId || null,
+        templateName: templateName || "General Notification",
+        subject,
+        bodyPreview: bodyPreview ? bodyPreview.substring(0, 200) : null,
+        sentAt: new Date(),
+      },
+    });
+    emailLogId = createdLog.id;
+  } catch (err) {
+    console.error("Failed to create EmailLog audit record:", err);
+  }
+
+  const getTrackedUrl = (action: string, destinationUrl: string): string => {
+    if (!emailLogId) return destinationUrl;
+    return `${getAppBaseUrl()}/api/track/click?emailId=${encodeURIComponent(emailLogId)}&action=${encodeURIComponent(action)}&url=${encodeURIComponent(destinationUrl)}`;
+  };
+
+  const getTrackingPixelHtml = (): string => {
+    if (!emailLogId) return "";
+    return `<img src="${getAppBaseUrl()}/api/track/open?emailId=${encodeURIComponent(emailLogId)}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />`;
+  };
+
+  return { emailLogId, getTrackedUrl, getTrackingPixelHtml };
+}
+
+/**
  * Global Student Profile Selection Confirmation Email Template
  */
 export async function sendStudentSelectionEmail({
@@ -120,11 +185,27 @@ export async function sendStudentSelectionEmail({
   registrationNumber,
   university,
   notes,
+  userId,
+  templateName = "Student Profile Selection Confirmation",
 }: StudentEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
       return { success: false, message: "No email address provided for student." };
     }
+
+    const subject = `🎉 Verified & Selected: Welcome to Topline ODC Roster`;
+    const portalUrl = `${getAppBaseUrl()}/events`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId,
+      templateName,
+      subject,
+      bodyPreview: `Profile approved & selected for upcoming events. University: ${university || "N/A"}`,
+    });
+
+    const trackedPortalUrl = getTrackedUrl("OPEN_PORTAL", portalUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -174,43 +255,58 @@ export async function sendStudentSelectionEmail({
           </p>
 
           <div style="text-align: center;">
-            <a href="${getAppBaseUrl()}/events" class="btn" style="color: #ffffff;">View Available Events</a>
+            <a href="${trackedPortalUrl}" class="btn" style="color: #ffffff;">View Available Events</a>
           </div>
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
-          This is an automated system notification. Please do not reply directly to this email.
+          This is an automated system notification.
         </div>
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
 
     return await sendEmail({
       to: email,
-      subject: `🎉 Congratulations! Your Topline ODC Profile Has Been Selected`,
+      subject,
       html: htmlContent,
     });
   } catch (error: any) {
-    console.error("Failed to send selection email:", error);
+    console.error("Failed to send student selection email:", error);
     return { success: false, message: error.message };
   }
 }
 
 /**
- * Global Student Profile Deselection / Status Update Email Template
+ * Global Student Profile Status Update (Not Selected / Under Review)
  */
 export async function sendStudentDeselectionEmail({
   studentName,
   email,
-  registrationNumber,
-  university,
   notes,
+  userId,
+  templateName = "Student Profile Status Notice",
 }: StudentEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
       return { success: false, message: "No email address provided for student." };
     }
+
+    const subject = `Topline ODC — Profile Selection Status Update`;
+    const portalUrl = `${getAppBaseUrl()}/profile`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId,
+      templateName,
+      subject,
+      bodyPreview: `Profile status updated. Note: ${notes || "Under review"}`,
+    });
+
+    const trackedPortalUrl = getTrackedUrl("OPEN_PORTAL", portalUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -223,13 +319,9 @@ export async function sendStudentDeselectionEmail({
         .header { background: #374151; padding: 24px; text-align: center; }
         .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
         .content { padding: 32px 24px; }
-        .badge { display: inline-block; background: #dc2626; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 14px; margin-bottom: 20px; }
-        .card { background: #1f2937; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #dc2626; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-        .row:last-child { margin-bottom: 0; }
-        .label { color: #9ca3af; font-weight: 500; }
-        .value { color: #ffffff; font-weight: 600; }
+        .badge { display: inline-block; background: #4b5563; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 14px; margin-bottom: 20px; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
       </style>
     </head>
     <body>
@@ -238,37 +330,30 @@ export async function sendStudentDeselectionEmail({
           <h1>TOPLINE ODC</h1>
         </div>
         <div class="content">
-          <div class="badge">STATUS UPDATE</div>
+          <div class="badge">PROFILE STATUS NOTICE</div>
           <h2 style="color: #ffffff; margin-top: 0;">Hello, ${studentName}</h2>
           <p style="color: #d1d5db; line-height: 1.6;">
-            We are writing to inform you that your profile selection status for Topline ODC has been updated to <strong>Not Selected / Under Review</strong>.
+            Your profile status on the Topline Student Portal has been updated. Please ensure your photos, grooming standards, and contact details are complete and up to date.
           </p>
 
-          <div class="card">
-            <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Profile Information</div>
-            <div class="row"><span class="label">Full Name:</span> <span class="value">${studentName}</span></div>
-            ${registrationNumber ? `<div class="row"><span class="label">Roll / Reg Number:</span> <span class="value">${registrationNumber}</span></div>` : ""}
-            ${university ? `<div class="row"><span class="label">University / College:</span> <span class="value">${university}</span></div>` : ""}
-            <div class="row"><span class="label">Current Status:</span> <span class="value" style="color: #ef4444;">Not Selected</span></div>
+          ${notes ? `<div style="background: #374151; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #e5e7eb; margin: 20px 0;"><strong>Coordinator Note:</strong> ${notes}</div>` : ""}
+
+          <div style="text-align: center;">
+            <a href="${trackedPortalUrl}" class="btn" style="color: #ffffff;">Update My Profile</a>
           </div>
-
-          ${notes ? `<div style="background: #374151; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #e5e7eb; margin-bottom: 20px;"><strong>Note:</strong> ${notes}</div>` : ""}
-
-          <p style="color: #9ca3af; font-size: 14px; line-height: 1.5;">
-            You can keep your profile updated with clear recent photos and academic details. Feel free to reach out to the Topline coordination team if you have any questions.
-          </p>
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.
         </div>
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
 
     return await sendEmail({
       to: email,
-      subject: `Topline ODC — Profile Selection Status Update`,
+      subject,
       html: htmlContent,
     });
   } catch (error: any) {
@@ -278,7 +363,7 @@ export async function sendStudentDeselectionEmail({
 }
 
 /**
- * Event-Specific Candidate Selection Email Template
+ * Event-Specific Candidate Selection Email Template with 1-Click RSVP & WhatsApp Group Unlock
  */
 export async function sendEventSelectionEmail({
   studentName,
@@ -291,6 +376,9 @@ export async function sendEventSelectionEmail({
   notes,
   whatsappGroupLink,
   applicationId,
+  userId,
+  eventId,
+  templateName = "Event Selection & WhatsApp Group Invite",
 }: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
@@ -298,8 +386,26 @@ export async function sendEventSelectionEmail({
     }
 
     const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
-    const confirmUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=CONFIRM` : `${getAppBaseUrl()}/profile`;
-    const declineUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=DECLINE` : `${getAppBaseUrl()}/profile`;
+    const subject = `🎉 Congratulations! Selected for ${eventName} — Topline ODC`;
+
+    const rawConfirmUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=CONFIRM` : `${getAppBaseUrl()}/profile`;
+    const rawDeclineUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=DECLINE` : `${getAppBaseUrl()}/profile`;
+    const rawPortalUrl = `${getAppBaseUrl()}/profile`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId,
+      applicationId,
+      eventId,
+      templateName,
+      subject,
+      bodyPreview: `Selected for ${eventName} (${formattedDate || "Upcoming"}). Availability confirmation required.`,
+    });
+
+    const confirmUrl = getTrackedUrl("CONFIRM_YES", rawConfirmUrl);
+    const declineUrl = getTrackedUrl("DECLINE_NO", rawDeclineUrl);
+    const portalUrl = getTrackedUrl("OPEN_PORTAL", rawPortalUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -373,7 +479,7 @@ export async function sendEventSelectionEmail({
           </p>
 
           <div style="text-align: center; margin-top: 10px;">
-            <a href="${getAppBaseUrl()}/profile" class="btn-portal">Open Student Portal</a>
+            <a href="${portalUrl}" class="btn-portal">Open Student Portal</a>
           </div>
         </div>
         <div class="footer">
@@ -381,13 +487,14 @@ export async function sendEventSelectionEmail({
           This is an automated system notification.
         </div>
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
 
     return await sendEmail({
       to: email,
-      subject: `🎉 Congratulations! Selected for ${eventName} — Topline ODC`,
+      subject,
       html: htmlContent,
     });
   } catch (error: any) {
@@ -405,6 +512,10 @@ export async function sendEventDeselectionEmail({
   eventName,
   eventDate,
   notes,
+  applicationId,
+  userId,
+  eventId,
+  templateName = "Event Application Status Notice",
 }: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
@@ -412,6 +523,21 @@ export async function sendEventDeselectionEmail({
     }
 
     const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
+    const subject = `Topline ODC — Application Status Update: ${eventName}`;
+    const portalUrl = `${getAppBaseUrl()}/events`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId,
+      applicationId,
+      eventId,
+      templateName,
+      subject,
+      bodyPreview: `Not selected for ${eventName}. Active for other gigs.`,
+    });
+
+    const trackedPortalUrl = getTrackedUrl("BROWSE_EVENTS", portalUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -460,20 +586,21 @@ export async function sendEventDeselectionEmail({
           </p>
 
           <div style="text-align: center;">
-            <a href="${getAppBaseUrl()}/events" class="btn" style="color: #ffffff;">Browse Other Events</a>
+            <a href="${trackedPortalUrl}" class="btn" style="color: #ffffff;">Browse Other Events</a>
           </div>
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.
         </div>
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
 
     return await sendEmail({
       to: email,
-      subject: `Topline ODC — Application Status Update: ${eventName}`,
+      subject,
       html: htmlContent,
     });
   } catch (error: any) {
@@ -483,7 +610,7 @@ export async function sendEventDeselectionEmail({
 }
 
 /**
- * Custom Broadcast / Single Message Email Template
+ * Custom Broadcast / Single Message Email Template with Full Action & Open Tracking
  */
 export async function sendCustomBroadcastEmail({
   to,
@@ -491,17 +618,38 @@ export async function sendCustomBroadcastEmail({
   subject,
   messageBody,
   includeBranding = true,
+  userId,
+  applicationId,
+  eventId,
+  templateName = "Custom Broadcast Message",
 }: {
   to: string;
   studentName: string;
   subject: string;
   messageBody: string;
   includeBranding?: boolean;
+  userId?: string | null;
+  applicationId?: string | null;
+  eventId?: string | null;
+  templateName?: string | null;
 }): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!to) {
       return { success: false, message: "No recipient email address provided." };
     }
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to,
+      recipientName: studentName,
+      userId,
+      applicationId,
+      eventId,
+      templateName,
+      subject,
+      bodyPreview: messageBody.substring(0, 180),
+    });
+
+    const portalUrl = getTrackedUrl("OPEN_PORTAL", `${getAppBaseUrl()}/events`);
 
     // Convert newlines in messageBody to clean HTML paragraphs/breaks
     const formattedBody = messageBody
@@ -541,7 +689,7 @@ export async function sendCustomBroadcastEmail({
           </div>
 
           <div style="text-align: center; margin-top: 28px;">
-            <a href="${getAppBaseUrl()}/events" class="btn" style="color: #ffffff;">Go to Topline Portal</a>
+            <a href="${portalUrl}" class="btn" style="color: #ffffff;">Go to Topline Portal</a>
           </div>
         </div>
         ${includeBranding ? `
@@ -551,6 +699,7 @@ export async function sendCustomBroadcastEmail({
         </div>
         ` : ""}
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
@@ -583,18 +732,24 @@ export async function sendAdminCredentialsEmail({
   password: string;
   role: string;
   assignedEventNames?: string[];
-}): Promise<{ success: boolean; message?: string }> {
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
-    const roleLabel =
-      role === "EVENT_ADMIN" || role === "event_admin"
-        ? "Event Administrator"
-        : role === "CALLING_ADMIN" || role === "calling"
-        ? "Calling Operator"
-        : role === "SUPERADMIN" || role === "superadmin"
-        ? "Super Administrator"
-        : "Operations Admin";
+    if (!email) {
+      return { success: false, message: "No email provided for admin credentials dispatch." };
+    }
 
-    const loginUrl = `${getAppBaseUrl()}/admin/login`;
+    const subject = `Your Topline Admin Access Credentials`;
+    const loginUrl = `${getAppBaseUrl()}/login`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: adminName,
+      templateName: "Admin Login Credentials",
+      subject,
+      bodyPreview: `Admin credentials issued for username: ${username}, role: ${role}`,
+    });
+
+    const trackedLoginUrl = getTrackedUrl("LOGIN_CLICK", loginUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -607,14 +762,14 @@ export async function sendAdminCredentialsEmail({
         .header { background: #ED0000; padding: 24px; text-align: center; }
         .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
         .content { padding: 32px 24px; }
-        .badge { display: inline-block; background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
-        .cred-box { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 18px; margin: 20px 0; }
-        .cred-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-        .cred-label { color: #9ca3af; font-weight: 600; }
-        .cred-val { color: #f9fafb; font-family: monospace; font-weight: bold; }
-        .events-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin: 16px 0; }
+        .badge { display: inline-block; background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 14px; margin-bottom: 20px; }
+        .card { background: #1f2937; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #2563eb; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .row:last-child { margin-bottom: 0; }
+        .label { color: #9ca3af; font-weight: 500; }
+        .value { color: #ffffff; font-weight: 600; font-family: monospace; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
-        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; margin-top: 15px; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
       </style>
     </head>
     <body>
@@ -623,54 +778,45 @@ export async function sendAdminCredentialsEmail({
           <h1>TOPLINE ODC</h1>
         </div>
         <div class="content">
-          <div class="badge">ADMINISTRATOR ONBOARDING</div>
-          <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 12px; font-size: 20px;">Welcome, ${adminName}!</h2>
-          <p style="color: #9ca3af; font-size: 14px; line-height: 1.6; margin-top: 0;">
-            You have been granted <strong>${roleLabel}</strong> access to the Topline ODC management portal.
+          <div class="badge">ADMIN ACCESS CREDENTIALS</div>
+          <h2 style="color: #ffffff; margin-top: 0;">Welcome, ${adminName}!</h2>
+          <p style="color: #d1d5db; line-height: 1.6;">
+            Your account has been created on the Topline Management Portal with <strong>${role}</strong> privileges.
           </p>
 
-          <div class="cred-box">
-            <h3 style="margin-top: 0; margin-bottom: 12px; color: #f3f4f6; font-size: 15px; border-bottom: 1px solid #374151; padding-bottom: 6px;">
-              Your Login Credentials
-            </h3>
-            <div style="font-size: 14px; line-height: 1.8;">
-              <div><strong style="color: #9ca3af;">Username:</strong> <code style="color: #38bdf8; background: #111827; padding: 2px 6px; border-radius: 4px;">${username}</code></div>
-              <div><strong style="color: #9ca3af;">Password:</strong> <code style="color: #38bdf8; background: #111827; padding: 2px 6px; border-radius: 4px;">${password}</code></div>
-              <div><strong style="color: #9ca3af;">Role:</strong> <span style="color: #4ade80;">${roleLabel}</span></div>
-            </div>
+          <div class="card">
+            <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Login Credentials</div>
+            <div class="row"><span class="label">Portal URL:</span> <span class="value" style="color: #60a5fa;">${loginUrl}</span></div>
+            <div class="row"><span class="label">Username:</span> <span class="value">${username}</span></div>
+            <div class="row"><span class="label">Password:</span> <span class="value">${password}</span></div>
+            <div class="row"><span class="label">Assigned Role:</span> <span class="value" style="color: #fbbf24;">${role}</span></div>
+            ${
+              assignedEventNames.length > 0
+                ? `<div class="row"><span class="label">Assigned Event(s):</span> <span class="value" style="color: #a78bfa;">${assignedEventNames.join(", ")}</span></div>`
+                : ""
+            }
           </div>
 
-          ${assignedEventNames.length > 0 ? `
-          <div class="events-box">
-            <div style="font-size: 12px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">
-              Assigned Event Management Scope
-            </div>
-            <ul style="margin: 0; padding-left: 20px; color: #e2e8f0; font-size: 13px; line-height: 1.7;">
-              ${assignedEventNames.map(name => `<li><strong>${name}</strong></li>`).join("")}
-            </ul>
-          </div>
-          ` : ""}
-
-          <p style="color: #9ca3af; font-size: 13px; line-height: 1.6;">
-            Please log in at the link below to access candidate rosters and manage your assigned events:
+          <p style="color: #ef4444; font-size: 13px; line-height: 1.5;">
+            <strong>Security Notice:</strong> Please change your password upon your first successful login under Account Settings.
           </p>
 
-          <div style="text-align: center; margin-top: 24px; margin-bottom: 10px;">
-            <a href="${loginUrl}" class="btn" style="color: #ffffff;">Log In to Admin Portal</a>
+          <div style="text-align: center;">
+            <a href="${trackedLoginUrl}" class="btn" style="color: #ffffff;">Log In to Dashboard</a>
           </div>
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
-          For security, please change your password after logging in.
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.
         </div>
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
 
     return await sendEmail({
       to: email,
-      subject: `Your Topline ODC Admin Access Credentials (${roleLabel})`,
+      subject,
       html: htmlContent,
     });
   } catch (error: any) {
@@ -678,5 +824,3 @@ export async function sendAdminCredentialsEmail({
     return { success: false, message: error.message };
   }
 }
-
-

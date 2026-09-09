@@ -124,6 +124,8 @@ export async function POST(request: Request) {
         subject: personalizedSubject,
         messageBody: personalizedMessage,
         includeBranding,
+        userId: student.id,
+        templateName: body.templateName || "Custom Student Message",
       });
 
       if (result.success) {
