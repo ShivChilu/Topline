@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock } from "lucide-react";
