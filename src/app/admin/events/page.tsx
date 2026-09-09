@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock } from "lucide-react";
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -163,17 +161,19 @@ export default function AdminEventsPage() {
           <p className="text-slate-500 text-sm mt-1">
             {currentAdminRole === "event_admin"
               ? "View candidate rosters and manage shift attendance for your assigned events"
-              : "Create, publish, and monitor catering schedules"}
+              : "Create, duplicate, schedule, and monitor catering schedules"}
           </p>
         </div>
         {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-          <Link
-            href="/admin/events/create"
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Event</span>
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/admin/events/create"
+              className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Event</span>
+            </Link>
+          </div>
         )}
       </div>
 
@@ -190,7 +190,7 @@ export default function AdminEventsPage() {
           />
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto justify-start">
-          {["ALL", "DRAFT", "OPEN", "FULL", "CLOSED", "COMPLETED", "ARCHIVED"].map((t) => (
+          {["ALL", "DRAFT", "SCHEDULED", "OPEN", "FULL", "CLOSED", "COMPLETED", "ARCHIVED"].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -215,109 +215,134 @@ export default function AdminEventsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEvents.map((event) => (
-            <div
-              key={event._id}
-              className="bg-white rounded-xl border border-slate-200 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300 shadow-sm"
-            >
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-450 font-semibold uppercase">{event.workType}</span>
-                  <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs font-bold uppercase">
-                    {event.status}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold hover:text-red-600 transition">
-                  <Link href={`/admin/events/${event._id}`}>{event.name}</Link>
-                </h3>
-                <div className="space-y-2 text-sm text-slate-500">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-red-600" />
-                    <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <MapPin className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                    <span className="line-clamp-1">{event.location}</span>
-                  </div>
-                </div>
-              </div>
+          {filteredEvents.map((event) => {
+            const isScheduled = event.status === "SCHEDULED";
+            let statusBadgeColor = "bg-red-600/10 text-red-600 border-red-600/20";
+            if (isScheduled) statusBadgeColor = "bg-purple-100 text-purple-800 border-purple-300";
+            if (event.status === "OPEN") statusBadgeColor = "bg-emerald-100 text-emerald-800 border-emerald-300";
+            if (event.status === "DRAFT") statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-300";
 
-              {/* Action Toolbar */}
-              <div className="bg-slate-50/50 border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-2">
-                <div className="flex gap-2">
-                  <Link
-                    href={`/admin/events/${event._id}`}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
-                    title="View & Manage"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href={`/admin/events/${event._id}/attendance`}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-655 transition"
-                    title="Attendance QR & Logs"
-                  >
-                    <QrCode className="w-4 h-4 text-red-600" />
-                  </Link>
-                  <Link
-                    href={`/events/${event._id}`}
-                    target="_blank"
-                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
-                    title="Preview Public Page"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button
-                    onClick={() => {
-                      const url = `${window.location.origin}/events/${event._id}`;
-                      navigator.clipboard.writeText(url);
-                      alert("Public event link copied to clipboard!");
-                    }}
-                    className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
-                    title="Copy Public Link"
-                  >
-                    <Copy className="w-4 h-4 text-slate-600" />
-                  </button>
+            return (
+              <div
+                key={event._id}
+                className="bg-white rounded-xl border border-slate-200 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300 shadow-sm"
+              >
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-450 font-semibold uppercase">{event.workType}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase border ${statusBadgeColor}`}>
+                      {isScheduled ? "⏰ Scheduled" : event.status}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold hover:text-red-600 transition">
+                    <Link href={`/admin/events/${event._id}`}>{event.name}</Link>
+                  </h3>
+                  <div className="space-y-2 text-sm text-slate-500">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4 text-red-600" />
+                      <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <MapPin className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                      <span className="line-clamp-1">{event.location}</span>
+                    </div>
+                    {isScheduled && event.scheduledPublishAt && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 text-xs text-purple-900 font-semibold flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>
+                          Auto-publish: {new Date(event.scheduledPublishAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {new Date(event.scheduledPublishAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-                  <div className="flex gap-2 items-center">
-                    {event.status === "DRAFT" && (
-                      <button
-                        onClick={() => handleUpdateStatus(event._id, "OPEN")}
-                        className="bg-emerald-600/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-emerald-600 hover:text-white"
-                      >
-                        Publish
-                      </button>
-                    )}
-                    {event.status === "OPEN" && (
-                      <button
-                        onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                        className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
-                      >
-                        Close Form
-                      </button>
-                    )}
-                    {event.status !== "ARCHIVED" && (
-                      <button
-                        onClick={() => handleArchive(event._id)}
-                        className="p-2 bg-amber-50 hover:bg-amber-600 border border-amber-200 text-amber-700 hover:text-white rounded transition"
-                        title="Archive Event"
-                      >
-                        <Archive className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openDeleteModal(event)}
-                      className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
-                      title="Delete Event"
+
+                {/* Action Toolbar */}
+                <div className="bg-slate-50/50 border-t border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex gap-1.5 items-center">
+                    <Link
+                      href={`/admin/events/${event._id}`}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
+                      title="View & Manage"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href={`/admin/events/create?cloneFrom=${event._id}`}
+                      className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded font-bold text-xs transition flex items-center gap-1"
+                      title="Duplicate & Edit as New Event"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span className="hidden sm:inline">Clone</span>
+                    </Link>
+                    <Link
+                      href={`/admin/events/${event._id}/attendance`}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-655 transition"
+                      title="Attendance QR & Logs"
+                    >
+                      <QrCode className="w-4 h-4 text-red-600" />
+                    </Link>
+                    <Link
+                      href={`/events/${event._id}`}
+                      target="_blank"
+                      className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
+                      title="Preview Public Page"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/events/${event._id}`;
+                        navigator.clipboard.writeText(url);
+                        alert("Public event link copied to clipboard!");
+                      }}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
+                      title="Copy Public Link"
+                    >
+                      <Copy className="w-4 h-4 text-slate-600" />
                     </button>
                   </div>
-                )}
+                  {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                    <div className="flex gap-2 items-center">
+                      {(event.status === "DRAFT" || isScheduled) && (
+                        <button
+                          onClick={() => handleUpdateStatus(event._id, "OPEN")}
+                          className="bg-emerald-600/10 text-emerald-700 border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-emerald-600 hover:text-white"
+                          title="Publish now immediately"
+                        >
+                          Publish Now
+                        </button>
+                      )}
+                      {event.status === "OPEN" && (
+                        <button
+                          onClick={() => handleUpdateStatus(event._id, "CLOSED")}
+                          className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
+                        >
+                          Close Form
+                        </button>
+                      )}
+                      {event.status !== "ARCHIVED" && (
+                        <button
+                          onClick={() => handleArchive(event._id)}
+                          className="p-2 bg-amber-50 hover:bg-amber-600 border border-amber-200 text-amber-700 hover:text-white rounded transition"
+                          title="Archive Event"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openDeleteModal(event)}
+                        className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

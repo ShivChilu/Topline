@@ -143,7 +143,15 @@ export async function PATCH(
     if (body.paymentPerStudent !== undefined) allowedData.paymentPerStudent = Number(body.paymentPerStudent);
     if (body.clientRevenue !== undefined) allowedData.clientRevenue = Number(body.clientRevenue);
     if (body.otherExpenses !== undefined) allowedData.otherExpenses = Number(body.otherExpenses);
-    if (body.status !== undefined) allowedData.status = body.status;
+    if (body.status !== undefined) {
+      allowedData.status = body.status;
+      if (body.status === "OPEN") {
+        allowedData.scheduledPublishAt = null;
+      }
+    }
+    if (body.scheduledPublishAt !== undefined) {
+      allowedData.scheduledPublishAt = body.scheduledPublishAt ? new Date(body.scheduledPublishAt) : null;
+    }
     if (body.visibility !== undefined) allowedData.visibility = body.visibility;
     if (body.allowedGender !== undefined) allowedData.allowedGender = body.allowedGender;
     if (body.clientId !== undefined) allowedData.clientId = body.clientId || null;

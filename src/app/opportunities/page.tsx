@@ -64,6 +64,17 @@ export default async function OpportunitiesPage(props: {
   }
 
   try {
+    const now = new Date();
+    await prisma.event.updateMany({
+      where: {
+        status: "SCHEDULED",
+        scheduledPublishAt: { lte: now },
+      },
+      data: {
+        status: "OPEN",
+      },
+    });
+
     const whereClause: any = {
       visibility: "VISIBLE",
       status: searchParams.status ? searchParams.status : { not: "ARCHIVED" },
@@ -244,10 +255,12 @@ export default async function OpportunitiesPage(props: {
             {events.map((event: any) => {
               const isOpen = event.status === "OPEN";
               const isFull = event.status === "FULL";
+              const isScheduled = event.status === "SCHEDULED";
 
               let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
               if (isOpen) statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
               if (isFull) statusBadgeColor = "bg-amber-50 text-amber-700 border-amber-200";
+              if (isScheduled) statusBadgeColor = "bg-purple-50 text-purple-700 border-purple-200";
 
               return (
                 <div
@@ -258,7 +271,7 @@ export default async function OpportunitiesPage(props: {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border uppercase tracking-wider ${statusBadgeColor}`}>
-                          {event.status}
+                          {isScheduled ? "⏰ Scheduled" : event.status}
                         </span>
                         {event.allowedGender === "FEMALE_ONLY" && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 uppercase">
@@ -296,6 +309,13 @@ export default async function OpportunitiesPage(props: {
                       <div className="flex items-center space-x-2.5">
                         <Users className="w-4 h-4 text-red-600 shrink-0" />
                         {(() => {
+                          if (isScheduled && event.scheduledPublishAt) {
+                            return (
+                              <span className="font-bold text-purple-700">
+                                ⏰ Opens: {new Date(event.scheduledPublishAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {new Date(event.scheduledPublishAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                              </span>
+                            );
+                          }
                           const remainingSlots = Math.max(0, (event.workersRequired || event.maxApplications) - event.applicationsCount);
                           if (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED") {
                             return <span className="font-extrabold text-red-600 uppercase">Applications Full</span>;

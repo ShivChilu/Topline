@@ -65,9 +65,27 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Event not found." }, { status: 404 });
     }
 
-    if (event.status !== EventStatus.OPEN) {
+    let currentEvent = event;
+    if (currentEvent.status === EventStatus.SCHEDULED) {
+      if (currentEvent.scheduledPublishAt && new Date() >= currentEvent.scheduledPublishAt) {
+        currentEvent = await prisma.event.update({
+          where: { id: eventId },
+          data: { status: EventStatus.OPEN, scheduledPublishAt: null },
+        });
+      } else {
+        const scheduledTimeStr = currentEvent.scheduledPublishAt
+          ? new Date(currentEvent.scheduledPublishAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })
+          : "a later date";
+        return NextResponse.json(
+          { success: false, message: `This event is scheduled. Applications will open on ${scheduledTimeStr}.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (currentEvent.status !== EventStatus.OPEN) {
       return NextResponse.json(
-        { success: false, message: `Applications are currently ${event.status.toLowerCase()}.` },
+        { success: false, message: `Applications are currently ${currentEvent.status.toLowerCase()}.` },
         { status: 400 }
       );
     }

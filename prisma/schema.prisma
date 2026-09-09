@@ -17,6 +17,7 @@ enum Role {
 
 enum EventStatus {
   DRAFT
+  SCHEDULED
   OPEN
   FULL
   CLOSED
@@ -213,6 +214,7 @@ model Event {
   clientRevenue               Float                @default(0)
   otherExpenses               Float                @default(0)
   status                      EventStatus          @default(DRAFT)
+  scheduledPublishAt          DateTime?
   visibility                  EventVisibility      @default(VISIBLE)
   allowedGender               AllowedGender        @default(ALL)
   whatsappGroupLink           String?

@@ -64,6 +64,18 @@ export async function POST(request: Request) {
     const finalWorkType = workType && workType.trim() ? workType.trim() : "Catering Staff";
     const finalDescription = description && description.trim() ? description.trim() : "Event responsibilities and details will be updated soon.";
 
+    let initialStatus: EventStatus = EventStatus.DRAFT;
+    let scheduledDate: Date | null = null;
+
+    if (body.status === "SCHEDULED" && body.scheduledPublishAt) {
+      initialStatus = EventStatus.SCHEDULED;
+      scheduledDate = new Date(body.scheduledPublishAt);
+    } else if (body.status === "OPEN") {
+      initialStatus = EventStatus.OPEN;
+    } else if (body.status && Object.values(EventStatus).includes(body.status)) {
+      initialStatus = body.status as EventStatus;
+    }
+
     const event = await prisma.event.create({
       data: {
         name: finalName,
@@ -83,7 +95,8 @@ export async function POST(request: Request) {
         paymentPerStudent: Number(paymentPerStudent) || 800,
         clientRevenue: Number(clientRevenue) || 0,
         otherExpenses: Number(otherExpenses) || 0,
-        status: EventStatus.DRAFT,
+        status: initialStatus,
+        scheduledPublishAt: scheduledDate,
         visibility: visibility === "HIDDEN" ? EventVisibility.HIDDEN : EventVisibility.VISIBLE,
         allowedGender: body.allowedGender === "FEMALE_ONLY" ? "FEMALE_ONLY" : body.allowedGender === "MALE_ONLY" ? "MALE_ONLY" : "ALL",
         whatsappGroupLink: body.whatsappGroupLink && body.whatsappGroupLink.trim() ? body.whatsappGroupLink.trim() : null,
@@ -178,6 +191,18 @@ export async function GET(request: Request) {
     if (recentOnly) {
       whereClause.status = { in: [EventStatus.OPEN, EventStatus.DRAFT, EventStatus.FULL, EventStatus.CLOSED] };
     }
+
+    const now = new Date();
+    // Auto-promote any scheduled events that have reached their trigger time
+    await prisma.event.updateMany({
+      where: {
+        status: EventStatus.SCHEDULED,
+        scheduledPublishAt: { lte: now },
+      },
+      data: {
+        status: EventStatus.OPEN,
+      },
+    });
 
     const events = await prisma.event.findMany({
       where: whereClause,

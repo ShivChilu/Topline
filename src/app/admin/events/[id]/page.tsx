@@ -1011,11 +1011,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase border ${
                 event.status === "OPEN"
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : event.status === "SCHEDULED"
+                  ? "bg-purple-50 text-purple-700 border-purple-200"
                   : event.status === "FULL"
                   ? "bg-amber-50 text-amber-700 border-amber-200"
                   : "bg-slate-100 text-slate-700 border-slate-200"
               }`}>
-                {event.status}
+                {event.status === "SCHEDULED" ? "⏰ Scheduled" : event.status}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
@@ -1024,12 +1026,30 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <span>{event.location}</span>
               <span>•</span>
               <span>Reporting: {formatTime12(event.reportingTime)}</span>
+              {event.status === "SCHEDULED" && event.scheduledPublishAt && (
+                <>
+                  <span>•</span>
+                  <span className="font-bold text-purple-700">
+                    Auto-publish: {new Date(event.scheduledPublishAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {new Date(event.scheduledPublishAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
 
         {/* Quick Operations & Create Dropdown for All Admins */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Duplicate as New Button */}
+          <Link
+            href={`/admin/events/create?cloneFrom=${eventId}`}
+            className="bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition"
+            title="Duplicate this event configuration and create as a new event"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+            <span>Duplicate as New</span>
+          </Link>
+
           {/* + Create / Actions Dropdown */}
           <div className="relative group">
             <button
@@ -1044,11 +1064,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
               <div className="py-1">
                 <Link
+                  href={`/admin/events/create?cloneFrom=${eventId}`}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Duplicate & Edit as New</span>
+                </Link>
+                <Link
                   href="/admin/events/create"
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
                 >
                   <Plus className="w-3.5 h-3.5 text-red-600" />
-                  <span>Create New Event</span>
+                  <span>Create Brand New Event</span>
                 </Link>
                 <button
                   type="button"
