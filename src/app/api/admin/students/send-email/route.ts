@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { sendCustomBroadcastEmail } from "@/lib/email";
+import { sendCustomBroadcastEmail, getAppBaseUrl } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,9 @@ function interpolateTags(template: string, student: any): string {
     age: student.age ? String(student.age) : "N/A",
     upiId: student.upiId || "N/A",
     email: student.email || "",
+    completenessScore: student.completenessScore ? `${student.completenessScore}%` : "65%",
+    profileLink: `${getAppBaseUrl()}/profile`,
+    portalLink: `${getAppBaseUrl()}/events`,
   };
 
   let result = template;

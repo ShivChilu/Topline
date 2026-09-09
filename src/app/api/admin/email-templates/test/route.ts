@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { sendCustomBroadcastEmail } from "@/lib/email";
+import { sendCustomBroadcastEmail, getAppBaseUrl } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +64,9 @@ export async function POST(request: Request) {
       whatsappGroupLink: "https://chat.whatsapp.com/sample-group-link",
       age: "21",
       upiId: "shiva@okaxis",
+      completenessScore: "65%",
+      profileLink: `${getAppBaseUrl()}/profile`,
+      portalLink: `${getAppBaseUrl()}/events`,
       email: targetEmail,
     };
 

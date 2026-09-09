@@ -27,7 +27,7 @@ export interface EventEmailPayload {
   templateName?: string | null;
 }
 
-function getAppBaseUrl(): string {
+export function getAppBaseUrl(): string {
   return "https://toplineodc.co.in";
 }
 
@@ -649,10 +649,24 @@ export async function sendCustomBroadcastEmail({
       bodyPreview: messageBody.substring(0, 180),
     });
 
-    const portalUrl = getTrackedUrl("OPEN_PORTAL", `${getAppBaseUrl()}/events`);
+    const isProfileTarget = 
+      Boolean(templateName && templateName.toLowerCase().includes("profile")) || 
+      Boolean(subject && subject.toLowerCase().includes("profile")) || 
+      Boolean(messageBody && (messageBody.toLowerCase().includes("profile") || messageBody.toLowerCase().includes("100%")));
 
-    // Convert newlines in messageBody to clean HTML paragraphs/breaks
-    const formattedBody = messageBody
+    const destinationUrl = isProfileTarget ? `${getAppBaseUrl()}/profile` : `${getAppBaseUrl()}/events`;
+    const actionKey = isProfileTarget ? "UPDATE_PROFILE" : "OPEN_PORTAL";
+    const buttonLabel = isProfileTarget ? "👉 Complete Your Profile (100%)" : "Go to Topline Portal";
+
+    const portalUrl = getTrackedUrl(actionKey, destinationUrl);
+
+    // Convert newlines in messageBody to clean HTML paragraphs/breaks and replace raw profileLink with styled link
+    const processedBody = messageBody.replace(
+      /\{\{\s*profileLink\s*\}\}/gi,
+      `<a href="${portalUrl}" style="color: #60a5fa; font-weight: bold; text-decoration: underline;">${destinationUrl}</a>`
+    );
+
+    const formattedBody = processedBody
       .split("\n\n")
       .map((para) => `<p style="margin-top: 0; margin-bottom: 16px; color: #d1d5db; line-height: 1.7;">${para.replace(/\n/g, "<br/>")}</p>`)
       .join("");
@@ -670,7 +684,7 @@ export async function sendCustomBroadcastEmail({
         .content { padding: 32px 24px; }
         .badge { display: inline-block; background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
-        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 800; font-size: 15px; margin-top: 20px; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); }
       </style>
     </head>
     <body>
@@ -689,7 +703,7 @@ export async function sendCustomBroadcastEmail({
           </div>
 
           <div style="text-align: center; margin-top: 28px;">
-            <a href="${portalUrl}" class="btn" style="color: #ffffff;">Go to Topline Portal</a>
+            <a href="${portalUrl}" class="btn" style="color: #ffffff;">${buttonLabel}</a>
           </div>
         </div>
         ${includeBranding ? `

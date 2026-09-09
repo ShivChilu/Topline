@@ -134,6 +134,8 @@ const PLACEHOLDER_TAGS = [
   { tag: "{{selectionStatus}}", label: "Selection Status", example: "SELECTED", desc: "Current status" },
   { tag: "{{age}}", label: "Age", example: "21", desc: "Student age" },
   { tag: "{{upiId}}", label: "UPI ID", example: "name@upi", desc: "Payment UPI ID" },
+  { tag: "{{completenessScore}}", label: "Profile %", example: "65%", desc: "Profile completeness score" },
+  { tag: "{{profileLink}}", label: "Profile Link", example: "https://topline.com/profile", desc: "Direct link to student profile edit page" },
 ];
 
 export default function AdminStudentsPage() {
@@ -569,6 +571,9 @@ export default function AdminStudentsPage() {
       age: student.age ? String(student.age) : "N/A",
       upiId: student.upiId || "N/A",
       email: student.email || "",
+      completenessScore: student.completenessScore ? `${student.completenessScore}%` : "65%",
+      profileLink: typeof window !== "undefined" ? `${window.location.origin}/profile` : "https://topline.com/profile",
+      portalLink: typeof window !== "undefined" ? `${window.location.origin}/events` : "https://topline.com/events",
     };
 
     let result = template;
@@ -2399,6 +2404,20 @@ export default function AdminStudentsPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setCustomEmailSubject("⚡ Complete Your Profile (100%) to Qualify for Upcoming Events — {{name}}");
+                    setCustomEmailBody(
+                      "Dear {{name}},\n\nWe noticed your Topline profile is currently incomplete.\n\n⭐ IMPORTANT: To be eligible and prioritized for upcoming premium catering, banquet, and hotel events, candidates must complete 100% of their profile details!\n\n📋 Please complete your missing details:\n1. Academic details (Roll/Reg No: {{registrationNumber}}, College: {{university}})\n2. Height, Age, and City information\n3. Mandatory formal full-length photos & clear portrait photo\n4. Active UPI ID for direct shift payout transfer\n\n👉 Tap the button below to complete your profile now:\n{{profileLink}}\n\nMake your profile 100% ready today and start receiving event duty selections!\n\nBest regards,\nTopline Operations & Recruitment Team"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-lg font-bold transition flex items-center gap-1 shadow-2xs"
+                  title="Template for reminding students to complete 100% of profile to qualify for events"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                  <span>100% Profile Completion</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     setCustomEmailSubject("Important Notice for {{name}} — Topline ODC");
                     setCustomEmailBody(
                       "Hi {{name}},\n\nWe have an important announcement for all Topline candidates from {{university}}.\n\nPlease review your portal dashboard for upcoming schedules and duty confirmations.\n\nBest regards,\nTopline Operations Team"
@@ -2581,7 +2600,9 @@ export default function AdminStudentsPage() {
                       </div>
                       <div className="text-center mt-6">
                         <span className="inline-block bg-[#ED0000] text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow">
-                          Go to Topline Portal
+                          {customEmailSubject.toLowerCase().includes("profile") || customEmailBody.toLowerCase().includes("profile") || customEmailBody.toLowerCase().includes("100%")
+                            ? "👉 Complete Your Profile (100%)"
+                            : "Go to Topline Portal"}
                         </span>
                       </div>
                     </div>

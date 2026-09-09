@@ -51,6 +51,14 @@ interface EmailTemplateManagerModalProps {
 export const SYSTEM_PREDEFINED_TEMPLATES: CustomEmailTemplate[] = [
   // Student templates
   {
+    id: "predefined_student_100_percent_profile_completion",
+    name: "100% Profile Completion & Eligibility",
+    subject: "⚡ Complete Your Profile (100%) to Qualify for Upcoming Events — {{name}}",
+    body: "Dear {{name}},\n\nWe noticed your Topline profile is currently incomplete.\n\n⭐ IMPORTANT: To be eligible and prioritized for upcoming premium catering, banquet, and hotel events, candidates must complete 100% of their profile details!\n\n📋 Please complete your missing details:\n1. Academic details (Roll/Reg No: {{registrationNumber}}, College: {{university}})\n2. Height, Age, and City information\n3. Mandatory formal full-length photos & clear portrait photo\n4. Active UPI ID for direct shift payout transfer\n\n👉 Tap the button below to complete your profile now:\n{{profileLink}}\n\nMake your profile 100% ready today and start receiving event duty selections!\n\nBest regards,\nTopline Operations & Recruitment Team",
+    category: "STUDENT",
+    isPredefined: true,
+  },
+  {
     id: "predefined_student_general_notice",
     name: "General Notice",
     subject: "Important Notice for {{name}} — Topline ODC",
