@@ -50,6 +50,7 @@ import {
   Activity,
   MousePointerClick,
   Unlock,
+  Lock,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
@@ -236,6 +237,34 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleToggleEventFormStatus = async (newStatus: "OPEN" | "CLOSED") => {
+    const actionLabel = newStatus === "CLOSED" ? "close and pause" : "resume and open";
+    if (!confirm(`Are you sure you want to ${actionLabel} the registration form for "${event?.name}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          newStatus === "CLOSED"
+            ? "🔒 Event registration form is now CLOSED for students."
+            : "🟢 Event registration form is now RESUMED & OPEN for students!"
+        );
+        fetchEventData(false);
+      } else {
+        showToast(data.message || "Failed to update event status.");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Network error updating event status.");
+    }
   };
 
   const openInspectCandidate = (candidate: any) => {
@@ -1082,6 +1111,29 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
         {/* Quick Operations & Create Dropdown for All Admins */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Close or Resume Form Quick Action Button */}
+          {event.status === "CLOSED" ? (
+            <button
+              type="button"
+              onClick={() => handleToggleEventFormStatus("OPEN")}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
+              title="Resume and open registration form for this event"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>Resume Form (Open)</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleToggleEventFormStatus("CLOSED")}
+              className="bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+              title="Close and pause application form for this event"
+            >
+              <Lock className="w-3.5 h-3.5 text-rose-600" />
+              <span>Close Form</span>
+            </button>
+          )}
+
           {/* Reopen Event with Additional Slots Button */}
           <button
             type="button"
@@ -1116,6 +1168,25 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
             <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
               <div className="py-1">
+                {event.status === "CLOSED" ? (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleEventFormStatus("OPEN")}
+                    className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>🟢 Resume Form (Open Applications)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleEventFormStatus("CLOSED")}
+                    className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-900 bg-rose-50/70 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-rose-600" />
+                    <span>🔒 Close Form (Stop Applications)</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsAddFromMasterModalOpen(true)}
@@ -1213,6 +1284,45 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           </a>
         </div>
       </div>
+
+      {/* Closed Event Status Alert Banner */}
+      {event.status === "CLOSED" && (
+        <div className="bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black shrink-0 border border-rose-300 shadow-2xs">
+              <Lock className="w-5 h-5 text-rose-600" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-black text-rose-950 flex items-center gap-1.5">
+                <span>Application Form is Currently CLOSED</span>
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-rose-200 text-rose-800">
+                  Form Paused
+                </span>
+              </h4>
+              <p className="text-[11px] text-rose-800 mt-0.5">
+                Students visiting the public registration page are shown <em>"Applications Closed by Administrator"</em>. You can resume and open the form anytime or add extra slots.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => handleToggleEventFormStatus("OPEN")}
+              className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>Resume Form (Open)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsReopenModalOpen(true)}
+              className="flex-1 sm:flex-initial bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer"
+            >
+              <span>+ Add Slots & Reopen</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* WhatsApp Group Integration & Automation Banner */}
       <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 rounded-2xl p-4 sm:p-5 border border-emerald-600/40 shadow-xl text-white space-y-3">

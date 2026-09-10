@@ -76,20 +76,114 @@ export default function EventApplicationForm({
       .finally(() => setLoadingAuth(false));
   }, []);
 
-  if (status !== "OPEN") {
-    return (
-      <div className="bg-red-950/20 border border-red-900/30 rounded-2xl p-8 text-center text-red-400 font-bold uppercase tracking-wider">
-        {status === "FULL" ? "⚠️ Applications Full for this Event" : "❌ Applications Closed"}
-      </div>
-    );
-  }
-
   // If still checking authentication
   if (loadingAuth) {
     return (
       <div className="bg-[#0c0d12] p-8 rounded-2xl border border-[#2A3040] text-center space-y-3">
         <div className="w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
         <p className="text-xs font-bold text-slate-400">Verifying student session...</p>
+      </div>
+    );
+  }
+
+  // DUPLICATE APPLICATION GATE: Candidate already applied for this event
+  const existingApplication = loggedInUser?.applications?.find(
+    (app: any) => app.eventId === eventId
+  );
+
+  if (existingApplication) {
+    const appStatus = (existingApplication.status || "APPLIED").toUpperCase();
+    return (
+      <div className="bg-[#0c0d12] p-8 rounded-2xl border border-emerald-900/40 shadow-xl space-y-6 text-center">
+        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+          <CheckCircle className="w-8 h-8" />
+        </div>
+
+        <div className="space-y-2 max-w-md mx-auto">
+          <div className="inline-block bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold px-3 py-1 rounded-full border border-emerald-500/30 uppercase tracking-wider">
+            Status: {appStatus}
+          </div>
+          <h3 className="text-xl font-extrabold text-white">Application Already Submitted</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            You have already applied for this event. Duplicate applications are not allowed for the same event. Selection updates, duty timings, and allocations will be communicated via WhatsApp.
+          </p>
+        </div>
+
+        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-300 flex items-center justify-between">
+          <span className="font-semibold text-slate-400">Registered Student:</span>
+          <span className="font-bold text-white">{loggedInUser.name} ({loggedInUser.registrationNumber})</span>
+        </div>
+
+        {appStatus === "SELECTED" && (
+          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/40 p-5 rounded-2xl space-y-3 text-center shadow-lg">
+            <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-sm uppercase tracking-wide">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>🎉 Congratulations! You are Selected</span>
+            </div>
+            <p className="text-xs text-emerald-200/90 leading-relaxed">
+              Please join the official event WhatsApp group immediately to receive live briefings, shift timings, and reporting instructions:
+            </p>
+            {whatsappGroupLink ? (
+              <a
+                href={whatsappGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-extrabold text-xs px-6 py-3 rounded-xl shadow-lg transition"
+              >
+                <span>📲 Join Official Event WhatsApp Group</span>
+              </a>
+            ) : (
+              <span className="text-slate-400 text-xs italic block">WhatsApp group link pending coordinator update</span>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/profile"
+            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700 flex items-center justify-center gap-2"
+          >
+            View My Profile
+          </Link>
+          <Link
+            href="/events"
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2"
+          >
+            Browse Other Events
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // CLOSED / FULL EVENT GATE
+  if (status !== "OPEN") {
+    return (
+      <div className="bg-[#0c0d12] p-8 rounded-2xl border border-rose-900/40 shadow-xl text-center space-y-4">
+        <div className="w-14 h-14 bg-rose-500/10 rounded-2xl border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500">
+          <Lock className="w-7 h-7" />
+        </div>
+        <div className="space-y-1.5 max-w-md mx-auto">
+          <div className="inline-block bg-rose-500/20 text-rose-400 text-[10px] font-extrabold px-3 py-1 rounded-full border border-rose-500/30 uppercase tracking-wider">
+            {status === "FULL" ? "⚠️ Applications Full" : "🔒 Applications Closed"}
+          </div>
+          <h3 className="text-xl font-extrabold text-white">
+            {status === "FULL" ? "Registration Full" : "Registration Form Closed"}
+          </h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {status === "FULL"
+              ? "All available candidate slots for this event have been filled. New applications are currently paused."
+              : "The application form for this event is currently closed by administrators. You can check back later or explore other open assignments."}
+          </p>
+        </div>
+        <div className="pt-2">
+          <Link
+            href="/events"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl text-xs uppercase tracking-wider transition shadow-md inline-flex items-center justify-center gap-2"
+          >
+            Browse Other Events
+          </Link>
+        </div>
       </div>
     );
   }
@@ -266,76 +360,6 @@ export default function EventApplicationForm({
             className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700 flex items-center justify-center gap-2"
           >
             View My Profile
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // DUPLICATE APPLICATION GATE: Candidate already applied for this event
-  const existingApplication = loggedInUser?.applications?.find(
-    (app: any) => app.eventId === eventId
-  );
-
-  if (existingApplication) {
-    const appStatus = (existingApplication.status || "APPLIED").toUpperCase();
-    return (
-      <div className="bg-[#0c0d12] p-8 rounded-2xl border border-emerald-900/40 shadow-xl space-y-6 text-center">
-        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
-          <CheckCircle className="w-8 h-8" />
-        </div>
-
-        <div className="space-y-2 max-w-md mx-auto">
-          <div className="inline-block bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold px-3 py-1 rounded-full border border-emerald-500/30 uppercase tracking-wider">
-            Status: {appStatus}
-          </div>
-          <h3 className="text-xl font-extrabold text-white">Application Already Submitted</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            You have already applied for this event. Duplicate applications are not allowed for the same event. Selection updates, duty timings, and allocations will be communicated via WhatsApp.
-          </p>
-        </div>
-
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-300 flex items-center justify-between">
-          <span className="font-semibold text-slate-400">Registered Student:</span>
-          <span className="font-bold text-white">{loggedInUser.name} ({loggedInUser.registrationNumber})</span>
-        </div>
-
-        {appStatus === "SELECTED" && (
-          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/40 p-5 rounded-2xl space-y-3 text-center shadow-lg">
-            <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-sm uppercase tracking-wide">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>🎉 Congratulations! You are Selected</span>
-            </div>
-            <p className="text-xs text-emerald-200/90 leading-relaxed">
-              Please join the official event WhatsApp group immediately to receive live briefings, shift timings, and reporting instructions:
-            </p>
-            {whatsappGroupLink ? (
-              <a
-                href={whatsappGroupLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-extrabold text-xs px-6 py-3 rounded-xl shadow-lg transition"
-              >
-                <span>📲 Join Official Event WhatsApp Group</span>
-              </a>
-            ) : (
-              <span className="text-slate-400 text-xs italic block">WhatsApp group link pending coordinator update</span>
-            )}
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <Link
-            href="/profile"
-            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700 flex items-center justify-center gap-2"
-          >
-            View My Profile
-          </Link>
-          <Link
-            href="/events"
-            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2"
-          >
-            Browse Other Events
           </Link>
         </div>
       </div>

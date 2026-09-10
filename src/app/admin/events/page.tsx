@@ -308,15 +308,26 @@ export default function AdminEventsPage() {
                   </div>
                   {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
                     <div className="flex gap-2 items-center flex-wrap">
-                      {/* Reopen Event with Additional Slots Button */}
+                      {/* Resume Form or Reopen Event with Additional Slots Button */}
+                      {event.status === "CLOSED" && (
+                        <button
+                          onClick={() => handleUpdateStatus(event._id, "OPEN")}
+                          className="bg-emerald-600/10 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                          title="Resume and open registration form for students"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Resume (Open)</span>
+                        </button>
+                      )}
+
                       {(event.status === "CLOSED" || event.status === "FULL" || event.status === "COMPLETED") && (
                         <button
                           onClick={() => setReopenModalEvent(event)}
-                          className="bg-emerald-600/10 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                          className="bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
                           title="Reopen event and add candidate seats"
                         >
-                          <Unlock className="w-3.5 h-3.5" />
-                          <span>Reopen (+Slots)</span>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+Slots</span>
                         </button>
                       )}
 
