@@ -52,7 +52,18 @@ export default async function OpportunitiesPage(props: {
       if (decoded && decoded.id) {
         user = await prisma.user.findUnique({
           where: { id: decoded.id },
-          select: { id: true, name: true, role: true, registrationNumber: true },
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            registrationNumber: true,
+            applications: {
+              select: {
+                eventId: true,
+                status: true,
+              },
+            },
+          },
         });
         if (user) {
           profileCompletion = await getStudentProfileCompletion(user.id);
@@ -342,16 +353,40 @@ export default async function OpportunitiesPage(props: {
 
                     {/* Action Button */}
                     {(() => {
-                      const alreadyApplied = user?.applications?.some((app: any) => app.eventId === event.id);
+                      const existingApp = user?.applications?.find((app: any) => app.eventId === event.id);
 
-                      if (alreadyApplied) {
+                      if (existingApp) {
+                        const appStatus = (existingApp.status || "APPLIED").toUpperCase();
+                        let badgeBg = "bg-emerald-600 hover:bg-emerald-700 text-white";
+                        let label = "Applied";
+                        if (appStatus === "CONFIRMED") {
+                          badgeBg = "bg-teal-600 hover:bg-teal-700 text-white";
+                          label = "Confirmed";
+                        } else if (appStatus === "SELECTED") {
+                          badgeBg = "bg-emerald-600 hover:bg-emerald-700 text-white";
+                          label = "Selected";
+                        } else if (appStatus === "ATTENDED") {
+                          badgeBg = "bg-blue-600 hover:bg-blue-700 text-white";
+                          label = "Attended";
+                        } else if (appStatus === "UNDER_REVIEW") {
+                          badgeBg = "bg-amber-600 hover:bg-amber-700 text-white";
+                          label = "Under Review";
+                        } else if (appStatus === "ON_HOLD") {
+                          badgeBg = "bg-amber-600 hover:bg-amber-700 text-white";
+                          label = "On Hold";
+                        } else if (appStatus === "REJECTED" || appStatus === "NOT_SELECTED") {
+                          badgeBg = "bg-rose-600 hover:bg-rose-700 text-white";
+                          label = "Not Selected";
+                        }
+
                         return (
                           <Link
                             href={`/events/${event.id}`}
-                            className="text-xs font-extrabold px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm flex items-center space-x-1.5"
+                            className={`text-xs font-extrabold px-4 py-2.5 rounded-xl ${badgeBg} transition shadow-sm flex items-center space-x-1.5`}
+                            title={`Your current status: ${appStatus}`}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Applied</span>
+                            <span>✓ {label}</span>
                           </Link>
                         );
                       }
