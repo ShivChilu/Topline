@@ -16,7 +16,15 @@ export async function GET(request: Request) {
         where: { id: photoId },
         select: { url: true },
       });
-      dataUrl = photo?.url || null;
+      if (photo?.url) {
+        dataUrl = photo.url;
+      } else {
+        const appPhoto = await prisma.photo.findUnique({
+          where: { id: photoId },
+          select: { url: true },
+        });
+        dataUrl = appPhoto?.url || null;
+      }
     } else if (userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },

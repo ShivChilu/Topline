@@ -54,6 +54,7 @@ import {
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 import LiveAttendanceModal from "@/components/admin/LiveAttendanceModal";
+import AddStudentFromMasterModal from "@/components/admin/AddStudentFromMasterModal";
 import {
   matchesGender,
   matchesHeight,
@@ -172,6 +173,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   // Add Manual Candidate Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddFromMasterModalOpen, setIsAddFromMasterModalOpen] = useState(false);
   const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [isLiveAttendanceModalOpen, setIsLiveAttendanceModalOpen] = useState(false);
   const [addFormData, setAddFormData] = useState<Record<string, any>>({});
@@ -1116,6 +1118,14 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <div className="py-1">
                 <button
                   type="button"
+                  onClick={() => setIsAddFromMasterModalOpen(true)}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100 flex items-center gap-2 transition cursor-pointer"
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                  <span>+ Add Student from Master DB</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsReopenModalOpen(true)}
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
                 >
@@ -1518,6 +1528,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setIsAddFromMasterModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
+              title="Search and add registered students directly from master database"
+            >
+              <Users className="w-3.5 h-3.5 text-blue-600" />
+              <span>+ Add Student</span>
+            </button>
             <button
               type="button"
               onClick={() => setTemplateModalOpen(true)}
@@ -3276,6 +3295,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           reportingTime={event?.reportingTime}
           onClose={() => setIsLiveAttendanceModalOpen(false)}
           onAttendanceChanged={() => {
+            fetchEventData(false);
+          }}
+        />
+      )}
+
+      {/* Add Student from Master Database Modal */}
+      {isAddFromMasterModalOpen && (
+        <AddStudentFromMasterModal
+          isOpen={isAddFromMasterModalOpen}
+          eventId={eventId}
+          eventName={event?.name || "Event"}
+          existingApplications={applications}
+          onClose={() => setIsAddFromMasterModalOpen(false)}
+          onStudentAdded={(newApp, message) => {
+            setApplications((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)]);
+            showToast(message || "Student added to event roster successfully!");
             fetchEventData(false);
           }}
         />

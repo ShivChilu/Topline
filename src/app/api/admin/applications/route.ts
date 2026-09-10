@@ -76,12 +76,10 @@ export async function GET(request: Request) {
             age: true,
             upiId: true,
             bio: true,
-            profilePhotoUrl: true,
             selectionStatus: true,
             studentPhotos: {
               select: {
                 id: true,
-                url: true,
                 photoType: true,
                 caption: true,
                 isPrimary: true,
@@ -119,7 +117,6 @@ export async function GET(request: Request) {
         photos: {
           select: {
             id: true,
-            url: true,
             caption: true,
             photoType: true,
           },
@@ -186,7 +183,7 @@ export async function GET(request: Request) {
         customFieldsMap[fr.formField.id] = customFieldsMap[fr.formField.key];
       });
 
-      // Photo fallback hierarchy: Primary -> Formal -> Full Length -> Casual -> User profilePhotoUrl
+      // Photo fallback hierarchy: Primary -> Formal -> Full Length -> Casual -> User profilePhotoUrl -> App photo
       const rawStudentPhotos = app.user?.studentPhotos || [];
       const primaryPhoto =
         rawStudentPhotos.find((p) => p.isPrimary) ||
@@ -196,15 +193,11 @@ export async function GET(request: Request) {
 
       let resolvedPhotoUrl = "";
       if (primaryPhoto) {
-        resolvedPhotoUrl = primaryPhoto.url?.startsWith("data:")
-          ? `/api/photos/student?photoId=${primaryPhoto.id}`
-          : primaryPhoto.url || "";
-      } else if (app.user?.profilePhotoUrl) {
-        resolvedPhotoUrl = app.user.profilePhotoUrl.startsWith("data:")
-          ? `/api/photos/student?userId=${app.user.id}`
-          : app.user.profilePhotoUrl;
+        resolvedPhotoUrl = `/api/photos/student?photoId=${primaryPhoto.id}`;
+      } else if (app.user?.id) {
+        resolvedPhotoUrl = `/api/photos/student?userId=${app.user.id}`;
       } else if (app.photos && app.photos[0]) {
-        resolvedPhotoUrl = app.photos[0].url || "";
+        resolvedPhotoUrl = `/api/photos/student?photoId=${app.photos[0].id}`;
       }
 
       // Authoritative Mobile Phone
@@ -226,7 +219,7 @@ export async function GET(request: Request) {
         photoType: p.photoType,
         caption: p.caption,
         isPrimary: p.isPrimary,
-        url: p.url && p.url.startsWith("data:") ? `/api/photos/student?photoId=${p.id}` : p.url || "",
+        url: `/api/photos/student?photoId=${p.id}`,
       }));
 
       return {

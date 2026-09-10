@@ -101,7 +101,6 @@ export async function GET(request: Request) {
         upiId: true,
         bio: true,
         adminRemarks: true,
-        profilePhotoUrl: true,
         selectionStatus: true,
         selectedAt: true,
         selectionEmailSentAt: true,
@@ -110,7 +109,6 @@ export async function GET(request: Request) {
         studentPhotos: {
           select: {
             id: true,
-            url: true,
             photoType: true,
             caption: true,
             isPrimary: true,
@@ -164,24 +162,17 @@ export async function GET(request: Request) {
       const attendedCount = userApps.filter((a) => a.status === "ATTENDED").length;
       const cancelledCount = userApps.filter((a) => a.status === "CANCELLED").length;
 
-      // Primary photo fallback - use fast streaming URL instead of heavy base64 strings
+      // Primary photo fallback - use fast lightweight streaming URL
       const primaryPhoto = userPhotos.find((p) => p.isPrimary) || userPhotos[0];
-      let displayPhotoUrl: string | null = null;
-      if (s.profilePhotoUrl) {
-        displayPhotoUrl = s.profilePhotoUrl.startsWith("data:")
-          ? `/api/photos/student?userId=${s.id}`
-          : s.profilePhotoUrl;
-      } else if (primaryPhoto) {
-        displayPhotoUrl = primaryPhoto.url?.startsWith("data:")
-          ? `/api/photos/student?photoId=${primaryPhoto.id}`
-          : primaryPhoto.url || null;
-      }
+      const displayPhotoUrl = primaryPhoto
+        ? `/api/photos/student?photoId=${primaryPhoto.id}`
+        : `/api/photos/student?userId=${s.id}`;
 
       // Completeness score
       let score = 0;
       if (s.name) score += 20;
       if (s.phone) score += 20;
-      if (displayPhotoUrl) score += 30;
+      if (userPhotos.length > 0) score += 30;
       if (s.university) score += 15;
       if (s.city || s.gender) score += 15;
 
@@ -190,7 +181,7 @@ export async function GET(request: Request) {
         photoType: p.photoType,
         caption: p.caption,
         isPrimary: p.isPrimary,
-        url: p.url && p.url.startsWith("data:") ? `/api/photos/student?photoId=${p.id}` : p.url || "",
+        url: `/api/photos/student?photoId=${p.id}`,
       }));
 
       return {
