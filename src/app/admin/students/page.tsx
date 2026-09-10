@@ -849,6 +849,39 @@ export default function AdminStudentsPage() {
       }
 
       return true;
+    }).sort((a, b) => {
+      // Tier 1: 100% completed profile pending review (UNDER_REVIEW) -> Top Priority
+      // Tier 2: Already Approved / Selected candidates (SELECTED)
+      // Tier 3: Less than 100% complete or other statuses (ON_HOLD, NOT_SELECTED, or <100% UNDER_REVIEW)
+      const getTier = (s: Student) => {
+        const status = s.selectionStatus || "UNDER_REVIEW";
+        if (s.completenessScore >= 100 && status === "UNDER_REVIEW") return 1;
+        if (status === "SELECTED") return 2;
+        return 3;
+      };
+
+      const tierA = getTier(a);
+      const tierB = getTier(b);
+      if (tierA !== tierB) return tierA - tierB;
+
+      // Within Tier 1: Newest registration first
+      if (tierA === 1) {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+
+      // Within Tier 2: Newest selected / registered first
+      if (tierA === 2) {
+        const timeA = new Date(a.selectedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.selectedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      }
+
+      // Within Tier 3: Higher completenessScore first, then newest createdAt
+      if (b.completenessScore !== a.completenessScore) {
+        return b.completenessScore - a.completenessScore;
+      }
+
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
   }, [students, search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 

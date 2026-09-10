@@ -170,11 +170,16 @@ export async function GET(request: Request) {
 
       // Completeness score
       let score = 0;
-      if (s.name) score += 20;
-      if (s.phone) score += 20;
+      if (s.name && s.name.trim()) score += 15;
+      if (s.phone && s.phone.trim()) score += 15;
+      if (s.email && s.email.trim()) score += 10;
+      if (s.registrationNumber && s.registrationNumber.trim()) score += 10;
+      if (s.university && s.university.trim()) score += 10;
+      if (s.city && s.city.trim()) score += 10;
+      if (s.gender && s.gender.trim()) score += 5;
+      if (s.height && s.height.trim()) score += 5;
       if (userPhotos.length > 0) score += 30;
-      if (s.university) score += 15;
-      if (s.city || s.gender) score += 15;
+      score = Math.min(100, score);
 
       const formattedPhotos = userPhotos.map((p) => ({
         id: p.id,
@@ -227,24 +232,39 @@ export async function GET(request: Request) {
     });
 
     // Custom Priority Sort:
-    // 1. 100% completed profiles that are UNDER_REVIEW -> Very Top
-    // 2. Other UNDER_REVIEW candidates
-    // 3. Higher completenessScore
-    // 4. Most recent createdAt
+    // Tier 1: 100% completed profiles awaiting approval (UNDER_REVIEW) -> Top Priority
+    // Tier 2: Already Approved / Selected candidates (SELECTED)
+    // Tier 3: Remaining candidates (<100% complete, ON_HOLD, NOT_SELECTED) sorted by score desc, then createdAt desc
+    const getStudentTier = (st: { completenessScore: number; selectionStatus?: string | null }) => {
+      const status = st.selectionStatus || "UNDER_REVIEW";
+      if (st.completenessScore >= 100 && status === "UNDER_REVIEW") return 1;
+      if (status === "SELECTED") return 2;
+      return 3;
+    };
+
     formattedStudents.sort((a, b) => {
-      const aReady100 = a.completenessScore >= 100 && a.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
-      const bReady100 = b.completenessScore >= 100 && b.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
-      if (aReady100 !== bReady100) return bReady100 - aReady100;
+      const tierA = getStudentTier(a);
+      const tierB = getStudentTier(b);
+      if (tierA !== tierB) return tierA - tierB;
 
-      const aReview = a.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
-      const bReview = b.selectionStatus === "UNDER_REVIEW" ? 1 : 0;
-      if (aReview !== bReview) return bReview - aReview;
+      // Within Tier 1 (100% complete pending approval): Newest first
+      if (tierA === 1) {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
 
+      // Within Tier 2 (SELECTED): Newest selected / registered first
+      if (tierA === 2) {
+        const timeA = new Date(a.selectedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.selectedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      }
+
+      // Within Tier 3 (<100% or others): Higher completenessScore first, then newest createdAt
       if (b.completenessScore !== a.completenessScore) {
         return b.completenessScore - a.completenessScore;
       }
 
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
 
     return NextResponse.json({ success: true, students: formattedStudents });
