@@ -283,7 +283,12 @@ export default function CallingDashboard() {
   useEffect(() => {
     let result = applications;
     if (statusFilter !== "ALL") {
-      result = result.filter((app) => app.status === statusFilter.toLowerCase());
+      const sf = statusFilter.toUpperCase();
+      if (sf === "CONFIRMED_ATTENDED" || sf === "CONFIRMED_OR_ATTENDED") {
+        result = result.filter((app) => ["CONFIRMED", "ATTENDED"].includes((app.status || "").toUpperCase()));
+      } else {
+        result = result.filter((app) => (app.status || "").toUpperCase() === sf);
+      }
     }
     if (messageFilter !== "ALL") {
       result = result.filter((app) => (app.messageStatus || "PENDING").toUpperCase() === messageFilter);
@@ -697,13 +702,15 @@ export default function CallingDashboard() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none"
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-bold focus:outline-none"
                   >
                     <option value="ALL">All Statuses</option>
-                    <option value="APPLIED">Applied</option>
-                    <option value="SELECTED">Selected</option>
-                    <option value="ATTENDED">Attended</option>
-                    <option value="CANCELLED">Cancelled</option>
+                    <option value="CONFIRMED_ATTENDED">🎉 Confirmed + Attended</option>
+                    <option value="CONFIRMED">✅ Confirmed (Attending)</option>
+                    <option value="ATTENDED">👔 Attended / Present</option>
+                    <option value="SELECTED">✨ Selected</option>
+                    <option value="APPLIED">📝 Applied</option>
+                    <option value="CANCELLED">🚫 Cancelled</option>
                   </select>
 
                   <select

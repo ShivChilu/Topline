@@ -904,7 +904,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
     // Status filter
     if (statusFilter !== "ALL") {
-      list = list.filter((a) => (a.status || "").toUpperCase() === statusFilter);
+      const sf = statusFilter.toUpperCase();
+      if (sf === "CONFIRMED_ATTENDED" || sf === "CONFIRMED_OR_ATTENDED") {
+        list = list.filter((a) => ["CONFIRMED", "ATTENDED"].includes((a.status || "").toUpperCase()));
+      } else if (sf === "NOT_SELECTED") {
+        list = list.filter((a) => ["NOT_SELECTED", "REJECTED"].includes((a.status || "").toUpperCase()));
+      } else if (sf === "CANCELLED") {
+        list = list.filter((a) => ["CANCELLED", "ABSENT"].includes((a.status || "").toUpperCase()));
+      } else {
+        list = list.filter((a) => (a.status || "").toUpperCase() === sf);
+      }
     }
 
     // Photo filter
@@ -1632,7 +1641,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       )}
 
       {/* Dynamic Statistics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
         <button
           onClick={() => setStatusFilter("ALL")}
           className={`p-3 rounded-xl border text-left transition shadow-sm ${
@@ -1644,47 +1653,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </button>
 
         <button
-          onClick={() => setStatusFilter("APPLIED")}
+          onClick={() => setStatusFilter(statusFilter === "CONFIRMED_ATTENDED" ? "ALL" : "CONFIRMED_ATTENDED")}
           className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "APPLIED" ? "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300"
+            statusFilter === "CONFIRMED_ATTENDED" ? "bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-500/30" : "bg-emerald-100/80 text-emerald-900 border-emerald-300 hover:bg-emerald-200/70"
           }`}
+          title="Filter all candidates who confirmed attendance or have attended"
         >
-          <span className="text-[10px] font-bold uppercase text-slate-500 block">Applied</span>
-          <span className="text-lg font-extrabold text-slate-900 mt-0.5 block">{stats.applied}</span>
+          <span className="text-[10px] font-extrabold uppercase text-emerald-800 flex items-center gap-1">
+            <span>🎉 Confirmed + Attended</span>
+          </span>
+          <span className="text-lg font-black text-emerald-950 mt-0.5 block">{stats.confirmed + stats.attended}</span>
         </button>
 
         <button
-          onClick={() => setStatusFilter("UNDER_REVIEW")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "UNDER_REVIEW" ? "bg-amber-600 text-white border-amber-600" : "bg-amber-50/60 text-amber-900 border-amber-200 hover:border-amber-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-amber-700 block">Under Review</span>
-          <span className="text-lg font-extrabold text-amber-800 mt-0.5 block">{stats.underReview}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("SELECTED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "SELECTED" ? "bg-emerald-600 text-white border-emerald-600" : "bg-emerald-50/60 text-emerald-900 border-emerald-200 hover:border-emerald-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-emerald-700 block">Selected</span>
-          <span className="text-lg font-extrabold text-emerald-700 mt-0.5 block">{stats.selected}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("NOT_SELECTED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "NOT_SELECTED" ? "bg-rose-600 text-white border-rose-600" : "bg-rose-50/60 text-rose-900 border-rose-200 hover:border-rose-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-rose-700 block">Not Selected</span>
-          <span className="text-lg font-extrabold text-rose-700 mt-0.5 block">{stats.notSelected}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter("CONFIRMED")}
+          onClick={() => setStatusFilter(statusFilter === "CONFIRMED" ? "ALL" : "CONFIRMED")}
           className={`p-3 rounded-xl border text-left transition shadow-sm ${
             statusFilter === "CONFIRMED" ? "bg-teal-600 text-white border-teal-600" : "bg-teal-50/60 text-teal-900 border-teal-200 hover:border-teal-300"
           }`}
@@ -1694,7 +1676,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </button>
 
         <button
-          onClick={() => setStatusFilter("ATTENDED")}
+          onClick={() => setStatusFilter(statusFilter === "ATTENDED" ? "ALL" : "ATTENDED")}
           className={`p-3 rounded-xl border text-left transition shadow-sm ${
             statusFilter === "ATTENDED" ? "bg-blue-600 text-white border-blue-600" : "bg-blue-50/60 text-blue-900 border-blue-200 hover:border-blue-300"
           }`}
@@ -1704,7 +1686,47 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </button>
 
         <button
-          onClick={() => setStatusFilter("CANCELLED")}
+          onClick={() => setStatusFilter(statusFilter === "SELECTED" ? "ALL" : "SELECTED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "SELECTED" ? "bg-emerald-600 text-white border-emerald-600" : "bg-emerald-50/60 text-emerald-900 border-emerald-200 hover:border-emerald-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-emerald-700 block">Selected</span>
+          <span className="text-lg font-extrabold text-emerald-700 mt-0.5 block">{stats.selected}</span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(statusFilter === "UNDER_REVIEW" ? "ALL" : "UNDER_REVIEW")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "UNDER_REVIEW" ? "bg-amber-600 text-white border-amber-600" : "bg-amber-50/60 text-amber-900 border-amber-200 hover:border-amber-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-amber-700 block">Under Review</span>
+          <span className="text-lg font-extrabold text-amber-800 mt-0.5 block">{stats.underReview}</span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(statusFilter === "APPLIED" ? "ALL" : "APPLIED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "APPLIED" ? "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-slate-500 block">Applied</span>
+          <span className="text-lg font-extrabold text-slate-900 mt-0.5 block">{stats.applied}</span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(statusFilter === "NOT_SELECTED" ? "ALL" : "NOT_SELECTED")}
+          className={`p-3 rounded-xl border text-left transition shadow-sm ${
+            statusFilter === "NOT_SELECTED" ? "bg-rose-600 text-white border-rose-600" : "bg-rose-50/60 text-rose-900 border-rose-200 hover:border-rose-300"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase text-rose-700 block">Not Selected</span>
+          <span className="text-lg font-extrabold text-rose-700 mt-0.5 block">{stats.notSelected}</span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(statusFilter === "CANCELLED" ? "ALL" : "CANCELLED")}
           className={`p-3 rounded-xl border text-left transition shadow-sm ${
             statusFilter === "CANCELLED" ? "bg-slate-600 text-white border-slate-600" : "bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300"
           }`}
@@ -1822,6 +1844,57 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
           {/* Filters & Queue Switch */}
           <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+            {/* Application & Attendance Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={`text-xs font-bold rounded-xl px-3 py-2 border transition cursor-pointer ${
+                statusFilter !== "ALL"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20 font-extrabold"
+                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+              }`}
+            >
+              <option value="ALL">All Application Statuses</option>
+              <option value="CONFIRMED_ATTENDED">🎉 Confirmed + Attended ({stats.confirmed + stats.attended})</option>
+              <option value="CONFIRMED">✅ Confirmed (Attending) ({stats.confirmed})</option>
+              <option value="ATTENDED">👔 Attended / Present ({stats.attended})</option>
+              <option value="SELECTED">✨ Selected ({stats.selected})</option>
+              <option value="UNDER_REVIEW">⏳ Under Review ({stats.underReview})</option>
+              <option value="APPLIED">📝 Applied ({stats.applied})</option>
+              <option value="NOT_SELECTED">❌ Not Selected ({stats.notSelected})</option>
+              <option value="CANCELLED">🚫 Cancelled ({stats.cancelled})</option>
+            </select>
+
+            {/* Quick Confirmed Pill Filter */}
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === "CONFIRMED" ? "ALL" : "CONFIRMED")}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                statusFilter === "CONFIRMED"
+                  ? "bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-500/30 font-extrabold"
+                  : "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100"
+              }`}
+              title="Filter only candidates who confirmed they will attend"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>Confirmed ({stats.confirmed})</span>
+            </button>
+
+            {/* Quick Confirmed + Attended Pill Filter */}
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === "CONFIRMED_ATTENDED" ? "ALL" : "CONFIRMED_ATTENDED")}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                statusFilter === "CONFIRMED_ATTENDED"
+                  ? "bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-500/30 font-extrabold"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+              }`}
+              title="Filter both Confirmed and Attended candidates"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Confirmed + Attended ({stats.confirmed + stats.attended})</span>
+            </button>
+
             {/* Call Status Filter */}
             <select
               value={callFilter}
