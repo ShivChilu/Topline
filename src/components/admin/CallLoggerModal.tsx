@@ -131,23 +131,24 @@ export default function CallLoggerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden flex flex-col shadow-2xl border border-slate-200">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-700">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85vh] shadow-2xl border border-slate-200 animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 duration-200">
+        
+        {/* Sticky Header */}
+        <div className="shrink-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400 shadow-inner">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400 shadow-inner shrink-0">
               <PhoneCall className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-extrabold flex items-center gap-2">
-                <span>Candidate Call Logger</span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-extrabold text-white">Candidate Call Logger</h3>
+                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
                   2-Call Verification
                 </span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Log Call 1 and Call 2 outcome, status remarks, and availability.
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
+                Log outcome, attendance confirmation & remarks
               </p>
             </div>
           </div>
@@ -155,45 +156,46 @@ export default function CallLoggerModal({
             type="button"
             onClick={onClose}
             disabled={isProcessing}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+            aria-label="Close modal"
+            className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-slate-800/90 hover:bg-rose-600 text-slate-200 hover:text-white flex items-center justify-center transition shadow active:scale-95 border border-slate-700 shrink-0 ml-2"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
 
-        {/* Candidate Mini Profile Card with Direct Phone Action */}
-        <div className="bg-slate-100/90 p-4 border-b border-slate-200 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-extrabold text-slate-900 text-sm">{candidateName}</h4>
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 font-mono font-medium">
+        {/* Candidate Profile & Direct Dial Strip (Sticky) */}
+        <div className="shrink-0 bg-slate-100/95 p-3.5 sm:p-4 border-b border-slate-200 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h4 className="font-extrabold text-slate-900 text-sm truncate">{candidateName}</h4>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 font-mono font-medium flex-wrap">
                 <span className="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700">
                   {regNo}
                 </span>
-                {university && <span>• {university}</span>}
+                {university && <span className="truncate max-w-[200px]">• {university}</span>}
               </div>
             </div>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-white shadow-2xs">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-white shrink-0 shadow-2xs">
               {application.status}
             </span>
           </div>
 
           {/* Phone Dialer Bar */}
           <div className="bg-white rounded-xl p-2.5 border border-slate-200 flex items-center justify-between gap-2 shadow-2xs">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                 <Phone className="w-4 h-4" />
               </div>
-              <span className="text-sm font-extrabold text-slate-900 font-mono tracking-wider">
+              <span className="text-xs sm:text-sm font-extrabold text-slate-900 font-mono tracking-wider truncate">
                 {mobileNumber || "No Phone on Record"}
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={handleCopyPhone}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition active:scale-95"
                 title="Copy phone number"
               >
                 <Copy className="w-3.5 h-3.5" />
@@ -203,7 +205,7 @@ export default function CallLoggerModal({
               {mobileNumber && (
                 <a
                   href={`tel:${mobileNumber}`}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center gap-1 shadow transition"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center gap-1 shadow transition active:scale-95"
                   title="Click to dial student immediately"
                 >
                   <PhoneCall className="w-3.5 h-3.5" />
@@ -214,13 +216,13 @@ export default function CallLoggerModal({
           </div>
         </div>
 
-        {/* Round Switcher Tabs (Call 1 vs Call 2) */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200">
+        {/* Round Switcher Tabs (Call 1 vs Call 2) - Sticky */}
+        <div className="shrink-0 p-3 sm:p-4 bg-slate-50 border-b border-slate-200">
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => handleSwitchRound(1)}
-              className={`p-3 rounded-2xl border text-left transition flex items-center justify-between ${
+              className={`p-2.5 sm:p-3 rounded-2xl border text-left transition flex items-center justify-between ${
                 activeCallRound === 1
                   ? "bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/20"
                   : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
@@ -229,14 +231,14 @@ export default function CallLoggerModal({
               <div>
                 <div className="font-extrabold text-xs flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5" />
-                  <span>1st Call (Call 1)</span>
+                  <span>Call 1</span>
                 </div>
                 <div className={`text-[11px] mt-0.5 ${activeCallRound === 1 ? "text-blue-100" : "text-slate-500"}`}>
-                  {application.call1Done ? "✓ Completed" : "⏳ Not logged"}
+                  {application.call1Done ? "✓ Done" : "⏳ Pending"}
                 </div>
               </div>
               {application.call1Done && (
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${
                   activeCallRound === 1 ? "bg-white text-blue-600" : "bg-blue-100 text-blue-700"
                 }`}>
                   <Check className="w-3.5 h-3.5 stroke-3" />
@@ -247,7 +249,7 @@ export default function CallLoggerModal({
             <button
               type="button"
               onClick={() => handleSwitchRound(2)}
-              className={`p-3 rounded-2xl border text-left transition flex items-center justify-between ${
+              className={`p-2.5 sm:p-3 rounded-2xl border text-left transition flex items-center justify-between ${
                 activeCallRound === 2
                   ? "bg-purple-600 text-white border-purple-600 shadow-md ring-2 ring-purple-500/20"
                   : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
@@ -256,14 +258,14 @@ export default function CallLoggerModal({
               <div>
                 <div className="font-extrabold text-xs flex items-center gap-1.5">
                   <PhoneCall className="w-3.5 h-3.5" />
-                  <span>2nd Call (Call 2)</span>
+                  <span>Call 2</span>
                 </div>
                 <div className={`text-[11px] mt-0.5 ${activeCallRound === 2 ? "text-purple-100" : "text-slate-500"}`}>
-                  {application.call2Done ? "✓ Completed" : "⏳ Follow-up / Pending"}
+                  {application.call2Done ? "✓ Done" : "⏳ Pending"}
                 </div>
               </div>
               {application.call2Done && (
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${
                   activeCallRound === 2 ? "bg-white text-purple-600" : "bg-purple-100 text-purple-700"
                 }`}>
                   <Check className="w-3.5 h-3.5 stroke-3" />
@@ -273,8 +275,8 @@ export default function CallLoggerModal({
           </div>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 text-slate-900">
+        {/* Scrollable Form Body */}
+        <form id="call-logger-form" onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 min-h-0 text-slate-900 bg-white">
           {/* Done Checkbox Toggle */}
           <div className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -299,7 +301,7 @@ export default function CallLoggerModal({
           <div>
             <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Quick Call Remarks:
+              Quick Remarks Presets:
             </label>
             <div className="flex flex-wrap gap-1.5">
               {CALL_REMARK_PRESETS.map((preset) => (
@@ -308,7 +310,7 @@ export default function CallLoggerModal({
                   type="button"
                   onClick={() => handleApplyPreset(preset.label)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition flex items-center gap-1 shadow-2xs ${preset.color} ${
-                    remarks === preset.label ? "ring-2 ring-blue-500" : ""
+                    remarks === preset.label ? "ring-2 ring-blue-500 font-bold" : ""
                   }`}
                 >
                   <span>{preset.icon}</span>
@@ -328,7 +330,7 @@ export default function CallLoggerModal({
               required
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              placeholder={`e.g. Student confirmed available for evening duty, informed about black formal attire...`}
+              placeholder={`e.g. Student confirmed available for event, informed about dress code & timings...`}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
             />
           </div>
@@ -350,32 +352,33 @@ export default function CallLoggerModal({
               <option value="CONFIRMED">🎉 Mark Confirmed (Attending)</option>
             </select>
           </div>
-
-          {/* Footer Buttons */}
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              disabled={isProcessing}
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              disabled={isProcessing || !remarks.trim()}
-              className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <Check className="w-4 h-4" />
-              <span>
-                {isProcessing
-                  ? "Saving..."
-                  : `Save Call ${activeCallRound} & Remarks`}
-              </span>
-            </button>
-          </div>
         </form>
+
+        {/* Sticky Fixed Footer Action Bar */}
+        <div className="shrink-0 bg-slate-50 p-3.5 sm:p-4 border-t border-slate-200 flex items-center justify-between gap-3 shadow-inner">
+          <button
+            type="button"
+            disabled={isProcessing}
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 bg-white border border-slate-200 transition active:scale-95"
+          >
+            Cancel / Close
+          </button>
+
+          <button
+            type="submit"
+            form="call-logger-form"
+            disabled={isProcessing || !remarks.trim()}
+            className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 transition shadow-md flex items-center gap-1.5 disabled:opacity-50 active:scale-95"
+          >
+            <Check className="w-4 h-4" />
+            <span>
+              {isProcessing
+                ? "Saving..."
+                : `Save Call ${activeCallRound} Remarks`}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );
