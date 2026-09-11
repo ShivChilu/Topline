@@ -247,6 +247,13 @@ export async function GET(request: Request) {
         whatsappAdded: app.whatsappGroupAdded,
         whatsappAddedAt: app.whatsappGroupAddedAt,
         callingRemarks: app.callingRemarks,
+        callCount: app.callCount ?? (app.call2Done ? 2 : app.call1Done ? 1 : 0),
+        call1Done: Boolean(app.call1Done),
+        call1At: app.call1At,
+        call1Remarks: app.call1Remarks || null,
+        call2Done: Boolean(app.call2Done),
+        call2At: app.call2At,
+        call2Remarks: app.call2Remarks || null,
         manualOrder: app.manualOrder,
         createdAt: app.createdAt,
         updatedAt: app.updatedAt,
@@ -349,6 +356,11 @@ export async function PATCH(request: Request) {
       callPriority,
       manualOrder,
       callingRemarks,
+      callCount,
+      call1Done,
+      call1Remarks,
+      call2Done,
+      call2Remarks,
       sendEmail = true,
       notes,
       customSubject,
@@ -431,6 +443,37 @@ export async function PATCH(request: Request) {
       if (callingRemarks !== undefined) {
         updateData.callingRemarks = callingRemarks;
       }
+      if (callCount !== undefined) {
+        updateData.callCount = Number(callCount);
+      }
+      if (call1Done !== undefined) {
+        updateData.call1Done = Boolean(call1Done);
+        updateData.call1At = call1Done ? now : null;
+        updateData.call1ById = call1Done ? admin.id : null;
+        if (call1Done && (!updateData.callCount || updateData.callCount === 0)) {
+          updateData.callCount = 1;
+        }
+      }
+      if (call1Remarks !== undefined) {
+        updateData.call1Remarks = call1Remarks;
+        if (!callingRemarks && call1Remarks) {
+          updateData.callingRemarks = `[Call 1]: ${call1Remarks}`;
+        }
+      }
+      if (call2Done !== undefined) {
+        updateData.call2Done = Boolean(call2Done);
+        updateData.call2At = call2Done ? now : null;
+        updateData.call2ById = call2Done ? admin.id : null;
+        if (call2Done) {
+          updateData.callCount = 2;
+        }
+      }
+      if (call2Remarks !== undefined) {
+        updateData.call2Remarks = call2Remarks;
+        if (call2Remarks) {
+          updateData.callingRemarks = `[Call 2]: ${call2Remarks}`;
+        }
+      }
       if (whatsappGroupAdded !== undefined) {
         updateData.whatsappGroupAdded = Boolean(whatsappGroupAdded);
         updateData.whatsappGroupAddedAt = whatsappGroupAdded ? now : null;
@@ -442,6 +485,15 @@ export async function PATCH(request: Request) {
         where: { id: appId },
         data: updateData,
       });
+
+      // Synchronize remarks to user profile for global visibility across all admin panels
+      if (app.userId && (callingRemarks || call1Remarks || call2Remarks)) {
+        const latestRemarkText = callingRemarks || (call2Remarks ? `[Call 2]: ${call2Remarks}` : `[Call 1]: ${call1Remarks}`);
+        await prisma.user.update({
+          where: { id: app.userId },
+          data: { adminRemarks: latestRemarkText },
+        }).catch(() => {});
+      }
 
       // Log status history if status changed
       if (isStatusChanged && nextStatus) {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Calendar, MapPin, Clock, MessageSquare, Check, X, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
+import { Search, Calendar, MapPin, Clock, MessageSquare, Check, X, ChevronRight, RefreshCw, AlertCircle, PhoneCall, Phone } from "lucide-react";
+import CallLoggerModal from "@/components/admin/CallLoggerModal";
 
 function formatTime12(timeStr: string) {
   if (!timeStr) return "";
@@ -109,9 +110,83 @@ export default function CallingDashboard() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [messageFilter, setMessageFilter] = useState("ALL");
+  const [callFilter, setCallFilter] = useState("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
+
+  // 2-Call Verification Logger State
+  const [callLogModalOpen, setCallLogModalOpen] = useState(false);
+  const [callLogApp, setCallLogApp] = useState<any>(null);
+  const [callLogRound, setCallLogRound] = useState<1 | 2>(1);
+  const [savingCallLog, setSavingCallLog] = useState(false);
+
+  const openCallLogModal = (app: any, round: 1 | 2 = 1) => {
+    setCallLogApp(app);
+    setCallLogRound(round);
+    setCallLogModalOpen(true);
+  };
+
+  const handleSaveCallLog = async (data: {
+    round: 1 | 2;
+    remarks: string;
+    updateStatus?: string;
+  }) => {
+    if (!callLogApp) return;
+    const appId = callLogApp._id || callLogApp.id;
+
+    try {
+      setSavingCallLog(true);
+      const payload: any = {
+        ids: [appId],
+      };
+
+      if (data.round === 1) {
+        payload.call1Done = true;
+        payload.call1Remarks = data.remarks;
+      } else {
+        payload.call2Done = true;
+        payload.call2Remarks = data.remarks;
+      }
+
+      if (data.updateStatus) {
+        payload.status = data.updateStatus;
+      }
+
+      const res = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        setApplications((prev) =>
+          prev.map((a) => {
+            if ((a._id || a.id) === appId) {
+              return {
+                ...a,
+                ...(data.round === 1
+                  ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
+                  : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
+                ...(data.updateStatus ? { status: data.updateStatus } : {}),
+              };
+            }
+            return a;
+          })
+        );
+        setCallLogModalOpen(false);
+        setCallLogApp(null);
+      } else {
+        alert(resData.message || "Failed to log call outcome.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error. Failed to save call record.");
+    } finally {
+      setSavingCallLog(false);
+    }
+  };
   const toggleCardDetails = (id: string) => {
     setExpandedCardIds(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -205,6 +280,13 @@ export default function CallingDashboard() {
     if (messageFilter !== "ALL") {
       result = result.filter((app) => (app.messageStatus || "PENDING").toUpperCase() === messageFilter);
     }
+    if (callFilter === "0_CALLS") {
+      result = result.filter((app) => !app.call1Done && !app.call2Done);
+    } else if (callFilter === "1_CALL") {
+      result = result.filter((app) => app.call1Done && !app.call2Done);
+    } else if (callFilter === "2_CALLS") {
+      result = result.filter((app) => app.call2Done);
+    }
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((app) => {
@@ -212,6 +294,9 @@ export default function CallingDashboard() {
         const regNo = app.registrationNumber || "";
         const name = student.name || "";
         const phone = student.phone || "";
+        const call1 = app.call1Remarks || "";
+        const call2 = app.call2Remarks || "";
+        const remarks = app.callingRemarks || "";
         
         const customMatches = Object.values(app.customFieldsData || {}).some(val => 
           String(val).toLowerCase().includes(q)
@@ -220,11 +305,14 @@ export default function CallingDashboard() {
         return regNo.toLowerCase().includes(q) || 
                name.toLowerCase().includes(q) || 
                phone.toLowerCase().includes(q) ||
+               call1.toLowerCase().includes(q) ||
+               call2.toLowerCase().includes(q) ||
+               remarks.toLowerCase().includes(q) ||
                customMatches;
       });
     }
     setFilteredApplications(result);
-  }, [search, statusFilter, messageFilter, applications]);
+  }, [search, statusFilter, messageFilter, callFilter, applications]);
 
   // Bulk Actions
   const handleBulkStatusUpdate = async (newStatus: string) => {
@@ -619,8 +707,21 @@ export default function CallingDashboard() {
                     <option value="PENDING">Msg Pending</option>
                     <option value="SENT">Msg Sent</option>
                   </select>
+
+                  <select
+                    value={callFilter}
+                    onChange={(e) => setCallFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 focus:outline-none"
+                  >
+                    <option value="ALL">All Call Statuses</option>
+                    <option value="0_CALLS">⏳ 0 Calls (Pending)</option>
+                    <option value="1_CALL">📞 1st Call Done</option>
+                    <option value="2_CALLS">✓ 2 Calls Done</option>
+                  </select>
                 </div>
-              </div>              {/* Table */}
+              </div>
+
+              {/* Table */}
               <div className="overflow-x-auto max-w-full">
                 {loadingApps ? (
                   <div className="text-center py-10 text-slate-400">Loading applications list...</div>
@@ -641,6 +742,7 @@ export default function CallingDashboard() {
                             <th className="px-6 py-4 text-slate-400 w-16 font-bold">S.No.</th>
                             <th className="px-6 py-4">Reg No.</th>
                             <th className="px-6 py-4">Name</th>
+                            <th className="px-6 py-4">Calls (2-Call Check)</th>
                             <th className="px-6 py-4">Mobile No.</th>
                             {/* Dynamic Custom Fields from Form Schema only */}
                             {eventDetails?.customFormFields?.filter((f: any) => !isReservedField(f.label)).map((f: any) => (
@@ -654,7 +756,7 @@ export default function CallingDashboard() {
                         <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                           {filteredApplications.length === 0 ? (
                             <tr>
-                              <td colSpan={(eventDetails?.customFormFields?.filter((f: any) => !isReservedField(f.label)).length || 0) + 7} className="px-6 py-10 text-center text-slate-400">
+                              <td colSpan={(eventDetails?.customFormFields?.filter((f: any) => !isReservedField(f.label)).length || 0) + 8} className="px-6 py-10 text-center text-slate-400">
                                 No matching applications found.
                               </td>
                             </tr>
@@ -683,6 +785,29 @@ export default function CallingDashboard() {
                                   </td>
                                   <td className="px-6 py-4 font-semibold text-slate-850">
                                     {resolvedName}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => openCallLogModal(app, app.call1Done && !app.call2Done ? 2 : 1)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 cursor-pointer shadow-2xs ${
+                                        app.call2Done
+                                          ? "bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100"
+                                          : app.call1Done
+                                          ? "bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100"
+                                          : "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                                      }`}
+                                      title={app.call2Remarks ? `Call 2: ${app.call2Remarks}` : app.call1Remarks ? `Call 1: ${app.call1Remarks}` : "Click to log call outcome"}
+                                    >
+                                      <PhoneCall className="w-3.5 h-3.5" />
+                                      <span>
+                                        {app.call2Done
+                                          ? "✓ 2 Calls Done"
+                                          : app.call1Done
+                                          ? "📞 1st Call Done"
+                                          : "⏳ 0/2 Calls"}
+                                      </span>
+                                    </button>
                                   </td>
                                   <td className="px-6 py-4 font-mono text-slate-650">
                                     {resolvedMobile ? (
@@ -877,6 +1002,93 @@ export default function CallingDashboard() {
                                 </span>
                               </div>
 
+                              {/* 2-Call Verification Box */}
+                              <div className="bg-slate-100/90 rounded-xl p-3 border border-slate-200 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-extrabold text-slate-700 flex items-center gap-1">
+                                    <PhoneCall className="w-3 h-3 text-blue-600" />
+                                    <span>2-Call Verification</span>
+                                  </span>
+                                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                                    app.call2Done
+                                      ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                      : app.call1Done
+                                      ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                      : "bg-amber-100 text-amber-800 border border-amber-200"
+                                  }`}>
+                                    {app.call2Done ? "✓ 2 Calls Done" : app.call1Done ? "📞 1st Call Done" : "⏳ 0/2 Calls"}
+                                  </span>
+                                </div>
+
+                                {app.call1Done && (
+                                  <div className="text-[11px] bg-white border border-blue-100 rounded-lg p-1.5 text-slate-700 space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-bold text-blue-700 flex items-center gap-1">
+                                        <Check className="w-3 h-3 text-blue-600 stroke-3" /> Call 1 Done
+                                      </span>
+                                      {app.call1At && (
+                                        <span className="text-[10px] text-slate-400 font-mono">
+                                          {new Date(app.call1At).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {app.call1Remarks && (
+                                      <p className="text-slate-600 italic line-clamp-2 m-0 text-[10.5px]">
+                                        &ldquo;{app.call1Remarks}&rdquo;
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {app.call2Done && (
+                                  <div className="text-[11px] bg-white border border-purple-100 rounded-lg p-1.5 text-slate-700 space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-bold text-purple-700 flex items-center gap-1">
+                                        <Check className="w-3 h-3 text-purple-600 stroke-3" /> Call 2 Done
+                                      </span>
+                                      {app.call2At && (
+                                        <span className="text-[10px] text-slate-400 font-mono">
+                                          {new Date(app.call2At).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {app.call2Remarks && (
+                                      <p className="text-slate-600 italic line-clamp-2 m-0 text-[10.5px]">
+                                        &ldquo;{app.call2Remarks}&rdquo;
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openCallLogModal(app, 1)}
+                                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                                      app.call1Done
+                                        ? "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
+                                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    }`}
+                                  >
+                                    <Phone className="w-3 h-3" />
+                                    <span>{app.call1Done ? "Edit Call 1" : "Log Call 1"}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openCallLogModal(app, 2)}
+                                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                                      app.call2Done
+                                        ? "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                        : "bg-purple-600 hover:bg-purple-700 text-white"
+                                    }`}
+                                  >
+                                    <PhoneCall className="w-3 h-3" />
+                                    <span>{app.call2Done ? "Edit Call 2" : "Log Call 2"}</span>
+                                  </button>
+                                </div>
+                              </div>
+
                               {/* Status row info */}
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-100 pt-3">
                                 <div>
@@ -1025,6 +1237,21 @@ export default function CallingDashboard() {
           </div>
 
         </div>
+      )}
+
+      {/* 2-Call Verification Logging Modal */}
+      {callLogModalOpen && (
+        <CallLoggerModal
+          isOpen={callLogModalOpen}
+          application={callLogApp}
+          initialRound={callLogRound}
+          isSaving={savingCallLog}
+          onClose={() => {
+            setCallLogModalOpen(false);
+            setCallLogApp(null);
+          }}
+          onSave={handleSaveCallLog}
+        />
       )}
     </div>
   );

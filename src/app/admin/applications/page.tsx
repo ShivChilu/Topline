@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Eye, Filter, Trash2 } from "lucide-react";
+import { Search, Eye, Filter, Trash2, PhoneCall, Phone, Check, Clock } from "lucide-react";
 import Link from "next/link";
+import CallLoggerModal from "@/components/admin/CallLoggerModal";
 
 export default function AdminApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -13,9 +14,83 @@ export default function AdminApplicationsPage() {
   // Filters
   const [selectedEventId, setSelectedEventId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedCallStatus, setSelectedCallStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // 2-Call Verification Modal State
+  const [callLogModalOpen, setCallLogModalOpen] = useState(false);
+  const [callLogApp, setCallLogApp] = useState<any>(null);
+  const [callLogRound, setCallLogRound] = useState<1 | 2>(1);
+  const [savingCallLog, setSavingCallLog] = useState(false);
+
+  const openCallLogModal = (app: any, round: 1 | 2 = 1) => {
+    setCallLogApp(app);
+    setCallLogRound(round);
+    setCallLogModalOpen(true);
+  };
+
+  const handleSaveCallLog = async (data: {
+    round: 1 | 2;
+    remarks: string;
+    updateStatus?: string;
+  }) => {
+    if (!callLogApp) return;
+    const appId = callLogApp._id || callLogApp.id;
+
+    try {
+      setSavingCallLog(true);
+      const payload: any = {
+        ids: [appId],
+      };
+
+      if (data.round === 1) {
+        payload.call1Done = true;
+        payload.call1Remarks = data.remarks;
+      } else {
+        payload.call2Done = true;
+        payload.call2Remarks = data.remarks;
+      }
+
+      if (data.updateStatus) {
+        payload.status = data.updateStatus;
+      }
+
+      const res = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        setApplications((prev) =>
+          prev.map((a) => {
+            if ((a._id || a.id) === appId) {
+              return {
+                ...a,
+                ...(data.round === 1
+                  ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
+                  : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
+                ...(data.updateStatus ? { status: data.updateStatus } : {}),
+              };
+            }
+            return a;
+          })
+        );
+        setCallLogModalOpen(false);
+        setCallLogApp(null);
+      } else {
+        alert(resData.message || "Failed to log call outcome.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error. Failed to save call record.");
+    } finally {
+      setSavingCallLog(false);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -48,11 +123,23 @@ export default function AdminApplicationsPage() {
         if (searchQuery) {
           list = list.filter((app: any) => {
             const s = app.studentId || {};
+            const call1 = app.call1Remarks || "";
+            const call2 = app.call2Remarks || "";
+            const q = searchQuery.toLowerCase();
             return (
-              (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-              (s.phone && s.phone.includes(searchQuery))
+              (s.name && s.name.toLowerCase().includes(q)) ||
+              (s.phone && s.phone.includes(q)) ||
+              call1.toLowerCase().includes(q) ||
+              call2.toLowerCase().includes(q)
             );
           });
+        }
+        if (selectedCallStatus === "0_CALLS") {
+          list = list.filter((app: any) => !app.call1Done && !app.call2Done);
+        } else if (selectedCallStatus === "1_CALL") {
+          list = list.filter((app: any) => app.call1Done && !app.call2Done);
+        } else if (selectedCallStatus === "2_CALLS") {
+          list = list.filter((app: any) => app.call2Done);
         }
         setApplications(list);
       }
@@ -69,7 +156,7 @@ export default function AdminApplicationsPage() {
 
   useEffect(() => {
     fetchApplications();
-  }, [selectedEventId, selectedStatus, searchQuery]);
+  }, [selectedEventId, selectedStatus, selectedCallStatus, searchQuery]);
 
   const handleBulkStatusChange = async (targetStatus: string) => {
     if (selectedIds.length === 0) {
@@ -219,6 +306,16 @@ export default function AdminApplicationsPage() {
               </option>
             ))}
           </select>
+          <select
+            value={selectedCallStatus}
+            onChange={(e) => setSelectedCallStatus(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-red-600"
+          >
+            <option value="">All Call Statuses...</option>
+            <option value="0_CALLS">⏳ 0 Calls (Pending)</option>
+            <option value="1_CALL">📞 1st Call Done</option>
+            <option value="2_CALLS">✓ 2 Calls Done</option>
+          </select>
         </div>
       </div>
 
@@ -282,6 +379,7 @@ export default function AdminApplicationsPage() {
                   <th className="p-4">Candidate</th>
                   <th className="p-4">Phone</th>
                   <th className="p-4">Target Event</th>
+                  <th className="p-4">Calls (2-Call Check)</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Submitted At</th>
                   <th className="p-4 text-right">Actions</th>
@@ -310,6 +408,29 @@ export default function AdminApplicationsPage() {
                       <td className="p-4">
                         <div className="font-semibold text-slate-900">{ev.name}</div>
                         <div className="text-xs text-slate-450">{new Date(ev.date).toLocaleDateString("en-GB")}</div>
+                      </td>
+                      <td className="p-4">
+                        <button
+                          type="button"
+                          onClick={() => openCallLogModal(app, app.call1Done && !app.call2Done ? 2 : 1)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 cursor-pointer shadow-2xs ${
+                            app.call2Done
+                              ? "bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100"
+                              : app.call1Done
+                              ? "bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100"
+                              : "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                          }`}
+                          title={app.call2Remarks ? `Call 2: ${app.call2Remarks}` : app.call1Remarks ? `Call 1: ${app.call1Remarks}` : "Click to log call outcome"}
+                        >
+                          <PhoneCall className="w-3.5 h-3.5" />
+                          <span>
+                            {app.call2Done
+                              ? "✓ 2 Calls Done"
+                              : app.call1Done
+                              ? "📞 1st Call Done"
+                              : "⏳ 0/2 Calls"}
+                          </span>
+                        </button>
                       </td>
                       <td className="p-4">
                         <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
@@ -344,6 +465,21 @@ export default function AdminApplicationsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* 2-Call Verification Logging Modal */}
+      {callLogModalOpen && (
+        <CallLoggerModal
+          isOpen={callLogModalOpen}
+          application={callLogApp}
+          initialRound={callLogRound}
+          isSaving={savingCallLog}
+          onClose={() => {
+            setCallLogModalOpen(false);
+            setCallLogApp(null);
+          }}
+          onSave={handleSaveCallLog}
+        />
       )}
     </div>
   );

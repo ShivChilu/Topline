@@ -51,12 +51,14 @@ import {
   MousePointerClick,
   Unlock,
   Lock,
+  PhoneCall,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 import LiveAttendanceModal from "@/components/admin/LiveAttendanceModal";
 import AddStudentFromMasterModal from "@/components/admin/AddStudentFromMasterModal";
 import SelectionEmailReviewModal from "@/components/admin/SelectionEmailReviewModal";
+import CallLoggerModal from "@/components/admin/CallLoggerModal";
 import {
   matchesGender,
   matchesHeight,
@@ -216,6 +218,89 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [selectionTargetApps, setSelectionTargetApps] = useState<any[]>([]);
   const [selectionProcessing, setSelectionProcessing] = useState(false);
 
+  // 2-Call Verification Logger Modal State
+  const [callLogModalOpen, setCallLogModalOpen] = useState(false);
+  const [callLogApp, setCallLogApp] = useState<any>(null);
+  const [callLogRound, setCallLogRound] = useState<1 | 2>(1);
+  const [savingCallLog, setSavingCallLog] = useState(false);
+
+  const openCallLogModal = (app: any, round: 1 | 2 = 1) => {
+    setCallLogApp(app);
+    setCallLogRound(round);
+    setCallLogModalOpen(true);
+  };
+
+  const handleSaveCallLog = async (data: {
+    round: 1 | 2;
+    remarks: string;
+    updateStatus?: string;
+  }) => {
+    if (!callLogApp) return;
+    const appId = callLogApp._id || callLogApp.id;
+
+    try {
+      setSavingCallLog(true);
+      const payload: any = {
+        ids: [appId],
+      };
+
+      if (data.round === 1) {
+        payload.call1Done = true;
+        payload.call1Remarks = data.remarks;
+      } else {
+        payload.call2Done = true;
+        payload.call2Remarks = data.remarks;
+      }
+
+      if (data.updateStatus) {
+        payload.status = data.updateStatus;
+      }
+
+      const res = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        setApplications((prev) =>
+          prev.map((a) => {
+            if ((a._id || a.id) === appId) {
+              return {
+                ...a,
+                ...(data.round === 1
+                  ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
+                  : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
+                ...(data.updateStatus ? { status: data.updateStatus } : {}),
+              };
+            }
+            return a;
+          })
+        );
+        if (inspectCandidate && (inspectCandidate._id || inspectCandidate.id) === appId) {
+          setInspectCandidate((prev: any) => ({
+            ...prev,
+            ...(data.round === 1
+              ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
+              : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
+            ...(data.updateStatus ? { status: data.updateStatus } : {}),
+          }));
+        }
+        showToast(`Call ${data.round} logged successfully!`);
+        setCallLogModalOpen(false);
+        setCallLogApp(null);
+      } else {
+        alert(resData.message || "Failed to log call outcome.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error. Failed to save call record.");
+    } finally {
+      setSavingCallLog(false);
+    }
+  };
+
   const openSelectionModal = (targetList: any[]) => {
     if (!targetList || targetList.length === 0) return;
     setSelectionTargetApps(targetList);
@@ -265,8 +350,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         showToast(data.message || "Failed to update candidates.");
       }
     } catch (err: any) {
-      console.error("Selection execution error:", err);
-      showToast("Network error executing selection.");
+      console.error(err);
+      showToast("Network error. Failed to update candidates.");
     } finally {
       setSelectionProcessing(false);
     }
@@ -2203,15 +2288,107 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </span>
                         </div>
 
-                        {/* Candidate Remarks Note Preview Snippet */}
-                        {(app.callingRemarks || app.user?.adminRemarks || student.adminRemarks) && (
+                        {/* 2-Call Verification & Status Box */}
+                        <div className="mt-2.5 bg-slate-50/90 border border-slate-200 rounded-xl p-2.5 space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 font-extrabold text-slate-800">
+                              <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Calling Status:</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold border flex items-center gap-1 shadow-2xs ${
+                              app.call2Done
+                                ? "bg-purple-100 text-purple-900 border-purple-300"
+                                : app.call1Done
+                                ? "bg-blue-100 text-blue-900 border-blue-300"
+                                : "bg-amber-100 text-amber-900 border-amber-300"
+                            }`}>
+                              {app.call2Done ? "✓ 2 Calls Done" : app.call1Done ? "📞 1st Call Done" : "⏳ 0/2 Calls"}
+                            </span>
+                          </div>
+
+                          {/* Call 1 Done Remark */}
+                          {app.call1Done && (
+                            <div className="text-[11px] bg-white border border-blue-100 rounded-lg p-1.5 text-slate-700 space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-blue-700 flex items-center gap-1">
+                                  <Check className="w-3 h-3 text-blue-600 stroke-3" /> Call 1 Done
+                                </span>
+                                {app.call1At && (
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {formatAppliedDateTime(app.call1At)}
+                                  </span>
+                                )}
+                              </div>
+                              {app.call1Remarks && (
+                                <p className="text-slate-600 italic line-clamp-2 m-0 text-[10.5px]">
+                                  &ldquo;{app.call1Remarks}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Call 2 Done Remark */}
+                          {app.call2Done && (
+                            <div className="text-[11px] bg-white border border-purple-100 rounded-lg p-1.5 text-slate-700 space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-purple-700 flex items-center gap-1">
+                                  <Check className="w-3 h-3 text-purple-600 stroke-3" /> Call 2 Done
+                                </span>
+                                {app.call2At && (
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {formatAppliedDateTime(app.call2At)}
+                                  </span>
+                                )}
+                              </div>
+                              {app.call2Remarks && (
+                                <p className="text-slate-600 italic line-clamp-2 m-0 text-[10.5px]">
+                                  &ldquo;{app.call2Remarks}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Call 1 / Call 2 Action Buttons */}
+                          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => openCallLogModal(app, 1)}
+                              className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
+                                app.call1Done
+                                  ? "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
+                                  : "bg-blue-600 hover:bg-blue-700 text-white"
+                              }`}
+                              title="Log outcome of 1st call"
+                            >
+                              <Phone className="w-3 h-3" />
+                              <span>{app.call1Done ? "Edit Call 1" : "Log Call 1"}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => openCallLogModal(app, 2)}
+                              className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
+                                app.call2Done
+                                  ? "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                  : "bg-purple-600 hover:bg-purple-700 text-white"
+                              }`}
+                              title="Log outcome of 2nd call"
+                            >
+                              <PhoneCall className="w-3 h-3" />
+                              <span>{app.call2Done ? "Edit Call 2" : "Log Call 2"}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Candidate Remarks Note Preview Snippet (if custom remark exists and differs) */}
+                        {app.callingRemarks && !app.call1Done && !app.call2Done && (
                           <div
                             onClick={() => openInspectCandidate(app)}
                             className="mt-2 text-[11px] bg-amber-50/90 border border-amber-200 text-amber-900 px-2 py-1 rounded-lg flex items-start gap-1 cursor-pointer hover:bg-amber-100 transition"
                             title="Click to view or edit remarks"
                           >
                             <span className="font-bold shrink-0">📝 Note:</span>
-                            <span className="truncate">{app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}</span>
+                            <span className="truncate">{app.callingRemarks}</span>
                           </div>
                         )}
 
@@ -2397,6 +2574,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <th className="p-4">Candidate</th>
                   <th className="p-4">Filled Date & Time</th>
                   <th className="p-4">Event Status</th>
+                  <th className="p-4">Calls (2-Call Check)</th>
                   <th className="p-4">Mobile Number</th>
                   <th className="p-4">University</th>
                   <th className="p-4">WhatsApp</th>
@@ -2510,6 +2688,31 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         }`}>
                           {sStatus === "ATTENDED" ? "🎉 PRESENT" : sStatus === "CONFIRMED" ? "✅ Confirmed" : sStatus === "ON_HOLD" ? "⏸ On Hold" : sStatus === "CANCELLED" ? "❌ Declined" : sStatus}
                         </span>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openCallLogModal(app, app.call1Done && !app.call2Done ? 2 : 1)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 cursor-pointer shadow-2xs ${
+                              app.call2Done
+                                ? "bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100"
+                                : app.call1Done
+                                ? "bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100"
+                                : "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                            }`}
+                            title={app.call2Remarks ? `Call 2: ${app.call2Remarks}` : app.call1Remarks ? `Call 1: ${app.call1Remarks}` : "Click to log call outcome"}
+                          >
+                            <PhoneCall className="w-3.5 h-3.5" />
+                            <span>
+                              {app.call2Done
+                                ? "✓ 2 Calls Done"
+                                : app.call1Done
+                                ? "📞 1st Call Done"
+                                : "⏳ 0/2 Calls"}
+                            </span>
+                          </button>
+                        </div>
                       </td>
                       <td className="p-4 font-semibold text-xs text-slate-800 font-mono">
                         {app.mobileNumber}
@@ -2862,11 +3065,96 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   </div>
                 </div>
 
+                {/* 2-Call Verification Box */}
+                <div className="bg-slate-800/90 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
+                      <span>2-Call Verification Protocol</span>
+                    </span>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                      inspectCandidate.call2Done
+                        ? "bg-purple-900/60 text-purple-200 border border-purple-500/40"
+                        : inspectCandidate.call1Done
+                        ? "bg-blue-900/60 text-blue-200 border border-blue-500/40"
+                        : "bg-amber-900/60 text-amber-200 border border-amber-500/40"
+                    }`}>
+                      {inspectCandidate.call2Done
+                        ? "✓ 2 Calls Done"
+                        : inspectCandidate.call1Done
+                        ? "📞 1st Call Done"
+                        : "⏳ 0/2 Calls (Pending)"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Call 1 Card */}
+                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-blue-400 flex items-center gap-1">
+                          {inspectCandidate.call1Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
+                          Call 1
+                        </span>
+                        {inspectCandidate.call1At && (
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {formatAppliedDateTime(inspectCandidate.call1At)}
+                          </span>
+                        )}
+                      </div>
+                      {inspectCandidate.call1Remarks ? (
+                        <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
+                          &ldquo;{inspectCandidate.call1Remarks}&rdquo;
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openCallLogModal(inspectCandidate, 1)}
+                        className="w-full py-1 px-2 text-[11px] font-bold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition flex items-center justify-center gap-1"
+                      >
+                        <Phone className="w-3 h-3" />
+                        <span>{inspectCandidate.call1Done ? "Edit Call 1 Log" : "Log Call 1"}</span>
+                      </button>
+                    </div>
+
+                    {/* Call 2 Card */}
+                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
+                          {inspectCandidate.call2Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
+                          Call 2
+                        </span>
+                        {inspectCandidate.call2At && (
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {formatAppliedDateTime(inspectCandidate.call2At)}
+                          </span>
+                        )}
+                      </div>
+                      {inspectCandidate.call2Remarks ? (
+                        <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
+                          &ldquo;{inspectCandidate.call2Remarks}&rdquo;
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openCallLogModal(inspectCandidate, 2)}
+                        className="w-full py-1 px-2 text-[11px] font-bold rounded-md bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center gap-1"
+                      >
+                        <PhoneCall className="w-3 h-3" />
+                        <span>{inspectCandidate.call2Done ? "Edit Call 2 Log" : "Log Call 2"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Dedicated Remarks Text Box with Save Button */}
                 <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span>📝 Candidate Remarks / Call Evaluation Notes</span>
+                      <span>📝 Quick Candidate Remarks / Notes</span>
                     </label>
                     {savingCandidateRemarks && (
                       <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
@@ -3522,6 +3810,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           isProcessing={selectionProcessing}
           onClose={() => setIsSelectionModalOpen(false)}
           onConfirm={handleExecuteSelection}
+        />
+      )}
+
+      {/* 2-Call Verification Logging Modal */}
+      {callLogModalOpen && (
+        <CallLoggerModal
+          isOpen={callLogModalOpen}
+          application={callLogApp}
+          initialRound={callLogRound}
+          isSaving={savingCallLog}
+          onClose={() => {
+            setCallLogModalOpen(false);
+            setCallLogApp(null);
+          }}
+          onSave={handleSaveCallLog}
         />
       )}
     </div>

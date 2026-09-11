@@ -330,6 +330,17 @@ model Application {
   manualOrder          Int                      @default(0)
   callingRemarks       String?
   
+  // 2-Call Tracking & Verification Metrics
+  callCount            Int                      @default(0)
+  call1Done            Boolean                  @default(false)
+  call1At              DateTime?
+  call1Remarks         String?
+  call1ById            String?
+  call2Done            Boolean                  @default(false)
+  call2At              DateTime?
+  call2Remarks         String?
+  call2ById            String?
+  
   // WhatsApp tracking
   whatsappGroupAdded   Boolean                  @default(false)
   whatsappGroupAddedAt DateTime?
