@@ -2386,23 +2386,32 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               <span className="truncate">{student.university}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-1.5">
-                            {app.mobileNumber || student.phone ? (
+                          {app.mobileNumber || student.phone ? (
+                            <div className="mt-2 flex items-center gap-1.5">
                               <a
                                 href={`tel:${app.mobileNumber || student.phone}`}
-                                className="flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 hover:underline bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition text-xs"
-                                title="Click to dial candidate"
+                                className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs py-1.5 px-2.5 rounded-xl shadow-xs transition"
+                                title="Click to call student directly"
                               >
-                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                <span>{app.mobileNumber || student.phone}</span>
+                                <Phone className="w-3.5 h-3.5" />
+                                <span>Call: {app.mobileNumber || student.phone}</span>
                               </a>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-slate-400 text-xs">
-                                <Phone className="w-3.5 h-3.5 shrink-0" />
-                                <span>No Phone</span>
-                              </div>
-                            )}
-                          </div>
+                              <a
+                                href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold p-1.5 rounded-xl border border-[#25D366]/30 transition"
+                                title="Open WhatsApp Chat"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-slate-400 text-xs mt-1">
+                              <Phone className="w-3.5 h-3.5 shrink-0" />
+                              <span>No Phone Number</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Form Application Date & Time */}

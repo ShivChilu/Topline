@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Eye, Filter, Trash2, PhoneCall, Phone, Check, Clock } from "lucide-react";
+import { Search, Eye, Filter, Trash2, PhoneCall, Phone, Check, Clock, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import CallLoggerModal from "@/components/admin/CallLoggerModal";
 
@@ -404,7 +404,31 @@ export default function AdminApplicationsPage() {
                         <div>{s.name}</div>
                         <div className="text-xs text-slate-450 font-semibold uppercase">{s.universityId}</div>
                       </td>
-                      <td className="p-4 text-gray-450">{s.phone}</td>
+                      <td className="p-4 text-gray-450">
+                        {s.phone ? (
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={`tel:${s.phone}`}
+                              className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 text-xs"
+                              title="Click to dial"
+                            >
+                              <Phone className="w-3 h-3 text-emerald-600" />
+                              <span>{s.phone}</span>
+                            </a>
+                            <a
+                              href={`https://wa.me/91${s.phone.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#25D366] hover:text-[#128C7E] ml-1"
+                              title="Open WhatsApp Chat"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">N/A</span>
+                        )}
+                      </td>
                       <td className="p-4">
                         <div className="font-semibold text-slate-900">{ev.name}</div>
                         <div className="text-xs text-slate-450">{new Date(ev.date).toLocaleDateString("en-GB")}</div>

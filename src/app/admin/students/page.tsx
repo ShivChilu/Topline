@@ -36,6 +36,8 @@ import {
   FileText,
   MousePointerClick,
   Activity,
+  MessageSquare,
+  PhoneCall,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import {
@@ -1525,10 +1527,30 @@ export default function AdminStudentsPage() {
                               <span>{student.city}</span>
                             </div>
                           )}
-                          {student.phone && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              <span>{student.phone}</span>
+                          {student.phone ? (
+                            <div className="mt-2 flex items-center gap-1.5">
+                              <a
+                                href={`tel:${student.phone}`}
+                                className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-xs transition"
+                                title="Click to call student directly"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                <span>Call: {student.phone}</span>
+                              </a>
+                              <a
+                                href={`https://wa.me/91${student.phone.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold p-2 rounded-xl border border-[#25D366]/30 transition"
+                                title="Open WhatsApp Chat"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-slate-400 text-xs mt-1">
+                              <Phone className="w-3.5 h-3.5 shrink-0" />
+                              <span>No Phone Number</span>
                             </div>
                           )}
                         </div>
@@ -1774,7 +1796,29 @@ export default function AdminStudentsPage() {
                       <div className="text-slate-400">{student.city || "N/A"}</div>
                     </td>
                     <td className="p-4 text-xs text-slate-600">
-                      <div>{student.phone}</div>
+                      {student.phone ? (
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={`tel:${student.phone}`}
+                            className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1"
+                            title="Click to dial"
+                          >
+                            <Phone className="w-3 h-3 text-emerald-600" />
+                            <span>{student.phone}</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/91${student.phone.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#25D366] hover:text-[#128C7E] ml-1"
+                            title="Open WhatsApp Chat"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+                          </a>
+                        </div>
+                      ) : (
+                        <div>N/A</div>
+                      )}
                       <div className="text-slate-400">{student.email || "N/A"}</div>
                     </td>
                     <td className="p-4 text-center font-bold text-slate-700">{student.appliedCount}</td>
@@ -2070,9 +2114,31 @@ export default function AdminStudentsPage() {
 
               {/* Physical & Contact Details */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
-                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block">{inspectStudent.phone}</span>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
+                    <span className="text-sm font-semibold text-slate-900 mt-0.5 block font-mono">{inspectStudent.phone || "N/A"}</span>
+                  </div>
+                  {inspectStudent.phone && (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <a
+                        href={`tel:${inspectStudent.phone}`}
+                        className="flex-1 flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-1.5 px-2 rounded-lg transition"
+                      >
+                        <Phone className="w-3 h-3" />
+                        <span>Direct Call</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/91${inspectStudent.phone.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold p-1.5 rounded-lg border border-[#25D366]/30 transition"
+                        title="Open WhatsApp Chat"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+                      </a>
+                    </div>
+                  )}
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-[11px] font-bold text-slate-400 uppercase block">Email</span>
