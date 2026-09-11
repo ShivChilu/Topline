@@ -56,6 +56,7 @@ import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/adm
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 import LiveAttendanceModal from "@/components/admin/LiveAttendanceModal";
 import AddStudentFromMasterModal from "@/components/admin/AddStudentFromMasterModal";
+import SelectionEmailReviewModal from "@/components/admin/SelectionEmailReviewModal";
 import {
   matchesGender,
   matchesHeight,
@@ -209,6 +210,67 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomEmailTemplate[]>([]);
+
+  // Selection Email Preview & Template Customization Modal State
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const [selectionTargetApps, setSelectionTargetApps] = useState<any[]>([]);
+  const [selectionProcessing, setSelectionProcessing] = useState(false);
+
+  const openSelectionModal = (targetList: any[]) => {
+    if (!targetList || targetList.length === 0) return;
+    setSelectionTargetApps(targetList);
+    setIsSelectionModalOpen(true);
+  };
+
+  const handleExecuteSelection = async (payload: {
+    skipEmail: boolean;
+    customSubject?: string;
+    customMessage?: string;
+    customInstructions?: string;
+    notes?: string;
+  }) => {
+    if (selectionTargetApps.length === 0) return;
+    const targetIds = selectionTargetApps.map((a) => a._id || a.id);
+
+    try {
+      setSelectionProcessing(true);
+      const res = await fetch(`/api/admin/applications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: targetIds,
+          status: "SELECTED",
+          sendEmail: !payload.skipEmail,
+          customSubject: payload.customSubject,
+          customMessage: payload.customMessage,
+          customInstructions: payload.customInstructions,
+          notes: payload.notes,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          !payload.skipEmail
+            ? `🎉 Marked ${targetIds.length} candidate(s) as SELECTED and sent customized selection emails!`
+            : `✓ Marked ${targetIds.length} candidate(s) as SELECTED (email skipped).`
+        );
+        setSelectedIds([]);
+        setIsSelectionModalOpen(false);
+        if (inspectCandidate && targetIds.includes(inspectCandidate._id || inspectCandidate.id)) {
+          setInspectCandidate((prev: any) => (prev ? { ...prev, status: "SELECTED" } : null));
+        }
+        fetchEventData(true);
+      } else {
+        showToast(data.message || "Failed to update candidates.");
+      }
+    } catch (err: any) {
+      console.error("Selection execution error:", err);
+      showToast("Network error executing selection.");
+    } finally {
+      setSelectionProcessing(false);
+    }
+  };
 
   const fetchEmailTemplates = async () => {
     try {
@@ -1945,9 +2007,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </button>
 
               <button
-                disabled={actionLoadingId === "bulk"}
-                onClick={() => handleBulkUpdate({ status: "SELECTED" })}
+                disabled={actionLoadingId === "bulk" || selectionProcessing}
+                onClick={() => {
+                  const targetList = applications.filter((a) => selectedIds.includes(a.id || a._id));
+                  if (sendEmailToggle) {
+                    openSelectionModal(targetList);
+                  } else {
+                    handleBulkUpdate({ status: "SELECTED" });
+                  }
+                }}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                title="Review selection email template and approve candidates"
               >
                 <UserCheck className="w-3.5 h-3.5" />
                 Mark Selected ({selectedIds.length})
@@ -2223,7 +2293,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <div className="grid grid-cols-3 gap-1.5">
                           <button
                             disabled={actionLoadingId === (app._id || app.id)}
-                            onClick={() => handleUpdateStatus(app._id || app.id, "SELECTED")}
+                            onClick={() => {
+                              if (sendEmailToggle && sStatus !== "SELECTED") {
+                                openSelectionModal([app]);
+                              } else {
+                                handleUpdateStatus(app._id || app.id, "SELECTED");
+                              }
+                            }}
                             className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                               sStatus === "SELECTED"
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
@@ -2859,8 +2935,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     Send Custom Message
                   </button>
                   <button
-                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED")}
+                    onClick={() => {
+                      if (sendEmailToggle) {
+                        const target = inspectCandidate;
+                        setInspectCandidate(null);
+                        openSelectionModal([target]);
+                      } else {
+                        handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED");
+                      }
+                    }}
                     className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                    title="Review selection email and approve candidate"
                   >
                     <UserCheck className="w-4 h-4" />
                     Approve & Select
@@ -3423,6 +3508,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             showToast(message || "Student added to event roster successfully!");
             fetchEventData(false);
           }}
+        />
+      )}
+
+      {/* Candidate Selection Email Preview & Template Customization Modal */}
+      {isSelectionModalOpen && (
+        <SelectionEmailReviewModal
+          isOpen={isSelectionModalOpen}
+          targetApplications={selectionTargetApps}
+          event={event}
+          currentAdminRole={currentAdminRole}
+          defaultCallingNote={callingNote}
+          isProcessing={selectionProcessing}
+          onClose={() => setIsSelectionModalOpen(false)}
+          onConfirm={handleExecuteSelection}
         />
       )}
     </div>

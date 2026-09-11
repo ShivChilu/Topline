@@ -351,6 +351,9 @@ export async function PATCH(request: Request) {
       callingRemarks,
       sendEmail = true,
       notes,
+      customSubject,
+      customMessage,
+      customInstructions,
     } = await request.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -462,8 +465,10 @@ export async function PATCH(request: Request) {
               eventDate: app.event.date,
               eventLocation: app.event.location,
               reportingTime: app.event.reportingTime,
-              instructions: app.event.instructions,
+              instructions: customInstructions !== undefined ? customInstructions : app.event.instructions,
               notes,
+              customSubject,
+              customMessage,
               whatsappGroupLink: app.event.whatsappGroupLink || undefined,
               applicationId: app.id,
               userId: app.userId,

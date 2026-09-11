@@ -25,6 +25,8 @@ export interface EventEmailPayload {
   userId?: string | null;
   eventId?: string | null;
   templateName?: string | null;
+  customSubject?: string | null;
+  customMessage?: string | null;
 }
 
 export function getAppBaseUrl(): string {
@@ -379,6 +381,8 @@ export async function sendEventSelectionEmail({
   userId,
   eventId,
   templateName = "Event Selection & WhatsApp Group Invite",
+  customSubject,
+  customMessage,
 }: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
@@ -386,7 +390,48 @@ export async function sendEventSelectionEmail({
     }
 
     const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
-    const subject = `🎉 Congratulations! Selected for ${eventName} — Topline ODC`;
+    
+    // Replacement dictionary for subject & custom message
+    const placeholderData: Record<string, string> = {
+      name: studentName,
+      studentName: studentName,
+      eventName: eventName,
+      eventDate: formattedDate,
+      eventLocation: eventLocation || "To be communicated",
+      reportingTime: reportingTime || "As scheduled",
+      instructions: instructions || "",
+      notes: notes || "",
+    };
+
+    const replacePlaceholders = (text: string) => {
+      let res = text;
+      for (const [key, val] of Object.entries(placeholderData)) {
+        const regexDouble = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi");
+        const regexSingle = new RegExp(`\\{\\s*${key}\\s*\\}`, "gi");
+        res = res.replace(regexDouble, val).replace(regexSingle, val);
+      }
+      return res;
+    };
+
+    let subject = `🎉 Congratulations! Selected for ${eventName} — Topline ODC`;
+    if (customSubject && customSubject.trim()) {
+      subject = replacePlaceholders(customSubject.trim());
+    }
+
+    let renderedIntroHtml = `
+      <p style="color: #d1d5db; line-height: 1.6;">
+        You have been shortlisted and <strong>SELECTED</strong> for the upcoming event duty assignment:
+      </p>
+    `;
+
+    if (customMessage && customMessage.trim()) {
+      const interpolatedMsg = replacePlaceholders(customMessage.trim());
+      const paragraphs = interpolatedMsg
+        .split(/\n\n+/)
+        .map((p) => `<p style="color: #d1d5db; line-height: 1.6; margin: 12px 0;">${p.replace(/\n/g, "<br />")}</p>`)
+        .join("");
+      renderedIntroHtml = paragraphs;
+    }
 
     const rawConfirmUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=CONFIRM` : `${getAppBaseUrl()}/profile`;
     const rawDeclineUrl = applicationId ? `${getAppBaseUrl()}/rsvp/${applicationId}?action=DECLINE` : `${getAppBaseUrl()}/profile`;
@@ -438,9 +483,8 @@ export async function sendEventSelectionEmail({
         <div class="content">
           <div class="badge">✓ SELECTED FOR EVENT DUTY</div>
           <h2 style="color: #ffffff; margin-top: 0;">Congratulations, ${studentName}!</h2>
-          <p style="color: #d1d5db; line-height: 1.6;">
-            You have been shortlisted and <strong>SELECTED</strong> for the upcoming event duty assignment:
-          </p>
+          
+          ${renderedIntroHtml}
 
           <div class="card">
             <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Event Assignment Details</div>
