@@ -7,20 +7,15 @@ import {
   Camera,
   CheckCircle2,
   AlertCircle,
-  Clock,
   Loader2,
   Scan,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  Calendar,
-  MapPin,
-  Upload,
   RefreshCw,
   Zap,
   ZapOff,
-  Image as ImageIcon,
   Check,
+  Calendar,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 
 interface StudentAttendanceScannerModalProps {
@@ -44,7 +39,6 @@ export default function StudentAttendanceScannerModal({
   event,
   onSuccess,
 }: StudentAttendanceScannerModalProps) {
-  const [activeTab, setActiveTab] = useState<"scan" | "upload" | "manual">("scan");
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
@@ -52,19 +46,21 @@ export default function StudentAttendanceScannerModal({
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   
-  const [submitting, setSubmitting] = useState(false);
-  const [manualCode, setManualCode] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<any>(null);
   const [scannedSuccess, setScannedSuccess] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualCode, setManualCode] = useState("");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isScanningRef = useRef<boolean>(false);
 
   const stopCamera = () => {
+    isScanningRef.current = false;
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -103,13 +99,13 @@ export default function StudentAttendanceScannerModal({
   const startCamera = async () => {
     stopCamera();
     setCameraError(null);
-    setErrorMsg(null);
+    setScanError(null);
     setScannedSuccess(false);
 
     try {
       if (!navigator?.mediaDevices?.getUserMedia) {
-        setCameraError("Camera access not supported on this browser. You can upload a QR image or enter code below.");
-        setActiveTab("manual");
+        setCameraError("Camera access is not supported on this browser. Please use manual code entry.");
+        setShowManualInput(true);
         return;
       }
 
@@ -151,18 +147,19 @@ export default function StudentAttendanceScannerModal({
     } catch (err: any) {
       console.warn("Camera start error:", err);
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setCameraError("Camera permission was denied. Please allow camera access in your browser settings, or use 1-Tap Quick Mark / Manual Code below.");
+        setCameraError("Camera permission was denied. Please allow camera permissions in browser settings.");
       } else {
-        setCameraError("Camera is currently unavailable. You can use 1-Tap Quick Mark or upload a QR screenshot.");
+        setCameraError("Unable to access camera. Please check camera permissions.");
       }
+      setShowManualInput(true);
     }
   };
 
   const startScanLoop = () => {
-    let isScanning = true;
+    isScanningRef.current = true;
 
     const scanFrame = () => {
-      if (!isScanning) return;
+      if (!isScanningRef.current) return;
 
       const video = videoRef.current;
       if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -186,13 +183,13 @@ export default function StudentAttendanceScannerModal({
             if (qrCode && qrCode.data) {
               const rawData = qrCode.data.trim();
               if (rawData) {
-                isScanning = false;
+                isScanningRef.current = false;
                 onQrDetected(rawData);
                 return;
               }
             }
           } catch (e) {
-            // Frame scan continue
+            // Continue scanning next frame
           }
         }
       }
@@ -203,9 +200,18 @@ export default function StudentAttendanceScannerModal({
     animationFrameRef.current = requestAnimationFrame(scanFrame);
   };
 
+  const extractToken = (raw: string) => {
+    let clean = raw.trim();
+    if (clean.includes("/attendance/")) {
+      const parts = clean.split("/attendance/");
+      clean = parts[parts.length - 1].split("?")[0].split("#")[0];
+    }
+    return clean;
+  };
+
   const onQrDetected = (rawData: string) => {
     setScannedSuccess(true);
-    // Haptic feedback if supported
+    // Haptic vibration feedback
     try {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate([100, 50, 100]);
@@ -216,76 +222,26 @@ export default function StudentAttendanceScannerModal({
       stopCamera();
       const token = extractToken(rawData);
       submitAttendance(token);
-    }, 400);
+    }, 350);
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      setErrorMsg(null);
-      setSuccessResult(null);
-      setScannedSuccess(false);
-      if (activeTab === "scan") {
-        startCamera();
-      }
-    } else {
-      stopCamera();
-    }
-    return () => stopCamera();
-  }, [isOpen, activeTab, facingMode]);
-
-  if (!isOpen) return null;
-
-  const extractToken = (raw: string) => {
-    let clean = raw.trim();
-    if (clean.includes("/attendance/")) {
-      const parts = clean.split("/attendance/");
-      clean = parts[parts.length - 1].split("?")[0].split("#")[0];
-    }
-    return clean;
+  const handleRetryScan = () => {
+    setScanError(null);
+    setScannedSuccess(false);
+    setShowManualInput(false);
+    startCamera();
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setErrorMsg(null);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          setErrorMsg("Could not process image. Please try another photo.");
-          return;
-        }
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (qrCode && qrCode.data) {
-          onQrDetected(qrCode.data);
-        } else {
-          setErrorMsg("No clear QR code found in the uploaded image. Please try pointing camera directly or enter the code manually.");
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const submitAttendance = async (tokenToSubmit?: string) => {
-    setErrorMsg(null);
-    setSubmitting(true);
+  const submitAttendance = async (tokenToSubmit: string) => {
+    setScanError(null);
+    setIsVerifying(true);
     try {
-      const token = tokenToSubmit || manualCode || event.attendanceToken;
+      const token = tokenToSubmit.trim();
       const res = await fetch("/api/student/mark-attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: token ? extractToken(token) : undefined,
+          token: extractToken(token),
           eventId: event.id,
         }),
       });
@@ -301,56 +257,75 @@ export default function StudentAttendanceScannerModal({
           setSuccessResult(data);
           onSuccess(data);
         } else {
-          setErrorMsg(data.message || "Failed to mark attendance.");
+          // Invalid QR or alignment error
+          setScanError(data.message || "Invalid QR code. Please align properly with the event QR.");
         }
       }
     } catch (err: any) {
-      setErrorMsg("Network error connecting to server. Please try again.");
+      setScanError("Network connection error. Please try scanning again.");
     } finally {
-      setSubmitting(false);
+      setIsVerifying(false);
     }
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      setScanError(null);
+      setSuccessResult(null);
+      setScannedSuccess(false);
+      setShowManualInput(false);
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => stopCamera();
+  }, [isOpen, facingMode]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
-      <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+      <div className="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
+        
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 text-white shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
               <Scan className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="font-extrabold text-base text-white leading-tight">Event Attendance Scanner</h3>
-              <p className="text-xs text-slate-300 truncate max-w-[240px] sm:max-w-xs">{event.name}</p>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">Event Attendance Scanner</h3>
+              <p className="text-xs text-slate-300 truncate max-w-[220px] sm:max-w-xs">{event.name}</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer"
+            aria-label="Close scanner"
+            className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-rose-600 text-slate-200 hover:text-white flex items-center justify-center transition shadow active:scale-95 border border-slate-700 shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
-          {/* Event Context Banner */}
-          <div className="bg-gradient-to-r from-slate-50 to-red-50/40 border border-slate-200 rounded-2xl p-3.5 space-y-1.5 text-xs text-slate-700 shadow-2xs">
-            <div className="font-extrabold text-slate-950 text-sm flex items-center gap-1.5">
+        {/* Modal Body */}
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
+          
+          {/* Event Context Pill */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-700 space-y-1">
+            <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-red-600 shrink-0" />
               <span className="truncate">{event.name}</span>
             </div>
-            <div className="flex items-center gap-2.5 text-slate-600 flex-wrap text-[11px] font-medium">
+            <div className="flex items-center gap-2 text-slate-500 text-[11px] font-medium flex-wrap">
               {event.date && <span>📅 {new Date(event.date).toLocaleDateString("en-GB")}</span>}
               {event.location && <span>📍 {event.location}</span>}
               {event.reportingTime && <span>⏰ {event.reportingTime}</span>}
             </div>
           </div>
 
-          {/* Success Result Display */}
+          {/* 1. SUCCESS STATE (Verified) */}
           {successResult ? (
             <div className="text-center py-4 space-y-4 animate-in fade-in">
               <div className="w-16 h-16 bg-emerald-50 border-2 border-emerald-300 rounded-full flex items-center justify-center text-emerald-600 mx-auto shadow-sm animate-bounce">
@@ -359,7 +334,7 @@ export default function StudentAttendanceScannerModal({
 
               <div>
                 <h4 className="text-xl font-black text-slate-900">
-                  {successResult.alreadyMarked ? "Attendance Already Verified!" : "🎉 Attendance Marked Successfully!"}
+                  {successResult.alreadyMarked ? "Attendance Already Recorded!" : "🎉 Attendance Marked Successfully!"}
                 </h4>
                 <p className="text-emerald-700 text-xs font-bold mt-1">
                   ✓ Verified Confirmed Duty Assignment
@@ -398,259 +373,191 @@ export default function StudentAttendanceScannerModal({
                 onClick={onClose}
                 className="w-full py-3.5 bg-slate-900 hover:bg-black active:scale-95 text-white font-extrabold rounded-2xl text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
               >
-                Done & Return to Profile
+                Done & Return to Dashboard
               </button>
             </div>
-          ) : (
-            <>
-              {/* Tab Navigation */}
-              <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("scan")}
-                  className={`flex-1 py-2 px-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                    activeTab === "scan"
-                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/60"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Camera Scan</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("upload")}
-                  className={`flex-1 py-2 px-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                    activeTab === "upload"
-                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/60"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Upload QR Photo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("manual")}
-                  className={`flex-1 py-2 px-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                    activeTab === "manual"
-                      ? "bg-white text-slate-900 shadow-xs border border-slate-200/60"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Scan className="w-3.5 h-3.5" />
-                  <span>Manual Code</span>
-                </button>
+          ) : isVerifying ? (
+            /* 2. VERIFYING STATE */
+            <div className="py-12 text-center space-y-3 animate-in fade-in">
+              <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center mx-auto text-blue-600">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+              <h4 className="font-extrabold text-slate-900 text-base">Verifying Attendance QR...</h4>
+              <p className="text-xs text-slate-500">Checking your assignment against event roster</p>
+            </div>
+          ) : scanError ? (
+            /* 3. ERROR / NOT ALIGNED / INVALID QR STATE */
+            <div className="py-6 text-center space-y-4 animate-in fade-in">
+              <div className="w-16 h-16 bg-rose-50 border-2 border-rose-300 rounded-full flex items-center justify-center text-rose-600 mx-auto shadow-sm">
+                <AlertTriangle className="w-8 h-8" />
               </div>
 
-              {/* Error Alert */}
-              {errorMsg && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-xs text-rose-900 animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <span className="font-bold block">Attendance Error:</span>
-                    <span>{errorMsg}</span>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-1 px-2">
+                <h4 className="text-base font-black text-rose-950">Invalid or Unaligned QR Code</h4>
+                <p className="text-xs text-rose-700 font-medium leading-relaxed">{scanError}</p>
+              </div>
 
-              {/* TAB 1: LIVE CAMERA SCANNER */}
-              {activeTab === "scan" && (
-                <div className="space-y-3.5">
-                  <div className="relative aspect-square w-full max-w-[270px] mx-auto bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-inner flex items-center justify-center">
-                    <video
-                      ref={videoRef}
-                      playsInline
-                      muted
-                      autoPlay
-                      className={`w-full h-full object-cover transition-opacity duration-300 ${
-                        cameraActive ? "opacity-100" : "opacity-0"
-                      }`}
-                    />
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11.5px] text-slate-600 text-left space-y-1">
+                <p className="font-bold text-slate-800">Quick Tips:</p>
+                <p>• Make sure the QR code is fully visible inside the viewfinder frame.</p>
+                <p>• Ensure you are scanning the coordinator&apos;s official desk QR code for <strong>{event.name}</strong>.</p>
+                <p>• Hold phone steady to avoid blurry frames.</p>
+              </div>
 
-                    {/* Viewfinder Target Overlay */}
-                    <div className="absolute inset-0 m-5 border border-white/20 rounded-2xl pointer-events-none flex flex-col justify-between p-2">
-                      <div className="flex justify-between">
-                        <div className="w-6 h-6 border-t-3 border-l-3 border-red-500 rounded-tl-lg"></div>
-                        <div className="w-6 h-6 border-t-3 border-r-3 border-red-500 rounded-tr-lg"></div>
-                      </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetryScan}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Scan Again</span>
+                </button>
+              </div>
+            </div>
+          ) : showManualInput ? (
+            /* 4. MANUAL CODE FALLBACK (If camera unsupported or failed) */
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Event Attendance Token / Code
+                </label>
+                <input
+                  type="text"
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  placeholder="Paste QR link or enter code"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 font-mono transition"
+                />
+                <span className="text-[11px] text-slate-400 block">
+                  Enter the code displayed below the QR code at the coordinator&apos;s desk.
+                </span>
+              </div>
 
-                      {/* Laser Line */}
-                      {cameraActive && !scannedSuccess && (
-                        <div className="w-full h-0.5 bg-red-500/90 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.9)]"></div>
-                      )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleRetryScan}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition cursor-pointer"
+                >
+                  Camera Scan
+                </button>
+                <button
+                  type="button"
+                  disabled={!manualCode.trim()}
+                  onClick={() => submitAttendance(manualCode)}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Verify Code</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* 5. LIVE AUTOMATIC CAMERA SCANNER (Default & Pure Auto-Scan) */
+            <div className="space-y-3.5">
+              <div className="relative aspect-square w-full max-w-[270px] mx-auto bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-inner flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    cameraActive ? "opacity-100" : "opacity-0"
+                  }`}
+                />
 
-                      {/* Green Success Pulse */}
-                      {scannedSuccess && (
-                        <div className="absolute inset-0 bg-emerald-500/25 backdrop-blur-xs flex items-center justify-center">
-                          <CheckCircle2 className="w-12 h-12 text-white animate-scale" />
-                        </div>
-                      )}
-
-                      <div className="flex justify-between">
-                        <div className="w-6 h-6 border-b-3 border-l-3 border-red-500 rounded-bl-lg"></div>
-                        <div className="w-6 h-6 border-b-3 border-r-3 border-red-500 rounded-br-lg"></div>
-                      </div>
-                    </div>
-
-                    {/* Camera Controls Overlay */}
-                    {cameraActive && (
-                      <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 z-10">
-                        {torchSupported && (
-                          <button
-                            type="button"
-                            onClick={toggleTorch}
-                            className={`p-2 rounded-xl text-white backdrop-blur-md transition ${
-                              torchOn ? "bg-amber-500 text-slate-950 shadow-md" : "bg-black/60 hover:bg-black/80"
-                            }`}
-                            title="Toggle Torch / Flashlight"
-                          >
-                            {torchOn ? <Zap className="w-4 h-4 fill-slate-950" /> : <ZapOff className="w-4 h-4" />}
-                          </button>
-                        )}
-                        {hasMultipleCameras && (
-                          <button
-                            type="button"
-                            onClick={toggleCameraFacing}
-                            className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl backdrop-blur-md transition"
-                            title="Switch Camera (Front/Back)"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {!cameraActive && !cameraError && (
-                      <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center text-white text-xs gap-2 p-4 text-center">
-                        <Loader2 className="w-7 h-7 animate-spin text-red-500" />
-                        <span className="font-semibold">Starting camera viewfinder...</span>
-                      </div>
-                    )}
+                {/* Target Viewfinder & Corner Brackets */}
+                <div className="absolute inset-0 m-5 border border-white/20 rounded-2xl pointer-events-none flex flex-col justify-between p-2">
+                  <div className="flex justify-between">
+                    <div className="w-6 h-6 border-t-3 border-l-3 border-red-500 rounded-tl-lg"></div>
+                    <div className="w-6 h-6 border-t-3 border-r-3 border-red-500 rounded-tr-lg"></div>
                   </div>
 
-                  {cameraError ? (
-                    <div className="text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-1">
-                      <p className="font-bold">⚠️ {cameraError}</p>
-                      <p className="text-slate-500">You can also use the <strong>1-Tap Quick Mark</strong> button below or upload a photo.</p>
-                    </div>
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 font-medium">
-                      Point camera directly at the event attendance QR code shown on the coordinator&apos;s desk or screen.
-                    </p>
+                  {/* Automatic Laser Scanning Bar */}
+                  {cameraActive && !scannedSuccess && (
+                    <div className="w-full h-0.5 bg-red-500/90 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.9)]"></div>
                   )}
 
-                  {/* 1-Tap Quick Mark Button for Confirmed Roster */}
-                  <div className="pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => submitAttendance()}
-                      className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white font-extrabold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Verifying Your Duty...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 text-amber-300" />
-                          <span>✓ 1-Tap Quick Mark Attendance</span>
-                        </>
-                      )}
-                    </button>
-                    <span className="text-[10.5px] text-slate-400 text-center block mt-1.5">
-                      Fast 1-tap check-in for confirmed students already present at the venue.
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: UPLOAD QR PHOTO / SCREENSHOT */}
-              {activeTab === "upload" && (
-                <div className="space-y-4 text-center py-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-300 hover:border-red-500 bg-slate-50 hover:bg-red-50/30 rounded-3xl p-8 transition cursor-pointer flex flex-col items-center justify-center space-y-2 group"
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-red-100 group-hover:bg-red-200 text-red-600 flex items-center justify-center transition">
-                      <ImageIcon className="w-7 h-7" />
+                  {/* Green Detection Flash */}
+                  {scannedSuccess && (
+                    <div className="absolute inset-0 bg-emerald-500/30 backdrop-blur-xs flex items-center justify-center">
+                      <CheckCircle2 className="w-12 h-12 text-white animate-scale" />
                     </div>
-                    <div className="font-extrabold text-sm text-slate-900">
-                      Upload QR Code Screenshot or Photo
-                    </div>
-                    <p className="text-xs text-slate-500 max-w-xs">
-                      Tap here to choose a photo or screenshot of the coordinator&apos;s attendance QR code from your gallery.
-                    </p>
-                  </div>
+                  )}
 
-                  {/* 1-Tap Fallback */}
-                  <div className="pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => submitAttendance()}
-                      className="w-full py-3 bg-slate-900 hover:bg-black text-white font-extrabold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
-                    >
-                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-400" />}
-                      <span>1-Tap Quick Mark (Confirmed Roster)</span>
-                    </button>
+                  <div className="flex justify-between">
+                    <div className="w-6 h-6 border-b-3 border-l-3 border-red-500 rounded-bl-lg"></div>
+                    <div className="w-6 h-6 border-b-3 border-r-3 border-red-500 rounded-br-lg"></div>
                   </div>
+                </div>
+
+                {/* Floating Torch & Flip Controls */}
+                {cameraActive && (
+                  <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 z-10">
+                    {torchSupported && (
+                      <button
+                        type="button"
+                        onClick={toggleTorch}
+                        className={`p-2 rounded-xl text-white backdrop-blur-md transition cursor-pointer ${
+                          torchOn ? "bg-amber-500 text-slate-950 shadow-md" : "bg-black/60 hover:bg-black/80"
+                        }`}
+                        title="Toggle Torch / Flashlight"
+                      >
+                        {torchOn ? <Zap className="w-4 h-4 fill-slate-950" /> : <ZapOff className="w-4 h-4" />}
+                      </button>
+                    )}
+                    {hasMultipleCameras && (
+                      <button
+                        type="button"
+                        onClick={toggleCameraFacing}
+                        className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl backdrop-blur-md transition cursor-pointer"
+                        title="Switch Camera (Front/Back)"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {!cameraActive && !cameraError && (
+                  <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center text-white text-xs gap-2 p-4 text-center">
+                    <Loader2 className="w-7 h-7 animate-spin text-red-500" />
+                    <span className="font-semibold">Starting camera auto-scanner...</span>
+                  </div>
+                )}
+              </div>
+
+              {cameraError ? (
+                <div className="text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-1">
+                  <p className="font-bold">⚠️ {cameraError}</p>
+                </div>
+              ) : (
+                <div className="text-center space-y-1">
+                  <p className="text-xs text-slate-700 font-bold flex items-center justify-center gap-1">
+                    <Camera className="w-3.5 h-3.5 text-red-600" />
+                    Point at QR code to scan automatically
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    No need to click anything — scanner auto-detects and verifies instantly.
+                  </p>
                 </div>
               )}
 
-              {/* TAB 3: MANUAL CODE ENTRY */}
-              {activeTab === "manual" && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                      Attendance Token / Event Code
-                    </label>
-                    <input
-                      type="text"
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value)}
-                      placeholder="e.g. Paste QR link or attendance code"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 font-mono transition"
-                    />
-                    <span className="text-[11px] text-slate-400 block">
-                      Ask your event coordinator for the code displayed below the QR code at the desk.
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 pt-2">
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => submitAttendance()}
-                      className="w-full py-3.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
-                    >
-                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                      <span>{submitting ? "Verifying..." : "Submit Attendance"}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => submitAttendance()}
-                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>1-Tap Quick Check-In (Confirmed Roster)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+              {/* Discreet Manual Code Option */}
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCamera();
+                    setShowManualInput(true);
+                  }}
+                  className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 underline transition cursor-pointer"
+                >
+                  Having camera trouble? Enter code manually
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
