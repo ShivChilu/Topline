@@ -154,6 +154,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [callFilter, setCallFilter] = useState<"ALL" | "0_CALLS" | "1_CALL" | "2_CALLS">("ALL");
   const [photoFilter, setPhotoFilter] = useState("ALL");
   const [profileFilter, setProfileFilter] = useState("ALL");
   const [whatsappFilter, setWhatsappFilter] = useState("ALL");
@@ -934,6 +935,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       list = list.filter((a) => a.paymentStatus !== "PAID");
     }
 
+    // 2-Call Verification Filter
+    if (callFilter === "0_CALLS") {
+      list = list.filter((a) => !a.call1Done && !a.call2Done);
+    } else if (callFilter === "1_CALL") {
+      list = list.filter((a) => a.call1Done && !a.call2Done);
+    } else if (callFilter === "2_CALLS") {
+      list = list.filter((a) => a.call2Done);
+    }
+
     // Gender filter (e.g. Girls only)
     if (genderFilter !== "ALL") {
       list = list.filter((a) => matchesGender(a.studentId?.gender || a.gender, genderFilter));
@@ -1015,7 +1025,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     });
 
     return list;
-  }, [applications, search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
+  }, [applications, search, statusFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
 
   const availableCities = useMemo(() => {
     const set = new Set<string>();
@@ -1039,6 +1049,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     let count = 0;
     if (search.trim()) count++;
     if (statusFilter !== "ALL") count++;
+    if (callFilter !== "ALL") count++;
     if (photoFilter !== "ALL") count++;
     if (profileFilter !== "ALL") count++;
     if (whatsappFilter !== "ALL") count++;
@@ -1050,11 +1061,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     if (cityFilter !== "ALL") count++;
     if (universityFilter !== "ALL") count++;
     return count;
-  }, [search, statusFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [search, statusFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 
   const handleResetFilters = () => {
     setSearch("");
     setStatusFilter("ALL");
+    setCallFilter("ALL");
     setPhotoFilter("ALL");
     setProfileFilter("ALL");
     setWhatsappFilter("ALL");
@@ -1080,7 +1092,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     const cancelled = applications.filter((a) => (a.status || "").toUpperCase() === "CANCELLED").length;
     const paid = applications.filter((a) => a.paymentStatus === "PAID").length;
     const unpaid = total - paid;
-    return { total, applied, underReview, selected, notSelected, confirmed, attended, absent, cancelled, paid, unpaid };
+    const calls0 = applications.filter((a) => !a.call1Done && !a.call2Done).length;
+    const calls1 = applications.filter((a) => a.call1Done && !a.call2Done).length;
+    const calls2 = applications.filter((a) => a.call2Done).length;
+    return { total, applied, underReview, selected, notSelected, confirmed, attended, absent, cancelled, paid, unpaid, calls0, calls1, calls2 };
   }, [applications]);
 
   // Financials
@@ -1807,6 +1822,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
           {/* Filters & Queue Switch */}
           <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+            {/* Call Status Filter */}
+            <select
+              value={callFilter}
+              onChange={(e) => setCallFilter(e.target.value as any)}
+              className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
+                callFilter !== "ALL"
+                  ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500/20"
+                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+              }`}
+            >
+              <option value="ALL">All Call Statuses</option>
+              <option value="0_CALLS">⏳ 0 Calls (Pending)</option>
+              <option value="1_CALL">📞 1st Call Done</option>
+              <option value="2_CALLS">✓ 2 Calls Done</option>
+            </select>
+
             {/* Gender Filter (e.g. Girls Only) */}
             <select
               value={genderFilter}
@@ -2131,6 +2162,90 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       </div>
 
       {/* ---------------------------------------------------- */}
+      {/* 2-CALL VERIFICATION QUICK FILTER PILLS BAR */}
+      {/* ---------------------------------------------------- */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+          <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0 mr-1">
+            <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
+            <span>Call Status:</span>
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setCallFilter("ALL")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+              callFilter === "ALL"
+                ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+            }`}
+          >
+            <span>All Candidates</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              callFilter === "ALL" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+            }`}>
+              {stats.total}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCallFilter("0_CALLS")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+              callFilter === "0_CALLS"
+                ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                : "bg-amber-50/80 text-amber-900 border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            <span>⏳ 0 Calls (Pending)</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              callFilter === "0_CALLS" ? "bg-white/25 text-white" : "bg-amber-200 text-amber-900"
+            }`}>
+              {stats.calls0}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCallFilter("1_CALL")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+              callFilter === "1_CALL"
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                : "bg-blue-50/80 text-blue-900 border-blue-200 hover:bg-blue-100"
+            }`}
+          >
+            <span>📞 1st Call Done</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              callFilter === "1_CALL" ? "bg-white/25 text-white" : "bg-blue-200 text-blue-900"
+            }`}>
+              {stats.calls1}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCallFilter("2_CALLS")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+              callFilter === "2_CALLS"
+                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                : "bg-purple-50/80 text-purple-900 border-purple-200 hover:bg-purple-100"
+            }`}
+          >
+            <span>✓ 2 Calls Done</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              callFilter === "2_CALLS" ? "bg-white/25 text-white" : "bg-purple-200 text-purple-900"
+            }`}>
+              {stats.calls2}
+            </span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 text-xs text-slate-500 font-semibold self-end sm:self-auto">
+          <span>Showing <strong className="text-slate-900">{filteredAndSortedApplications.length}</strong> of {stats.total}</span>
+        </div>
+      </div>
+
+      {/* ---------------------------------------------------- */}
       {/* VIEW 1: EVENT CANDIDATE PHOTO GALLERY */}
       {/* ---------------------------------------------------- */}
       {activeView === "gallery" && (
@@ -2272,8 +2387,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             </div>
                           )}
                           <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="font-semibold text-slate-800">{app.mobileNumber}</span>
+                            {app.mobileNumber || student.phone ? (
+                              <a
+                                href={`tel:${app.mobileNumber || student.phone}`}
+                                className="flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 hover:underline bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition text-xs"
+                                title="Click to dial candidate"
+                              >
+                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>{app.mobileNumber || student.phone}</span>
+                              </a>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-slate-400 text-xs">
+                                <Phone className="w-3.5 h-3.5 shrink-0" />
+                                <span>No Phone</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -2715,7 +2843,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         </div>
                       </td>
                       <td className="p-4 font-semibold text-xs text-slate-800 font-mono">
-                        {app.mobileNumber}
+                        {app.mobileNumber || student.phone ? (
+                          <a
+                            href={`tel:${app.mobileNumber || student.phone}`}
+                            className="text-emerald-700 hover:text-emerald-800 hover:underline font-bold inline-flex items-center gap-1"
+                            title="Click to dial"
+                          >
+                            <Phone className="w-3 h-3 text-emerald-600" />
+                            <span>{app.mobileNumber || student.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 font-normal">N/A</span>
+                        )}
                       </td>
                       <td className="p-4 text-xs text-slate-600">
                         {student.university || "N/A"}

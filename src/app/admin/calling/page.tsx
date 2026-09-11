@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Search, Calendar, MapPin, Clock, MessageSquare, Check, X, ChevronRight, RefreshCw, AlertCircle, PhoneCall, Phone } from "lucide-react";
 import CallLoggerModal from "@/components/admin/CallLoggerModal";
 
@@ -114,6 +114,14 @@ export default function CallingDashboard() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
+
+  const callStats = useMemo(() => {
+    const total = applications.length;
+    const calls0 = applications.filter((a) => !a.call1Done && !a.call2Done).length;
+    const calls1 = applications.filter((a) => a.call1Done && !a.call2Done).length;
+    const calls2 = applications.filter((a) => a.call2Done).length;
+    return { total, calls0, calls1, calls2 };
+  }, [applications]);
 
   // 2-Call Verification Logger State
   const [callLogModalOpen, setCallLogModalOpen] = useState(false);
@@ -718,6 +726,88 @@ export default function CallingDashboard() {
                     <option value="1_CALL">📞 1st Call Done</option>
                     <option value="2_CALLS">✓ 2 Calls Done</option>
                   </select>
+                </div>
+              </div>
+
+              {/* 2-Call Verification Quick Filter Pills Bar */}
+              <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0 mr-1">
+                    <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Call Status:</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setCallFilter("ALL")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+                      callFilter === "ALL"
+                        ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>All Candidates</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                      callFilter === "ALL" ? "bg-white/25 text-white" : "bg-slate-100 text-slate-700"
+                    }`}>
+                      {callStats.total}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCallFilter("0_CALLS")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+                      callFilter === "0_CALLS"
+                        ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                        : "bg-amber-50/80 text-amber-900 border-amber-200 hover:bg-amber-100"
+                    }`}
+                  >
+                    <span>⏳ 0 Calls (Pending)</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                      callFilter === "0_CALLS" ? "bg-white/25 text-white" : "bg-amber-100 text-amber-900"
+                    }`}>
+                      {callStats.calls0}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCallFilter("1_CALL")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+                      callFilter === "1_CALL"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-blue-50/80 text-blue-900 border-blue-200 hover:bg-blue-100"
+                    }`}
+                  >
+                    <span>📞 1st Call Done</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                      callFilter === "1_CALL" ? "bg-white/25 text-white" : "bg-blue-100 text-blue-900"
+                    }`}>
+                      {callStats.calls1}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCallFilter("2_CALLS")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shrink-0 border cursor-pointer active:scale-95 ${
+                      callFilter === "2_CALLS"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                        : "bg-purple-50/80 text-purple-900 border-purple-200 hover:bg-purple-100"
+                    }`}
+                  >
+                    <span>✓ 2 Calls Done</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                      callFilter === "2_CALLS" ? "bg-white/25 text-white" : "bg-purple-100 text-purple-900"
+                    }`}>
+                      {callStats.calls2}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="text-xs text-slate-500 font-semibold self-end sm:self-auto">
+                  <span>Showing <strong className="text-slate-900">{filteredApplications.length}</strong> of {callStats.total}</span>
                 </div>
               </div>
 
