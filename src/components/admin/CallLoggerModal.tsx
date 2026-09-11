@@ -40,6 +40,7 @@ export interface CallLoggerModalProps {
 
 const CALL_REMARK_PRESETS = [
   { label: "Confirmed & Available", icon: "✅", color: "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100" },
+  { label: "First Time", icon: "🌱", color: "bg-teal-50 text-teal-700 border-teal-300 hover:bg-teal-100" },
   { label: "Ringing / No Answer", icon: "⏳", color: "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100" },
   { label: "Switched Off / Unreachable", icon: "📴", color: "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100" },
   { label: "Busy / Call Back in 30 mins", icon: "🔄", color: "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100" },
