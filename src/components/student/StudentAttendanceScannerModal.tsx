@@ -214,7 +214,7 @@ export default function StudentAttendanceScannerModal({
     // Haptic vibration feedback
     try {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
+        navigator.vibrate([80, 40, 80]);
       }
     } catch (e) {}
 
@@ -222,7 +222,7 @@ export default function StudentAttendanceScannerModal({
       stopCamera();
       const token = extractToken(rawData);
       submitAttendance(token);
-    }, 350);
+    }, 100);
   };
 
   const handleRetryScan = () => {

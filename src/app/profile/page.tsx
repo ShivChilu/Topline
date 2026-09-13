@@ -132,10 +132,10 @@ export default function StudentProfilePage() {
     }
   };
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (silent = false) => {
     try {
-      setLoading(true);
-      const res = await fetch("/api/user/profile");
+      if (!silent) setLoading(true);
+      const res = await fetch(`/api/user/profile?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (res.ok && data.success && data.user) {
         const u = data.user;
@@ -167,18 +167,18 @@ export default function StudentProfilePage() {
           profilePhotoUrl: u.profilePhotoUrl || "",
         });
       } else {
-        router.push("/login");
+        if (!silent) router.push("/login");
       }
     } catch (err) {
       console.error("Profile fetch error:", err);
-      router.push("/login");
+      if (!silent) router.push("/login");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProfile();
+    fetchProfile(false);
   }, []);
 
   const handleLogout = async () => {
@@ -1416,7 +1416,27 @@ export default function StudentProfilePage() {
             event={scannerEvent}
             onSuccess={(result) => {
               showFeedback("success", `Attendance successfully recorded as ${result.status || "PRESENT"}!`);
-              fetchProfile();
+              // Optimistically update active applications in local state instantly
+              setUser((prev: any) => {
+                if (!prev) return prev;
+                const updatedRecent = (prev.recentApplications || []).map((app: any) => {
+                  const evId = app.event?.id || app.eventId;
+                  if (evId === scannerEvent.id || app.id === result.applicationId) {
+                    return {
+                      ...app,
+                      status: "ATTENDED",
+                      attendance: {
+                        attendanceStatus: result.status || "PRESENT",
+                        checkInTime: result.checkInTime || new Date().toISOString(),
+                      },
+                    };
+                  }
+                  return app;
+                });
+                return { ...prev, recentApplications: updatedRecent };
+              });
+              // Authoritative sync in background without tearing down UI
+              fetchProfile(true);
             }}
           />
         )}

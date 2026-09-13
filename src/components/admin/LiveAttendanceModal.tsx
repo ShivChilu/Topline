@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import QRCode from "qrcode";
 import {
   X,
   QrCode,
@@ -59,6 +60,7 @@ export default function LiveAttendanceModal({
   const [regeneratingToken, setRegeneratingToken] = useState(false);
   const [togglingToken, setTogglingToken] = useState(false);
   const [mobileTab, setMobileTab] = useState<"qr" | "feed" | "roster">("qr");
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -96,15 +98,28 @@ export default function LiveAttendanceModal({
     };
   }, [isOpen, eventId, isLiveActive]);
 
-  if (!isOpen) return null;
-
   const attendanceToken = eventData?.attendanceToken || "";
   const isQrEnabled = eventData?.attendanceTokenEnabled || false;
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const publicQrUrl = attendanceToken ? `${origin}/attendance/${attendanceToken}` : "";
-  const qrImageSrc = attendanceToken
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(publicQrUrl)}`
-    : "";
+
+  // Local, zero-latency QR data URL generation
+  useEffect(() => {
+    if (!attendanceToken || !publicQrUrl) {
+      setQrDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(publicQrUrl, {
+      width: 400,
+      margin: 2,
+      errorCorrectionLevel: "M",
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((e) => console.error("QR generation error:", e));
+  }, [attendanceToken, publicQrUrl]);
+
+  if (!isOpen) return null;
 
   const handleCopyLink = async () => {
     if (!publicQrUrl) return;
@@ -363,12 +378,17 @@ export default function LiveAttendanceModal({
 
                 {/* Big QR Code Card */}
                 <div className="p-2 sm:p-3 bg-white rounded-2xl border-2 border-slate-900 shadow-md relative group max-w-full">
-                  {attendanceToken && isQrEnabled ? (
+                  {attendanceToken && isQrEnabled && qrDataUrl ? (
                     <img
-                      src={qrImageSrc}
+                      src={qrDataUrl}
                       alt="Event Attendance QR Code"
                       className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-xl max-w-full"
                     />
+                  ) : attendanceToken && isQrEnabled && !qrDataUrl ? (
+                    <div className="w-48 h-48 sm:w-56 sm:h-56 bg-slate-50 rounded-xl flex flex-col items-center justify-center p-4 text-center max-w-full">
+                      <RefreshCw className="w-8 h-8 text-slate-400 animate-spin mb-2" />
+                      <span className="text-xs font-bold text-slate-700">Generating QR...</span>
+                    </div>
                   ) : (
                     <div className="w-48 h-48 sm:w-56 sm:h-56 bg-slate-100 rounded-xl flex flex-col items-center justify-center p-4 text-center max-w-full">
                       <QrCode className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300 mb-2" />

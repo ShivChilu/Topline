@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
 import {
   ArrowLeft,
   QrCode,
@@ -32,6 +33,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [event, setEvent] = useState<any>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -48,28 +50,32 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const [verificationField, setVerificationField] = useState("registrationNumber");
   const [gracePeriod, setGracePeriod] = useState(15);
   const [qrToken, setQrToken] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
-  const fetchAttendance = async () => {
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchAttendance = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
+      else setIsRefreshing(true);
       setErrorMsg(null);
       
       const res = await fetch(`/api/admin/events/${eventId}/attendance?t=${Date.now()}`, { cache: "no-store" });
       if (res.status === 403) {
         setErrorMsg("403 Access Denied. You do not have permission to view or manage attendance for this event.");
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
       
       const data = await res.json();
       if (!data.success) {
         setErrorMsg(data.message || "Failed to load attendance logs.");
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
 
-      setAttendance(data.attendance);
-      setFilteredAttendance(data.attendance);
+      setAttendance(data.attendance || []);
+      setFilteredAttendance(data.attendance || []);
       setEvent(data.event);
       setQrEnabled(data.event.attendanceTokenEnabled || false);
       setVerificationField(data.event.attendanceVerificationField || "registrationNumber");
@@ -80,17 +86,41 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
         : ["registrationNumber", "name", "phone"]);
     } catch (err) {
       console.error(err);
-      setErrorMsg("An error occurred while loading attendance.");
+      if (!silent) setErrorMsg("An error occurred while loading attendance.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchAttendance();
+    fetchAttendance(false);
+    // Background silent poll every 5s so attendance list updates without flickering
+    pollRef.current = setInterval(() => {
+      fetchAttendance(true);
+    }, 5000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [eventId]);
 
-  if (loading) return <div className="text-slate-900 text-center py-12">Loading attendance dashboard...</div>;
+  const publicQRUrl = typeof window !== "undefined" && qrToken ? `${window.location.origin}/attendance/${qrToken}` : "";
+
+  // Zero-latency local QR Data URL generation
+  useEffect(() => {
+    if (!qrToken || !publicQRUrl) {
+      setQrDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(publicQRUrl, {
+      width: 300,
+      margin: 2,
+      errorCorrectionLevel: "M",
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((e) => console.error("QR Code generation error:", e));
+  }, [qrToken, publicQRUrl]);
 
   if (errorMsg) {
     return (
@@ -291,8 +321,6 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const absentCount = attendance.filter((r) => r.status === "ABSENT").length;
   const totalEligible = attendance.length;
   const attendanceRate = totalEligible > 0 ? Math.round(((presentCount + lateCount) / totalEligible) * 100) : 0;
-
-  const publicQRUrl = typeof window !== "undefined" ? `${window.location.origin}/attendance/${qrToken}` : "";
 
   return (
     <div className="space-y-6 text-slate-800">
@@ -611,11 +639,17 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
               {qrToken ? (
                 <div className="space-y-4 text-center">
                   <div className="bg-slate-100 p-4 rounded-2xl inline-block border border-slate-200">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(publicQRUrl)}`}
-                      alt="Attendance QR Code"
-                      className="w-48 h-48 mx-auto"
-                    />
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="Attendance QR Code"
+                        className="w-48 h-48 mx-auto"
+                      />
+                    ) : (
+                      <div className="w-48 h-48 flex items-center justify-center text-xs text-slate-400">
+                        <RefreshCw className="w-6 h-6 animate-spin text-red-600 mr-2" /> Generating...
+                      </div>
+                    )}
                   </div>
                   <div className="text-xs font-mono break-all text-slate-400 bg-slate-50 p-2 rounded border border-slate-200">
                     {publicQRUrl}
