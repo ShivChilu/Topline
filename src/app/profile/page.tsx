@@ -526,7 +526,7 @@ export default function StudentProfilePage() {
               }`}
             >
               <Calendar className="w-3.5 h-3.5 text-blue-500" />
-              <span>My Gigs ({user.recentApplications?.length || 0})</span>
+              <span>My Events ({user.recentApplications?.length || 0})</span>
             </button>
 
             <button
@@ -716,7 +716,7 @@ export default function StudentProfilePage() {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Gigs Applied</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Events Applied</span>
                 <span className="text-xl font-black text-slate-900 mt-1 block">{user.recentApplications?.length || 0}</span>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">Lifetime applications</span>
               </div>
@@ -797,7 +797,7 @@ export default function StudentProfilePage() {
                   onClick={() => setActiveTab("gigs")}
                   className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
                 >
-                  <span>View All Gigs</span>
+                  <span>View All Events</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -805,7 +805,7 @@ export default function StudentProfilePage() {
               {(!user.recentApplications || user.recentApplications.length === 0) ? (
                 <div className="text-center py-8 space-y-3">
                   <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
-                  <p className="text-slate-500 text-xs font-semibold">You have not applied for any event gigs yet.</p>
+                  <p className="text-slate-500 text-xs font-semibold">You have not applied for any events yet.</p>
                   <Link
                     href="/events"
                     className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition shadow-sm"
@@ -874,7 +874,7 @@ export default function StudentProfilePage() {
         )}
 
         {/* ---------------------------------------------------- */}
-        {/* TAB 2: MY GIGS & HISTORY */}
+        {/* TAB 2: MY EVENTS & HISTORY */}
         {/* ---------------------------------------------------- */}
         {activeTab === "gigs" && (
           <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-5 animate-in fade-in duration-200">
@@ -882,7 +882,7 @@ export default function StudentProfilePage() {
               <div>
                 <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-red-600" />
-                  My Gigs & Applications History
+                  My Events & Applications History
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Track your application decisions, duty attendance status, and event earnings.
@@ -916,7 +916,7 @@ export default function StudentProfilePage() {
                   href="/events"
                   className="inline-block bg-red-600 hover:bg-red-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm"
                 >
-                  Browse Available Gigs
+                  Browse Available Events
                 </Link>
               </div>
             ) : (
