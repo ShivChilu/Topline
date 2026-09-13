@@ -246,6 +246,7 @@ model Event {
   @@index([date])
   @@index([status])
   @@index([visibility])
+  @@index([attendanceToken])
 }
 
 // Calling Admin assignment relationship
@@ -416,6 +417,8 @@ model Attendance {
   updatedAt          DateTime         @updatedAt
 
   @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
   @@index([eventId, registrationNumber])
 }
 

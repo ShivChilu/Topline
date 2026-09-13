@@ -42,73 +42,88 @@ export async function GET(
       }
     }
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      select: {
-        id: true,
-        name: true,
-        date: true,
-        location: true,
-        reportingTime: true,
-        startTime: true,
-        endTime: true,
-        status: true,
-        attendanceToken: true,
-        attendanceTokenEnabled: true,
-        gracePeriod: true,
-      },
-    });
+    const [event, applications, recentCheckIns] = await Promise.all([
+      prisma.event.findUnique({
+        where: { id: eventId },
+        select: {
+          id: true,
+          name: true,
+          date: true,
+          location: true,
+          reportingTime: true,
+          startTime: true,
+          endTime: true,
+          status: true,
+          attendanceToken: true,
+          attendanceTokenEnabled: true,
+          gracePeriod: true,
+        },
+      }),
+      prisma.application.findMany({
+        where: {
+          eventId,
+          status: { in: ["CONFIRMED", "ATTENDED"] },
+        },
+        select: {
+          id: true,
+          userId: true,
+          name: true,
+          mobileNumber: true,
+          registrationNumber: true,
+          status: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              registrationNumber: true,
+              profilePhotoUrl: true,
+            },
+          },
+          attendance: {
+            select: {
+              id: true,
+              attendanceStatus: true,
+              checkInTime: true,
+              manualRemarks: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.attendance.findMany({
+        where: { eventId },
+        select: {
+          id: true,
+          applicationId: true,
+          registrationNumber: true,
+          checkInTime: true,
+          attendanceStatus: true,
+          manualRemarks: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              profilePhotoUrl: true,
+            },
+          },
+          application: {
+            select: {
+              id: true,
+              name: true,
+              mobileNumber: true,
+            },
+          },
+        },
+        orderBy: { checkInTime: "desc" },
+        take: 30,
+      }),
+    ]);
 
     if (!event) {
       return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
     }
-
-    // Fetch confirmed & attended applications
-    const applications = await prisma.application.findMany({
-      where: {
-        eventId,
-        status: { in: ["CONFIRMED", "ATTENDED"] },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            registrationNumber: true,
-            profilePhotoUrl: true,
-          },
-        },
-        attendance: true,
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    // Fetch all attendance records chronologically (newest first for live stream)
-    const recentCheckIns = await prisma.attendance.findMany({
-      where: { eventId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            registrationNumber: true,
-            profilePhotoUrl: true,
-          },
-        },
-        application: {
-          select: {
-            id: true,
-            name: true,
-            mobileNumber: true,
-            registrationNumber: true,
-          },
-        },
-      },
-      orderBy: { checkInTime: "desc" },
-      take: 50,
-    });
 
     const totalConfirmed = applications.length;
     let markedPresent = 0;
