@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -32,6 +32,14 @@ import {
   Loader2,
   QrCode,
   Scan,
+  Edit3,
+  ExternalLink,
+  ChevronRight,
+  ArrowRight,
+  Zap,
+  CheckCircle,
+  RefreshCw,
+  Plus,
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
 import { compressImage } from "@/lib/image-compress";
@@ -69,6 +77,10 @@ export default function StudentProfilePage() {
   const [uploadType, setUploadType] = useState<"FORMAL" | "FULL_LENGTH" | "CASUAL">("FORMAL");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Active navigation tab: "overview" | "gigs" | "edit" | "photos"
+  const [activeTab, setActiveTab] = useState<"overview" | "gigs" | "edit" | "photos">("overview");
+  const [gigFilter, setGigFilter] = useState<"ALL" | "CONFIRMED" | "SELECTED" | "ATTENDED" | "APPLIED">("ALL");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -103,7 +115,12 @@ export default function StudentProfilePage() {
       const res = await fetch(`/api/rsvp?` + query.toString());
       const json = await res.json();
       if (res.ok && json.success) {
-        showFeedback("success", action === "CONFIRM" ? "Duty attendance confirmed! WhatsApp group unlocked." : "Duty declined and slot released.");
+        showFeedback(
+          "success",
+          action === "CONFIRM"
+            ? "🎉 Duty attendance confirmed! WhatsApp group and QR check-in unlocked."
+            : "Duty declined and slot released."
+        );
         fetchProfile();
       } else {
         showFeedback("error", json.message || "Failed to update attendance.");
@@ -310,14 +327,33 @@ export default function StudentProfilePage() {
 
   const allMissing = [...(completeness.missingFields || []), ...(completeness.missingPhotos || [])];
 
+  // Active or Confirmed Gig (High Priority Action Card)
+  const activeConfirmedGigs = useMemo(() => {
+    if (!user?.recentApplications) return [];
+    return user.recentApplications.filter(
+      (app: any) => app.status === "CONFIRMED" || app.status === "SELECTED" || app.status === "ATTENDED"
+    );
+  }, [user]);
+
+  // Filtered Gigs list
+  const filteredGigs = useMemo(() => {
+    if (!user?.recentApplications) return [];
+    if (gigFilter === "ALL") return user.recentApplications;
+    if (gigFilter === "CONFIRMED") return user.recentApplications.filter((a: any) => a.status === "CONFIRMED");
+    if (gigFilter === "SELECTED") return user.recentApplications.filter((a: any) => a.status === "SELECTED");
+    if (gigFilter === "ATTENDED") return user.recentApplications.filter((a: any) => a.status === "ATTENDED");
+    if (gigFilter === "APPLIED") return user.recentApplications.filter((a: any) => a.status === "APPLIED" || a.status === "UNDER_REVIEW");
+    return user.recentApplications;
+  }, [user, gigFilter]);
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700">
         <Navbar />
-        <main className="flex-grow flex items-center justify-center">
+        <main className="flex-grow flex items-center justify-center p-6">
           <div className="text-center space-y-3">
             <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm font-bold text-slate-500">Loading student profile...</p>
+            <p className="text-sm font-bold text-slate-500">Loading student dashboard...</p>
           </div>
         </main>
         <Footer />
@@ -340,249 +376,696 @@ export default function StudentProfilePage() {
         className="hidden"
       />
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-8 relative z-10">
-        {/* Feedback Alert */}
+      <main className="flex-grow max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-5 sm:space-y-6 relative z-10">
+        
+        {/* Feedback Alert Toast */}
         {feedback && (
           <div
-            className={`p-4 rounded-2xl text-sm font-semibold flex items-center justify-between shadow-sm animate-in fade-in ${
+            className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-between shadow-md animate-in fade-in slide-in-from-top-2 duration-200 ${
               feedback.type === "success"
-                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                : "bg-rose-50 text-rose-800 border border-rose-200"
+                ? "bg-emerald-600 text-white"
+                : "bg-rose-600 text-white"
             }`}
           >
             <div className="flex items-center space-x-2">
               {feedback.type === "success" ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-rose-600" />
+                <AlertCircle className="w-5 h-5 shrink-0" />
               )}
               <span>{feedback.message}</span>
             </div>
-            <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-700">
-              <XCircle className="w-4 h-4" />
+            <button onClick={() => setFeedback(null)} className="text-white/80 hover:text-white p-1">
+              <XCircle className="w-5 h-5" />
             </button>
           </div>
         )}
 
-        {/* Profile Header with Avatar & Permanent Selection Status */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex items-center space-x-5">
-            <div className="relative group">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-100 rounded-3xl border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-inner flex-shrink-0 text-red-600 font-extrabold text-3xl">
-                {user.profilePhotoUrl ? (
-                  <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  user.name?.charAt(0)?.toUpperCase() || "S"
-                )}
+        {/* ---------------------------------------------------- */}
+        {/* HERO PROFILE CARD & QUICK ACTIONS HUB */}
+        {/* ---------------------------------------------------- */}
+        <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm relative overflow-hidden">
+          {/* Subtle decorative background gradient */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-red-500/10 via-amber-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
+            {/* Left: Avatar & Identity */}
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="relative group shrink-0">
+                <div className="w-18 h-18 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl sm:rounded-3xl border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-inner text-red-600 font-black text-2xl sm:text-3xl">
+                  {user.profilePhotoUrl ? (
+                    <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    user.name?.charAt(0)?.toUpperCase() || "S"
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => triggerPhotoUpload("FORMAL")}
+                  disabled={uploadingPhoto}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-md transition active:scale-95 border-2 border-white"
+                  title="Update Photo"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              {/* Camera Trigger */}
-              <button
-                type="button"
-                onClick={() => triggerPhotoUpload("FORMAL")}
-                disabled={uploadingPhoto}
-                className="absolute inset-0 bg-black/60 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold p-1 cursor-pointer"
-                title="Upload Photo"
-              >
-                <Camera className="w-5 h-5 mb-1" />
-                <span>{uploadingPhoto ? "Uploading..." : "Add Photo"}</span>
-              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 truncate">{user.name}</h1>
+                  {user.selectionStatus === "SELECTED" && (
+                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-2xs">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selected
+                    </span>
+                  )}
+                  {user.selectionStatus === "UNDER_REVIEW" && (
+                    <span className="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-600" /> Under Review
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-1 flex-wrap">
+                  <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-bold">
+                    {user.registrationNumber || "No Roll No"}
+                  </span>
+                  {user.university && <span className="truncate max-w-[200px] text-slate-600">• {user.university}</span>}
+                </div>
+
+                {/* Completeness Pill */}
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        completeness.percentage === 100 ? "bg-emerald-500" : "bg-red-600"
+                      }`}
+                      style={{ width: `${completeness.percentage}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-600">
+                    {completeness.percentage}% Profile Complete
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">{user.name}</h1>
-                {/* Selection Status Badge */}
-                {user.selectionStatus === "SELECTED" && (
-                  <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-0.5 rounded-full text-xs font-extrabold flex items-center gap-1 shadow-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Selected Candidate
-                  </span>
-                )}
-                {user.selectionStatus === "UNDER_REVIEW" && (
-                  <span className="bg-amber-100 text-amber-800 border border-amber-300 px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> Under Review
-                  </span>
-                )}
-                {user.selectionStatus === "NOT_SELECTED" && (
-                  <span className="bg-rose-100 text-rose-800 border border-rose-300 px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
-                    <XCircle className="w-3.5 h-3.5" /> Profile Not Selected
-                  </span>
-                )}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 font-mono mt-1">
-                Roll No: <span className="font-bold text-slate-800">{user.registrationNumber}</span> • {user.university || "University Unspecified"}
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Permanent Topline Student Account • 30-Day Persistent Session Active
-              </p>
+            {/* Right: Primary Call to Actions */}
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
+              <Link
+                href="/events"
+                className="flex-1 sm:flex-initial bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Browse Events</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("edit")}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2.5 rounded-xl text-xs transition border border-slate-200 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                title="Edit Profile"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                <span>Edit Profile</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-700 font-bold p-2.5 rounded-xl text-xs transition border border-slate-200 cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 w-full md:w-auto">
-            <Link
-              href="/events"
-              className="flex-1 md:flex-initial bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm uppercase tracking-wider transition shadow-sm text-center"
-            >
-              Browse Open Events
-            </Link>
+          {/* QUICK ACTION SHORTCUT STRIP */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5 pt-4 border-t border-slate-100">
             <button
-              onClick={handleLogout}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-1 border border-slate-200"
-              title="Sign Out"
+              type="button"
+              onClick={() => setActiveTab("overview")}
+              className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === "overview"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Overview</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("gigs")}
+              className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === "gigs"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-blue-500" />
+              <span>My Gigs ({user.recentApplications?.length || 0})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("photos")}
+              className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === "photos"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5 text-purple-500" />
+              <span>Photos ({photos.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("edit")}
+              className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === "edit"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Edit Details</span>
             </button>
           </div>
         </div>
 
-        {/* Profile Completeness Progress */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-5 h-5 text-red-600" />
-              <h2 className="text-base font-bold text-slate-900 uppercase tracking-wider">
-                Profile Completeness & Verification
-              </h2>
-            </div>
-            <span className="text-sm font-extrabold text-red-600">{completeness.percentage}% Completed</span>
-          </div>
-
-          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-            <div
-              className={`h-3 rounded-full transition-all duration-700 ${
-                completeness.percentage === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-red-500 to-red-600"
-              }`}
-              style={{ width: `${completeness.percentage}%` }}
-            ></div>
-          </div>
-
-          {allMissing.length > 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <span>
-                  Complete your profile to reach 100% and unlock event applications:{" "}
-                  <strong className="font-bold">{allMissing.join(", ")}</strong>
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-800 flex items-center space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span className="font-bold">Excellent! Your permanent profile is fully completed and ready for event allocations.</span>
-            </div>
-          )}
-        </div>
-
         {/* ---------------------------------------------------- */}
-        {/* PERMANENT STUDENT PHOTO GALLERY UPLOADER */}
+        {/* ACTIVE CONFIRMED GIG SPOTLIGHT (Top Priority Card) */}
         {/* ---------------------------------------------------- */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-            <div>
-              <h3 className="font-extrabold text-slate-900 uppercase tracking-wider text-base flex items-center gap-2">
-                <Camera className="w-5 h-5 text-red-600" />
-                Permanent Profile & Grooming Photos
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Upload clear, well-lit formal grooming photos and full-length attire photos. These are permanently stored in your account and visually evaluated by Topline operations managers.
-              </p>
-            </div>
+        {activeConfirmedGigs.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Active Event Assignments & Attendance
+            </h3>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={uploadingPhoto}
-                onClick={() => triggerPhotoUpload("FORMAL")}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5"
-              >
-                <UploadCloud className="w-4 h-4" />
-                Upload Formal Photo
-              </button>
-              <button
-                type="button"
-                disabled={uploadingPhoto}
-                onClick={() => triggerPhotoUpload("FULL_LENGTH")}
-                className="bg-slate-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5"
-              >
-                <UploadCloud className="w-4 h-4" />
-                Upload Full-Length
-              </button>
-            </div>
-          </div>
+            {activeConfirmedGigs.map((app: any) => {
+              const ev = app.event || {};
+              const isConfirmed = app.status === "CONFIRMED";
+              const isSelected = app.status === "SELECTED";
+              const isAttended = app.status === "ATTENDED";
 
-          {photos.length === 0 ? (
-            <div className="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center space-y-3 bg-slate-50">
-              <Camera className="w-12 h-12 text-slate-300 mx-auto" />
-              <p className="text-sm font-bold text-slate-700">No profile photos uploaded yet</p>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Having clear formal and full-length photos is mandatory to get selected for premium five-star catering events.
-              </p>
-              <button
-                type="button"
-                onClick={() => triggerPhotoUpload("FORMAL")}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-5 py-2 rounded-xl transition shadow-sm inline-flex items-center gap-2"
-              >
-                <Camera className="w-4 h-4" />
-                Upload First Photo
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {photos.map((photo) => (
+              return (
                 <div
-                  key={photo.id}
-                  className="relative aspect-3/4 rounded-2xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-sm"
+                  key={app.id}
+                  className={`rounded-3xl p-5 sm:p-6 border shadow-md transition ${
+                    isAttended
+                      ? "bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/80 border-emerald-300"
+                      : isConfirmed
+                      ? "bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white border-teal-500/50 shadow-xl"
+                      : "bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-amber-300"
+                  }`}
                 >
-                  <img
-                    src={photo.url}
-                    alt="Grooming"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = "none";
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Category Pill */}
-                  <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                    {photo.photoType}
-                  </div>
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                            isAttended
+                              ? "bg-emerald-600 text-white"
+                              : isConfirmed
+                              ? "bg-teal-500 text-slate-950 font-extrabold"
+                              : "bg-amber-500 text-white"
+                          }`}
+                        >
+                          {isAttended ? "🎉 Attended (Present)" : isConfirmed ? "✓ Confirmed Roster" : "✨ Selected (Awaiting RSVP)"}
+                        </span>
 
-                  {photo.isPrimary && (
-                    <div className="absolute top-2 right-2 bg-emerald-600 text-white p-1 rounded-full shadow" title="Primary Profile Photo">
-                      <Star className="w-3 h-3 fill-white" />
+                        {ev.reportingTime && (
+                          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                            isConfirmed ? "bg-white/10 text-teal-200" : "bg-white text-slate-700 border border-slate-200"
+                          }`}>
+                            ⏰ Report by {ev.reportingTime}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className={`text-base sm:text-lg font-black truncate ${isConfirmed ? "text-white" : "text-slate-900"}`}>
+                        {ev.name || "Topline Catering Event"}
+                      </h4>
+
+                      <div className={`flex items-center gap-3 text-xs font-medium flex-wrap ${isConfirmed ? "text-teal-200/90" : "text-slate-600"}`}>
+                        {ev.date && <span>📅 {new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>}
+                        {ev.location && <span>📍 {ev.location}</span>}
+                        {ev.paymentPerStudent && <span>💰 ₹{ev.paymentPerStudent}</span>}
+                      </div>
                     </div>
-                  )}
 
-                  {/* Hover Delete Action */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
-                    <button
-                      onClick={() => handleDeletePhoto(photo.id)}
-                      className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg transition"
-                      title="Delete Photo"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Action Buttons for Active Gigs */}
+                    <div className="flex items-center gap-2 w-full md:w-auto flex-wrap shrink-0">
+                      {/* CONFIRMED: Direct Attendance Scanner & WhatsApp */}
+                      {isConfirmed && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setScannerEvent({
+                                id: ev.id || app.eventId,
+                                name: ev.name,
+                                date: ev.date,
+                                location: ev.location,
+                                reportingTime: ev.reportingTime,
+                                attendanceToken: ev.attendanceToken,
+                                attendanceTokenEnabled: ev.attendanceTokenEnabled,
+                              })
+                            }
+                            className="flex-1 md:flex-initial bg-red-600 hover:bg-red-500 active:scale-95 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                          >
+                            <QrCode className="w-4 h-4" />
+                            <span>Mark Attendance (Scan QR)</span>
+                          </button>
+
+                          {ev.whatsappGroupLink && (
+                            <a
+                              href={ev.whatsappGroupLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-[#25D366] hover:bg-[#20bd5a] active:scale-95 text-white font-extrabold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md whitespace-nowrap"
+                            >
+                              <MessageCircle className="w-4 h-4 fill-white" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+                        </>
+                      )}
+
+                      {/* SELECTED: 1-Tap Confirm / Decline */}
+                      {isSelected && (
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                          <button
+                            onClick={() => handleRsvpAction(app.id, "CONFIRM")}
+                            disabled={rsvpLoadingId === app.id}
+                            className="flex-1 md:flex-initial bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {rsvpLoadingId === app.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-3" />}
+                            <span>Confirm Available</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRsvpAction(app.id, "DECLINE")}
+                            disabled={rsvpLoadingId === app.id}
+                            className="bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1 border border-slate-200 transition disabled:opacity-50 cursor-pointer"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>Decline</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* ATTENDED: Verified badge */}
+                      {isAttended && (
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 text-white shadow-2xs flex items-center gap-1">
+                            <ShieldCheck className="w-4 h-4" />
+                            <span>Attendance Verified ({app.attendance?.attendanceStatus || "PRESENT"})</span>
+                          </span>
+                          {ev.whatsappGroupLink && (
+                            <a
+                              href={ev.whatsappGroupLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-2xs transition"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* ---------------------------------------------------- */}
-        {/* EDIT PROFILE DETAILS & DYNAMIC ADMIN FIELDS */}
+        {/* TAB 1: OVERVIEW DASHBOARD */}
         {/* ---------------------------------------------------- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Main Info Form */}
-          <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        {activeTab === "overview" && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Gigs Applied</span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">{user.recentApplications?.length || 0}</span>
+                <span className="text-[11px] text-slate-500 mt-0.5 block">Lifetime applications</span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Confirmed / Attended</span>
+                <span className="text-xl font-black text-emerald-600 mt-1 block">
+                  {user.recentApplications?.filter((a: any) => a.status === "CONFIRMED" || a.status === "ATTENDED").length || 0}
+                </span>
+                <span className="text-[11px] text-emerald-700 mt-0.5 block">Verified duty slots</span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attire Photos</span>
+                <span className="text-xl font-black text-purple-600 mt-1 block">{photos.length}</span>
+                <span className="text-[11px] text-purple-700 mt-0.5 block">{photos.length >= 2 ? "✓ Verified photos" : "Upload formal & full"}</span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Payout UPI Handle</span>
+                <span className="text-xs font-mono font-bold text-slate-900 mt-1.5 block truncate">
+                  {formData.upiId || "Not set yet"}
+                </span>
+                <span className="text-[11px] text-slate-500 mt-0.5 block">{formData.upiId ? "✓ Direct settlement" : "⚠️ Add UPI in Edit"}</span>
+              </div>
+            </div>
+
+            {/* Profile Completeness Checklist Box */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-red-600" />
+                  Profile Completeness Checklist
+                </h3>
+                <span className="text-xs font-black text-red-600">{completeness.percentage}%</span>
+              </div>
+
+              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className={`h-2.5 rounded-full transition-all duration-700 ${
+                    completeness.percentage === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-red-500 to-red-600"
+                  }`}
+                  style={{ width: `${completeness.percentage}%` }}
+                ></div>
+              </div>
+
+              {allMissing.length > 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="font-bold block">Missing items to complete profile (100%):</span>
+                    <span className="text-[11px] text-amber-800">{allMissing.join(" • ")}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("edit")}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap"
+                  >
+                    Complete Now
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-bold">Excellent! Your permanent student profile is 100% complete and ready for event assignments.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Recent Gigs Summary List */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="font-extrabold text-slate-900 text-sm uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-red-600" />
+                  Recent Applications ({user.recentApplications?.length || 0})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("gigs")}
+                  className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View All Gigs</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {(!user.recentApplications || user.recentApplications.length === 0) ? (
+                <div className="text-center py-8 space-y-3">
+                  <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-slate-500 text-xs font-semibold">You have not applied for any event gigs yet.</p>
+                  <Link
+                    href="/events"
+                    className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition shadow-sm"
+                  >
+                    Browse Open Events
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {user.recentApplications.slice(0, 3).map((app: any) => (
+                    <div
+                      key={app.id}
+                      className="p-3.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl flex items-center justify-between gap-3 transition"
+                    >
+                      <div className="min-w-0">
+                        <Link href={`/events/${app.event?.id}`} className="font-extrabold text-slate-900 hover:text-red-600 text-xs sm:text-sm truncate block">
+                          {app.event?.name}
+                        </Link>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {app.event?.date ? new Date(app.event.date).toLocaleDateString("en-GB") : ""} • {app.event?.location}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase ${
+                            app.status === "ATTENDED"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              : app.status === "CONFIRMED"
+                              ? "bg-teal-100 text-teal-800 border border-teal-300"
+                              : app.status === "SELECTED"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-slate-200 text-slate-700"
+                          }`}
+                        >
+                          {app.status}
+                        </span>
+
+                        {app.status === "CONFIRMED" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setScannerEvent({
+                                id: app.event?.id || app.eventId,
+                                name: app.event?.name,
+                                date: app.event?.date,
+                                location: app.event?.location,
+                                reportingTime: app.event?.reportingTime,
+                                attendanceToken: app.event?.attendanceToken,
+                                attendanceTokenEnabled: app.event?.attendanceTokenEnabled,
+                              })
+                            }
+                            className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
+                            title="Scan Attendance QR"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB 2: MY GIGS & HISTORY */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "gigs" && (
+          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-5 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-red-600" />
+                  My Gigs & Applications History
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Track your application decisions, duty attendance status, and event earnings.
+                </p>
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {(["ALL", "CONFIRMED", "SELECTED", "ATTENDED", "APPLIED"] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setGigFilter(filter)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      gigFilter === filter
+                        ? "bg-slate-900 text-white shadow-2xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {filter === "ALL" ? "All" : filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredGigs.length === 0 ? (
+              <div className="text-center py-12 space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <Calendar className="w-12 h-12 text-slate-300 mx-auto" />
+                <p className="text-slate-700 font-bold text-sm">No applications matching {gigFilter !== "ALL" ? gigFilter : ""}</p>
+                <Link
+                  href="/events"
+                  className="inline-block bg-red-600 hover:bg-red-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm"
+                >
+                  Browse Available Gigs
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {filteredGigs.map((app: any) => {
+                  const ev = app.event || {};
+                  return (
+                    <div key={app.id} className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3 text-xs">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div>
+                          <Link href={`/events/${ev.id}`} className="font-black text-slate-900 hover:text-red-600 text-sm">
+                            {ev.name}
+                          </Link>
+                          <div className="flex items-center gap-2 text-slate-500 text-[11px] mt-0.5 flex-wrap">
+                            {ev.date && <span>📅 {new Date(ev.date).toLocaleDateString("en-GB")}</span>}
+                            {ev.location && <span>📍 {ev.location}</span>}
+                            {ev.reportingTime && <span>⏰ {ev.reportingTime}</span>}
+                            {ev.paymentPerStudent && <span className="font-bold text-slate-800">💰 ₹{ev.paymentPerStudent}</span>}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full ${
+                            app.status === "ATTENDED"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              : app.status === "CONFIRMED"
+                              ? "bg-teal-100 text-teal-800 border border-teal-300"
+                              : app.status === "SELECTED"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : app.status === "CANCELLED"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-slate-200 text-slate-700"
+                          }`}
+                        >
+                          {app.status === "ATTENDED"
+                            ? "🎉 Attended"
+                            : app.status === "CONFIRMED"
+                            ? "✅ Confirmed"
+                            : app.status === "CANCELLED"
+                            ? "❌ Declined"
+                            : app.status}
+                        </span>
+                      </div>
+
+                      {/* Action buttons inside Gig card */}
+                      {app.status === "CONFIRMED" && (
+                        <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-teal-800 font-bold text-[11px]">
+                            ✓ Ready for Duty. Scan QR code when you arrive at venue:
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setScannerEvent({
+                                  id: ev.id || app.eventId,
+                                  name: ev.name,
+                                  date: ev.date,
+                                  location: ev.location,
+                                  reportingTime: ev.reportingTime,
+                                  attendanceToken: ev.attendanceToken,
+                                  attendanceTokenEnabled: ev.attendanceTokenEnabled,
+                                })
+                              }
+                              className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow-sm transition cursor-pointer"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                              <span>Scan Attendance</span>
+                            </button>
+
+                            {ev.whatsappGroupLink && (
+                              <a
+                                href={ev.whatsappGroupLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow-2xs transition"
+                              >
+                                <MessageCircle className="w-3 h-3 fill-white" />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {app.status === "SELECTED" && (
+                        <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-emerald-800 font-bold text-[11px]">
+                            🎉 You were selected! Confirm your availability:
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleRsvpAction(app.id, "CONFIRM")}
+                              disabled={rsvpLoadingId === app.id}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
+                            >
+                              {rsvpLoadingId === app.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                              <span>I Am Available</span>
+                            </button>
+                            <button
+                              onClick={() => handleRsvpAction(app.id, "DECLINE")}
+                              disabled={rsvpLoadingId === app.id}
+                              className="bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {app.status === "ATTENDED" && (
+                        <div className="pt-1.5 border-t border-slate-200 flex items-center justify-between text-[11px] text-emerald-800 font-bold">
+                          <span>✓ Duty Completed & Recorded</span>
+                          {ev.whatsappGroupLink && (
+                            <a
+                              href={ev.whatsappGroupLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#25D366] hover:underline flex items-center gap-1 font-bold"
+                            >
+                              <span>WhatsApp Chat</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB 3: EDIT PROFILE DETAILS */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "edit" && (
+          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-6 animate-in fade-in duration-200">
             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <h3 className="font-extrabold text-slate-900 uppercase tracking-wider text-base">
-                Personal & Academic Information
-              </h3>
-              <span className="text-xs text-slate-400 font-mono">Permanent Profile</span>
+              <div>
+                <h3 className="font-black text-slate-900 uppercase tracking-wider text-base flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-red-600" />
+                  Edit Profile & Academic Details
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update your contact, university, physical attributes, and payout UPI handle.
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-5">
@@ -691,7 +1174,6 @@ export default function StudentProfilePage() {
                       <option value="CUSTOM">Custom / Other Format...</option>
                     </select>
 
-                    {/* Show manual input if non-standard or custom */}
                     {(!STANDARD_HEIGHT_OPTIONS.some((opt) => opt.value === formData.height) || formData.height === "CUSTOM") && (
                       <input
                         type="text"
@@ -706,7 +1188,6 @@ export default function StudentProfilePage() {
                       />
                     )}
 
-                    {/* Live Height Validation Feedback */}
                     {formData.height && (
                       <div className="text-[11px] font-semibold">
                         {isValidHeight(formData.height) ? (
@@ -715,7 +1196,7 @@ export default function StudentProfilePage() {
                           </span>
                         ) : (
                           <span className="text-rose-600 flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5" /> Invalid height (e.g. 5'10&quot; or 178 cm)
+                            <AlertCircle className="w-3.5 h-3.5" /> Invalid height format
                           </span>
                         )}
                       </div>
@@ -813,209 +1294,121 @@ export default function StudentProfilePage() {
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white font-bold px-8 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-sm flex items-center justify-center space-x-2"
-              >
-                <Save className="w-4 h-4" />
-                <span>{saving ? "Saving Changes..." : "Save Profile Details"}</span>
-              </button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white font-extrabold px-8 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? "Saving Changes..." : "Save Profile Details"}</span>
+                </button>
+              </div>
             </form>
           </div>
+        )}
 
-          {/* Right Column: Event History Overview */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <h3 className="font-extrabold text-slate-900 uppercase tracking-wider text-base">
-                Recent Gigs
-              </h3>
-              <span className="text-xs font-bold text-red-600 font-mono">
-                {user.recentApplications?.length || 0} Total
-              </span>
+        {/* ---------------------------------------------------- */}
+        {/* TAB 4: GROOMING PHOTOS */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "photos" && (
+          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-sm space-y-6 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="font-black text-slate-900 uppercase tracking-wider text-base flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-red-600" />
+                  Permanent Profile & Grooming Photos
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Upload clear, well-lit formal grooming photos and full-length attire photos.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={uploadingPhoto}
+                  onClick={() => triggerPhotoUpload("FORMAL")}
+                  className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Upload Formal Photo</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={uploadingPhoto}
+                  onClick={() => triggerPhotoUpload("FULL_LENGTH")}
+                  className="bg-slate-900 hover:bg-black text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Upload Full-Length</span>
+                </button>
+              </div>
             </div>
 
-            {(!user.recentApplications || user.recentApplications.length === 0) ? (
-              <div className="text-center py-8 space-y-3">
-                <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
-                <p className="text-slate-500 text-xs font-semibold">No event applications yet.</p>
-                <Link
-                  href="/events"
-                  className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition shadow-sm"
+            {photos.length === 0 ? (
+              <div className="p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center space-y-3 bg-slate-50">
+                <Camera className="w-12 h-12 text-slate-300 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">No profile photos uploaded yet</p>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Having clear formal and full-length photos is required to be selected for catering events.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => triggerPhotoUpload("FORMAL")}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-sm inline-flex items-center gap-2 cursor-pointer"
                 >
-                  Apply for Events
-                </Link>
+                  <Camera className="w-4 h-4" />
+                  <span>Upload First Photo</span>
+                </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {user.recentApplications.map((app: any) => (
-                  <div key={app.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <Link href={`/events/${app.event?.id}`} className="font-bold text-slate-900 hover:text-red-600 truncate">
-                        {app.event?.name}
-                      </Link>
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                        app.status === "ATTENDED"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold"
-                          : app.status === "CONFIRMED"
-                          ? "bg-teal-100 text-teal-800 border border-teal-200 font-bold"
-                          : app.status === "SELECTED"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold"
-                          : app.status === "NOT_SELECTED" || app.status === "REJECTED" || app.status === "CANCELLED"
-                          ? "bg-rose-100 text-rose-800 border border-rose-200"
-                          : "bg-slate-200 text-slate-700"
-                      }`}>
-                        {app.status === "ATTENDED"
-                          ? "🎉 Attended (Present)"
-                          : app.status === "CONFIRMED"
-                          ? "✅ Confirmed"
-                          : app.status === "CANCELLED"
-                          ? "❌ Declined"
-                          : app.status}
-                      </span>
-                    </div>
-                    <div className="text-slate-400 text-[11px]">
-                      {app.event?.date ? new Date(app.event.date).toLocaleDateString("en-GB") : ""} • {app.event?.location}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className="relative aspect-3/4 rounded-2xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-sm"
+                  >
+                    <img
+                      src={photo.url}
+                      alt="Grooming"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = "none";
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Category Pill */}
+                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                      {photo.photoType}
                     </div>
 
-                    {/* Banner when ATTENDED (Attendance Recorded) */}
-                    {app.status === "ATTENDED" && (
-                      <div className="pt-2 border-t border-slate-200 flex flex-col gap-2 bg-emerald-50/90 p-3 rounded-xl border border-emerald-300 shadow-2xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center font-extrabold text-sm shrink-0 border border-emerald-400">
-                              ✓
-                            </div>
-                            <div>
-                              <span className="text-emerald-950 font-black text-xs block flex items-center gap-1">
-                                🎉 Attendance Recorded: {app.attendance?.attendanceStatus || "PRESENT"}
-                              </span>
-                              <span className="text-emerald-800 text-[11px] font-medium">
-                                Checked in at {app.attendance?.checkInTime ? new Date(app.attendance.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }) : "Gate Desk"}
-                              </span>
-                            </div>
-                          </div>
-
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white shadow-2xs flex items-center gap-1">
-                            <ShieldCheck className="w-3.5 h-3.5" /> Verified On Duty
-                          </span>
-                        </div>
-
-                        {app.event?.whatsappGroupLink && (
-                          <div className="pt-1.5 border-t border-emerald-200/70 flex items-center justify-between">
-                            <span className="text-[10px] text-emerald-800 font-semibold">Event official chat:</span>
-                            <a
-                              href={app.event.whatsappGroupLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition whitespace-nowrap"
-                            >
-                              <MessageCircle className="w-3 h-3 fill-white" />
-                              <span>Open WhatsApp</span>
-                            </a>
-                          </div>
-                        )}
+                    {photo.isPrimary && (
+                      <div className="absolute top-2 right-2 bg-emerald-600 text-white p-1 rounded-full shadow" title="Primary Profile Photo">
+                        <Star className="w-3 h-3 fill-white" />
                       </div>
                     )}
 
-                    {/* Action banner when SELECTED (Awaiting Response) */}
-                    {app.status === "SELECTED" && (
-                      <div className="pt-2 border-t border-slate-200 flex flex-col gap-2.5 bg-emerald-50/80 p-3 rounded-xl border border-emerald-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-emerald-900 font-black text-xs block">🎉 Selected for Event Duty!</span>
-                            <span className="text-emerald-700 text-[11px]">Are you available to attend this assignment? Confirm to unlock attendance check-in.</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <button
-                            onClick={() => handleRsvpAction(app.id, "CONFIRM")}
-                            disabled={rsvpLoadingId === app.id}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition disabled:opacity-50 cursor-pointer"
-                          >
-                            {rsvpLoadingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-3" />}
-                            <span>✅ YES, I AM AVAILABLE</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleRsvpAction(app.id, "DECLINE")}
-                            disabled={rsvpLoadingId === app.id}
-                            className="bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 transition disabled:opacity-50 cursor-pointer"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>❌ NO (Decline)</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Banner when CONFIRMED (Attendance Ready + Mark Attendance Button) */}
-                    {app.status === "CONFIRMED" && (
-                      <div className="pt-2 border-t border-slate-200 flex flex-col gap-2.5 bg-teal-50/90 p-3 rounded-xl border border-teal-200 shadow-2xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div>
-                            <span className="text-teal-900 font-extrabold text-xs flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 inline" /> Duty Confirmed & Roster Locked
-                            </span>
-                            <span className="text-teal-700 text-[11px]">You are confirmed on this roster. Scan coordinator&apos;s QR code upon arrival:</span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setScannerEvent({
-                              id: app.event?.id || app.eventId,
-                              name: app.event?.name,
-                              date: app.event?.date,
-                              location: app.event?.location,
-                              reportingTime: app.event?.reportingTime,
-                              attendanceToken: app.event?.attendanceToken,
-                              attendanceTokenEnabled: app.event?.attendanceTokenEnabled,
-                            })}
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition whitespace-nowrap cursor-pointer active:scale-95"
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            <span>📷 Mark Attendance</span>
-                          </button>
-                        </div>
-
-                        {/* WhatsApp Group Link */}
-                        <div className="pt-1.5 border-t border-teal-200/60 flex items-center justify-between">
-                          <span className="text-[10px] text-teal-800 font-semibold">Live duty coordination chat:</span>
-                          {app.event?.whatsappGroupLink ? (
-                            <a
-                              href={app.event.whatsappGroupLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition whitespace-nowrap"
-                            >
-                              <MessageCircle className="w-3 h-3 fill-white" />
-                              <span>📲 Join WhatsApp Group</span>
-                            </a>
-                          ) : (
-                            <span className="text-slate-400 text-[10px] italic">WhatsApp group link pending coordinator update</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Banner when CANCELLED / DECLINED */}
-                    {app.status === "CANCELLED" && (
-                      <div className="pt-2 border-t border-slate-200 flex items-center justify-between bg-rose-50 p-2.5 rounded-lg border border-rose-200">
-                        <span className="text-rose-800 text-[11px] font-semibold flex items-center gap-1">
-                          <XCircle className="w-3.5 h-3.5 text-rose-500 inline" /> Duty Assignment Permanently Declined
-                        </span>
-                        <span className="text-[10px] text-rose-600 italic">Slot released</span>
-                      </div>
-                    )}
+                    {/* Delete Action */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
+                      <button
+                        onClick={() => handleDeletePhoto(photo.id)}
+                        className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg transition active:scale-95 cursor-pointer"
+                        title="Delete Photo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Student Attendance Camera QR Scanner Modal */}
+        {/* ---------------------------------------------------- */}
+        {/* ATTENDANCE CAMERA QR SCANNER MODAL */}
+        {/* ---------------------------------------------------- */}
         {scannerEvent && (
           <StudentAttendanceScannerModal
             isOpen={!!scannerEvent}
