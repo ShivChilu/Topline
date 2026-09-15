@@ -42,5 +42,6 @@ next-env.d.ts
 
 # scratch & uploads
 scratch/
+*.sql
 /public/uploads/*
 !/public/uploads/.gitkeep
