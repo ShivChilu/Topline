@@ -314,6 +314,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     customMessage?: string;
     customInstructions?: string;
     notes?: string;
+    confirmationDeadline?: string;
   }) => {
     if (selectionTargetApps.length === 0) return;
     const targetIds = selectionTargetApps.map((a) => a._id || a.id);
@@ -331,6 +332,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           customMessage: payload.customMessage,
           customInstructions: payload.customInstructions,
           notes: payload.notes,
+          confirmationDeadline: payload.confirmationDeadline,
         }),
       });
 

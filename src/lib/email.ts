@@ -27,6 +27,7 @@ export interface EventEmailPayload {
   templateName?: string | null;
   customSubject?: string | null;
   customMessage?: string | null;
+  confirmationDeadline?: string | null;
 }
 
 export function getAppBaseUrl(): string {
@@ -383,6 +384,7 @@ export async function sendEventSelectionEmail({
   templateName = "Event Selection & WhatsApp Group Invite",
   customSubject,
   customMessage,
+  confirmationDeadline,
 }: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!email) {
@@ -401,6 +403,8 @@ export async function sendEventSelectionEmail({
       reportingTime: reportingTime || "As scheduled",
       instructions: instructions || "",
       notes: notes || "",
+      confirmationDeadline: confirmationDeadline || "Immediately upon receipt",
+      deadline: confirmationDeadline || "Immediately upon receipt",
     };
 
     const replacePlaceholders = (text: string) => {
@@ -419,7 +423,7 @@ export async function sendEventSelectionEmail({
     }
 
     let renderedIntroHtml = `
-      <p style="color: #d1d5db; line-height: 1.6;">
+      <p style="color: #d1d5db; line-height: 1.6; margin-top: 6px;">
         You have been shortlisted and <strong>SELECTED</strong> for the upcoming event duty assignment:
       </p>
     `;
@@ -445,7 +449,7 @@ export async function sendEventSelectionEmail({
       eventId,
       templateName,
       subject,
-      bodyPreview: `Selected for ${eventName} (${formattedDate || "Upcoming"}). Availability confirmation required.`,
+      bodyPreview: `Selected for ${eventName} (${formattedDate || "Upcoming"}). Availability confirmation required${confirmationDeadline ? ` before ${confirmationDeadline}` : ""}.`,
     });
 
     const confirmUrl = getTrackedUrl("CONFIRM_YES", rawConfirmUrl);
@@ -470,8 +474,8 @@ export async function sendEventSelectionEmail({
         .label { color: #9ca3af; font-weight: 500; }
         .value { color: #ffffff; font-weight: 600; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
-        .btn-confirm { display: inline-block; background: #059669; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 15px; margin: 6px 4px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4); }
-        .btn-decline { display: inline-block; background: #374151; color: #f87171 !important; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: 700; font-size: 13px; margin: 6px 4px; border: 1px solid #4b5563; }
+        .btn-confirm { display: inline-block; background: #059669; color: #ffffff !important; text-decoration: none; padding: 16px 28px; border-radius: 8px; font-weight: 800; font-size: 16px; margin: 6px 4px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4); text-align: center; }
+        .btn-decline { display: inline-block; background: #374151; color: #f87171 !important; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: 700; font-size: 13px; margin: 6px 4px; border: 1px solid #4b5563; text-align: center; }
         .btn-portal { display: inline-block; background: #ED0000; color: #ffffff !important; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; margin-top: 16px; }
       </style>
     </head>
@@ -482,10 +486,39 @@ export async function sendEventSelectionEmail({
         </div>
         <div class="content">
           <div class="badge">✓ SELECTED FOR EVENT DUTY</div>
-          <h2 style="color: #ffffff; margin-top: 0;">Congratulations, ${studentName}!</h2>
+          <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 12px;">Congratulations, ${studentName}!</h2>
           
           ${renderedIntroHtml}
 
+          <!-- PRIMARY TOP CONFIRMATION & RSVP ACTION BOX -->
+          <div style="background: #0f172a; border: 2px solid #3b82f6; border-radius: 12px; padding: 22px; text-align: center; margin: 20px 0 24px 0; box-shadow: 0 8px 20px rgba(0,0,0,0.3);">
+            ${
+              confirmationDeadline
+                ? `
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 800; margin-bottom: 14px; display: inline-block; letter-spacing: 0.5px;">
+              ⏰ CONFIRMATION DEADLINE: <span style="color: #ffffff; text-decoration: underline;">${confirmationDeadline}</span>
+            </div>
+            `
+                : ""
+            }
+            <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">⚡ Confirm Your Attendance Now</div>
+            <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 16px 0; line-height: 1.5;">
+              Click below to confirm your slot on the official duty roster and immediately unlock the <strong>WhatsApp Group Link</strong> for briefing.
+            </p>
+
+            <div style="margin: 12px 0;">
+              <a href="${confirmUrl}" class="btn-confirm" target="_blank" style="display: block; color: #ffffff;">
+                ✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)
+              </a>
+            </div>
+            <div style="margin-top: 10px;">
+              <a href="${declineUrl}" class="btn-decline" target="_blank" style="display: block; color: #f87171;">
+                ❌ NO, NOT AVAILABLE (Decline & Release Slot)
+              </a>
+            </div>
+          </div>
+
+          <!-- EVENT DETAILS CARD -->
           <div class="card">
             <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Event Assignment Details</div>
             <div class="row"><span class="label">Event Name:</span> <span class="value">${eventName}</span></div>
@@ -493,25 +526,6 @@ export async function sendEventSelectionEmail({
             ${eventLocation ? `<div class="row"><span class="label">Location / Venue:</span> <span class="value">${eventLocation}</span></div>` : ""}
             ${reportingTime ? `<div class="row"><span class="label">Reporting Time:</span> <span class="value">${reportingTime}</span></div>` : ""}
             <div class="row"><span class="label">Selection Status:</span> <span class="value" style="color: #10b981;">Selected (Awaiting RSVP)</span></div>
-          </div>
-
-          <!-- AVAILABILITY RSVP ACTION BOX -->
-          <div style="background: #0f172a; border: 2px solid #3b82f6; border-radius: 12px; padding: 24px; text-align: center; margin: 26px 0;">
-            <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">⚡ Are you available to attend this duty?</div>
-            <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 18px 0; line-height: 1.5;">
-              Please confirm your availability immediately. Selecting <strong>YES</strong> confirms your slot on the duty roster and unlocks the <strong>Official WhatsApp Group link</strong> for briefing updates.
-            </p>
-
-            <div style="margin: 12px 0;">
-              <a href="${confirmUrl}" class="btn-confirm" target="_blank">
-                ✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)
-              </a>
-            </div>
-            <div style="margin-top: 8px;">
-              <a href="${declineUrl}" class="btn-decline" target="_blank">
-                ❌ NO, NOT AVAILABLE (Decline & Release Slot)
-              </a>
-            </div>
           </div>
 
           ${instructions ? `<div style="background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 8px; font-size: 13px; color: #cbd5e1; margin: 16px 0;"><strong>Instructions:</strong> ${instructions}</div>` : ""}
@@ -879,6 +893,152 @@ export async function sendAdminCredentialsEmail({
     });
   } catch (error: any) {
     console.error("Failed to send admin credentials email:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+export interface AdminEventAssignmentPayload {
+  adminName: string;
+  email: string;
+  eventName: string;
+  eventDate?: string | Date | null;
+  eventLocation?: string | null;
+  reportingTime?: string | null;
+  workType?: string | null;
+  workersRequired?: number | null;
+  paymentPerStudent?: number | null;
+  instructions?: string | null;
+  whatsappGroupLink?: string | null;
+  assignedByAdminName?: string | null;
+}
+
+/**
+ * Dispatches notification email to Event Admins when an event is assigned to them.
+ */
+export async function sendAdminEventAssignmentEmail({
+  adminName,
+  email,
+  eventName,
+  eventDate,
+  eventLocation,
+  reportingTime,
+  workType,
+  workersRequired,
+  paymentPerStudent,
+  instructions,
+  whatsappGroupLink,
+  assignedByAdminName,
+}: AdminEventAssignmentPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email address provided for event admin assignment." };
+    }
+
+    const formattedDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "Upcoming";
+
+    const subject = `🎯 New Event Assigned: ${eventName} — Topline ODC`;
+    const loginUrl = `${getAppBaseUrl()}/admin/login`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: adminName,
+      templateName: "Admin Event Assignment Notice",
+      subject,
+      bodyPreview: `You have been assigned as Event Admin for ${eventName} (${formattedDate}).`,
+    });
+
+    const trackedLoginUrl = getTrackedUrl("ADMIN_LOGIN_CLICK", loginUrl);
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
+        .header { background: #ED0000; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 32px 24px; }
+        .badge { display: inline-block; background: #3b82f6; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
+        .card { background: #1f2937; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3b82f6; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .row:last-child { margin-bottom: 0; }
+        .label { color: #9ca3af; font-weight: 500; }
+        .value { color: #ffffff; font-weight: 600; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 800; font-size: 15px; margin-top: 20px; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE ODC</h1>
+        </div>
+        <div class="content">
+          <div class="badge">🎯 NEW EVENT ASSIGNED</div>
+          <h2 style="color: #ffffff; margin-top: 0;">Hello, ${adminName}!</h2>
+          <p style="color: #d1d5db; line-height: 1.6;">
+            You have been assigned as the <strong>Event Admin</strong> for the upcoming event duty assignment${
+              assignedByAdminName ? ` by ${assignedByAdminName}` : ""
+            }.
+          </p>
+
+          <div class="card">
+            <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Event Assignment Details</div>
+            <div class="row"><span class="label">Event Name:</span> <span class="value">${eventName}</span></div>
+            <div class="row"><span class="label">Event Date:</span> <span class="value">${formattedDate}</span></div>
+            ${eventLocation ? `<div class="row"><span class="label">Location / Venue:</span> <span class="value">${eventLocation}</span></div>` : ""}
+            ${reportingTime ? `<div class="row"><span class="label">Reporting Time:</span> <span class="value">${reportingTime}</span></div>` : ""}
+            ${workType ? `<div class="row"><span class="label">Work Type:</span> <span class="value">${workType}</span></div>` : ""}
+            ${workersRequired ? `<div class="row"><span class="label">Workers Required:</span> <span class="value">${workersRequired}</span></div>` : ""}
+            ${paymentPerStudent ? `<div class="row"><span class="label">Payout / Student:</span> <span class="value">₹${paymentPerStudent}</span></div>` : ""}
+          </div>
+
+          ${
+            instructions
+              ? `<div style="background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 8px; font-size: 13px; color: #cbd5e1; margin: 16px 0;"><strong>Coordinator Instructions:</strong> ${instructions}</div>`
+              : ""
+          }
+
+          ${
+            whatsappGroupLink
+              ? `<div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 12px 16px; border-radius: 8px; font-size: 13px; color: #6ee7b7; margin: 16px 0;"><strong>Official WhatsApp Group:</strong> <a href="${whatsappGroupLink}" style="color: #34d399; font-weight: bold; text-decoration: underline;" target="_blank">Join Group</a></div>`
+              : ""
+          }
+
+          <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin-top: 20px;">
+            Please log in to your Admin Portal to manage student candidate selection, track duty RSVP availability, and monitor live attendance check-ins.
+          </p>
+
+          <div style="text-align: center; margin-top: 24px;">
+            <a href="${trackedLoginUrl}" class="btn" style="color: #ffffff;">Open Admin Portal</a>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
+          This is an official administrative system dispatch.
+        </div>
+      </div>
+      ${getTrackingPixelHtml()}
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: email,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send admin event assignment email:", error);
     return { success: false, message: error.message };
   }
 }

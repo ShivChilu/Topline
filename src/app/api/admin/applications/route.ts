@@ -366,6 +366,7 @@ export async function PATCH(request: Request) {
       customSubject,
       customMessage,
       customInstructions,
+      confirmationDeadline,
     } = await request.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -521,6 +522,7 @@ export async function PATCH(request: Request) {
               notes,
               customSubject,
               customMessage,
+              confirmationDeadline,
               whatsappGroupLink: app.event.whatsappGroupLink || undefined,
               applicationId: app.id,
               userId: app.userId,

@@ -66,9 +66,20 @@ const PLACEHOLDER_TAGS = [
   { tag: "{{eventDate}}", label: "Date", example: "Saturday, 12 Oct 2026" },
   { tag: "{{reportingTime}}", label: "Reporting Time", example: "04:30 PM" },
   { tag: "{{eventLocation}}", label: "Location", example: "Radisson Blu, Jalandhar" },
+  { tag: "{{confirmationDeadline}}", label: "Deadline", example: "Today before 8:00 PM" },
+  { tag: "{{deadline}}", label: "Deadline (Short)", example: "Today before 8:00 PM" },
   { tag: "{{registrationNumber}}", label: "Reg No", example: "2023CSE1042" },
   { tag: "{{university}}", label: "University", example: "SRM University" },
   { tag: "{{phone}}", label: "Phone", example: "9876543210" },
+];
+
+const DEADLINE_PRESETS = [
+  "Today before 8:00 PM",
+  "Within 2 Hours",
+  "Within 1 Hour",
+  "Tomorrow 12:00 PM",
+  "Before 10:00 PM Tonight",
+  "Within 30 Minutes",
 ];
 
 interface SelectionEmailReviewModalProps {
@@ -84,6 +95,7 @@ interface SelectionEmailReviewModalProps {
     customMessage?: string;
     customInstructions?: string;
     notes?: string;
+    confirmationDeadline?: string;
   }) => Promise<void>;
   isProcessing?: boolean;
 }
@@ -105,14 +117,16 @@ export default function SelectionEmailReviewModal({
   const [messageBody, setMessageBody] = useState<string>(
     "You have been shortlisted and SELECTED for the upcoming event duty assignment.\n\nPlease review your assignment details below and confirm your availability immediately to secure your slot on the duty roster."
   );
+  const [confirmationDeadline, setConfirmationDeadline] = useState<string>("Today before 8:00 PM");
   const [instructions, setInstructions] = useState<string>(event?.instructions || "");
   const [notes, setNotes] = useState<string>(defaultCallingNote || "");
 
   // Active focus tracking for tag injection
-  const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body" | "instructions" | "notes">("body");
+  const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body" | "instructions" | "notes" | "deadline">("body");
 
   const subjectInputRef = useRef<HTMLInputElement | null>(null);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const deadlineInputRef = useRef<HTMLInputElement | null>(null);
   const instructionsTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const notesInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -168,6 +182,8 @@ export default function SelectionEmailReviewModal({
       eventDate: formattedEventDate,
       eventLocation: event?.location || "To be communicated",
       reportingTime: event?.reportingTime || "As scheduled",
+      confirmationDeadline: confirmationDeadline || "Immediately upon receipt",
+      deadline: confirmationDeadline || "Immediately upon receipt",
       registrationNumber: sampleRegNo,
       regNo: sampleRegNo,
       university: sampleUniversity,
@@ -212,6 +228,20 @@ export default function SelectionEmailReviewModal({
       setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(start + tag.length, start + tag.length);
+      }, 0);
+    } else if (lastFocusedField === "deadline") {
+      const input = deadlineInputRef.current;
+      if (!input) {
+        setConfirmationDeadline((prev: string) => (prev ? prev + " " + tag : tag));
+        return;
+      }
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const val = confirmationDeadline;
+      setConfirmationDeadline(val.substring(0, start) + tag + val.substring(end));
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + tag.length, start + tag.length);
       }, 0);
     } else if (lastFocusedField === "instructions") {
       const textarea = instructionsTextareaRef.current;
@@ -261,6 +291,7 @@ export default function SelectionEmailReviewModal({
           applicationIds: [currentPreviewApp._id || currentPreviewApp.id],
           subject: subject,
           message: messageBody,
+          confirmationDeadline: confirmationDeadline,
           sendTestCopy: true,
           sendTestToAdmin: true,
           templateName: "Event Selection Email (Admin Test Copy)",
@@ -417,6 +448,30 @@ export default function SelectionEmailReviewModal({
                       ))}
                   </div>
 
+                  {/* PRIMARY TOP AVAILABILITY RSVP ACTION BOX */}
+                  <div className="bg-slate-900/90 border-2 border-blue-500/80 rounded-2xl p-5 text-center space-y-3 shadow-lg my-4">
+                    {confirmationDeadline && confirmationDeadline.trim() && (
+                      <div className="inline-block bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-black px-3.5 py-1.5 rounded-lg tracking-wide shadow-xs">
+                        ⏰ CONFIRMATION DEADLINE: <span className="text-white underline">{interpolate(confirmationDeadline)}</span>
+                      </div>
+                    )}
+                    <div className="text-base font-extrabold text-white flex items-center justify-center gap-1.5">
+                      <span>⚡ Confirm Your Attendance Now</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed m-0">
+                      Click below to confirm your slot on the official duty roster and immediately unlock the <strong>WhatsApp Group Link</strong> for briefing updates.
+                    </p>
+
+                    <div className="space-y-2 pt-2">
+                      <div className="w-full bg-emerald-600 text-white font-extrabold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md border border-emerald-400/50 flex items-center justify-center gap-2 cursor-default">
+                        <span>✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)</span>
+                      </div>
+                      <div className="w-full bg-slate-800 text-rose-400 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 cursor-default">
+                        <span>❌ NO, NOT AVAILABLE (Decline & Release Slot)</span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Event Details Card */}
                   <div className="bg-slate-900 border-l-4 border-[#ED0000] rounded-xl p-4 space-y-2.5 text-xs">
                     <div className="font-bold text-slate-400 uppercase text-[11px] tracking-wider mb-2">
@@ -441,25 +496,6 @@ export default function SelectionEmailReviewModal({
                     <div className="flex justify-between pt-0.5">
                       <span className="text-slate-400">Selection Status:</span>
                       <span className="font-bold text-emerald-400">Selected (Awaiting RSVP)</span>
-                    </div>
-                  </div>
-
-                  {/* AVAILABILITY RSVP ACTION BOX */}
-                  <div className="bg-slate-900/90 border-2 border-blue-500/80 rounded-2xl p-5 text-center space-y-3 shadow-lg">
-                    <div className="text-base font-extrabold text-white flex items-center justify-center gap-1.5">
-                      <span>⚡ Are you available to attend this duty?</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed m-0">
-                      Please confirm your availability immediately. Selecting <strong>YES</strong> confirms your slot on the duty roster and unlocks the <strong>Official WhatsApp Group link</strong> for briefing updates.
-                    </p>
-
-                    <div className="space-y-2 pt-2">
-                      <div className="w-full bg-emerald-600 text-white font-extrabold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md border border-emerald-400/50 flex items-center justify-center gap-2 cursor-default">
-                        <span>✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)</span>
-                      </div>
-                      <div className="w-full bg-slate-800 text-rose-400 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 cursor-default">
-                        <span>❌ NO, NOT AVAILABLE (Decline & Release Slot)</span>
-                      </div>
                     </div>
                   </div>
 
@@ -525,6 +561,53 @@ export default function SelectionEmailReviewModal({
                       <span className="text-slate-500 text-[10.5px]">({tagItem.label})</span>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Confirmation Deadline Input & Preset Chips */}
+              <div className="bg-white border-2 border-rose-100 p-4 rounded-2xl space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-extrabold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>⏰ Confirmation Deadline (RSVP Expiry Alert)</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    Appears as a prominent top badge in the candidate email
+                  </span>
+                </div>
+                <input
+                  ref={deadlineInputRef}
+                  type="text"
+                  value={confirmationDeadline}
+                  onFocus={() => setLastFocusedField("deadline")}
+                  onChange={(e) => setConfirmationDeadline(e.target.value)}
+                  placeholder="e.g. Today before 8:00 PM, Within 2 Hours, Tomorrow 12:00 PM"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[11px] font-semibold text-slate-400">Quick presets:</span>
+                  {DEADLINE_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setConfirmationDeadline(preset)}
+                      className={`text-xs px-2.5 py-1 rounded-lg font-bold transition border ${
+                        confirmationDeadline === preset
+                          ? "bg-rose-600 text-white border-rose-600 shadow-2xs"
+                          : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300"
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                  {confirmationDeadline && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmationDeadline("")}
+                      className="text-xs px-2 py-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 font-semibold transition"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -684,6 +767,7 @@ export default function SelectionEmailReviewModal({
                   customMessage: messageBody,
                   customInstructions: instructions,
                   notes: notes,
+                  confirmationDeadline: confirmationDeadline.trim() || undefined,
                 })
               }
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-800 bg-slate-200 hover:bg-slate-300 transition disabled:opacity-50 cursor-pointer"
@@ -702,6 +786,7 @@ export default function SelectionEmailReviewModal({
                   customMessage: messageBody,
                   customInstructions: instructions,
                   notes: notes,
+                  confirmationDeadline: confirmationDeadline.trim() || undefined,
                 })
               }
               className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 transition shadow-md flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"

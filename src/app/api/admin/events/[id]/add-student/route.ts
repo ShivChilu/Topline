@@ -46,6 +46,10 @@ export async function POST(
       status = "SELECTED",
       remarks = "",
       sendEmailNotification = false,
+      confirmationDeadline,
+      customSubject,
+      customMessage,
+      customInstructions,
     } = body;
 
     if (!studentId) {
@@ -282,8 +286,11 @@ export async function POST(
           eventDate: event.date,
           eventLocation: event.location,
           reportingTime: event.reportingTime || "",
-          instructions: event.instructions || undefined,
+          instructions: customInstructions !== undefined ? customInstructions : event.instructions || undefined,
           notes: remarks.trim() || undefined,
+          customSubject,
+          customMessage,
+          confirmationDeadline,
           whatsappGroupLink: event.whatsappGroupLink || undefined,
           applicationId: application.id,
           userId: student.id,

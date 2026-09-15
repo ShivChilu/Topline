@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { Role } from "@prisma/client";
-import { sendAdminCredentialsEmail } from "@/lib/email";
+import { sendAdminCredentialsEmail, sendAdminEventAssignmentEmail } from "@/lib/email";
 
 async function getLoggedInAdmin() {
   const cookieStore = await cookies();
@@ -136,9 +136,28 @@ export async function POST(request: Request) {
 
       const eventsData = await prisma.event.findMany({
         where: { id: { in: assignedEvents } },
-        select: { name: true },
       });
       assignedEventNames = eventsData.map((e) => e.name);
+
+      // Dispatch event assignment emails to the admin
+      if (cleanEmail && (roleEnum === Role.EVENT_ADMIN || roleEnum === Role.CALLING_ADMIN)) {
+        for (const ev of eventsData) {
+          sendAdminEventAssignmentEmail({
+            adminName: newAdmin.name,
+            email: cleanEmail,
+            eventName: ev.name,
+            eventDate: ev.date,
+            eventLocation: ev.location,
+            reportingTime: ev.reportingTime,
+            workType: ev.workType,
+            workersRequired: ev.workersRequired,
+            paymentPerStudent: ev.paymentPerStudent,
+            instructions: ev.instructions,
+            whatsappGroupLink: ev.whatsappGroupLink,
+            assignedByAdminName: currentAdmin.name || currentAdmin.username,
+          }).catch((err) => console.error("Admin event assignment email dispatch error:", err));
+        }
+      }
     }
 
     // Automatically send login credentials to admin's email if provided
@@ -231,7 +250,16 @@ export async function PATCH(request: Request) {
       });
 
       let assignedEventNames: string[] = [];
+      let newlyAssignedEvents: any[] = [];
+
       if (Array.isArray(assignedEvents)) {
+        const existingAssignments = await prisma.adminAssignedEvent.findMany({
+          where: { adminId },
+          select: { eventId: true },
+        });
+        const existingIds = existingAssignments.map((a) => a.eventId);
+        const newlyAssignedIds = assignedEvents.filter((id: string) => !existingIds.includes(id));
+
         await prisma.adminAssignedEvent.deleteMany({ where: { adminId } });
         if (assignedEvents.length > 0) {
           await prisma.adminAssignedEvent.createMany({
@@ -244,9 +272,33 @@ export async function PATCH(request: Request) {
 
           const eventsData = await prisma.event.findMany({
             where: { id: { in: assignedEvents } },
-            select: { name: true },
           });
           assignedEventNames = eventsData.map((e) => e.name);
+          newlyAssignedEvents = eventsData.filter((e) => newlyAssignedIds.includes(e.id));
+        }
+      }
+
+      // Send event assignment email to the admin for newly assigned events
+      if (
+        updatedUser.email &&
+        (updatedUser.role === Role.EVENT_ADMIN || updatedUser.role === Role.CALLING_ADMIN) &&
+        newlyAssignedEvents.length > 0
+      ) {
+        for (const ev of newlyAssignedEvents) {
+          sendAdminEventAssignmentEmail({
+            adminName: updatedUser.name || updatedUser.username,
+            email: updatedUser.email,
+            eventName: ev.name,
+            eventDate: ev.date,
+            eventLocation: ev.location,
+            reportingTime: ev.reportingTime,
+            workType: ev.workType,
+            workersRequired: ev.workersRequired,
+            paymentPerStudent: ev.paymentPerStudent,
+            instructions: ev.instructions,
+            whatsappGroupLink: ev.whatsappGroupLink,
+            assignedByAdminName: currentAdmin.name || currentAdmin.username,
+          }).catch((err) => console.error("Admin event assignment email dispatch error:", err));
         }
       }
 
