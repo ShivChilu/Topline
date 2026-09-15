@@ -44,7 +44,13 @@ export default async function GalleryPage() {
     }
   ];
 
-  const displayImages = images.length > 0 ? images : fallbackImages;
+  const displayImages =
+    images.length > 0
+      ? images.map((img: any) => ({
+          ...img,
+          imageUrl: img.imageUrl?.startsWith("data:") ? `/api/photos/gallery?id=${img.id}` : img.imageUrl,
+        }))
+      : fallbackImages;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">

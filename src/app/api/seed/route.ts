@@ -2,8 +2,36 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
   try {
+    // 0. Security Guard: Strictly disable in production unless explicitly enabled via environment variable
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_PROD_SEED !== "true") {
+      return NextResponse.json(
+        { success: false, message: "Database seeding is strictly disabled in production environments." },
+        { status: 403 }
+      );
+    }
+
+    // Require SEED_SECRET if configured in environment
+    const authHeader = request.headers.get("x-seed-secret");
+    const expectedSecret = process.env.SEED_SECRET;
+
+    if (expectedSecret && authHeader !== expectedSecret) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized: Invalid or missing x-seed-secret header." },
+        { status: 401 }
+      );
+    }
+
+    if (!expectedSecret && process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { success: false, message: "Database seeding is disabled in production." },
+        { status: 403 }
+      );
+    }
+
     // 1. Clear existing database for a clean demo slate
     await prisma.attendance.deleteMany({});
     await prisma.applicationFieldResponse.deleteMany({});

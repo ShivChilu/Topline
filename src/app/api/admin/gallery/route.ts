@@ -6,7 +6,15 @@ export async function GET() {
     const images = await prisma.gallery.findMany({
       orderBy: { createdAt: "desc" },
     });
-    const formatted = images.map((img) => ({ ...img, _id: img.id }));
+    const formatted = images.map((img) => ({
+      id: img.id,
+      _id: img.id,
+      caption: img.caption,
+      category: img.category,
+      published: img.published,
+      createdAt: img.createdAt,
+      imageUrl: img.imageUrl.startsWith("data:") ? `/api/photos/gallery?id=${img.id}` : img.imageUrl,
+    }));
     return NextResponse.json({ success: true, images: formatted });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

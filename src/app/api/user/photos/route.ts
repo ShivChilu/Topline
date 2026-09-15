@@ -28,7 +28,17 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ success: true, photos });
+    const formattedPhotos = photos.map((p) => ({
+      id: p.id,
+      userId: p.userId,
+      photoType: p.photoType,
+      caption: p.caption,
+      isPrimary: p.isPrimary,
+      createdAt: p.createdAt,
+      url: `/api/photos/student?photoId=${p.id}`,
+    }));
+
+    return NextResponse.json({ success: true, photos: formattedPhotos });
   } catch (error: any) {
     console.error("Fetch student photos error:", error);
     return NextResponse.json({ success: false, message: "Failed to fetch photos." }, { status: 500 });
@@ -89,7 +99,15 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Photo uploaded and saved to your profile!",
-      photo,
+      photo: {
+        id: photo.id,
+        userId: photo.userId,
+        photoType: photo.photoType,
+        caption: photo.caption,
+        isPrimary: photo.isPrimary,
+        createdAt: photo.createdAt,
+        url: `/api/photos/student?photoId=${photo.id}`,
+      },
     });
   } catch (error: any) {
     console.error("Save student photo error:", error);

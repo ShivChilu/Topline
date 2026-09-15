@@ -57,7 +57,14 @@ export async function GET(
         status: { in: ["APPLIED", "SELECTED", "CONFIRMED", "ATTENDED", "PAID"] },
       },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            registrationNumber: true,
+          },
+        },
         fieldResponses: {
           include: {
             formField: true,

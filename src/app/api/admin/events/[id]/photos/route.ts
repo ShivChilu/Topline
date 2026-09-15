@@ -29,7 +29,17 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ success: true, photos });
+    const formattedPhotos = photos.map((p) => ({
+      id: p.id,
+      eventId: p.eventId,
+      caption: p.caption,
+      category: p.category,
+      isPublic: p.isPublic,
+      createdAt: p.createdAt,
+      url: p.url.startsWith("data:") ? `/api/photos/student?photoId=${p.id}` : p.url,
+    }));
+
+    return NextResponse.json({ success: true, photos: formattedPhotos });
   } catch (error) {
     console.error("Fetch event photos error:", error);
     return NextResponse.json({ success: false, message: "Internal error" }, { status: 500 });

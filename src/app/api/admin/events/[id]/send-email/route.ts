@@ -127,7 +127,21 @@ export async function POST(
         eventId,
       },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            registrationNumber: true,
+            university: true,
+            city: true,
+            gender: true,
+            selectionStatus: true,
+            age: true,
+            upiId: true,
+          },
+        },
         attendance: true,
       },
     });

@@ -77,7 +77,6 @@ export async function GET(
               name: true,
               phone: true,
               registrationNumber: true,
-              profilePhotoUrl: true,
             },
           },
           attendance: {
@@ -96,6 +95,7 @@ export async function GET(
         select: {
           id: true,
           applicationId: true,
+          userId: true,
           registrationNumber: true,
           checkInTime: true,
           attendanceStatus: true,
@@ -105,7 +105,6 @@ export async function GET(
               id: true,
               name: true,
               phone: true,
-              profilePhotoUrl: true,
             },
           },
           application: {
@@ -135,13 +134,15 @@ export async function GET(
       if (attStatus === "PRESENT") markedPresent++;
       else if (attStatus === "LATE") markedLate++;
 
+      const targetUserId = app.userId || app.user?.id;
+
       return {
         applicationId: app.id,
-        studentId: app.userId,
+        studentId: targetUserId || null,
         name: app.name || app.user?.name || `Student ${app.registrationNumber || "N/A"}`,
         phone: app.mobileNumber || app.user?.phone || "",
         registrationNumber: app.registrationNumber || app.user?.registrationNumber || "N/A",
-        photoUrl: app.user?.profilePhotoUrl || "",
+        photoUrl: targetUserId ? `/api/photos/student?userId=${targetUserId}` : "",
         applicationStatus: app.status,
         isCheckedIn: isAttended,
         attendanceStatus: attStatus || "ABSENT",
@@ -154,17 +155,20 @@ export async function GET(
     const pendingCheckIn = Math.max(0, totalConfirmed - totalCheckedIn);
     const turnoutRate = totalConfirmed > 0 ? Math.round((totalCheckedIn / totalConfirmed) * 100) : 0;
 
-    const liveFeed = recentCheckIns.map((item) => ({
-      id: item.id,
-      applicationId: item.applicationId,
-      studentName: item.application?.name || item.user?.name || `Student ${item.registrationNumber}`,
-      registrationNumber: item.registrationNumber,
-      phone: item.application?.mobileNumber || item.user?.phone || "",
-      photoUrl: item.user?.profilePhotoUrl || "",
-      checkInTime: item.checkInTime,
-      attendanceStatus: item.attendanceStatus,
-      manualRemarks: item.manualRemarks,
-    }));
+    const liveFeed = recentCheckIns.map((item) => {
+      const targetUserId = item.userId || item.user?.id;
+      return {
+        id: item.id,
+        applicationId: item.applicationId,
+        studentName: item.application?.name || item.user?.name || `Student ${item.registrationNumber}`,
+        registrationNumber: item.registrationNumber,
+        phone: item.application?.mobileNumber || item.user?.phone || "",
+        photoUrl: targetUserId ? `/api/photos/student?userId=${targetUserId}` : "",
+        checkInTime: item.checkInTime,
+        attendanceStatus: item.attendanceStatus,
+        manualRemarks: item.manualRemarks,
+      };
+    });
 
     return NextResponse.json({
       success: true,

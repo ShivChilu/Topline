@@ -55,6 +55,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchAttendance = async (silent = false) => {
+    if (silent && typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
     try {
       if (!silent) setLoading(true);
       else setIsRefreshing(true);
@@ -95,12 +98,22 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
 
   useEffect(() => {
     fetchAttendance(false);
-    // Background silent poll every 5s so attendance list updates without flickering
+    // Background silent poll every 8s so attendance list updates without flickering
     pollRef.current = setInterval(() => {
       fetchAttendance(true);
-    }, 5000);
+    }, 8000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchAttendance(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [eventId]);
 

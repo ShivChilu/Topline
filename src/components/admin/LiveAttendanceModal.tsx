@@ -65,6 +65,9 @@ export default function LiveAttendanceModal({
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchLiveAttendance = async (showLoading = false) => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
     if (showLoading) setLoading(true);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/live-attendance?t=${Date.now()}`, {
@@ -85,16 +88,27 @@ export default function LiveAttendanceModal({
   };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchLiveAttendance(true);
-      if (isLiveActive) {
-        pollTimerRef.current = setInterval(() => {
-          fetchLiveAttendance(false);
-        }, 3000);
-      }
+    if (!isOpen) return;
+
+    fetchLiveAttendance(true);
+
+    if (isLiveActive) {
+      pollTimerRef.current = setInterval(() => {
+        fetchLiveAttendance(false);
+      }, 8000);
     }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isLiveActive) {
+        fetchLiveAttendance(false);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [isOpen, eventId, isLiveActive]);
 
