@@ -299,12 +299,12 @@ export default function SelectionEmailReviewModal({
       });
       const data = await res.json();
       if (data.success) {
-        setTestEmailStatus("✅ Test email sent to admin inbox.");
+        setTestEmailStatus("Test email sent to admin inbox.");
       } else {
-        setTestEmailStatus(`⚠️ ${data.message || "Failed to send test email."}`);
+        setTestEmailStatus(data.message || "Failed to send test email.");
       }
     } catch (err: any) {
-      setTestEmailStatus(`❌ Error: ${err.message}`);
+      setTestEmailStatus(`Error: ${err.message}`);
     } finally {
       setSendingTestEmail(false);
     }
@@ -452,11 +452,11 @@ export default function SelectionEmailReviewModal({
                   <div className="bg-slate-900/90 border-2 border-blue-500/80 rounded-2xl p-5 text-center space-y-3 shadow-lg my-4">
                     {confirmationDeadline && confirmationDeadline.trim() && (
                       <div className="inline-block bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-black px-3.5 py-1.5 rounded-lg tracking-wide shadow-xs">
-                        ⏰ CONFIRMATION DEADLINE: <span className="text-white underline">{interpolate(confirmationDeadline)}</span>
+                        CONFIRMATION DEADLINE: <span className="text-white underline">{interpolate(confirmationDeadline)}</span>
                       </div>
                     )}
                     <div className="text-base font-extrabold text-white flex items-center justify-center gap-1.5">
-                      <span>⚡ Confirm Your Attendance Now</span>
+                      <span>Confirm Your Attendance Now</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed m-0">
                       Click below to confirm your slot on the official duty roster and immediately unlock the <strong>WhatsApp Group Link</strong> for briefing updates.
@@ -464,10 +464,10 @@ export default function SelectionEmailReviewModal({
 
                     <div className="space-y-2 pt-2">
                       <div className="w-full bg-emerald-600 text-white font-extrabold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-md border border-emerald-400/50 flex items-center justify-center gap-2 cursor-default">
-                        <span>✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)</span>
+                        <span>YES, I AM AVAILABLE (Confirm & Join WhatsApp)</span>
                       </div>
                       <div className="w-full bg-slate-800 text-rose-400 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 cursor-default">
-                        <span>❌ NO, NOT AVAILABLE (Decline & Release Slot)</span>
+                        <span>NO, NOT AVAILABLE (Decline & Release Slot)</span>
                       </div>
                     </div>
                   </div>
@@ -502,7 +502,7 @@ export default function SelectionEmailReviewModal({
                   {/* Optional Instructions */}
                   {instructions && (
                     <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-300">
-                      <strong className="text-white block mb-1">📋 Instructions & Dress Code:</strong>
+                      <strong className="text-white block mb-1">Instructions & Dress Code:</strong>
                       <span className="whitespace-pre-line">{interpolate(instructions)}</span>
                     </div>
                   )}
@@ -795,7 +795,7 @@ export default function SelectionEmailReviewModal({
               <span>
                 {isProcessing
                   ? "Processing..."
-                  : `⚡ Confirm & Send Emails (${targetApplications.length})`}
+                  : `Confirm & Send Emails (${targetApplications.length})`}
               </span>
             </button>
           </div>

@@ -2902,17 +2902,17 @@ export default function AdminStudentsPage() {
                                 <span className="text-blue-700 font-bold flex items-center gap-1">
                                   <MousePointerClick className="w-3.5 h-3.5 text-blue-600" />
                                   Action: {log.clickedAction === "CONFIRM_YES"
-                                    ? "✅ Confirmed Attendance"
+                                    ? "Confirmed Attendance"
                                     : log.clickedAction === "DECLINE_NO"
-                                    ? "❌ Declined Availability"
+                                    ? "Declined Availability"
                                     : log.clickedAction === "JOIN_WHATSAPP"
-                                    ? "📲 Joined WhatsApp Group"
+                                    ? "Joined WhatsApp Group"
                                     : log.clickedAction || "Link Clicked"}{" "}
                                   at {new Date(log.clickedAt || log.sentAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                                 </span>
                               ) : (
                                 <span className="text-slate-400 font-medium">
-                                  ⚪ No button actions clicked
+                                  No button actions clicked
                                 </span>
                               )}
                             </div>
@@ -2946,7 +2946,8 @@ export default function AdminStudentsPage() {
                 <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span>📝 Admin Remarks / Candidate Notes</span>
+                      <FileText className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Admin Remarks / Candidate Notes</span>
                     </label>
                     {savingRemarks && (
                       <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
@@ -2980,10 +2981,10 @@ export default function AdminStudentsPage() {
                       onChange={(e) => handleUpdateSelection(inspectStudent.id, e.target.value as any)}
                       className="bg-slate-800 border border-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
                     >
-                      <option value="SELECTED">✓ Selected (Approved)</option>
-                      <option value="UNDER_REVIEW">⏳ Under Review</option>
-                      <option value="ON_HOLD">⏸ Mark as Hold / Waitlist</option>
-                      <option value="NOT_SELECTED">✗ Rejected / Not Selected</option>
+                      <option value="SELECTED">Selected (Approved)</option>
+                      <option value="UNDER_REVIEW">Under Review</option>
+                      <option value="ON_HOLD">Mark as Hold / Waitlist</option>
+                      <option value="NOT_SELECTED">Rejected / Not Selected</option>
                     </select>
                   </div>
 
@@ -3120,7 +3121,7 @@ export default function AdminStudentsPage() {
                     Interactive Placeholder Tags
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">
-                    💡 Click to insert or drag & drop into Subject / Body
+                    Click to insert or drag & drop into Subject / Body
                   </span>
                 </div>
 

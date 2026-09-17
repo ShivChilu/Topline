@@ -285,9 +285,9 @@ export default function LiveAttendanceModal({
 
           {/* Sub-header Event Meta */}
           <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-slate-300 mt-2 font-medium flex-wrap">
-            {eventDate && <span>📅 {new Date(eventDate).toLocaleDateString("en-GB")}</span>}
-            {reportingTime && <span>• ⏰ Report: {reportingTime}</span>}
-            <span>• 👥 {stats.totalConfirmed} Confirmed</span>
+            {eventDate && <span>Date: {new Date(eventDate).toLocaleDateString("en-GB")}</span>}
+            {reportingTime && <span>• Report: {reportingTime}</span>}
+            <span>• {stats.totalConfirmed} Confirmed</span>
           </div>
         </div>
 
@@ -450,7 +450,7 @@ export default function LiveAttendanceModal({
                       onClick={() => handleToggleQR(true)}
                       className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition disabled:opacity-50 cursor-pointer"
                     >
-                      {togglingToken ? "Updating..." : "✓ Activate QR"}
+                      {togglingToken ? "Updating..." : "Activate QR"}
                     </button>
                   )}
 

@@ -225,7 +225,7 @@ export default function AddStudentFromMasterModal({
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500"
             >
               <option value="ALL">All Profile Statuses</option>
-              <option value="SELECTED">✓ Verified Selected Profiles</option>
+              <option value="SELECTED">Verified Selected Profiles</option>
               <option value="UNDER_REVIEW">Under Review</option>
               <option value="ON_HOLD">On Hold</option>
             </select>
@@ -237,8 +237,8 @@ export default function AddStudentFromMasterModal({
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500"
             >
               <option value="ALL">All Genders</option>
-              <option value="FEMALE">👩 Girls Only (Female)</option>
-              <option value="MALE">👨 Boys Only (Male)</option>
+              <option value="FEMALE">Girls Only (Female)</option>
+              <option value="MALE">Boys Only (Male)</option>
             </select>
 
             {/* Photo Filter */}
@@ -248,7 +248,7 @@ export default function AddStudentFromMasterModal({
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500"
             >
               <option value="ALL">All (With/Without Photos)</option>
-              <option value="WITH_PHOTOS">📸 Must Have Photos</option>
+              <option value="WITH_PHOTOS">Must Have Photos</option>
             </select>
 
             <span className="ml-auto text-[11px] font-bold text-slate-500">
@@ -418,11 +418,11 @@ export default function AddStudentFromMasterModal({
                   onChange={(e) => setTargetStatus(e.target.value)}
                   className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 shadow-2xs cursor-pointer"
                 >
-                  <option value="SELECTED">🎉 SELECTED (Immediate Selection)</option>
-                  <option value="CONFIRMED">✅ CONFIRMED (Confirmed Slot)</option>
-                  <option value="APPLIED">📝 APPLIED (Standard Applied)</option>
-                  <option value="UNDER_REVIEW">⏳ UNDER_REVIEW (Under Review)</option>
-                  <option value="ON_HOLD">⏸️ ON_HOLD (On Hold)</option>
+                  <option value="SELECTED">SELECTED (Immediate Selection)</option>
+                  <option value="CONFIRMED">CONFIRMED (Confirmed Slot)</option>
+                  <option value="APPLIED">APPLIED (Standard Applied)</option>
+                  <option value="UNDER_REVIEW">UNDER_REVIEW (Under Review)</option>
+                  <option value="ON_HOLD">ON_HOLD (On Hold)</option>
                 </select>
               </div>
             </div>

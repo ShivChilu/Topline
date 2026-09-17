@@ -645,7 +645,7 @@ export default function EmailTemplateManagerModal({
                     Interactive Placeholder Tags
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">
-                    💡 Click or drag into Title, Subject, or Message
+                    Click or drag into Title, Subject, or Message
                   </span>
                 </div>
 
@@ -695,9 +695,9 @@ export default function EmailTemplateManagerModal({
                     onChange={(e) => setCategory(e.target.value as any)}
                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-red-600"
                   >
-                    <option value="GLOBAL">🌐 All Dashboards (Shared)</option>
-                    <option value="STUDENT">🎓 Students Directory</option>
-                    <option value="EVENT">🎪 Event Details</option>
+                    <option value="GLOBAL">All Dashboards (Shared)</option>
+                    <option value="STUDENT">Students Directory</option>
+                    <option value="EVENT">Event Details</option>
                   </select>
                 </div>
               </div>

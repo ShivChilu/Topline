@@ -340,8 +340,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       if (data.success) {
         showToast(
           !payload.skipEmail
-            ? `🎉 Marked ${targetIds.length} candidate(s) as SELECTED and sent customized selection emails!`
-            : `✓ Marked ${targetIds.length} candidate(s) as SELECTED (email skipped).`
+            ? `Marked ${targetIds.length} candidate(s) as SELECTED and sent customized selection emails!`
+            : `Marked ${targetIds.length} candidate(s) as SELECTED (email skipped).`
         );
         setSelectedIds([]);
         setIsSelectionModalOpen(false);
@@ -405,8 +405,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       if (data.success) {
         showToast(
           newStatus === "CLOSED"
-            ? "🔒 Event registration form is now CLOSED for students."
-            : "🟢 Event registration form is now RESUMED & OPEN for students!"
+            ? "Event registration form is now CLOSED for students."
+            : "Event registration form is now RESUMED & OPEN for students!"
         );
         fetchEventData(false);
       } else {
@@ -1383,7 +1383,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
                   >
                     <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>🟢 Resume Form (Open Applications)</span>
+                    <span>Resume Form (Open Applications)</span>
                   </button>
                 ) : (
                   <button
@@ -1392,7 +1392,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-900 bg-rose-50/70 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
                   >
                     <Lock className="w-3.5 h-3.5 text-rose-600" />
-                    <span>🔒 Close Form (Stop Applications)</span>
+                    <span>Close Form (Stop Applications)</span>
                   </button>
                 )}
                 <button
@@ -1448,7 +1448,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-purple-900 bg-purple-50/70 hover:bg-purple-100 flex items-center gap-2 transition cursor-pointer"
                 >
                   <QrCode className="w-3.5 h-3.5 text-purple-600" />
-                  <span>⚡ Live Attendance & QR Hub</span>
+                  <span>Live Attendance & QR Hub</span>
                 </button>
                 <Link
                   href={`/admin/events/${eventId}/attendance`}
@@ -1557,8 +1557,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     Live & Automated
                   </span>
                 ) : (
-                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    ⚠️ Link Not Set
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-amber-400" />
+                    Link Not Set
                   </span>
                 )}
               </div>
@@ -1694,7 +1695,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           title="Filter all candidates who confirmed attendance or have attended"
         >
           <span className="text-[10px] font-extrabold uppercase text-emerald-800 flex items-center gap-1">
-            <span>🎉 Confirmed + Attended</span>
+            <span>Confirmed + Attended</span>
           </span>
           <span className="text-lg font-black text-emerald-950 mt-0.5 block">{stats.confirmed + stats.attended}</span>
         </button>
@@ -1834,7 +1835,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-0.5 flex-wrap">
                 <span className="text-emerald-400 font-bold">✓ {emailAnalytics.confirmedCount} Confirmed</span>
                 {emailAnalytics.declinedCount > 0 && <span className="text-rose-400 font-bold">✗ {emailAnalytics.declinedCount} Declined</span>}
-                {emailAnalytics.whatsappJoinedCount > 0 && <span className="text-[#25D366] font-bold">📲 {emailAnalytics.whatsappJoinedCount} WhatsApp</span>}
+                {emailAnalytics.whatsappJoinedCount > 0 && <span className="text-[#25D366] font-bold">{emailAnalytics.whatsappJoinedCount} WhatsApp</span>}
               </div>
             </div>
           </div>
@@ -1901,14 +1902,14 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               }`}
             >
               <option value="ALL">All Application Statuses</option>
-              <option value="CONFIRMED_ATTENDED">🎉 Confirmed + Attended ({stats.confirmed + stats.attended})</option>
-              <option value="CONFIRMED">✅ Confirmed (Attending) ({stats.confirmed})</option>
-              <option value="ATTENDED">👔 Attended / Present ({stats.attended})</option>
-              <option value="SELECTED">✨ Selected ({stats.selected})</option>
-              <option value="UNDER_REVIEW">⏳ Under Review ({stats.underReview})</option>
-              <option value="APPLIED">📝 Applied ({stats.applied})</option>
-              <option value="NOT_SELECTED">❌ Not Selected ({stats.notSelected})</option>
-              <option value="CANCELLED">🚫 Cancelled ({stats.cancelled})</option>
+              <option value="CONFIRMED_ATTENDED">Confirmed + Attended ({stats.confirmed + stats.attended})</option>
+              <option value="CONFIRMED">Confirmed (Attending) ({stats.confirmed})</option>
+              <option value="ATTENDED">Attended / Present ({stats.attended})</option>
+              <option value="SELECTED">Selected ({stats.selected})</option>
+              <option value="UNDER_REVIEW">Under Review ({stats.underReview})</option>
+              <option value="APPLIED">Applied ({stats.applied})</option>
+              <option value="NOT_SELECTED">Not Selected ({stats.notSelected})</option>
+              <option value="CANCELLED">Cancelled ({stats.cancelled})</option>
             </select>
 
             {/* Quick Confirmed Pill Filter */}
@@ -1952,9 +1953,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               }`}
             >
               <option value="ALL">All Call Statuses</option>
-              <option value="0_CALLS">⏳ 0 Calls (Pending)</option>
-              <option value="1_CALL">📞 1st Call Done</option>
-              <option value="2_CALLS">✓ 2 Calls Done</option>
+              <option value="0_CALLS">0 Calls (Pending)</option>
+              <option value="1_CALL">1st Call Done</option>
+              <option value="2_CALLS">2 Calls Done</option>
             </select>
 
             {/* Gender Filter (e.g. Girls Only) */}
@@ -1968,8 +1969,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               }`}
             >
               <option value="ALL">All Genders</option>
-              <option value="FEMALE">👩 Girls Only (Female)</option>
-              <option value="MALE">👨 Boys Only (Male)</option>
+              <option value="FEMALE">Girls Only (Female)</option>
+              <option value="MALE">Boys Only (Male)</option>
               <option value="OTHER">Other</option>
             </select>
 
@@ -1984,15 +1985,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               }`}
             >
               <option value="ALL">All Heights</option>
-              <option value="5_0">📏 ≥ 5&apos;0&quot; (152 cm+)</option>
-              <option value="5_2">📏 ≥ 5&apos;2&quot; (157 cm+)</option>
-              <option value="5_3">📏 ≥ 5&apos;3&quot; (160 cm+)</option>
-              <option value="5_4">📏 ≥ 5&apos;4&quot; (162 cm+)</option>
-              <option value="5_5">📏 ≥ 5&apos;5&quot; (165 cm+)</option>
-              <option value="5_6">📏 ≥ 5&apos;6&quot; (167 cm+)</option>
-              <option value="5_8">📏 ≥ 5&apos;8&quot; (172 cm+)</option>
-              <option value="5_10">📏 ≥ 5&apos;10&quot; (178 cm+)</option>
-              <option value="6_0">📏 ≥ 6&apos;0&quot; (183 cm+)</option>
+              <option value="5_0">≥ 5&apos;0&quot; (152 cm+)</option>
+              <option value="5_2">≥ 5&apos;2&quot; (157 cm+)</option>
+              <option value="5_3">≥ 5&apos;3&quot; (160 cm+)</option>
+              <option value="5_4">≥ 5&apos;4&quot; (162 cm+)</option>
+              <option value="5_5">≥ 5&apos;5&quot; (165 cm+)</option>
+              <option value="5_6">≥ 5&apos;6&quot; (167 cm+)</option>
+              <option value="5_8">≥ 5&apos;8&quot; (172 cm+)</option>
+              <option value="5_10">≥ 5&apos;10&quot; (178 cm+)</option>
+              <option value="6_0">≥ 6&apos;0&quot; (183 cm+)</option>
             </select>
 
             {/* Who Filled First FCFS Quick Button */}
@@ -2013,7 +2014,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               title="First-Come-First-Serve: Sort applicants by exact date & time they filled the form (who applied first)"
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>{sortBy === "FIRST_FILLED" ? "✓ FCFS (Filled 1st)" : "⚡ Who Filled First"}</span>
+              <span>{sortBy === "FIRST_FILLED" ? "FCFS (Filled 1st)" : "Who Filled First"}</span>
             </button>
 
             {/* Sort Mode Dropdown */}
@@ -2029,10 +2030,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               }`}
               title="Choose applicant sorting order"
             >
-              <option value="PENDING_QUEUE">⚡ Review Queue (Action First)</option>
-              <option value="FIRST_FILLED">⏳ Who Filled First (FCFS)</option>
-              <option value="LATEST_FILLED">🕒 Latest Submissions First</option>
-              <option value="NAME_ASC">🔤 Candidate Name (A-Z)</option>
+              <option value="PENDING_QUEUE">Review Queue (Action First)</option>
+              <option value="FIRST_FILLED">Who Filled First (FCFS)</option>
+              <option value="LATEST_FILLED">Latest Submissions First</option>
+              <option value="NAME_ASC">Candidate Name (A-Z)</option>
             </select>
 
             {/* Queue Mode Toggle (when in review queue) */}
@@ -2176,8 +2177,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
               >
                 <option value="ALL">All WhatsApp Status</option>
-                <option value="ADDED">💬 Added to WhatsApp</option>
-                <option value="NOT_ADDED">⏳ Not Added Yet</option>
+                <option value="ADDED">Added to WhatsApp</option>
+                <option value="NOT_ADDED">Not Added Yet</option>
               </select>
             </div>
 
@@ -2190,8 +2191,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
               >
                 <option value="ALL">All Payouts</option>
-                <option value="PAID">💰 Paid</option>
-                <option value="UNPAID">⏳ Unpaid</option>
+                <option value="PAID">Paid</option>
+                <option value="UNPAID">Unpaid</option>
               </select>
             </div>
           </div>
@@ -2307,7 +2308,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 : "bg-amber-50/80 text-amber-900 border-amber-200 hover:bg-amber-100"
             }`}
           >
-            <span>⏳ 0 Calls (Pending)</span>
+            <span>0 Calls (Pending)</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
               callFilter === "0_CALLS" ? "bg-white/25 text-white" : "bg-amber-200 text-amber-900"
             }`}>
@@ -2324,7 +2325,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 : "bg-blue-50/80 text-blue-900 border-blue-200 hover:bg-blue-100"
             }`}
           >
-            <span>📞 1st Call Done</span>
+            <span>1st Call Done</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
               callFilter === "1_CALL" ? "bg-white/25 text-white" : "bg-blue-200 text-blue-900"
             }`}>
@@ -2341,7 +2342,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 : "bg-purple-50/80 text-purple-900 border-purple-200 hover:bg-purple-100"
             }`}
           >
-            <span>✓ 2 Calls Done</span>
+            <span>2 Calls Done</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
               callFilter === "2_CALLS" ? "bg-white/25 text-white" : "bg-purple-200 text-purple-900"
             }`}>
@@ -2549,7 +2550,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                                 ? "bg-blue-100 text-blue-900 border-blue-300"
                                 : "bg-amber-100 text-amber-900 border-amber-300"
                             }`}>
-                              {app.call2Done ? "✓ 2 Calls Done" : app.call1Done ? "📞 1st Call Done" : "⏳ 0/2 Calls"}
+                              {app.call2Done ? "2 Calls Done" : app.call1Done ? "1st Call Done" : "0/2 Calls"}
                             </span>
                           </div>
 
@@ -2634,7 +2635,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             className="mt-2 text-[11px] bg-amber-50/90 border border-amber-200 text-amber-900 px-2 py-1 rounded-lg flex items-start gap-1 cursor-pointer hover:bg-amber-100 transition"
                             title="Click to view or edit remarks"
                           >
-                            <span className="font-bold shrink-0">📝 Note:</span>
+                            <span className="font-bold shrink-0">Note:</span>
                             <span className="truncate">{app.callingRemarks}</span>
                           </div>
                         )}
@@ -2644,9 +2645,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           <span className="text-slate-400 font-medium">Student Profile:</span>
                           <span className="font-bold text-slate-700">
                             {student.selectionStatus === "SELECTED"
-                              ? "✓ Verified Selected"
+                              ? "Verified Selected"
                               : student.selectionStatus === "ON_HOLD"
-                              ? "⏸ On Hold"
+                              ? "On Hold"
                               : student.selectionStatus === "NOT_SELECTED"
                               ? "Profile Not Selected"
                               : "Under Review"}
@@ -2880,7 +2881,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                                 className="mt-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded cursor-pointer max-w-[220px] truncate hover:bg-amber-100 transition"
                                 title={`Remarks: ${app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}`}
                               >
-                                📝 {app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}
+                                {app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}
                               </div>
                             )}
                             {((app.emailLogs && app.emailLogs.length > 0) || (app.user?.emailLogs && app.user.emailLogs.length > 0)) && (
@@ -2899,8 +2900,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                                       ) : (
                                         <span className="text-amber-600 font-medium">Unopened</span>
                                       )}
-                                      {hasConfirmed && <span className="text-teal-700 font-extrabold bg-teal-50 border border-teal-200 px-1 rounded">✓ YES</span>}
-                                      {hasDeclined && <span className="text-rose-700 font-extrabold bg-rose-50 border border-rose-200 px-1 rounded">✗ NO</span>}
+                                      {hasConfirmed && <span className="text-teal-700 font-extrabold bg-teal-50 border border-teal-200 px-1 rounded flex items-center gap-0.5"><Check className="w-2.5 h-2.5" /> YES</span>}
+                                      {hasDeclined && <span className="text-rose-700 font-extrabold bg-rose-50 border border-rose-200 px-1 rounded flex items-center gap-0.5"><X className="w-2.5 h-2.5" /> NO</span>}
                                     </>
                                   );
                                 })()}
@@ -2933,7 +2934,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             ? "bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold"
                             : "bg-slate-100 text-slate-700 border-slate-200"
                         }`}>
-                          {sStatus === "ATTENDED" ? "🎉 PRESENT" : sStatus === "CONFIRMED" ? "✅ Confirmed" : sStatus === "ON_HOLD" ? "⏸ On Hold" : sStatus === "CANCELLED" ? "❌ Declined" : sStatus}
+                          {sStatus === "ATTENDED" ? "PRESENT" : sStatus === "CONFIRMED" ? "Confirmed" : sStatus === "ON_HOLD" ? "On Hold" : sStatus === "CANCELLED" ? "Declined" : sStatus}
                         </span>
                       </td>
                       <td className="p-4 whitespace-nowrap">
@@ -2953,10 +2954,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <PhoneCall className="w-3.5 h-3.5" />
                             <span>
                               {app.call2Done
-                                ? "✓ 2 Calls Done"
+                                ? "2 Calls Done"
                                 : app.call1Done
-                                ? "📞 1st Call Done"
-                                : "⏳ 0/2 Calls"}
+                                ? "1st Call Done"
+                                : "0/2 Calls"}
                             </span>
                           </button>
                         </div>
@@ -3100,7 +3101,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   </div>
                 </div>
                 <div className="text-xs font-extrabold text-amber-950 font-mono bg-white px-3.5 py-1.5 rounded-xl border border-amber-300 shadow-2xs">
-                  📅 {formatAppliedDateTime(inspectCandidate.createdAt)}
+                  {formatAppliedDateTime(inspectCandidate.createdAt)}
                 </div>
               </div>
 
@@ -3277,7 +3278,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                                 </span>
                               ) : (
                                 <span className="text-slate-400 font-medium">
-                                  ⚪ No button actions clicked
+                                  No button actions clicked
                                 </span>
                               )}
                             </div>
@@ -3329,10 +3330,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         : "bg-amber-900/60 text-amber-200 border border-amber-500/40"
                     }`}>
                       {inspectCandidate.call2Done
-                        ? "✓ 2 Calls Done"
+                        ? "2 Calls Done"
                         : inspectCandidate.call1Done
-                        ? "📞 1st Call Done"
-                        : "⏳ 0/2 Calls (Pending)"}
+                        ? "1st Call Done"
+                        : "0/2 Calls (Pending)"}
                     </span>
                   </div>
 
@@ -3403,7 +3404,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <span>📝 Quick Candidate Remarks / Notes</span>
+                      <FileText className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Quick Candidate Remarks / Notes</span>
                     </label>
                     {savingCandidateRemarks && (
                       <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
@@ -3437,13 +3439,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       onChange={(e) => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, e.target.value)}
                       className="bg-slate-800 border border-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
                     >
-                      <option value="SELECTED">✓ Selected (Approved)</option>
-                      <option value="UNDER_REVIEW">⏳ Under Review</option>
-                      <option value="ON_HOLD">⏸ Mark as Hold / Waitlist</option>
-                      <option value="NOT_SELECTED">✗ Rejected / Not Selected</option>
-                      <option value="CONFIRMED">🎉 Confirmed (Attending)</option>
-                      <option value="CANCELLED">🚫 Cancelled / Declined</option>
-                      <option value="ATTENDED">✅ Attended</option>
+                      <option value="SELECTED">Selected (Approved)</option>
+                      <option value="UNDER_REVIEW">Under Review</option>
+                      <option value="ON_HOLD">Mark as Hold / Waitlist</option>
+                      <option value="NOT_SELECTED">Rejected / Not Selected</option>
+                      <option value="CONFIRMED">Confirmed (Attending)</option>
+                      <option value="CANCELLED">Cancelled / Declined</option>
+                      <option value="ATTENDED">Attended</option>
                     </select>
                   </div>
 

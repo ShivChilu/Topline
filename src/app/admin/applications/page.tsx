@@ -326,9 +326,9 @@ export default function AdminApplicationsPage() {
             className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-bold focus:outline-none focus:border-red-600"
           >
             <option value="">All Call Statuses...</option>
-            <option value="0_CALLS">⏳ 0 Calls (Pending)</option>
-            <option value="1_CALL">📞 1st Call Done</option>
-            <option value="2_CALLS">✓ 2 Calls Done</option>
+            <option value="0_CALLS">0 Calls (Pending)</option>
+            <option value="1_CALL">1st Call Done</option>
+            <option value="2_CALLS">2 Calls Done</option>
           </select>
         </div>
       </div>
@@ -463,10 +463,10 @@ export default function AdminApplicationsPage() {
                           <PhoneCall className="w-3.5 h-3.5" />
                           <span>
                             {app.call2Done
-                              ? "✓ 2 Calls Done"
+                              ? "2 Calls Done"
                               : app.call1Done
-                              ? "📞 1st Call Done"
-                              : "⏳ 0/2 Calls"}
+                              ? "1st Call Done"
+                              : "0/2 Calls"}
                           </span>
                         </button>
                       </td>

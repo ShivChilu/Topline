@@ -197,11 +197,11 @@ export default function ReopenEventModal({
               </div>
               <div className="flex justify-between">
                 <span>Immediate Open Seats for Students:</span>
-                <span className="font-extrabold text-emerald-700">🟢 {newAvailableSlots} new slots open</span>
+                <span className="font-extrabold text-emerald-700">{newAvailableSlots} new slots open</span>
               </div>
               <div className="flex justify-between">
                 <span>Event Status:</span>
-                <span className="font-extrabold text-emerald-600 uppercase">🚀 OPEN (Live immediately)</span>
+                <span className="font-extrabold text-emerald-600 uppercase">OPEN (Live immediately)</span>
               </div>
             </div>
           </div>

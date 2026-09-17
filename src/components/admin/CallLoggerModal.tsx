@@ -39,14 +39,14 @@ export interface CallLoggerModalProps {
 }
 
 const CALL_REMARK_PRESETS = [
-  { label: "Confirmed & Available", icon: "✅", color: "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100" },
-  { label: "First Time", icon: "🌱", color: "bg-teal-50 text-teal-700 border-teal-300 hover:bg-teal-100" },
-  { label: "Ringing / No Answer", icon: "⏳", color: "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100" },
-  { label: "Switched Off / Unreachable", icon: "📴", color: "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100" },
-  { label: "Busy / Call Back in 30 mins", icon: "🔄", color: "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100" },
-  { label: "Declined / Not Available", icon: "❌", color: "bg-red-50 text-red-700 border-red-300 hover:bg-red-100" },
-  { label: "Confirmed for Lead Steward", icon: "👔", color: "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100" },
-  { label: "Wrong Number / Need Update", icon: "⚠️", color: "bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100" },
+  { label: "Confirmed & Available", color: "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100" },
+  { label: "First Time", color: "bg-teal-50 text-teal-700 border-teal-300 hover:bg-teal-100" },
+  { label: "Ringing / No Answer", color: "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100" },
+  { label: "Switched Off / Unreachable", color: "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100" },
+  { label: "Busy / Call Back in 30 mins", color: "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100" },
+  { label: "Declined / Not Available", color: "bg-red-50 text-red-700 border-red-300 hover:bg-red-100" },
+  { label: "Confirmed for Lead Steward", color: "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100" },
+  { label: "Wrong Number / Need Update", color: "bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100" },
 ];
 
 export default function CallLoggerModal({
@@ -235,7 +235,7 @@ export default function CallLoggerModal({
                   <span>Call 1</span>
                 </div>
                 <div className={`text-[11px] mt-0.5 ${activeCallRound === 1 ? "text-blue-100" : "text-slate-500"}`}>
-                  {application.call1Done ? "✓ Done" : "⏳ Pending"}
+                  {application.call1Done ? "Done" : "Pending"}
                 </div>
               </div>
               {application.call1Done && (
@@ -262,7 +262,7 @@ export default function CallLoggerModal({
                   <span>Call 2</span>
                 </div>
                 <div className={`text-[11px] mt-0.5 ${activeCallRound === 2 ? "text-purple-100" : "text-slate-500"}`}>
-                  {application.call2Done ? "✓ Done" : "⏳ Pending"}
+                  {application.call2Done ? "Done" : "Pending"}
                 </div>
               </div>
               {application.call2Done && (
@@ -314,7 +314,6 @@ export default function CallLoggerModal({
                     remarks === preset.label ? "ring-2 ring-blue-500 font-bold" : ""
                   }`}
                 >
-                  <span>{preset.icon}</span>
                   <span>{preset.label}</span>
                 </button>
               ))}
@@ -347,10 +346,10 @@ export default function CallLoggerModal({
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-600"
             >
               <option value="">Keep Current Status ({application.status})</option>
-              <option value="SELECTED">✓ Approve & Select</option>
-              <option value="ON_HOLD">⏸ Mark as Hold / Waitlist</option>
-              <option value="NOT_SELECTED">✗ Mark as Not Selected / Reject</option>
-              <option value="CONFIRMED">🎉 Mark Confirmed (Attending)</option>
+              <option value="SELECTED">Approve & Select</option>
+              <option value="ON_HOLD">Mark as Hold / Waitlist</option>
+              <option value="NOT_SELECTED">Mark as Not Selected / Reject</option>
+              <option value="CONFIRMED">Mark Confirmed (Attending)</option>
             </select>
           </div>
         </form>
