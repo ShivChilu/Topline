@@ -712,17 +712,36 @@ export async function sendCustomBroadcastEmail({
       Boolean(subject && subject.toLowerCase().includes("profile")) || 
       Boolean(messageBody && (messageBody.toLowerCase().includes("profile") || messageBody.toLowerCase().includes("100%")));
 
-    const destinationUrl = isProfileTarget ? `${getAppBaseUrl()}/profile` : `${getAppBaseUrl()}/events`;
-    const actionKey = isProfileTarget ? "UPDATE_PROFILE" : "OPEN_PORTAL";
-    const buttonLabel = isProfileTarget ? "👉 Complete Your Profile (100%)" : "Go to Topline Portal";
+    let destinationUrl = `${getAppBaseUrl()}/events`;
+    let actionKey = "OPEN_PORTAL";
+    let buttonLabel = "Go to Topline Portal";
+
+    if (eventId) {
+      destinationUrl = `${getAppBaseUrl()}/events/${eventId}`;
+      actionKey = "APPLY_EVENT";
+      buttonLabel = "Apply for Event – Topline ODC";
+    } else if (isProfileTarget) {
+      destinationUrl = `${getAppBaseUrl()}/profile`;
+      actionKey = "UPDATE_PROFILE";
+      buttonLabel = "👉 Complete Your Profile (100%)";
+    }
 
     const portalUrl = getTrackedUrl(actionKey, destinationUrl);
 
-    // Convert newlines in messageBody to clean HTML paragraphs/breaks and replace raw profileLink with styled link
-    const processedBody = messageBody.replace(
-      /\{\{\s*profileLink\s*\}\}/gi,
-      `<a href="${portalUrl}" style="color: #60a5fa; font-weight: bold; text-decoration: underline;">${destinationUrl}</a>`
-    );
+    // Convert markdown link syntax [Text](url) to styled button and replace links with tracked/styled links
+    const processedBody = messageBody
+      .replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        `<div style="text-align: center; margin: 16px 0;"><a href="$2" style="display: inline-block; background-color: #ED0000; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); text-align: center;">$1</a></div>`
+      )
+      .replace(
+        /\{\{\s*profileLink\s*\}\}/gi,
+        `<a href="${portalUrl}" style="color: #60a5fa; font-weight: bold; text-decoration: underline;">${destinationUrl}</a>`
+      )
+      .replace(
+        /\{\{\s*applyLink\s*\}\}/gi,
+        `<div style="text-align: center; margin: 16px 0;"><a href="${portalUrl}" style="display: inline-block; background-color: #ED0000; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); text-align: center;">Apply for the Event – Topline ODC →</a></div>`
+      );
 
     const formattedBody = processedBody
       .split("\n\n")

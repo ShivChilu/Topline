@@ -170,7 +170,15 @@ const PLACEHOLDER_TAGS = [
   { tag: "{{age}}", label: "Age", example: "21", desc: "Student age" },
   { tag: "{{upiId}}", label: "UPI ID", example: "name@upi", desc: "Payment UPI ID" },
   { tag: "{{completenessScore}}", label: "Profile %", example: "65%", desc: "Profile completeness score" },
-  { tag: "{{profileLink}}", label: "Profile Link", example: "https://topline.com/profile", desc: "Direct link to student profile edit page" },
+  { tag: "{{profileLink}}", label: "Profile Link", example: "https://toplineodc.co.in/profile", desc: "Direct link to student profile edit page" },
+  { tag: "{{eventName}}", label: "Event Name", example: "Grand Gala Dinner", desc: "Target event name" },
+  { tag: "{{eventDate}}", label: "Event Date", example: "21st September 2026", desc: "Date of event" },
+  { tag: "{{pickupTime}}", label: "Pickup Time", example: "3:30 PM", desc: "Pickup / reporting time" },
+  { tag: "{{reportingTime}}", label: "Reporting Time", example: "3:30 PM", desc: "Reporting time" },
+  { tag: "{{eventWorkType}}", label: "Work Type", example: "STEWARDS (SNACKS BOYS) REQUIRED", desc: "Role / Service required" },
+  { tag: "{{eventLocation}}", label: "Location", example: "Grand Palace, Jalandhar", desc: "Venue location" },
+  { tag: "{{paymentPerStudent}}", label: "Payout", example: "₹800", desc: "Event payout per student" },
+  { tag: "{{applyLink}}", label: "Apply Link", example: "https://toplineodc.co.in/events/...", desc: "Direct event application URL" },
 ];
 
 export default function AdminStudentsPage() {
@@ -190,7 +198,7 @@ export default function AdminStudentsPage() {
   const [universityFilter, setUniversityFilter] = useState("ALL");
   const [eventFilterId, setEventFilterId] = useState<string>("ALL");
   const [eventFilterMode, setEventFilterMode] = useState<"NOT_APPLIED" | "APPLIED">("NOT_APPLIED");
-  const [eventsList, setEventsList] = useState<{ id: string; name: string; date?: string; status?: string }[]>([]);
+  const [eventsList, setEventsList] = useState<any[]>([]);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Selection & Bulk
@@ -207,6 +215,7 @@ export default function AdminStudentsPage() {
 
   // Custom Email Broadcast & Single Message Modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailSelectedEventId, setEmailSelectedEventId] = useState<string>("ALL");
   const [emailTargetStudents, setEmailTargetStudents] = useState<Student[]>([]);
   const [customEmailSubject, setCustomEmailSubject] = useState("Important Update from Topline ODC — {{name}}");
   const [customEmailBody, setCustomEmailBody] = useState(
@@ -510,6 +519,11 @@ export default function AdminStudentsPage() {
     if (!targetList || targetList.length === 0) return;
     setEmailTargetStudents(targetList);
     setEmailTab("compose");
+    if (eventFilterId && eventFilterId !== "ALL") {
+      setEmailSelectedEventId(eventFilterId);
+    } else if (eventsList.length > 0 && emailSelectedEventId === "ALL") {
+      setEmailSelectedEventId(eventsList[0]?.id || "ALL");
+    }
     setEmailModalOpen(true);
   };
 
@@ -564,6 +578,13 @@ export default function AdminStudentsPage() {
 
     try {
       setEmailSending(true);
+      const chosenEventId =
+        emailSelectedEventId !== "ALL"
+          ? emailSelectedEventId
+          : eventFilterId !== "ALL"
+          ? eventFilterId
+          : undefined;
+
       const res = await fetch("/api/admin/students/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -573,6 +594,7 @@ export default function AdminStudentsPage() {
           message: customEmailBody,
           includeBranding: customEmailBranding,
           sendTestCopy: sendTestEmailCopy,
+          eventId: chosenEventId,
         }),
       });
 
@@ -607,6 +629,40 @@ export default function AdminStudentsPage() {
       email: "rahul@example.com",
     };
 
+    const targetEventId =
+      emailSelectedEventId !== "ALL"
+        ? emailSelectedEventId
+        : eventFilterId !== "ALL"
+        ? eventFilterId
+        : eventsList[0]?.id;
+    const targetEvent = eventsList.find((e: any) => e.id === targetEventId) || eventsList[0];
+
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://www.toplineodc.co.in";
+    const eventApplyUrl = targetEvent ? `${baseUrl}/events/${targetEvent.id}` : `${baseUrl}/events`;
+
+    let formattedDate = "Upcoming Date";
+    if (targetEvent?.date) {
+      const d = new Date(targetEvent.date);
+      const day = d.getDate();
+      const suffix =
+        day % 10 === 1 && day !== 11
+          ? "st"
+          : day % 10 === 2 && day !== 12
+          ? "nd"
+          : day % 10 === 3 && day !== 13
+          ? "rd"
+          : "th";
+      const month = d.toLocaleDateString("en-IN", { month: "long" });
+      const year = d.getFullYear();
+      formattedDate = `${day}${suffix} ${month} ${year}`;
+    }
+
+    const eventPickup = targetEvent?.reportingTime || targetEvent?.startTime || "3:30 PM";
+    const eventWork = targetEvent?.workType || "STEWARDS (SNACKS BOYS) REQUIRED";
+    const eventLoc = targetEvent?.location || "Grand Palace, Jalandhar";
+    const eventNameStr = targetEvent?.name || "Topline ODC Event";
+    const eventPay = targetEvent?.paymentPerStudent ? `₹${targetEvent.paymentPerStudent}` : "₹800";
+
     const replacements: Record<string, string> = {
       name: student.name || "Student",
       studentName: student.name || "Student",
@@ -624,9 +680,21 @@ export default function AdminStudentsPage() {
       age: student.age ? String(student.age) : "N/A",
       upiId: student.upiId || "N/A",
       email: student.email || "",
-      completenessScore: student.completenessScore ? `${student.completenessScore}%` : "65%",
-      profileLink: typeof window !== "undefined" ? `${window.location.origin}/profile` : "https://topline.com/profile",
-      portalLink: typeof window !== "undefined" ? `${window.location.origin}/events` : "https://topline.com/events",
+      completenessScore: (student as any).completenessScore ? `${(student as any).completenessScore}%` : "65%",
+      profileLink: `${baseUrl}/profile`,
+      portalLink: `${baseUrl}/events`,
+      eventName: eventNameStr,
+      eventDate: formattedDate,
+      pickupTime: eventPickup,
+      reportingTime: eventPickup,
+      eventWorkType: eventWork,
+      workType: eventWork,
+      eventLocation: eventLoc,
+      location: eventLoc,
+      paymentPerStudent: eventPay,
+      eventPay: eventPay,
+      applyLink: eventApplyUrl,
+      eventLink: eventApplyUrl,
     };
 
     let result = template;
@@ -2904,6 +2972,29 @@ export default function AdminStudentsPage() {
 
             {/* Scrollable Modal Content */}
             <div className="p-6 overflow-y-auto space-y-5 flex-1 text-slate-900">
+              {/* ASSOCIATED EVENT SELECTOR */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-blue-50/70 border border-blue-200 p-3.5 rounded-2xl">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">Associated Event Target</span>
+                    <span className="text-[11px] text-slate-500 block">Used for dynamic event link, date, pickup time & pay tags</span>
+                  </div>
+                </div>
+                <select
+                  value={emailSelectedEventId}
+                  onChange={(e) => setEmailSelectedEventId(e.target.value)}
+                  className="bg-white border border-blue-300 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-2xs max-w-xs"
+                >
+                  <option value="ALL">-- Select Event for Dynamic Link & Tags --</option>
+                  {eventsList.map((ev: any) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.name} {ev.date ? `(${new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* PLACEHOLDER TAGS TOOLBAR */}
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -2954,6 +3045,20 @@ export default function AdminStudentsPage() {
                     Manage
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomEmailSubject("🎉 Opportunity: You are eligible for {{eventName}} — Apply Now!");
+                    setCustomEmailBody(
+                      "Hi {{name}},\n\n🎉 You are eligible for the upcoming Topline ODC event!\n\n🍽️ {{eventWorkType}}\n📅 Date: {{eventDate}} 🕒 Pickup Time: {{pickupTime}}\n\nRequirements:\n• Clean shave is mandatory • Short & well-groomed hair • Black formal shoes 👞 • High-length formal socks 🧦 • Good grooming and professional appearance\n\nIf you are interested and available, please apply for the event through the link below:\n[Apply for the Event – Topline ODC]({{applyLink}})\n\nRegards,\nTopline ODC Team"
+                    );
+                  }}
+                  className="px-2.5 py-1 bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 rounded-lg font-bold transition flex items-center gap-1 shadow-2xs"
+                  title="Send invitation with dynamic event details and 1-click apply button"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>🎉 Event Invitation & Apply</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -3149,7 +3254,28 @@ export default function AdminStudentsPage() {
                         Dear {getPreviewText("{{name}}")},
                       </h2>
                       <div className="text-slate-300 text-sm leading-relaxed space-y-3 whitespace-pre-wrap">
-                        {getPreviewText(customEmailBody)}
+                        {(() => {
+                          const previewContent = getPreviewText(customEmailBody);
+                          const parts = previewContent.split(/(\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g);
+                          return parts.map((part, i) => {
+                            const linkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+                            if (linkMatch) {
+                              return (
+                                <div key={i} className="my-4 text-center">
+                                  <a
+                                    href={linkMatch[2]}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-block bg-[#ED0000] hover:bg-[#c90000] text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg transition"
+                                  >
+                                    {linkMatch[1]} &rarr;
+                                  </a>
+                                </div>
+                              );
+                            }
+                            return <span key={i}>{part}</span>;
+                          });
+                        })()}
                       </div>
                       <div className="text-center mt-6">
                         <span className="inline-block bg-[#ED0000] text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow">

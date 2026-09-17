@@ -19,8 +19,19 @@ async function getLoggedInAdmin() {
   return user;
 }
 
-function interpolateTags(template: string, student: any): string {
+function interpolateTags(template: string, student: any, event?: any): string {
   if (!template) return "";
+
+  const eventDateFormatted = event?.date
+    ? new Date(event.date).toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "Upcoming Date";
+
+  const applyUrl = event?.id ? `${getAppBaseUrl()}/events/${event.id}` : `${getAppBaseUrl()}/events`;
 
   const replacements: Record<string, string> = {
     name: student.name || "Student",
@@ -42,6 +53,19 @@ function interpolateTags(template: string, student: any): string {
     completenessScore: student.completenessScore ? `${student.completenessScore}%` : "65%",
     profileLink: `${getAppBaseUrl()}/profile`,
     portalLink: `${getAppBaseUrl()}/events`,
+    // Dynamic Event Tags
+    eventName: event?.name || "Topline Event",
+    eventDate: eventDateFormatted,
+    pickupTime: event?.reportingTime || "TBD",
+    reportingTime: event?.reportingTime || "TBD",
+    eventLocation: event?.location || "Venue to be announced",
+    location: event?.location || "Venue to be announced",
+    eventWorkType: event?.workType || "Hospitality & Catering Staff",
+    workType: event?.workType || "Hospitality & Catering Staff",
+    paymentPerStudent: event?.paymentPerStudent ? String(event.paymentPerStudent) : "800",
+    eventPay: event?.paymentPerStudent ? String(event.paymentPerStudent) : "800",
+    applyLink: applyUrl,
+    eventLink: applyUrl,
   };
 
   let result = template;
@@ -66,6 +90,7 @@ export async function POST(request: Request) {
       studentIds,
       subject,
       message,
+      eventId,
       includeBranding = true,
     } = body;
 
@@ -79,6 +104,13 @@ export async function POST(request: Request) {
 
     if (!message || !message.trim()) {
       return NextResponse.json({ success: false, message: "Email message body is required." }, { status: 400 });
+    }
+
+    let targetEvent: any = null;
+    if (eventId && typeof eventId === "string" && eventId.trim() !== "ALL") {
+      targetEvent = await prisma.event.findUnique({
+        where: { id: eventId.trim() },
+      });
     }
 
     // Fetch targeted students
@@ -118,8 +150,8 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const personalizedSubject = interpolateTags(subject, student);
-      const personalizedMessage = interpolateTags(message, student);
+      const personalizedSubject = interpolateTags(subject, student, targetEvent);
+      const personalizedMessage = interpolateTags(message, student, targetEvent);
 
       const result = await sendCustomBroadcastEmail({
         to: student.email,
@@ -128,7 +160,8 @@ export async function POST(request: Request) {
         messageBody: personalizedMessage,
         includeBranding,
         userId: student.id,
-        templateName: body.templateName || "Custom Student Message",
+        eventId: targetEvent?.id || undefined,
+        templateName: body.templateName || (targetEvent ? `Event Invitation: ${targetEvent.name}` : "Custom Student Message"),
       });
 
       if (result.success) {

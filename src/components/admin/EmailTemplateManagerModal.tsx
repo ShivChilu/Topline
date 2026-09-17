@@ -108,6 +108,14 @@ export const SYSTEM_PREDEFINED_TEMPLATES: CustomEmailTemplate[] = [
     isPredefined: true,
   },
   {
+    id: "predefined_event_invitation_apply",
+    name: "🎉 Event Invitation & Application Link",
+    subject: "🎉 Opportunity: You are eligible for {{eventName}} — Apply Now!",
+    body: "Hi {{name}},\n\n🎉 You are eligible for the upcoming Topline ODC event!\n\n🍽️ {{eventWorkType}}\n📅 Date: {{eventDate}} 🕒 Pickup Time: {{pickupTime}}\n\nRequirements:\n• Clean shave is mandatory • Short & well-groomed hair • Black formal shoes 👞 • High-length formal socks 🧦 • Good grooming and professional appearance\n\nIf you are interested and available, please apply for the event through the link below:\n[Apply for the Event – Topline ODC]({{applyLink}})\n\nRegards,\nTopline ODC Team",
+    category: "GLOBAL",
+    isPredefined: true,
+  },
+  {
     id: "predefined_event_payment_info",
     name: "Payment & Bank Info",
     subject: "Payment & Payout Confirmation: {{eventName}} — {{name}}",
