@@ -893,14 +893,54 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     // Search filter
     if (search.trim()) {
       const q = search.toLowerCase().trim();
+      const qDigits = q.replace(/\D/g, "");
+
       list = list.filter((app) => {
-        const name = (app.name || app.studentId?.name || "").toLowerCase();
-        const reg = (app.registrationNumber || app.studentId?.registrationNumber || "").toLowerCase();
-        const phone = (app.mobileNumber || app.studentId?.phone || "").toLowerCase();
-        const email = (app.studentId?.email || "").toLowerCase();
-        const uni = (app.studentId?.university || "").toLowerCase();
-        const city = (app.studentId?.city || "").toLowerCase();
-        return name.includes(q) || reg.includes(q) || phone.includes(q) || email.includes(q) || uni.includes(q) || city.includes(q);
+        const student = app.user || app.studentId || {};
+        const name = (app.name || student.name || "").toLowerCase();
+        const reg = (app.registrationNumber || student.registrationNumber || "").toLowerCase();
+        const phone = (app.mobileNumber || student.phone || "").toLowerCase();
+        const email = (app.email || student.email || "").toLowerCase();
+        const uni = (app.university || student.university || "").toLowerCase();
+        const city = (app.city || student.city || "").toLowerCase();
+        const upi = (student.upiId || "").toLowerCase();
+        const status = (app.status || "").toLowerCase();
+        const attendance = (app.attendanceStatus || "").toLowerCase();
+        const remarks = (app.callingRemarks || student.adminRemarks || "").toLowerCase();
+        const call1 = (app.call1Remarks || "").toLowerCase();
+        const call2 = (app.call2Remarks || "").toLowerCase();
+
+        // Phone digit matching (e.g. searching 9876 matches +91 9876543210)
+        let phoneMatch = phone.includes(q);
+        if (!phoneMatch && qDigits.length >= 3) {
+          const rawDigits = phone.replace(/\D/g, "");
+          phoneMatch = rawDigits.includes(qDigits);
+        }
+
+        // Custom fields matching
+        let customMatch = false;
+        if (app.customFieldsData) {
+          const customStr = typeof app.customFieldsData === "string"
+            ? app.customFieldsData
+            : JSON.stringify(app.customFieldsData);
+          customMatch = customStr.toLowerCase().includes(q);
+        }
+
+        return (
+          name.includes(q) ||
+          reg.includes(q) ||
+          phoneMatch ||
+          email.includes(q) ||
+          uni.includes(q) ||
+          city.includes(q) ||
+          upi.includes(q) ||
+          status.includes(q) ||
+          attendance.includes(q) ||
+          remarks.includes(q) ||
+          call1.includes(q) ||
+          call2.includes(q) ||
+          customMatch
+        );
       });
     }
 
@@ -1812,36 +1852,48 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       {/* FILTER & VIEW TOOLBAR */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
-          {/* Search bar & Create Template Button */}
-          <div className="flex items-center gap-2.5 w-full lg:w-auto flex-1 max-w-lg">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+          {/* Search bar & Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto flex-1 max-w-2xl">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search candidate, roll no, phone..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
+                placeholder="Search candidate name, roll no, phone, city, remarks..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-9 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-2.5 p-0.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() => setIsAddFromMasterModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
-              title="Search and add registered students directly from master database"
-            >
-              <Users className="w-3.5 h-3.5 text-blue-600" />
-              <span>+ Add Student</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTemplateModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
-              title="Create or manage reusable email templates"
-            >
-              <FileText className="w-3.5 h-3.5 text-red-600" />
-              <span>Create Template</span>
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAddFromMasterModalOpen(true)}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
+                title="Search and add registered students directly from master database"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>+ Add Student</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateModalOpen(true)}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
+                title="Create or manage reusable email templates"
+              >
+                <FileText className="w-3.5 h-3.5 text-red-600" />
+                <span>Create Template</span>
+              </button>
+            </div>
           </div>
 
           {/* Filters & Queue Switch */}
@@ -2462,20 +2514,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             </div>
                           )}
                           {app.mobileNumber || student.phone ? (
-                            <div className="mt-2 flex items-center gap-1.5">
+                            <div className="mt-2 flex items-center gap-1.5 min-w-0">
                               <a
                                 href={`tel:${app.mobileNumber || student.phone}`}
-                                className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs py-1.5 px-2.5 rounded-xl shadow-xs transition"
+                                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs py-1.5 px-2.5 rounded-xl shadow-xs transition"
                                 title="Click to call student directly"
                               >
-                                <Phone className="w-3.5 h-3.5" />
-                                <span>Call: {app.mobileNumber || student.phone}</span>
+                                <Phone className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">Call: {app.mobileNumber || student.phone}</span>
                               </a>
                               <a
                                 href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold p-1.5 rounded-xl border border-[#25D366]/30 transition"
+                                className="flex items-center justify-center bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold p-1.5 rounded-xl border border-[#25D366]/30 transition shrink-0"
                                 title="Open WhatsApp Chat"
                               >
                                 <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />

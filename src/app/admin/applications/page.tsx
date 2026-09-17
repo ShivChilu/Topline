@@ -120,17 +120,31 @@ export default function AdminApplicationsPage() {
       if (data.success) {
         let list = data.applications;
         // Client side filtering for search query
-        if (searchQuery) {
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const qDigits = q.replace(/\D/g, "");
           list = list.filter((app: any) => {
-            const s = app.studentId || {};
-            const call1 = app.call1Remarks || "";
-            const call2 = app.call2Remarks || "";
-            const q = searchQuery.toLowerCase();
+            const s = app.user || app.studentId || {};
+            const name = (app.name || s.name || "").toLowerCase();
+            const phone = (app.mobileNumber || s.phone || "").toLowerCase();
+            const reg = (app.registrationNumber || s.registrationNumber || "").toLowerCase();
+            const call1 = (app.call1Remarks || "").toLowerCase();
+            const call2 = (app.call2Remarks || "").toLowerCase();
+            const remarks = (app.callingRemarks || s.adminRemarks || "").toLowerCase();
+
+            let phoneMatch = phone.includes(q);
+            if (!phoneMatch && qDigits.length >= 3) {
+              const rawDigits = phone.replace(/\D/g, "");
+              phoneMatch = rawDigits.includes(qDigits);
+            }
+
             return (
-              (s.name && s.name.toLowerCase().includes(q)) ||
-              (s.phone && s.phone.includes(q)) ||
-              call1.toLowerCase().includes(q) ||
-              call2.toLowerCase().includes(q)
+              name.includes(q) ||
+              phoneMatch ||
+              reg.includes(q) ||
+              call1.includes(q) ||
+              call2.includes(q) ||
+              remarks.includes(q)
             );
           });
         }

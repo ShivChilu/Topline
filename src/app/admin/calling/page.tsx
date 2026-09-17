@@ -300,28 +300,42 @@ export default function CallingDashboard() {
     } else if (callFilter === "2_CALLS") {
       result = result.filter((app) => app.call2Done);
     }
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((app) => {
-        const student = app.studentId || {};
-        const regNo = app.registrationNumber || "";
-        const name = student.name || "";
-        const phone = student.phone || "";
-        const call1 = app.call1Remarks || "";
-        const call2 = app.call2Remarks || "";
-        const remarks = app.callingRemarks || "";
-        
-        const customMatches = Object.values(app.customFieldsData || {}).some(val => 
-          String(val).toLowerCase().includes(q)
-        );
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      const qDigits = q.replace(/\D/g, "");
 
-        return regNo.toLowerCase().includes(q) || 
-               name.toLowerCase().includes(q) || 
-               phone.toLowerCase().includes(q) ||
-               call1.toLowerCase().includes(q) ||
-               call2.toLowerCase().includes(q) ||
-               remarks.toLowerCase().includes(q) ||
-               customMatches;
+      result = result.filter((app) => {
+        const student = app.user || app.studentId || {};
+        const regNo = (app.registrationNumber || student.registrationNumber || "").toLowerCase();
+        const name = (app.name || student.name || "").toLowerCase();
+        const phone = (app.mobileNumber || student.phone || "").toLowerCase();
+        const call1 = (app.call1Remarks || "").toLowerCase();
+        const call2 = (app.call2Remarks || "").toLowerCase();
+        const remarks = (app.callingRemarks || student.adminRemarks || "").toLowerCase();
+
+        let phoneMatch = phone.includes(q);
+        if (!phoneMatch && qDigits.length >= 3) {
+          const rawDigits = phone.replace(/\D/g, "");
+          phoneMatch = rawDigits.includes(qDigits);
+        }
+
+        let customMatches = false;
+        if (app.customFieldsData) {
+          const customStr = typeof app.customFieldsData === "string"
+            ? app.customFieldsData
+            : JSON.stringify(app.customFieldsData);
+          customMatches = customStr.toLowerCase().includes(q);
+        }
+
+        return (
+          regNo.includes(q) ||
+          name.includes(q) ||
+          phoneMatch ||
+          call1.includes(q) ||
+          call2.includes(q) ||
+          remarks.includes(q) ||
+          customMatches
+        );
       });
     }
     setFilteredApplications(result);
