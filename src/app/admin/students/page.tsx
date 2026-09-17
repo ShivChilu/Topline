@@ -206,8 +206,9 @@ export default function AdminStudentsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Detail Modal
+  // Detail Modal & Photo Lightbox
   const [inspectStudent, setInspectStudent] = useState<Student | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [inspectEventFilter, setInspectEventFilter] = useState<"ALL" | "ATTENDED" | "NO_SHOW" | "CONFIRMED" | "APPLIED">("ALL");
   const [customNote, setCustomNote] = useState("");
   const [savingRemarks, setSavingRemarks] = useState(false);
@@ -337,6 +338,19 @@ export default function AdminStudentsPage() {
       fetchStudents();
     }
   }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, activeTab]);
+
+  // Handle Escape key to close lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLightboxPhoto(null);
+      }
+    };
+    if (lightboxPhoto) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [lightboxPhoto]);
 
   // Open inspect student modal and populate current remarks
   const openInspectStudent = (student: Student) => {
@@ -1656,7 +1670,17 @@ export default function AdminStudentsPage() {
                     }`}
                   >
                     {/* Top Image Section */}
-                    <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden group">
+                    <div
+                      onClick={() => {
+                        if (student.profilePhotoUrl) {
+                          setLightboxPhoto(student.profilePhotoUrl);
+                        } else {
+                          openInspectStudent(student);
+                        }
+                      }}
+                      className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden group cursor-pointer"
+                      title={student.profilePhotoUrl ? "Click to view enlarged photo" : "Click to view profile"}
+                    >
                       {student.profilePhotoUrl ? (
                         <>
                           <img
@@ -1673,6 +1697,13 @@ export default function AdminStudentsPage() {
                             <Camera className="w-10 h-10 stroke-1 mb-1" />
                             <span className="text-xs font-semibold">Photo Unavailable</span>
                           </div>
+
+                          {/* Hover Overlay with View Prompt */}
+                          <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                            <span className="bg-black/75 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/20">
+                              <Eye className="w-3.5 h-3.5" /> View Photo
+                            </span>
+                          </div>
                         </>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
@@ -1683,7 +1714,10 @@ export default function AdminStudentsPage() {
 
                       {/* Checkbox Overlay */}
                       <button
-                        onClick={() => toggleSelectOne(student.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelectOne(student.id);
+                        }}
                         className="absolute top-3 left-3 z-10 w-6 h-6 rounded-md bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:bg-black/70 transition"
                       >
                         {isSelected && <Check className="w-4 h-4 text-red-400 stroke-3" />}
@@ -1721,10 +1755,18 @@ export default function AdminStudentsPage() {
 
                       {/* Multiple Photos Indicator */}
                       {student.photos.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInspectStudent(student);
+                          }}
+                          className="absolute bottom-2 right-2 bg-black/70 hover:bg-black/90 backdrop-blur-md text-white px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 transition shadow"
+                          title={`View all ${student.photos.length} photos in full profile`}
+                        >
                           <Camera className="w-3 h-3" />
                           +{student.photos.length} Photos
-                        </div>
+                        </button>
                       )}
                     </div>
 
@@ -1989,7 +2031,17 @@ export default function AdminStudentsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
+                        <div
+                          onClick={() => {
+                            if (student.profilePhotoUrl) {
+                              setLightboxPhoto(student.profilePhotoUrl);
+                            } else {
+                              openInspectStudent(student);
+                            }
+                          }}
+                          className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-red-500 transition shadow-xs"
+                          title={student.profilePhotoUrl ? "Click to view photo" : "Click to view profile"}
+                        >
                           {student.profilePhotoUrl ? (
                             <img src={student.profilePhotoUrl} alt={student.name} className="w-full h-full object-cover" />
                           ) : (
@@ -2303,7 +2355,13 @@ export default function AdminStudentsPage() {
             {/* Modal Header */}
             <div className="p-6 border-b border-slate-200 flex items-start justify-between bg-slate-50/50 rounded-t-2xl">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow">
+                <div
+                  onClick={() => inspectStudent.profilePhotoUrl && setLightboxPhoto(inspectStudent.profilePhotoUrl)}
+                  className={`w-14 h-14 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow ${
+                    inspectStudent.profilePhotoUrl ? "cursor-pointer hover:ring-2 hover:ring-red-500 transition" : ""
+                  }`}
+                  title={inspectStudent.profilePhotoUrl ? "Click to view enlarged profile photo" : undefined}
+                >
                   {inspectStudent.profilePhotoUrl ? (
                     <img src={inspectStudent.profilePhotoUrl} alt={inspectStudent.name} className="w-full h-full object-cover" />
                   ) : (
@@ -2343,21 +2401,32 @@ export default function AdminStudentsPage() {
                 {inspectStudent.photos.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {inspectStudent.photos.map((photo) => (
-                      <div key={photo.id} className="relative aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group bg-slate-100">
+                      <div
+                        key={photo.id}
+                        onClick={() => setLightboxPhoto(photo.url)}
+                        className="relative aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 cursor-pointer shadow-xs hover:shadow-md hover:border-red-400 transition"
+                        title="Click to expand full resolution photo"
+                      >
                         <img
                           src={photo.url}
                           alt="Profile"
                           onError={(e) => {
                             (e.currentTarget as HTMLElement).style.display = "none";
                           }}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600/80 px-1.5 py-0.5 rounded">
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          <span className="bg-black/70 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+                            <Eye className="w-3 h-3" /> Expand
+                          </span>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600/90 px-1.5 py-0.5 rounded shadow-xs">
                             {photo.photoType}
                           </span>
                           {photo.isPrimary && (
-                            <span className="ml-1 text-[10px] font-bold uppercase bg-emerald-600 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-bold uppercase bg-emerald-600 px-1.5 py-0.5 rounded shadow-xs">
                               Primary
                             </span>
                           )}
@@ -2366,15 +2435,24 @@ export default function AdminStudentsPage() {
                     ))}
                   </div>
                 ) : inspectStudent.profilePhotoUrl ? (
-                  <div className="w-48 aspect-3/4 rounded-xl overflow-hidden border border-slate-200">
+                  <div
+                    onClick={() => setLightboxPhoto(inspectStudent.profilePhotoUrl)}
+                    className="w-48 aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group cursor-pointer shadow-xs hover:shadow-md hover:border-red-400 relative transition"
+                    title="Click to expand full resolution photo"
+                  >
                     <img
                       src={inspectStudent.profilePhotoUrl}
                       alt="Profile"
                       onError={(e) => {
                         (e.currentTarget as HTMLElement).style.display = "none";
                       }}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="bg-black/70 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+                        <Eye className="w-3 h-3" /> Expand
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
@@ -3367,6 +3445,49 @@ export default function AdminStudentsPage() {
           setCustomEmailBody(tpl.body);
         }}
       />
+
+      {/* ---------------------------------------------------- */}
+      {/* FULLSCREEN PHOTO LIGHTBOX MODAL */}
+      {/* ---------------------------------------------------- */}
+      {lightboxPhoto && (
+        <div
+          onClick={() => setLightboxPhoto(null)}
+          className="fixed inset-0 z-70 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center justify-center cursor-default"
+          >
+            <img
+              src={lightboxPhoto}
+              alt="Enlarged photo preview"
+              className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+            />
+            
+            {/* Top-Right Quick Actions */}
+            <div className="absolute top-3 right-3 flex items-center gap-2">
+              <a
+                href={lightboxPhoto}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="bg-black/70 hover:bg-black text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition hover:scale-105 shadow-lg"
+                title="Open original photo in new tab"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <button
+                type="button"
+                onClick={() => setLightboxPhoto(null)}
+                className="bg-black/70 hover:bg-black text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition hover:scale-105 shadow-lg"
+                title="Close Lightbox (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
