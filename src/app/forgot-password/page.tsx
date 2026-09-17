@@ -416,14 +416,14 @@ export default function ForgotPasswordPage() {
               If you cannot access your registered email, contact our administrative coordinator team directly on WhatsApp to verify and reset your account.
             </p>
             <a
-              href={`https://wa.me/919999999999?text=${encodeURIComponent(
+              href={`https://wa.me/917986955634?text=${encodeURIComponent(
                 `Hello Topline Support Team, I am unable to reset my password for Registration/Phone: ${
                   identifier || "My Account"
                 }. Please assist me with account verification.`
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-2xs"
+              className="inline-flex items-center justify-center gap-1.5 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-2xs cursor-pointer"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Contact Coordinator on WhatsApp</span>
