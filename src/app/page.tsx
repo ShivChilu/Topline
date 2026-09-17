@@ -34,6 +34,7 @@ function formatTime12(timeStr: string) {
 
 export default async function HomePage() {
   let activeEvents: any[] = [];
+  let heroFeaturedEvent: any = null;
   let galleryImages: any[] = [];
   let homeContent: any = {
     headline: "Reliable Hospitality Workforce for Events, Hotels & Resorts",
@@ -45,12 +46,32 @@ export default async function HomePage() {
   };
 
   try {
-    // Fetch active open events
-    activeEvents = await prisma.event.findMany({
-      where: { status: "OPEN", visibility: "VISIBLE" },
+    // Fetch all published events and sort with marketing priority (OPEN first)
+    const allVisibleEvents = await prisma.event.findMany({
+      where: { visibility: "VISIBLE", status: { not: "ARCHIVED" } },
       orderBy: { date: "asc" },
-      take: 3,
     });
+
+    const statusPriority: Record<string, number> = {
+      OPEN: 1,
+      SCHEDULED: 2,
+      FULL: 3,
+      DRAFT: 4,
+      CLOSED: 5,
+      COMPLETED: 6,
+    };
+
+    allVisibleEvents.sort((a, b) => {
+      const pA = statusPriority[a.status] || 99;
+      const pB = statusPriority[b.status] || 99;
+      if (pA !== pB) return pA - pB;
+      const dA = a.date ? new Date(a.date).getTime() : 0;
+      const dB = b.date ? new Date(b.date).getTime() : 0;
+      return dA - dB;
+    });
+
+    activeEvents = allVisibleEvents.slice(0, 3);
+    heroFeaturedEvent = allVisibleEvents.find((e) => e.status === "OPEN") || null;
 
     // Fetch published gallery images
     galleryImages = await prisma.gallery.findMany({
@@ -85,23 +106,54 @@ export default async function HomePage() {
       <div className="absolute top-[20%] left-[-10%] w-[40vw] h-[40vw] bg-red-650/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
       <div className="absolute top-[60%] right-[-10%] w-[40vw] h-[40vw] bg-red-650/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
 
+      {/* Top Urgent Recruitment Announcement Bar */}
+      {heroFeaturedEvent && (
+        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-2.5 px-4 text-xs sm:text-sm font-extrabold shadow-md relative z-40 border-b border-red-700">
+          <div className="max-w-7xl mx-auto flex items-center justify-center text-center gap-2 sm:gap-3 flex-wrap">
+            <span className="bg-white text-red-700 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-xs animate-pulse">
+              🔥 Urgent Hiring
+            </span>
+            <span className="text-white/95">
+              <strong>{heroFeaturedEvent.name}</strong> • {heroFeaturedEvent.workType} • ₹{heroFeaturedEvent.paymentPerStudent}/shift
+            </span>
+            <Link
+              href={`/events/${heroFeaturedEvent.id}`}
+              className="bg-white hover:bg-slate-100 text-red-700 font-extrabold px-3 py-1 rounded-lg text-xs transition inline-flex items-center gap-1 shadow-xs ml-1"
+            >
+              <span>Apply Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
       <Navbar />
 
       {/* Hero Slideshow Section */}
       <HeroSlideshow headline={homeContent.headline} subheadline={homeContent.subheadline}>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[320px] sm:max-w-none mx-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[420px] sm:max-w-none mx-auto">
+          {heroFeaturedEvent ? (
+            <Link
+              href={`/events/${heroFeaturedEvent.id}`}
+              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-black shadow-lg shadow-red-600/30 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border animate-pulse"
+            >
+              <span>🔥 Apply for {heroFeaturedEvent.name} (₹{heroFeaturedEvent.paymentPerStudent})</span>
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          ) : (
+            <Link
+              href="/opportunities"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border"
+            >
+              <span>Upcoming Events</span>
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          )}
           <Link
             href="/opportunities"
-            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-black px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border"
-          >
-            <span>Upcoming Events</span>
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          <Link
-            href="/contact"
             className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center box-border"
           >
-            Contact TOPLINE
+            Browse All Gigs
           </Link>
         </div>
       </HeroSlideshow>
@@ -166,52 +218,78 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {activeEvents.map((event: any) => (
-                <div
-                  key={event.id}
-                  className="light-panel rounded-2xl overflow-hidden flex flex-col justify-between relative group"
-                >
-                  {/* Left accent bar on hover */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
-                  <div className="absolute -top-10 -right-10 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition-colors duration-300"></div>
+              {activeEvents.map((event: any) => {
+                const isOpen = event.status === "OPEN";
+                return (
+                  <div
+                    key={event.id}
+                    className={`rounded-2xl overflow-hidden flex flex-col justify-between relative group transition-all duration-300 ${
+                      isOpen
+                        ? "bg-white border-2 border-red-500/80 shadow-md ring-4 ring-red-500/10 hover:shadow-xl transform hover:-translate-y-1"
+                        : "light-panel shadow-sm hover:shadow-md"
+                    }`}
+                  >
+                    {/* Left accent bar on hover */}
+                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
+                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition-colors duration-300"></div>
 
-                  <div className="p-6 relative z-10">
-                    <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-250 uppercase tracking-widest">
-                      {event.status}
-                    </span>
-                    <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-red-700 transition duration-300">
-                      <Link href={`/events/${event.id}`}>{event.name}</Link>
-                    </h3>
-                    <p className="mt-2 text-sm text-slate-500 line-clamp-2">{event.description}</p>
-                    <div className="mt-6 space-y-3.5 text-sm text-slate-600">
-                      <div className="flex items-center space-x-2.5">
-                        <Calendar className="w-4 h-4 text-red-700" />
-                        <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
+                    <div className="p-6 relative z-10">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span
+                          className={`text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider ${
+                            isOpen
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1.5"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {isOpen && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />}
+                          {isOpen ? "🟢 Hiring Active" : event.status}
+                        </span>
+                        {event.workType && (
+                          <span className="text-[11px] font-bold text-slate-500 uppercase">
+                            {event.workType}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center space-x-2.5">
-                        <MapPin className="w-4 h-4 text-red-700" />
-                        <span>{event.location}</span>
-                      </div>
-                      <div className="flex items-center space-x-2.5">
-                        <Clock className="w-4 h-4 text-red-700" />
-                         <span>Reporting: {formatTime12(event.reportingTime)}</span>
+                      <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-red-700 transition duration-300">
+                        <Link href={`/events/${event.id}`}>{event.name}</Link>
+                      </h3>
+                      <p className="mt-2 text-sm text-slate-500 line-clamp-2">{event.description}</p>
+                      <div className="mt-6 space-y-3.5 text-sm text-slate-600 font-medium">
+                        <div className="flex items-center space-x-2.5">
+                          <Calendar className="w-4 h-4 text-red-600" />
+                          <span>{new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                        </div>
+                        <div className="flex items-center space-x-2.5">
+                          <MapPin className="w-4 h-4 text-red-600" />
+                          <span>{event.location}</span>
+                        </div>
+                        <div className="flex items-center space-x-2.5">
+                          <Clock className="w-4 h-4 text-red-600" />
+                          <span>Reporting: {formatTime12(event.reportingTime)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="bg-slate-50/50 px-6 py-5 flex items-center justify-between border-t border-slate-100 relative z-10">
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Payout</p>
-                      <p className="text-xl font-extrabold text-red-700">₹{event.paymentPerStudent}</p>
+                    <div className="bg-slate-50/75 px-6 py-5 flex items-center justify-between border-t border-slate-100 relative z-10">
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Per Student Pay</p>
+                        <p className="text-xl font-extrabold text-red-600 font-mono">₹{event.paymentPerStudent}</p>
+                      </div>
+                      <Link
+                        href={`/events/${event.id}`}
+                        className={`text-xs font-extrabold px-5 py-2.5 rounded-xl shadow-sm transition duration-300 flex items-center gap-1 ${
+                          isOpen
+                            ? "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-red-600/20"
+                            : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                        }`}
+                      >
+                        <span>{isOpen ? "Apply Now" : "View Details"}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
-                    <Link
-                      href={`/events/${event.id}`}
-                      className="bg-red-600 hover:bg-red-700 text-black text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition duration-300"
-                    >
-                      Apply Now
-                    </Link>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -100,15 +100,43 @@ export default async function OpportunitiesPage(props: {
       ];
     }
 
-    events = await prisma.event.findMany({
+    const rawEvents = await prisma.event.findMany({
       where: whereClause,
       orderBy: { date: "asc" },
+    });
+
+    // Smart Marketing-First Priority Sorting:
+    // 1. OPEN events (Hiring active)
+    // 2. SCHEDULED events
+    // 3. FULL events
+    // 4. CLOSED / COMPLETED / ARCHIVED events
+    const statusPriority: Record<string, number> = {
+      OPEN: 1,
+      SCHEDULED: 2,
+      FULL: 3,
+      DRAFT: 4,
+      CLOSED: 5,
+      COMPLETED: 6,
+      CANCELLED: 7,
+      ARCHIVED: 8,
+    };
+
+    events = [...rawEvents].sort((a, b) => {
+      const pA = statusPriority[a.status] || 99;
+      const pB = statusPriority[b.status] || 99;
+      if (pA !== pB) return pA - pB;
+      const dA = a.date ? new Date(a.date).getTime() : 0;
+      const dB = b.date ? new Date(b.date).getTime() : 0;
+      return dA - dB;
     });
   } catch (error) {
     console.error("Failed to load events", error);
   }
 
   const allMissing = [...profileCompletion.missingFields, ...profileCompletion.missingPhotos];
+  const openEvents = events.filter((e: any) => e.status === "OPEN");
+  const fullEvents = events.filter((e: any) => e.status === "FULL");
+  const featuredOpenEvent = openEvents[0] || null;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
@@ -199,6 +227,64 @@ export default async function OpportunitiesPage(props: {
           </div>
         )}
 
+        {/* URGENT OPEN EVENT HIRING SPOTLIGHT BANNER */}
+        {featuredOpenEvent && !searchParams.status && !searchParams.search && (
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#1e1b2e] to-slate-900 border-2 border-red-500/60 shadow-xl text-white p-6 sm:p-8">
+            <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
+              <div className="space-y-3 max-w-2xl">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black uppercase tracking-wider shadow-sm animate-pulse">
+                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                    🔥 Urgent Hiring Now
+                  </span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    🟢 Slots Open
+                  </span>
+                  {featuredOpenEvent.workType && (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                      🍽️ {featuredOpenEvent.workType}
+                    </span>
+                  )}
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                  {featuredOpenEvent.name}
+                </h2>
+
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm text-slate-300 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-red-400" />
+                    <span>{new Date(featuredOpenEvent.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-red-400" />
+                    <span>Reporting: {formatTime12(featuredOpenEvent.reportingTime)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-red-400" />
+                    <span>{featuredOpenEvent.location}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 w-full lg:w-auto shrink-0 pt-2 lg:pt-0">
+                <div className="text-left lg:text-right">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Per Student Pay</p>
+                  <p className="text-3xl font-black text-red-400 font-mono">₹{featuredOpenEvent.paymentPerStudent}</p>
+                </div>
+                <Link
+                  href={`/events/${featuredOpenEvent.id}`}
+                  className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold px-8 py-3.5 rounded-2xl text-sm uppercase tracking-wider transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 text-center"
+                >
+                  <span>Apply For This Event</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filter Toolbar */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
           <form className="w-full md:w-auto flex flex-col sm:flex-row gap-2.5">
@@ -220,7 +306,7 @@ export default async function OpportunitiesPage(props: {
             </button>
           </form>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link
               href="/opportunities"
               className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
@@ -229,17 +315,18 @@ export default async function OpportunitiesPage(props: {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              All Events
+              All Events ({events.length})
             </Link>
             <Link
               href="/opportunities?status=OPEN"
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center gap-1.5 ${
                 searchParams.status === "OPEN"
                   ? "bg-emerald-600 text-white shadow-sm"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              Open Only
+              {openEvents.length > 0 && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
+              <span>Open Only ({openEvents.length})</span>
             </Link>
             <Link
               href="/opportunities?status=FULL"
@@ -249,7 +336,7 @@ export default async function OpportunitiesPage(props: {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              Full
+              Full ({fullEvents.length})
             </Link>
           </div>
         </div>
@@ -269,14 +356,18 @@ export default async function OpportunitiesPage(props: {
               const isScheduled = event.status === "SCHEDULED";
 
               let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
-              if (isOpen) statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
+              if (isOpen) statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200 font-extrabold";
               if (isFull) statusBadgeColor = "bg-amber-50 text-amber-700 border-amber-200";
               if (isScheduled) statusBadgeColor = "bg-purple-50 text-purple-700 border-purple-200";
 
               return (
                 <div
                   key={event.id}
-                  className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                  className={`bg-white rounded-3xl overflow-hidden transition-all flex flex-col justify-between ${
+                    isOpen
+                      ? "border-2 border-red-500/80 shadow-md ring-4 ring-red-500/5 hover:shadow-lg"
+                      : "border border-slate-200 shadow-sm hover:shadow-md"
+                  }`}
                 >
                   <div className="p-6">
                     <div className="flex items-center justify-between">
