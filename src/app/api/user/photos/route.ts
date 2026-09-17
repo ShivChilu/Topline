@@ -25,7 +25,7 @@ export async function GET() {
 
     const photos = await prisma.studentPhoto.findMany({
       where: { userId: student.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
     });
 
     const formattedPhotos = photos.map((p) => ({
@@ -35,7 +35,7 @@ export async function GET() {
       caption: p.caption,
       isPrimary: p.isPrimary,
       createdAt: p.createdAt,
-      url: `/api/photos/student?photoId=${p.id}`,
+      url: `/api/photos/student?photoId=${p.id}&t=${new Date(p.createdAt).getTime()}`,
     }));
 
     return NextResponse.json({ success: true, photos: formattedPhotos });
@@ -45,7 +45,7 @@ export async function GET() {
   }
 }
 
-// POST /api/user/photos - add a new student photo
+// POST /api/user/photos - add or replace a student photo
 export async function POST(request: Request) {
   try {
     const student = await getAuthStudent();
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { url, photoType = "FORMAL", caption, isPrimary = false } = body;
+    const { url, photoType = "FORMAL", caption, isPrimary = false, replacePhotoId } = body;
 
     if (!url) {
       return NextResponse.json({ success: false, message: "Photo URL is required." }, { status: 400 });
@@ -64,9 +64,57 @@ export async function POST(request: Request) {
     const validTypes: StudentPhotoType[] = ["FORMAL", "FULL_LENGTH", "CASUAL", "OTHER"];
     const typeEnum = validTypes.includes(photoType) ? (photoType as StudentPhotoType) : "FORMAL";
 
-    // If marked as primary or if it's the first photo, update user profilePhotoUrl
-    if (isPrimary) {
-      // Unset previous primary photos
+    // If replacePhotoId is specified, update existing photo
+    if (replacePhotoId) {
+      const existing = await prisma.studentPhoto.findFirst({
+        where: { id: replacePhotoId, userId: student.id },
+      });
+
+      if (existing) {
+        const updated = await prisma.studentPhoto.update({
+          where: { id: replacePhotoId },
+          data: {
+            url,
+            photoType: typeEnum,
+            caption: caption !== undefined ? caption : existing.caption,
+            isPrimary: isPrimary !== undefined ? Boolean(isPrimary) : existing.isPrimary,
+          },
+        });
+
+        if (updated.isPrimary) {
+          await prisma.studentPhoto.updateMany({
+            where: { userId: student.id, id: { not: replacePhotoId } },
+            data: { isPrimary: false },
+          });
+          await prisma.user.update({
+            where: { id: student.id },
+            data: { profilePhotoUrl: url },
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: "Photo replaced successfully!",
+          photo: {
+            id: updated.id,
+            userId: updated.userId,
+            photoType: updated.photoType,
+            caption: updated.caption,
+            isPrimary: updated.isPrimary,
+            createdAt: updated.createdAt,
+            url: `/api/photos/student?photoId=${updated.id}&t=${Date.now()}`,
+          },
+        });
+      }
+    }
+
+    // Check count of photos
+    const existingPhotos = await prisma.studentPhoto.findMany({
+      where: { userId: student.id },
+    });
+    const shouldBePrimary = Boolean(isPrimary) || existingPhotos.length === 0;
+
+    if (shouldBePrimary) {
       await prisma.studentPhoto.updateMany({
         where: { userId: student.id },
         data: { isPrimary: false },
@@ -75,15 +123,6 @@ export async function POST(request: Request) {
         where: { id: student.id },
         data: { profilePhotoUrl: url },
       });
-    } else {
-      // Check if user has no profile photo set
-      const user = await prisma.user.findUnique({ where: { id: student.id } });
-      if (!user?.profilePhotoUrl) {
-        await prisma.user.update({
-          where: { id: student.id },
-          data: { profilePhotoUrl: url },
-        });
-      }
     }
 
     const photo = await prisma.studentPhoto.create({
@@ -92,7 +131,7 @@ export async function POST(request: Request) {
         url,
         photoType: typeEnum,
         caption: caption || null,
-        isPrimary: Boolean(isPrimary),
+        isPrimary: shouldBePrimary,
       },
     });
 
@@ -106,12 +145,78 @@ export async function POST(request: Request) {
         caption: photo.caption,
         isPrimary: photo.isPrimary,
         createdAt: photo.createdAt,
-        url: `/api/photos/student?photoId=${photo.id}`,
+        url: `/api/photos/student?photoId=${photo.id}&t=${Date.now()}`,
       },
     });
   } catch (error: any) {
     console.error("Save student photo error:", error);
     return NextResponse.json({ success: false, message: "Failed to save photo." }, { status: 500 });
+  }
+}
+
+// PATCH /api/user/photos - update photo (e.g. set as primary, change category, or caption)
+export async function PATCH(request: Request) {
+  try {
+    const student = await getAuthStudent();
+    if (!student) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { photoId, isPrimary, photoType, caption } = body;
+
+    if (!photoId) {
+      return NextResponse.json({ success: false, message: "Photo ID is required." }, { status: 400 });
+    }
+
+    const photo = await prisma.studentPhoto.findFirst({
+      where: { id: photoId, userId: student.id },
+    });
+
+    if (!photo) {
+      return NextResponse.json({ success: false, message: "Photo not found." }, { status: 404 });
+    }
+
+    if (isPrimary) {
+      // Unset all other photos as primary
+      await prisma.studentPhoto.updateMany({
+        where: { userId: student.id },
+        data: { isPrimary: false },
+      });
+
+      // Set this photo as primary
+      await prisma.studentPhoto.update({
+        where: { id: photoId },
+        data: { isPrimary: true },
+      });
+
+      // Update user main profilePhotoUrl
+      await prisma.user.update({
+        where: { id: student.id },
+        data: { profilePhotoUrl: photo.url },
+      });
+    }
+
+    if (photoType || caption !== undefined) {
+      const validTypes: StudentPhotoType[] = ["FORMAL", "FULL_LENGTH", "CASUAL", "OTHER"];
+      const typeEnum = photoType && validTypes.includes(photoType) ? (photoType as StudentPhotoType) : undefined;
+
+      await prisma.studentPhoto.update({
+        where: { id: photoId },
+        data: {
+          ...(typeEnum && { photoType: typeEnum }),
+          ...(caption !== undefined && { caption: caption ? String(caption).trim() : null }),
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: isPrimary ? "Photo set as your primary profile photo!" : "Photo details updated.",
+    });
+  } catch (error: any) {
+    console.error("Update student photo error:", error);
+    return NextResponse.json({ success: false, message: "Failed to update photo." }, { status: 500 });
   }
 }
 
@@ -142,7 +247,7 @@ export async function DELETE(request: Request) {
       where: { id: photoId },
     });
 
-    // If the deleted photo was the user's primary profile photo, update to next available or null
+    // If the deleted photo was primary, assign next available or null
     const remainingPhotos = await prisma.studentPhoto.findMany({
       where: { userId: student.id },
       orderBy: { createdAt: "desc" },

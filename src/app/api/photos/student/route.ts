@@ -28,9 +28,31 @@ export async function GET(request: Request) {
     } else if (userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { profilePhotoUrl: true },
+        select: {
+          profilePhotoUrl: true,
+          studentPhotos: {
+            orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
+            select: { id: true, url: true, isPrimary: true },
+          },
+        },
       });
+
       dataUrl = user?.profilePhotoUrl || null;
+
+      // If user.profilePhotoUrl is missing or corrupted with a relative endpoint path, fall back to studentPhotos!
+      if (!dataUrl || dataUrl.startsWith("/api/photos") || dataUrl.startsWith("/")) {
+        const primaryPhoto = user?.studentPhotos?.find((p) => p.isPrimary) || user?.studentPhotos?.[0];
+        if (primaryPhoto?.url) {
+          dataUrl = primaryPhoto.url;
+          // Auto-repair user profilePhotoUrl in DB asynchronously
+          prisma.user
+            .update({
+              where: { id: userId },
+              data: { profilePhotoUrl: primaryPhoto.url },
+            })
+            .catch((err) => console.warn("Auto-repair profilePhotoUrl skipped:", err));
+        }
+      }
     }
 
     if (!dataUrl) {
@@ -52,7 +74,7 @@ export async function GET(request: Request) {
           headers: {
             "Content-Type": mimeType,
             "Content-Length": buffer.length.toString(),
-            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+            "Cache-Control": "public, max-age=0, must-revalidate",
           },
         });
       }

@@ -82,6 +82,10 @@ export default function StudentProfilePage() {
   const [activeTab, setActiveTab] = useState<"overview" | "gigs" | "edit" | "photos">("overview");
   const [gigFilter, setGigFilter] = useState<"ALL" | "CONFIRMED" | "SELECTED" | "ATTENDED" | "APPLIED">("ALL");
 
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
+  const [photoActionLoading, setPhotoActionLoading] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -204,9 +208,52 @@ export default function StudentProfilePage() {
     }
   };
 
-  const triggerPhotoUpload = (type: "FORMAL" | "FULL_LENGTH" | "CASUAL") => {
-    setUploadType(type);
+  const triggerPhotoUpload = (type: "FORMAL" | "FULL_LENGTH" | "CASUAL" | "OTHER" = "FORMAL") => {
+    setReplacingPhotoId(null);
+    setUploadType(type === "OTHER" ? "FORMAL" : type);
     fileInputRef.current?.click();
+  };
+
+  const handleReplacePhoto = (photoId: string, type: "FORMAL" | "FULL_LENGTH" | "CASUAL" | "OTHER" = "FORMAL") => {
+    setReplacingPhotoId(photoId);
+    setUploadType(type === "OTHER" ? "FORMAL" : type);
+    fileInputRef.current?.click();
+  };
+
+  const handleSetPrimaryPhoto = async (photoId: string) => {
+    try {
+      setPhotoActionLoading(photoId);
+      // Optimistic UI update
+      setPhotos((prev) =>
+        prev.map((p) => ({
+          ...p,
+          isPrimary: p.id === photoId,
+        }))
+      );
+      setUser((prev: any) => ({
+        ...prev,
+        profilePhotoUrl: `/api/photos/student?photoId=${photoId}&t=${Date.now()}`,
+      }));
+
+      const res = await fetch("/api/user/photos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoId, isPrimary: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showFeedback("success", "Primary profile picture updated!");
+        fetchProfile(true);
+      } else {
+        showFeedback("error", data.message || "Failed to set profile picture.");
+        fetchProfile(true);
+      }
+    } catch (err) {
+      console.error("Set primary photo error:", err);
+      showFeedback("error", "Error setting profile picture.");
+    } finally {
+      setPhotoActionLoading(null);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,22 +285,38 @@ export default function StudentProfilePage() {
         return;
       }
 
-      // Step 2: Save to student photo gallery table
+      // Step 2: Save or Replace in student photo gallery table
       const isFirst = photos.length === 0;
+      const isPrimaryTarget = isFirst || uploadType === "FORMAL" || Boolean(avatarModalOpen);
+
       const photoSaveRes = await fetch("/api/user/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: uploadData.url,
           photoType: uploadType,
-          isPrimary: isFirst || uploadType === "FORMAL",
+          isPrimary: isPrimaryTarget,
+          replacePhotoId: replacingPhotoId || undefined,
         }),
       });
 
       const photoSaveData = await photoSaveRes.json();
       if (photoSaveData.success) {
-        showFeedback("success", `New ${uploadType.toLowerCase()} photo saved to your profile!`);
-        fetchProfile();
+        showFeedback(
+          "success",
+          replacingPhotoId
+            ? "Photo replaced successfully!"
+            : isPrimaryTarget
+            ? "Profile photo updated successfully!"
+            : `New ${uploadType.toLowerCase()} photo saved to your profile!`
+        );
+        // Instant visual update for avatar
+        setUser((prev: any) => ({
+          ...prev,
+          profilePhotoUrl: `/api/photos/student?userId=${user.id}&t=${Date.now()}`,
+        }));
+        setAvatarModalOpen(false);
+        fetchProfile(true);
       } else {
         showFeedback("error", photoSaveData.message || "Failed to link photo.");
       }
@@ -262,6 +325,7 @@ export default function StudentProfilePage() {
       showFeedback("error", "Network error during photo upload.");
     } finally {
       setUploadingPhoto(false);
+      setReplacingPhotoId(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -269,17 +333,20 @@ export default function StudentProfilePage() {
   const handleDeletePhoto = async (photoId: string) => {
     if (!confirm("Are you sure you want to remove this photo?")) return;
     try {
+      setPhotoActionLoading(photoId);
       const res = await fetch(`/api/user/photos?id=${photoId}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
         showFeedback("success", "Photo deleted.");
-        fetchProfile();
+        fetchProfile(true);
       } else {
         showFeedback("error", data.message || "Failed to delete photo.");
       }
     } catch (err) {
       console.error(err);
       showFeedback("error", "Failed to delete photo.");
+    } finally {
+      setPhotoActionLoading(null);
     }
   };
 
@@ -462,9 +529,20 @@ export default function StudentProfilePage() {
             {/* Left: Avatar & Identity */}
             <div className="flex items-center gap-4 min-w-0">
               <div className="relative group shrink-0">
-                <div className="w-18 h-18 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl sm:rounded-3xl border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-inner text-red-600 font-black text-2xl sm:text-3xl">
+                <div
+                  onClick={() => setAvatarModalOpen(true)}
+                  className="w-18 h-18 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl sm:rounded-3xl border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-inner text-red-600 font-black text-2xl sm:text-3xl cursor-pointer transition hover:ring-2 hover:ring-red-500/50"
+                  title="Click to view or change profile photo"
+                >
                   {user.profilePhotoUrl ? (
-                    <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" />
+                    <img
+                      src={user.profilePhotoUrl}
+                      alt={user.name}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = "none";
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     user.name?.charAt(0)?.toUpperCase() || "S"
                   )}
@@ -472,10 +550,10 @@ export default function StudentProfilePage() {
 
                 <button
                   type="button"
-                  onClick={() => triggerPhotoUpload("FORMAL")}
+                  onClick={() => setAvatarModalOpen(true)}
                   disabled={uploadingPhoto}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-md transition active:scale-95 border-2 border-white"
-                  title="Update Photo"
+                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-md transition active:scale-95 border-2 border-white cursor-pointer"
+                  title="Change Profile Picture"
                 >
                   <Camera className="w-3.5 h-3.5" />
                 </button>
@@ -1490,7 +1568,9 @@ export default function StudentProfilePage() {
                 {photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="relative aspect-3/4 rounded-2xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-sm"
+                    className={`relative aspect-3/4 rounded-2xl overflow-hidden border group bg-slate-100 shadow-sm transition ${
+                      photo.isPrimary ? "border-emerald-500 ring-2 ring-emerald-500/30" : "border-slate-200"
+                    }`}
                   >
                     <img
                       src={photo.url}
@@ -1506,26 +1586,189 @@ export default function StudentProfilePage() {
                       {photo.photoType}
                     </div>
 
-                    {photo.isPrimary && (
-                      <div className="absolute top-2 right-2 bg-emerald-600 text-white p-1 rounded-full shadow" title="Primary Profile Photo">
+                    {photo.isPrimary ? (
+                      <div className="absolute top-2 right-2 bg-emerald-600 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 shadow" title="Primary Profile Photo">
                         <Star className="w-3 h-3 fill-white" />
+                        <span>Profile Pic</span>
                       </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSetPrimaryPhoto(photo.id)}
+                        disabled={photoActionLoading === photo.id}
+                        className="absolute top-2 right-2 bg-black/60 hover:bg-emerald-600 text-white p-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow transition opacity-90 group-hover:opacity-100 cursor-pointer"
+                        title="Set as Main Profile Picture"
+                      >
+                        <Star className="w-3 h-3" />
+                      </button>
                     )}
 
-                    {/* Delete Action */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
-                      <button
-                        onClick={() => handleDeletePhoto(photo.id)}
-                        className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg transition active:scale-95 cursor-pointer"
-                        title="Delete Photo"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {/* Hover Controls Overlay */}
+                    <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2 p-2">
+                      {!photo.isPrimary && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetPrimaryPhoto(photo.id)}
+                          disabled={photoActionLoading === photo.id}
+                          className="w-full py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 shadow transition active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <Star className="w-3 h-3 fill-white" />
+                          <span>Set as Profile</span>
+                        </button>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleReplacePhoto(photo.id, photo.photoType)}
+                          disabled={uploadingPhoto}
+                          className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition active:scale-95 cursor-pointer"
+                          title="Replace this photo"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePhoto(photo.id)}
+                          disabled={photoActionLoading === photo.id}
+                          className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow transition active:scale-95 cursor-pointer disabled:opacity-50"
+                          title="Delete Photo"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* DEDICATED PROFILE PHOTO & AVATAR MANAGER MODAL */}
+        {/* ---------------------------------------------------- */}
+        {avatarModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+            <div className="bg-white w-full max-w-lg rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+              {/* Header */}
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-white">Profile Picture & Avatar</h3>
+                    <p className="text-xs text-slate-400">Update or choose your main profile photo</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAvatarModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 sm:p-6 space-y-5">
+                {/* Large Preview */}
+                <div className="flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-slate-100 border-4 border-slate-200 overflow-hidden shadow-inner flex items-center justify-center text-red-600 font-black text-4xl relative group">
+                    {user.profilePhotoUrl ? (
+                      <img src={user.profilePhotoUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user.name?.charAt(0)?.toUpperCase() || "S"
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    This photo is visible to event coordinators, banquet managers, and on your candidate profile card.
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    disabled={uploadingPhoto}
+                    onClick={() => triggerPhotoUpload("FORMAL")}
+                    className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {uploadingPhoto ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4" />
+                        <span>Upload New Photo</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarModalOpen(false);
+                      setActiveTab("photos");
+                    }}
+                    className="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold px-4 py-3 rounded-2xl text-xs transition border border-slate-200 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-purple-600" />
+                    <span>Manage All Photos ({photos.length})</span>
+                  </button>
+                </div>
+
+                {/* Select from Existing Photos */}
+                {photos.length > 0 && (
+                  <div className="space-y-2.5 pt-3 border-t border-slate-100">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Or Select from Uploaded Photos:
+                    </span>
+                    <div className="grid grid-cols-4 gap-2">
+                      {photos.map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => handleSetPrimaryPhoto(p.id)}
+                          className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition group hover:scale-102 ${
+                            p.isPrimary
+                              ? "border-emerald-500 ring-2 ring-emerald-500/40 shadow-sm"
+                              : "border-slate-200 hover:border-slate-400"
+                          }`}
+                          title={p.isPrimary ? "Active Primary Photo" : "Click to set as profile photo"}
+                        >
+                          <img src={p.url} alt="Photo" className="w-full h-full object-cover" />
+                          {p.isPrimary ? (
+                            <div className="absolute top-1 right-1 bg-emerald-600 text-white p-0.5 rounded-full shadow">
+                              <Check className="w-2.5 h-2.5 stroke-3" />
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                              <span className="text-[9px] font-extrabold text-white bg-black/60 px-1.5 py-0.5 rounded">
+                                Set
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAvatarModalOpen(false)}
+                  className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

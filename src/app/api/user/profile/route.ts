@@ -113,7 +113,9 @@ export async function GET() {
         age: user.age,
         upiId: user.upiId,
         bio: user.bio,
-        profilePhotoUrl: user.profilePhotoUrl ? `/api/photos/student?userId=${user.id}` : null,
+        profilePhotoUrl: user.profilePhotoUrl || user.studentPhotos.length > 0
+          ? `/api/photos/student?userId=${user.id}&t=${new Date(user.updatedAt || user.createdAt).getTime()}`
+          : null,
         selectionStatus: user.selectionStatus,
         selectedAt: user.selectedAt,
         studentPhotos: user.studentPhotos.map((p) => ({
@@ -123,7 +125,7 @@ export async function GET() {
           caption: p.caption,
           isPrimary: p.isPrimary,
           createdAt: p.createdAt,
-          url: `/api/photos/student?photoId=${p.id}`,
+          url: `/api/photos/student?photoId=${p.id}&t=${new Date(p.createdAt).getTime()}`,
         })),
         dynamicFields,
         completeness,
@@ -205,6 +207,24 @@ export async function PUT(request: Request) {
       }
     }
 
+    // Only update profilePhotoUrl if it's an actual image data URL or http URL, or explicitly empty.
+    // NEVER overwrite with a proxy relative path like "/api/photos/student?..."
+    let shouldUpdatePhoto = false;
+    let cleanProfilePhotoUrl: string | null = null;
+    if (profilePhotoUrl !== undefined) {
+      if (!profilePhotoUrl || String(profilePhotoUrl).trim() === "") {
+        shouldUpdatePhoto = true;
+        cleanProfilePhotoUrl = null;
+      } else if (
+        String(profilePhotoUrl).startsWith("data:") ||
+        String(profilePhotoUrl).startsWith("http://") ||
+        String(profilePhotoUrl).startsWith("https://")
+      ) {
+        shouldUpdatePhoto = true;
+        cleanProfilePhotoUrl = String(profilePhotoUrl).trim();
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: student.id },
       data: {
@@ -220,7 +240,7 @@ export async function PUT(request: Request) {
         ...(age !== undefined && { age: age ? parseInt(String(age), 10) : null }),
         ...(upiId !== undefined && { upiId: upiId ? upiId.trim() : null }),
         ...(bio !== undefined && { bio: bio ? bio.trim() : null }),
-        ...(profilePhotoUrl !== undefined && { profilePhotoUrl: profilePhotoUrl ? profilePhotoUrl.trim() : null }),
+        ...(shouldUpdatePhoto && { profilePhotoUrl: cleanProfilePhotoUrl }),
       },
     });
 
@@ -268,7 +288,9 @@ export async function PUT(request: Request) {
         age: updatedUser.age,
         upiId: updatedUser.upiId,
         bio: updatedUser.bio,
-        profilePhotoUrl: updatedUser.profilePhotoUrl ? `/api/photos/student?userId=${updatedUser.id}` : null,
+        profilePhotoUrl: updatedUser.profilePhotoUrl
+          ? `/api/photos/student?userId=${updatedUser.id}&t=${Date.now()}`
+          : null,
         selectionStatus: updatedUser.selectionStatus,
         completeness,
       },
