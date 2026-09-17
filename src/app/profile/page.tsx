@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import {
   User,
+  Users,
   Phone,
   Mail,
   GraduationCap,
@@ -346,6 +347,14 @@ export default function StudentProfilePage() {
     return user.recentApplications;
   }, [user, gigFilter]);
 
+  const isAdmin = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user?.role);
+  const adminDashboardUrl =
+    user?.role === "CALLING_ADMIN"
+      ? "/admin/calling"
+      : user?.role === "EVENT_ADMIN"
+      ? "/admin/events"
+      : "/admin/dashboard";
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700">
@@ -378,6 +387,35 @@ export default function StudentProfilePage() {
 
       <main className="flex-grow max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-5 sm:space-y-6 relative z-10">
         
+        {/* Administrator Access Hub Banner */}
+        {isAdmin && (
+          <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white p-5 rounded-3xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-red-500/30 animate-in fade-in">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white">
+                <ShieldCheck className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black tracking-wide">Topline Administration Workspace</h2>
+                  <span className="bg-white text-red-700 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider">
+                    {user.role}
+                  </span>
+                </div>
+                <p className="text-xs text-white/90 mt-0.5">
+                  You are signed in as an administrator. Access event operations, candidate rosters, attendance QR codes, and communications.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={adminDashboardUrl}
+              className="bg-white hover:bg-slate-50 text-red-700 font-extrabold px-5 py-2.5 rounded-2xl text-xs uppercase tracking-wider shadow-md transition shrink-0 flex items-center gap-2 active:scale-95"
+            >
+              <span>Go to Admin Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+
         {/* Feedback Alert Toast */}
         {feedback && (
           <div
@@ -434,51 +472,72 @@ export default function StudentProfilePage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl sm:text-2xl font-black text-slate-900 truncate">{user.name}</h1>
-                  {user.selectionStatus === "SELECTED" && (
+                  {isAdmin ? (
+                    <span className="bg-purple-100 text-purple-900 border border-purple-300 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-2xs">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-600" /> Admin ({user.role})
+                    </span>
+                  ) : user.selectionStatus === "SELECTED" ? (
                     <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-2xs">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selected
                     </span>
-                  )}
-                  {user.selectionStatus === "UNDER_REVIEW" && (
+                  ) : user.selectionStatus === "UNDER_REVIEW" ? (
                     <span className="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1">
                       <Clock className="w-3 h-3 text-amber-600" /> Under Review
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-1 flex-wrap">
                   <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-bold">
-                    {user.registrationNumber || "No Roll No"}
+                    {user.registrationNumber || (isAdmin ? "ADMIN-ACCOUNT" : "No Roll No")}
                   </span>
                   {user.university && <span className="truncate max-w-[200px] text-slate-600">• {user.university}</span>}
                 </div>
 
-                {/* Completeness Pill */}
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-500 ${
-                        completeness.percentage === 100 ? "bg-emerald-500" : "bg-red-600"
-                      }`}
-                      style={{ width: `${completeness.percentage}%` }}
-                    ></div>
+                {/* Completeness / Role Pill */}
+                {isAdmin ? (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="bg-purple-50 text-purple-800 border border-purple-200 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                      ⭐ Full Operational Console Access
+                    </span>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-600">
-                    {completeness.percentage}% Profile Complete
-                  </span>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          completeness.percentage === 100 ? "bg-emerald-500" : "bg-red-600"
+                        }`}
+                        style={{ width: `${completeness.percentage}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-600">
+                      {completeness.percentage}% Profile Complete
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Right: Primary Call to Actions */}
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
-              <Link
-                href="/events"
-                className="flex-1 sm:flex-initial bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-95"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Browse Events</span>
-              </Link>
+              {isAdmin ? (
+                <Link
+                  href={adminDashboardUrl}
+                  className="flex-1 sm:flex-initial bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                  <span>Admin Dashboard</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/events"
+                  className="flex-1 sm:flex-initial bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Browse Events</span>
+                </Link>
+              )}
 
               <button
                 type="button"
@@ -744,46 +803,98 @@ export default function StudentProfilePage() {
               </div>
             </div>
 
-            {/* Profile Completeness Checklist Box */}
-            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-red-600" />
-                  Profile Completeness Checklist
-                </h3>
-                <span className="text-xs font-black text-red-600">{completeness.percentage}%</span>
-              </div>
-
-              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className={`h-2.5 rounded-full transition-all duration-700 ${
-                    completeness.percentage === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-red-500 to-red-600"
-                  }`}
-                  style={{ width: `${completeness.percentage}%` }}
-                ></div>
-              </div>
-
-              {allMissing.length > 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* Profile Completeness or Admin Quick Console */}
+            {isAdmin ? (
+              <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white rounded-3xl p-5 sm:p-6 shadow-md space-y-4 border border-slate-700">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <span className="font-bold block">Missing items to complete profile (100%):</span>
-                    <span className="text-[11px] text-amber-800">{allMissing.join(" • ")}</span>
+                    <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-white">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>Admin Management Center</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Quick access to operational controls, events, and rosters</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("edit")}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap"
+                  <Link
+                    href={adminDashboardUrl}
+                    className="bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition shadow-sm flex items-center gap-1 active:scale-95"
                   >
-                    Complete Now
-                  </button>
+                    <span>Open Admin Console</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-              ) : (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-800 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-bold">Excellent! Your permanent student profile is 100% complete and ready for event assignments.</span>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  <Link
+                    href="/admin/events"
+                    className="p-3.5 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition text-center space-y-1 block group"
+                  >
+                    <Calendar className="w-5 h-5 mx-auto text-amber-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-bold block">Manage Events</span>
+                  </Link>
+                  <Link
+                    href="/admin/applications"
+                    className="p-3.5 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition text-center space-y-1 block group"
+                  >
+                    <Users className="w-5 h-5 mx-auto text-blue-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-bold block">Applications</span>
+                  </Link>
+                  <Link
+                    href="/admin/students"
+                    className="p-3.5 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition text-center space-y-1 block group"
+                  >
+                    <GraduationCap className="w-5 h-5 mx-auto text-emerald-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-bold block">Student Master</span>
+                  </Link>
+                  <Link
+                    href="/admin/settings"
+                    className="p-3.5 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition text-center space-y-1 block group"
+                  >
+                    <Sliders className="w-5 h-5 mx-auto text-purple-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-bold block">Settings & Fields</span>
+                  </Link>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-red-600" />
+                    Profile Completeness Checklist
+                  </h3>
+                  <span className="text-xs font-black text-red-600">{completeness.percentage}%</span>
+                </div>
+
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className={`h-2.5 rounded-full transition-all duration-700 ${
+                      completeness.percentage === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-red-500 to-red-600"
+                    }`}
+                    style={{ width: `${completeness.percentage}%` }}
+                  ></div>
+                </div>
+
+                {allMissing.length > 0 ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="font-bold block">Missing items to complete profile (100%):</span>
+                      <span className="text-[11px] text-amber-800">{allMissing.join(" • ")}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("edit")}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl whitespace-nowrap"
+                    >
+                      Complete Now
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-bold">Excellent! Your permanent student profile is 100% complete and ready for event assignments.</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Recent Gigs Summary List */}
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">

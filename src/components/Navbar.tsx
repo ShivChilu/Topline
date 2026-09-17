@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Menu, X, User, LogIn } from "lucide-react";
+import { Menu, X, User, LogIn, ShieldCheck } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
@@ -19,6 +19,14 @@ export default function Navbar() {
       })
       .catch(() => {});
   }, []);
+
+  const isAdmin = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(loggedInUser?.role);
+  const adminDashboardUrl =
+    loggedInUser?.role === "CALLING_ADMIN"
+      ? "/admin/calling"
+      : loggedInUser?.role === "EVENT_ADMIN"
+      ? "/admin/events"
+      : "/admin/dashboard";
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -55,32 +63,61 @@ export default function Navbar() {
               ))}
 
               {loggedInUser ? (
-                <Link
-                  href="/profile"
-                  className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>My Profile</span>
-                </Link>
+                isAdmin ? (
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={adminDashboardUrl}
+                      className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition shadow-sm"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Admin Dashboard</span>
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition"
+                      title="Profile Settings"
+                    >
+                      <User className="w-4 h-4" />
+                    </Link>
+                  </div>
+                ) : (
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>My Profile</span>
+                  </Link>
+                )
               ) : (
                 <Link
                   href="/login"
                   className="flex items-center space-x-1.5 bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"
                 >
                   <LogIn className="w-3.5 h-3.5" />
-                  <span>Student Login</span>
+                  <span>Portal Login</span>
                 </Link>
               )}
             </div>
           </div>
           <div className="md:hidden flex items-center space-x-2">
             {loggedInUser ? (
-              <Link
-                href="/profile"
-                className="bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-bold uppercase"
-              >
-                Profile
-              </Link>
+              isAdmin ? (
+                <Link
+                  href={adminDashboardUrl}
+                  className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase flex items-center gap-1 shadow-xs"
+                >
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Admin</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/profile"
+                  className="bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-bold uppercase"
+                >
+                  Profile
+                </Link>
+              )
             ) : (
               <Link
                 href="/login"
@@ -116,20 +153,39 @@ export default function Navbar() {
 
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
               {loggedInUser ? (
-                <Link
-                  href="/profile"
-                  onClick={() => setIsOpen(false)}
-                  className="bg-red-600 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
-                >
-                  My Profile ({loggedInUser.name})
-                </Link>
+                isAdmin ? (
+                  <>
+                    <Link
+                      href={adminDashboardUrl}
+                      onClick={() => setIsOpen(false)}
+                      className="bg-red-600 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider shadow-sm"
+                    >
+                      👑 Admin Dashboard ({loggedInUser.name})
+                    </Link>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="bg-slate-100 text-slate-800 block text-center py-2 rounded-xl font-bold text-xs"
+                    >
+                      Account Settings
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsOpen(false)}
+                    className="bg-red-600 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
+                  >
+                    My Profile ({loggedInUser.name})
+                  </Link>
+                )
               ) : (
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
                   className="bg-slate-900 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
                 >
-                  Student Login / Register
+                  Portal Login / Register
                 </Link>
               )}
             </div>
