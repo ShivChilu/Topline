@@ -41,6 +41,8 @@ import {
   MessageSquare,
   PhoneCall,
   CalendarDays,
+  Users,
+  Filter,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import {
@@ -76,6 +78,13 @@ interface StudentEmailLog {
   clickCount: number;
   clickedAction?: string | null;
   clickedUrl?: string | null;
+  eventId?: string | null;
+  applicationId?: string | null;
+  event?: {
+    id: string;
+    name: string;
+    date?: string | null;
+  } | null;
 }
 
 export interface StudentApplication {
@@ -145,6 +154,34 @@ interface Student {
   createdAt: string;
 }
 
+export interface RecipientItem {
+  student: Student;
+  log: StudentEmailLog;
+}
+
+export interface CampaignGroup {
+  key: string;
+  title: string;
+  subtitle: string;
+  subject: string;
+  templateName?: string | null;
+  eventId?: string | null;
+  eventName?: string | null;
+  lastSentAt: string;
+  firstSentAt: string;
+  recipientCount: number;
+  totalSent: number;
+  openedCount: number;
+  unopenedCount: number;
+  clickedCount: number;
+  confirmedCount: number;
+  declinedCount: number;
+  whatsappCount: number;
+  openRate: number;
+  clickRate: number;
+  recipients: RecipientItem[];
+}
+
 interface AdminProfileField {
   id: string;
   key: string;
@@ -200,6 +237,17 @@ export default function AdminStudentsPage() {
   const [eventFilterMode, setEventFilterMode] = useState<"NOT_APPLIED" | "APPLIED">("NOT_APPLIED");
   const [eventsList, setEventsList] = useState<any[]>([]);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+
+  // Email Campaign & Engagement Filter
+  const [selectedCampaignKey, setSelectedCampaignKey] = useState<string>("ALL");
+  const [selectedEmailStatusFilter, setSelectedEmailStatusFilter] = useState<
+    "ALL" | "SENT" | "OPENED" | "UNOPENED" | "CLICKED" | "CONFIRMED" | "DECLINED" | "WHATSAPP"
+  >("ALL");
+  const [isCampaignDetailsModalOpen, setIsCampaignDetailsModalOpen] = useState(false);
+  const [campaignSearchQuery, setCampaignSearchQuery] = useState("");
+  const [campaignRecipientTab, setCampaignRecipientTab] = useState<
+    "ALL" | "OPENED" | "UNOPENED" | "CONFIRMED" | "DECLINED" | "WHATSAPP"
+  >("ALL");
 
   // Selection & Bulk
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -864,6 +912,251 @@ export default function AdminStudentsPage() {
     };
   }, [students]);
 
+  // Group Email Logs into Distinct Campaigns / Batches
+  const campaignsList = useMemo<CampaignGroup[]>(() => {
+    const map = new Map<
+      string,
+      {
+        key: string;
+        subject: string;
+        templateName?: string | null;
+        eventId?: string | null;
+        eventName?: string | null;
+        sentDates: number[];
+        recipientsMap: Map<string, RecipientItem>;
+      }
+    >();
+
+    students.forEach((student) => {
+      (student.emailLogs || []).forEach((log) => {
+        const subjectClean = (log.subject || "").trim();
+        const templateClean = (log.templateName || "").trim();
+        const evId = log.eventId || log.event?.id || "";
+        const evName = log.event?.name || "";
+
+        let key = "";
+        if (evId) {
+          key = `event_${evId}_${templateClean.toLowerCase() || subjectClean.toLowerCase()}`;
+        } else if (templateClean) {
+          key = `template_${templateClean.toLowerCase()}_${subjectClean.toLowerCase()}`;
+        } else if (subjectClean) {
+          key = `subject_${subjectClean.toLowerCase()}`;
+        } else {
+          key = `log_${log.id}`;
+        }
+
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            subject: subjectClean || "Candidate Broadcast",
+            templateName: templateClean || null,
+            eventId: evId || null,
+            eventName: evName || null,
+            sentDates: [],
+            recipientsMap: new Map(),
+          });
+        }
+
+        const group = map.get(key)!;
+        const sentTime = new Date(log.sentAt || 0).getTime();
+        if (!isNaN(sentTime)) group.sentDates.push(sentTime);
+
+        const existing = group.recipientsMap.get(student.id);
+        if (!existing) {
+          group.recipientsMap.set(student.id, { student, log });
+        } else {
+          const existingScore = existing.log.clickedAt ? 2 : existing.log.openedAt ? 1 : 0;
+          const currentScore = log.clickedAt ? 2 : log.openedAt ? 1 : 0;
+          if (
+            currentScore > existingScore ||
+            new Date(log.sentAt).getTime() > new Date(existing.log.sentAt).getTime()
+          ) {
+            group.recipientsMap.set(student.id, { student, log });
+          }
+        }
+      });
+    });
+
+    const result: CampaignGroup[] = [];
+
+    map.forEach((item) => {
+      const recipients = Array.from(item.recipientsMap.values());
+      const recipientCount = recipients.length;
+      if (recipientCount === 0) return;
+
+      const sortedDates = item.sentDates.sort((a, b) => b - a);
+      const lastSentAt = sortedDates[0] ? new Date(sortedDates[0]).toISOString() : new Date().toISOString();
+      const firstSentAt = sortedDates[sortedDates.length - 1]
+        ? new Date(sortedDates[sortedDates.length - 1]).toISOString()
+        : lastSentAt;
+
+      let openedCount = 0;
+      let unopenedCount = 0;
+      let clickedCount = 0;
+      let confirmedCount = 0;
+      let declinedCount = 0;
+      let whatsappCount = 0;
+
+      recipients.forEach(({ log }) => {
+        if (log.openedAt || log.openCount > 0) {
+          openedCount++;
+        } else {
+          unopenedCount++;
+        }
+
+        if (log.clickedAt || log.clickCount > 0) {
+          clickedCount++;
+          if (log.clickedAction === "CONFIRM_YES") confirmedCount++;
+          else if (log.clickedAction === "DECLINE_NO") declinedCount++;
+          else if (log.clickedAction === "JOIN_WHATSAPP") whatsappCount++;
+        }
+      });
+
+      const openRate = recipientCount > 0 ? Math.round((openedCount / recipientCount) * 100) : 0;
+      const clickRate = openedCount > 0 ? Math.round((clickedCount / openedCount) * 100) : 0;
+
+      let title = item.subject;
+      if (item.eventName) {
+        title = `${item.eventName} — ${item.templateName ? item.templateName.replace(/_/g, " ") : item.subject}`;
+      } else if (item.templateName) {
+        title = `${item.templateName.replace(/_/g, " ")}: ${item.subject}`;
+      }
+
+      const formattedDate = new Date(lastSentAt).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const subtitle = `Sent to ${recipientCount} candidate${recipientCount === 1 ? "" : "s"} • ${formattedDate}`;
+
+      result.push({
+        key: item.key,
+        title,
+        subtitle,
+        subject: item.subject,
+        templateName: item.templateName,
+        eventId: item.eventId,
+        eventName: item.eventName,
+        lastSentAt,
+        firstSentAt,
+        recipientCount,
+        totalSent: recipientCount,
+        openedCount,
+        unopenedCount,
+        clickedCount,
+        confirmedCount,
+        declinedCount,
+        whatsappCount,
+        openRate,
+        clickRate,
+        recipients,
+      });
+    });
+
+    return result.sort((a, b) => new Date(b.lastSentAt).getTime() - new Date(a.lastSentAt).getTime());
+  }, [students]);
+
+  const activeCampaign = useMemo(() => {
+    if (selectedCampaignKey === "ALL") return null;
+    return campaignsList.find((c) => c.key === selectedCampaignKey) || null;
+  }, [selectedCampaignKey, campaignsList]);
+
+  // Active Email Communication & Action Analytics (respects selected Campaign)
+  const activeEmailAnalytics = useMemo(() => {
+    if (activeCampaign) {
+      return {
+        title: activeCampaign.title,
+        subtitle: activeCampaign.subtitle,
+        totalEmailsSent: activeCampaign.totalSent,
+        candidatesEmailedCount: activeCampaign.recipientCount,
+        openedEmailsCount: activeCampaign.openedCount,
+        unopenedEmailsCount: activeCampaign.unopenedCount,
+        clickedCount: activeCampaign.clickedCount,
+        confirmedCount: activeCampaign.confirmedCount,
+        declinedCount: activeCampaign.declinedCount,
+        whatsappJoinedCount: activeCampaign.whatsappCount,
+        openRate: activeCampaign.openRate,
+        clickRate: activeCampaign.clickRate,
+      };
+    }
+
+    return {
+      title: "All Dispatched Broadcasts & Email Notifications",
+      subtitle: `Across all ${emailAnalytics.candidatesEmailedCount} candidates (${emailAnalytics.totalEmailsSent} total emails dispatched)`,
+      totalEmailsSent: emailAnalytics.totalEmailsSent,
+      candidatesEmailedCount: emailAnalytics.candidatesEmailedCount,
+      openedEmailsCount: emailAnalytics.openedEmailsCount,
+      unopenedEmailsCount: emailAnalytics.unopenedEmailsCount,
+      clickedCount: emailAnalytics.clickedCount,
+      confirmedCount: emailAnalytics.confirmedCount,
+      declinedCount: emailAnalytics.declinedCount,
+      whatsappJoinedCount: emailAnalytics.whatsappJoinedCount,
+      openRate: emailAnalytics.openRate,
+      clickRate: emailAnalytics.clickRate,
+    };
+  }, [activeCampaign, emailAnalytics]);
+
+  // Recipients list for Modal
+  const modalRecipientsList = useMemo<RecipientItem[]>(() => {
+    if (activeCampaign) {
+      return activeCampaign.recipients;
+    }
+    const list: RecipientItem[] = [];
+    students.forEach((student) => {
+      if (student.emailLogs && student.emailLogs.length > 0) {
+        const sortedLogs = [...student.emailLogs].sort(
+          (a, b) => new Date(b.sentAt || 0).getTime() - new Date(a.sentAt || 0).getTime()
+        );
+        list.push({ student, log: sortedLogs[0] });
+      }
+    });
+    return list;
+  }, [activeCampaign, students]);
+
+  const modalCounts = useMemo(() => {
+    let opened = 0;
+    let unopened = 0;
+    let confirmed = 0;
+    let declined = 0;
+    let whatsapp = 0;
+
+    modalRecipientsList.forEach(({ log }) => {
+      if (log.openedAt || log.openCount > 0) opened++;
+      else unopened++;
+
+      if (log.clickedAction === "CONFIRM_YES") confirmed++;
+      else if (log.clickedAction === "DECLINE_NO") declined++;
+      else if (log.clickedAction === "JOIN_WHATSAPP") whatsapp++;
+    });
+
+    return { opened, unopened, confirmed, declined, whatsapp };
+  }, [modalRecipientsList]);
+
+  const filteredModalRecipients = useMemo(() => {
+    return modalRecipientsList.filter(({ student, log }) => {
+      if (campaignSearchQuery.trim()) {
+        const q = campaignSearchQuery.toLowerCase().trim();
+        const matchName = (student.name || "").toLowerCase().includes(q);
+        const matchPhone = (student.phone || "").toLowerCase().includes(q);
+        const matchEmail = (student.email || "").toLowerCase().includes(q);
+        const matchReg = (student.registrationNumber || "").toLowerCase().includes(q);
+        const matchUni = (student.university || "").toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchEmail && !matchReg && !matchUni) return false;
+      }
+
+      const isOpened = Boolean(log.openedAt || log.openCount > 0);
+      if (campaignRecipientTab === "OPENED" && !isOpened) return false;
+      if (campaignRecipientTab === "UNOPENED" && isOpened) return false;
+      if (campaignRecipientTab === "CONFIRMED" && log.clickedAction !== "CONFIRM_YES") return false;
+      if (campaignRecipientTab === "DECLINED" && log.clickedAction !== "DECLINE_NO") return false;
+      if (campaignRecipientTab === "WHATSAPP" && log.clickedAction !== "JOIN_WHATSAPP") return false;
+
+      return true;
+    });
+  }, [modalRecipientsList, campaignSearchQuery, campaignRecipientTab]);
+
   const availableCities = useMemo(() => {
     const set = new Set<string>();
     for (const s of students) {
@@ -894,8 +1187,10 @@ export default function AdminStudentsPage() {
     if (cityFilter !== "ALL") count++;
     if (universityFilter !== "ALL") count++;
     if (eventFilterId !== "ALL") count++;
+    if (selectedCampaignKey !== "ALL") count++;
+    if (selectedEmailStatusFilter !== "ALL") count++;
     return count;
-  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, eventFilterId]);
+  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, eventFilterId, selectedCampaignKey, selectedEmailStatusFilter]);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -911,6 +1206,8 @@ export default function AdminStudentsPage() {
     setUniversityFilter("ALL");
     setEventFilterId("ALL");
     setEventFilterMode("NOT_APPLIED");
+    setSelectedCampaignKey("ALL");
+    setSelectedEmailStatusFilter("ALL");
   };
 
   // Client-side reactive filtered students list
@@ -942,6 +1239,47 @@ export default function AdminStudentsPage() {
         }
         if (eventFilterMode === "APPLIED" && !hasApplied) {
           return false;
+        }
+      }
+
+      // Campaign Filter
+      if (selectedCampaignKey !== "ALL" && activeCampaign) {
+        const isRecipient = activeCampaign.recipients.some((r: RecipientItem) => r.student.id === s.id);
+        if (!isRecipient) return false;
+      }
+
+      // Email Delivery & Action Filter
+      if (selectedEmailStatusFilter !== "ALL") {
+        const relevantLogs = selectedCampaignKey !== "ALL" && activeCampaign
+          ? (s.emailLogs || []).filter((l) => {
+              if (activeCampaign.eventId && (l.eventId === activeCampaign.eventId || l.event?.id === activeCampaign.eventId)) return true;
+              if (activeCampaign.templateName && l.templateName === activeCampaign.templateName) return true;
+              if (l.subject === activeCampaign.subject) return true;
+              return false;
+            })
+          : (s.emailLogs || []);
+
+        if (selectedEmailStatusFilter === "SENT") {
+          if (relevantLogs.length === 0) return false;
+        } else if (selectedEmailStatusFilter === "OPENED") {
+          const hasOpened = relevantLogs.some((l) => l.openedAt || l.openCount > 0);
+          if (!hasOpened) return false;
+        } else if (selectedEmailStatusFilter === "UNOPENED") {
+          if (relevantLogs.length === 0) return false;
+          const hasOpened = relevantLogs.some((l) => l.openedAt || l.openCount > 0);
+          if (hasOpened) return false;
+        } else if (selectedEmailStatusFilter === "CLICKED") {
+          const hasClicked = relevantLogs.some((l) => l.clickedAt || l.clickCount > 0);
+          if (!hasClicked) return false;
+        } else if (selectedEmailStatusFilter === "CONFIRMED") {
+          const hasConfirmed = relevantLogs.some((l) => l.clickedAction === "CONFIRM_YES");
+          if (!hasConfirmed) return false;
+        } else if (selectedEmailStatusFilter === "DECLINED") {
+          const hasDeclined = relevantLogs.some((l) => l.clickedAction === "DECLINE_NO");
+          if (!hasDeclined) return false;
+        } else if (selectedEmailStatusFilter === "WHATSAPP") {
+          const hasWa = relevantLogs.some((l) => l.clickedAction === "JOIN_WHATSAPP");
+          if (!hasWa) return false;
         }
       }
 
@@ -1032,7 +1370,7 @@ export default function AdminStudentsPage() {
 
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
-  }, [students, search, selectionFilter, eventFilterId, eventFilterMode, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [students, search, selectionFilter, eventFilterId, eventFilterMode, selectedCampaignKey, selectedEmailStatusFilter, activeCampaign, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 
   const toggleSelectAll = () => {
     if (selectedStudentIds.length === filteredStudents.length) {
@@ -1188,70 +1526,249 @@ export default function AdminStudentsPage() {
       {/* TOP EMAIL & ACTION ANALYTICS TRACKER */}
       {activeTab !== "fields" && emailAnalytics.totalEmailsSent > 0 && (
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-4 sm:p-5 text-white shadow-md space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                <Activity className="w-4 h-4" />
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-700/60">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                <Activity className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>Candidate Email & Action Tracker</span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Live Engagement</span>
-                </h3>
-                <p className="text-[11px] text-slate-400">Real-time delivery, open rates, and button click actions for dispatched student emails.</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Candidate Email & Action Tracker</span>
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">
+                    Live Engagement
+                  </span>
+                  {selectedCampaignKey !== "ALL" && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold flex items-center gap-1">
+                      <Check className="w-2.5 h-2.5" /> Filtered Batch
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {activeEmailAnalytics.subtitle || "Real-time delivery, open rates, and button click actions for dispatched student emails."}
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-              <span className="text-slate-400 font-sans">Open Rate:</span>
-              <span className="font-extrabold text-emerald-400">{emailAnalytics.openRate}%</span>
+            {/* Campaign Selector Dropdown & Recipient Breakdown Button */}
+            <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+              {campaignsList.length > 0 && (
+                <div className="relative">
+                  <select
+                    value={selectedCampaignKey}
+                    onChange={(e) => {
+                      setSelectedCampaignKey(e.target.value);
+                      setSelectedEmailStatusFilter("ALL");
+                    }}
+                    className="bg-slate-950 border border-slate-700 text-xs font-bold text-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 max-w-[260px] sm:max-w-[340px] truncate cursor-pointer"
+                    title="Filter metrics by specific email campaign or broadcast batch"
+                  >
+                    <option value="ALL">All Broadcasts & Notifications ({emailAnalytics.totalEmailsSent} emails)</option>
+                    {campaignsList.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.title} — {c.recipientCount} sent ({c.openRate}% read)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCampaignRecipientTab("ALL");
+                  setCampaignSearchQuery("");
+                  setIsCampaignDetailsModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
+                title="View full searchable recipient breakdown with delivery times and button click actions"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Recipient Breakdown</span>
+              </button>
+
+              <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span className="text-slate-400 font-sans">Open Rate:</span>
+                <span className="font-extrabold text-emerald-400">{activeEmailAnalytics.openRate}%</span>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             {/* 1. Emails Sent */}
-            <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+            <div
+              onClick={() => setSelectedEmailStatusFilter(selectedEmailStatusFilter === "SENT" ? "ALL" : "SENT")}
+              className={`p-3 rounded-xl border transition cursor-pointer ${
+                selectedEmailStatusFilter === "SENT"
+                  ? "bg-slate-900 border-white ring-2 ring-white/30"
+                  : "bg-slate-950/50 border-slate-800 hover:border-slate-700"
+              }`}
+              title="Click to filter candidate list by all who were sent emails"
+            >
               <div className="flex items-center justify-between text-slate-400 mb-1">
                 <span className="font-semibold uppercase text-[10px]">Emails Sent</span>
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
               </div>
-              <div className="text-xl font-black text-white">{emailAnalytics.totalEmailsSent}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">To {emailAnalytics.candidatesEmailedCount} candidates</div>
+              <div className="text-xl font-black text-white">{activeEmailAnalytics.totalEmailsSent}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">To {activeEmailAnalytics.candidatesEmailedCount} candidates</div>
             </div>
 
-            {/* 2. Opened */}
-            <div className="bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
+            {/* 2. Opened / Read */}
+            <div
+              onClick={() => setSelectedEmailStatusFilter(selectedEmailStatusFilter === "OPENED" ? "ALL" : "OPENED")}
+              className={`p-3 rounded-xl border transition cursor-pointer ${
+                selectedEmailStatusFilter === "OPENED"
+                  ? "bg-emerald-900/60 border-emerald-400 ring-2 ring-emerald-400/40 shadow-sm"
+                  : "bg-emerald-950/30 border-emerald-900/50 hover:border-emerald-700/60"
+              }`}
+              title="Click to filter candidate list to those who have OPENED this email"
+            >
               <div className="flex items-center justify-between text-emerald-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Opened / Read</span>
+                <span className="font-semibold uppercase text-[10px] flex items-center gap-1">
+                  Opened / Read
+                  {selectedEmailStatusFilter === "OPENED" && <Check className="w-3 h-3 text-emerald-300" />}
+                </span>
                 <Eye className="w-3.5 h-3.5 text-emerald-400" />
               </div>
-              <div className="text-xl font-black text-emerald-300">{emailAnalytics.openedEmailsCount}</div>
-              <div className="text-[10px] text-emerald-400/80 mt-0.5">{emailAnalytics.openRate}% candidate open rate</div>
+              <div className="text-xl font-black text-emerald-300">{activeEmailAnalytics.openedEmailsCount}</div>
+              <div className="text-[10px] text-emerald-400/80 mt-0.5">{activeEmailAnalytics.openRate}% candidate open rate</div>
             </div>
 
             {/* 3. Pending / Unopened */}
-            <div className="bg-amber-950/30 p-3 rounded-xl border border-amber-900/50">
+            <div
+              onClick={() => setSelectedEmailStatusFilter(selectedEmailStatusFilter === "UNOPENED" ? "ALL" : "UNOPENED")}
+              className={`p-3 rounded-xl border transition cursor-pointer ${
+                selectedEmailStatusFilter === "UNOPENED"
+                  ? "bg-amber-900/60 border-amber-400 ring-2 ring-amber-400/40 shadow-sm"
+                  : "bg-amber-950/30 border-amber-900/50 hover:border-amber-700/60"
+              }`}
+              title="Click to filter candidate list to those who have NOT opened this email yet"
+            >
               <div className="flex items-center justify-between text-amber-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Pending / Unopened</span>
+                <span className="font-semibold uppercase text-[10px] flex items-center gap-1">
+                  Pending / Unopened
+                  {selectedEmailStatusFilter === "UNOPENED" && <Check className="w-3 h-3 text-amber-300" />}
+                </span>
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <div className="text-xl font-black text-amber-300">{emailAnalytics.unopenedEmailsCount}</div>
+              <div className="text-xl font-black text-amber-300">{activeEmailAnalytics.unopenedEmailsCount}</div>
               <div className="text-[10px] text-amber-400/80 mt-0.5">Awaiting candidate open</div>
             </div>
 
             {/* 4. Button Actions Clicked */}
-            <div className="bg-blue-950/30 p-3 rounded-xl border border-blue-900/50">
+            <div
+              onClick={() => setSelectedEmailStatusFilter(selectedEmailStatusFilter === "CLICKED" ? "ALL" : "CLICKED")}
+              className={`p-3 rounded-xl border transition cursor-pointer ${
+                selectedEmailStatusFilter === "CLICKED" || selectedEmailStatusFilter === "CONFIRMED" || selectedEmailStatusFilter === "DECLINED" || selectedEmailStatusFilter === "WHATSAPP"
+                  ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400/40 shadow-sm"
+                  : "bg-blue-950/30 border-blue-900/50 hover:border-blue-700/60"
+              }`}
+              title="Click to filter candidates who clicked actionable buttons (YES / NO / WhatsApp)"
+            >
               <div className="flex items-center justify-between text-blue-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Button Actions</span>
+                <span className="font-semibold uppercase text-[10px] flex items-center gap-1">
+                  Button Actions
+                  {selectedEmailStatusFilter === "CLICKED" && <Check className="w-3 h-3 text-blue-300" />}
+                </span>
                 <MousePointerClick className="w-3.5 h-3.5 text-blue-400" />
               </div>
-              <div className="text-xl font-black text-blue-300">{emailAnalytics.clickedCount} <span className="text-xs font-normal text-slate-400">clicks</span></div>
+              <div className="text-xl font-black text-blue-300">
+                {activeEmailAnalytics.clickedCount} <span className="text-xs font-normal text-slate-400">clicks</span>
+              </div>
               <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-0.5 flex-wrap">
-                <span className="text-emerald-400 font-bold">✓ {emailAnalytics.confirmedCount} Confirmed</span>
-                {emailAnalytics.declinedCount > 0 && <span className="text-rose-400 font-bold">✗ {emailAnalytics.declinedCount} Declined</span>}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEmailStatusFilter(selectedEmailStatusFilter === "CONFIRMED" ? "ALL" : "CONFIRMED");
+                  }}
+                  className={`px-1.5 py-0.2 rounded font-bold transition hover:bg-emerald-500/20 ${
+                    selectedEmailStatusFilter === "CONFIRMED" ? "bg-emerald-500 text-white" : "text-emerald-400"
+                  }`}
+                  title="Filter Confirmed YES"
+                >
+                  ✓ {activeEmailAnalytics.confirmedCount} Yes
+                </button>
+                {activeEmailAnalytics.declinedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEmailStatusFilter(selectedEmailStatusFilter === "DECLINED" ? "ALL" : "DECLINED");
+                    }}
+                    className={`px-1.5 py-0.2 rounded font-bold transition hover:bg-rose-500/20 ${
+                      selectedEmailStatusFilter === "DECLINED" ? "bg-rose-500 text-white" : "text-rose-400"
+                    }`}
+                    title="Filter Declined NO"
+                  >
+                    ✗ {activeEmailAnalytics.declinedCount} No
+                  </button>
+                )}
+                {activeEmailAnalytics.whatsappJoinedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEmailStatusFilter(selectedEmailStatusFilter === "WHATSAPP" ? "ALL" : "WHATSAPP");
+                    }}
+                    className={`px-1.5 py-0.2 rounded font-bold transition hover:bg-emerald-500/20 ${
+                      selectedEmailStatusFilter === "WHATSAPP" ? "bg-[#25D366] text-white" : "text-[#25D366]"
+                    }`}
+                    title="Filter WhatsApp Group Joined"
+                  >
+                    WA ({activeEmailAnalytics.whatsappJoinedCount})
+                  </button>
+                )}
               </div>
             </div>
           </div>
+
+          {/* ACTIVE EMAIL FILTER INDICATOR BANNER */}
+          {(selectedCampaignKey !== "ALL" || selectedEmailStatusFilter !== "ALL") && (
+            <div className="bg-gradient-to-r from-blue-950/80 via-slate-900 to-blue-950/80 border border-blue-500/40 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs text-blue-200 animate-in fade-in">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-blue-500/30 text-blue-200 font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1">
+                  <Activity className="w-3 h-3" />
+                  <span>Email Filter Active</span>
+                </span>
+                <span>
+                  Showing <strong>{filteredStudents.length}</strong> candidate{filteredStudents.length === 1 ? "" : "s"}
+                  {selectedCampaignKey !== "ALL" && activeCampaign ? <> for <strong>&quot;{activeCampaign.title}&quot;</strong></> : null}
+                  {selectedEmailStatusFilter !== "ALL" ? (
+                    <>
+                      {" "}who are{" "}
+                      <strong className="underline underline-offset-2 text-white">
+                        {selectedEmailStatusFilter === "OPENED"
+                          ? "Opened / Read"
+                          : selectedEmailStatusFilter === "UNOPENED"
+                          ? "Pending / Unopened"
+                          : selectedEmailStatusFilter === "CONFIRMED"
+                          ? "Confirmed (YES)"
+                          : selectedEmailStatusFilter === "DECLINED"
+                          ? "Declined (NO)"
+                          : selectedEmailStatusFilter === "WHATSAPP"
+                          ? "Joined WhatsApp"
+                          : selectedEmailStatusFilter === "CLICKED"
+                          ? "Clicked Actions"
+                          : "Sent Emails"}
+                      </strong>
+                    </>
+                  ) : null}.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCampaignKey("ALL");
+                  setSelectedEmailStatusFilter("ALL");
+                }}
+                className="text-blue-300 hover:text-white text-xs font-bold hover:underline cursor-pointer shrink-0"
+              >
+                Reset Email Filter ✕
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -3512,6 +4029,383 @@ export default function AdminStudentsPage() {
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ---------------------------------------------------- */}
+      {/* CAMPAIGN RECIPIENT BREAKDOWN & ENGAGEMENT AUDIT MODAL */}
+      {/* ---------------------------------------------------- */}
+      {isCampaignDetailsModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150">
+          <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-3xl border border-slate-200 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-between gap-3 border-b border-slate-700">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-white truncate">
+                      {activeCampaign ? activeCampaign.title : "All Dispatched Broadcasts & Email Notifications"}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold shrink-0">
+                      Audit Breakdown
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate">
+                    {activeCampaign
+                      ? activeCampaign.subtitle
+                      : `Consolidated view of ${emailAnalytics.candidatesEmailedCount} candidates across ${emailAnalytics.totalEmailsSent} emails`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsCampaignDetailsModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 flex items-center justify-center transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Campaign Metrics Summary Strip */}
+            <div className="bg-slate-950 p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-white border-b border-slate-800">
+              <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Total Sent</span>
+                <span className="text-lg font-black text-white">{activeEmailAnalytics.totalEmailsSent}</span>
+              </div>
+              <div className="bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-900/50">
+                <span className="text-[10px] font-semibold text-emerald-400 uppercase block">Opened / Read</span>
+                <span className="text-lg font-black text-emerald-300">
+                  {activeEmailAnalytics.openedEmailsCount}{" "}
+                  <span className="text-xs font-semibold text-emerald-400/80">({activeEmailAnalytics.openRate}%)</span>
+                </span>
+              </div>
+              <div className="bg-amber-950/40 p-2.5 rounded-xl border border-amber-900/50">
+                <span className="text-[10px] font-semibold text-amber-400 uppercase block">Pending Unopened</span>
+                <span className="text-lg font-black text-amber-300">
+                  {activeEmailAnalytics.unopenedEmailsCount}{" "}
+                  <span className="text-xs font-semibold text-amber-400/80">
+                    ({activeEmailAnalytics.totalEmailsSent > 0 ? Math.round((activeEmailAnalytics.unopenedEmailsCount / activeEmailAnalytics.totalEmailsSent) * 100) : 0}%)
+                  </span>
+                </span>
+              </div>
+              <div className="bg-blue-950/40 p-2.5 rounded-xl border border-blue-900/50">
+                <span className="text-[10px] font-semibold text-blue-400 uppercase block">Button Actions Clicked</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-lg font-black text-blue-300">{activeEmailAnalytics.clickedCount}</span>
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <span className="text-emerald-400 font-bold">✓ {activeEmailAnalytics.confirmedCount}</span>
+                    {activeEmailAnalytics.declinedCount > 0 && <span className="text-rose-400 font-bold">✗ {activeEmailAnalytics.declinedCount}</span>}
+                    {activeEmailAnalytics.whatsappJoinedCount > 0 && <span className="text-[#25D366] font-bold">WA {activeEmailAnalytics.whatsappJoinedCount}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Campaign Modal Controls: Search & Tabs */}
+            <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setCampaignRecipientTab("ALL")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                    campaignRecipientTab === "ALL"
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  }`}
+                >
+                  All ({modalRecipientsList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCampaignRecipientTab("OPENED")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                    campaignRecipientTab === "OPENED"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Opened ({modalCounts.opened})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCampaignRecipientTab("UNOPENED")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                    campaignRecipientTab === "UNOPENED"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Unopened ({modalCounts.unopened})</span>
+                </button>
+                {modalCounts.confirmed > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCampaignRecipientTab("CONFIRMED")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                      campaignRecipientTab === "CONFIRMED"
+                        ? "bg-emerald-700 text-white shadow-xs"
+                        : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300"
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>YES ({modalCounts.confirmed})</span>
+                  </button>
+                )}
+                {modalCounts.declined > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCampaignRecipientTab("DECLINED")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                      campaignRecipientTab === "DECLINED"
+                        ? "bg-rose-600 text-white shadow-xs"
+                        : "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                    }`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>NO ({modalCounts.declined})</span>
+                  </button>
+                )}
+                {modalCounts.whatsapp > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCampaignRecipientTab("WHATSAPP")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                      campaignRecipientTab === "WHATSAPP"
+                        ? "bg-[#25D366] text-white shadow-xs"
+                        : "bg-emerald-50 text-[#128C7E] hover:bg-emerald-100 border border-emerald-200"
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>WhatsApp ({modalCounts.whatsapp})</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={campaignSearchQuery}
+                  onChange={(e) => setCampaignSearchQuery(e.target.value)}
+                  placeholder="Search recipients..."
+                  className="w-full pl-8.5 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600"
+                />
+              </div>
+            </div>
+
+            {/* Recipient Table List */}
+            <div className="flex-1 overflow-y-auto max-h-[50vh]">
+              {filteredModalRecipients.length === 0 ? (
+                <div className="p-10 text-center text-slate-400">
+                  <Mail className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  <p className="text-xs font-semibold">No recipients found matching current filter</p>
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-500 uppercase font-extrabold text-[10px] tracking-wider sticky top-0 bg-slate-100 z-10">
+                      <th className="p-3">Candidate</th>
+                      <th className="p-3">Contact Details</th>
+                      <th className="p-3">Dispatched</th>
+                      <th className="p-3">Open Status</th>
+                      <th className="p-3">Button Action Click</th>
+                      <th className="p-3 text-right">Quick Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {filteredModalRecipients.map(({ student, log }) => {
+                      const isOpened = Boolean(log.openedAt || log.openCount > 0);
+                      const isClicked = Boolean(log.clickedAt || log.clickCount > 0);
+
+                      return (
+                        <tr key={`${student.id}_${log.id}`} className="hover:bg-slate-50/80 transition">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-200">
+                                {student.profilePhotoUrl ? (
+                                  <img src={student.profilePhotoUrl} alt={student.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 text-[10px]">
+                                    {student.name.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                  <span>{student.name}</span>
+                                  {student.selectionStatus === "SELECTED" && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold">Selected</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono">{student.registrationNumber || "No Reg"}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3">
+                            <div className="font-medium text-slate-900 flex items-center gap-1.5">
+                              <span>{student.phone}</span>
+                              {student.phone && student.phone !== "N/A" && (
+                                <a
+                                  href={`https://wa.me/91${student.phone.replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#25D366] hover:opacity-80"
+                                  title="Chat on WhatsApp"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
+                              {student.university || "University N/A"} • {student.city || ""}
+                            </div>
+                          </td>
+
+                          <td className="p-3 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                            {new Date(log.sentAt).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+
+                          <td className="p-3">
+                            {isOpened ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 font-extrabold text-[10px]">
+                                <Eye className="w-3 h-3" />
+                                <span>
+                                  Opened ({log.openCount || 1}x) •{" "}
+                                  {new Date(log.openedAt || log.sentAt).toLocaleDateString("en-IN", {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 font-semibold text-[10px]">
+                                <Clock className="w-3 h-3" />
+                                <span>Unopened / Pending</span>
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-3">
+                            {isClicked ? (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border font-extrabold text-[10px] ${
+                                  log.clickedAction === "CONFIRM_YES"
+                                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                                    : log.clickedAction === "DECLINE_NO"
+                                    ? "bg-rose-50 border-rose-300 text-rose-800"
+                                    : log.clickedAction === "JOIN_WHATSAPP"
+                                    ? "bg-emerald-50 border-emerald-300 text-[#128C7E]"
+                                    : "bg-blue-50 border-blue-300 text-blue-800"
+                                }`}
+                              >
+                                <MousePointerClick className="w-3 h-3" />
+                                <span>
+                                  {log.clickedAction === "CONFIRM_YES"
+                                    ? "YES, Available"
+                                    : log.clickedAction === "DECLINE_NO"
+                                    ? "NO, Declined"
+                                    : log.clickedAction === "JOIN_WHATSAPP"
+                                    ? "Joined WhatsApp"
+                                    : "Clicked Action Link"}
+                                </span>
+                                {log.clickedAt && (
+                                  <span className="font-normal opacity-80 text-[9px]">
+                                    (
+                                    {new Date(log.clickedAt).toLocaleDateString("en-IN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                    )
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[10px] italic">No action clicked</span>
+                            )}
+                          </td>
+
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsCampaignDetailsModalOpen(false);
+                                  openInspectStudent(student);
+                                }}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                                title="Inspect student profile"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsCampaignDetailsModalOpen(false);
+                                  openCustomEmailModal([student]);
+                                }}
+                                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition cursor-pointer"
+                                title="Send direct follow-up email"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-slate-500">
+                Showing <strong>{filteredModalRecipients.length}</strong> of <strong>{modalRecipientsList.length}</strong> recipients
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idsToSelect = filteredModalRecipients.map((r) => r.student.id);
+                    setSelectedStudentIds((prev) => Array.from(new Set([...prev, ...idsToSelect])));
+                    setIsCampaignDetailsModalOpen(false);
+                    setToastMessage(`Selected ${idsToSelect.length} candidate(s) in the main roster.`);
+                    setTimeout(() => setToastMessage(null), 3000);
+                  }}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Select Filtered Candidates ({filteredModalRecipients.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCampaignDetailsModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

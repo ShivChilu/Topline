@@ -174,6 +174,15 @@ export async function GET(request: Request) {
             clickCount: true,
             clickedAction: true,
             clickedUrl: true,
+            eventId: true,
+            applicationId: true,
+            event: {
+              select: {
+                id: true,
+                name: true,
+                date: true,
+              },
+            },
           },
           orderBy: { sentAt: "desc" },
         },
