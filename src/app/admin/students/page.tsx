@@ -188,6 +188,9 @@ export default function AdminStudentsPage() {
   const [weightFilter, setWeightFilter] = useState("ALL");
   const [cityFilter, setCityFilter] = useState("ALL");
   const [universityFilter, setUniversityFilter] = useState("ALL");
+  const [eventFilterId, setEventFilterId] = useState<string>("ALL");
+  const [eventFilterMode, setEventFilterMode] = useState<"NOT_APPLIED" | "APPLIED">("NOT_APPLIED");
+  const [eventsList, setEventsList] = useState<{ id: string; name: string; date?: string; status?: string }[]>([]);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Selection & Bulk
@@ -230,6 +233,18 @@ export default function AdminStudentsPage() {
       }
     } catch (err) {
       console.error("Error fetching email templates:", err);
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch("/api/admin/events");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.events)) {
+        setEventsList(data.events);
+      }
+    } catch (err) {
+      console.error("Error fetching events list:", err);
     }
   };
 
@@ -303,6 +318,7 @@ export default function AdminStudentsPage() {
 
   useEffect(() => {
     fetchEmailTemplates();
+    fetchEvents();
   }, []);
 
   useEffect(() => {
@@ -795,8 +811,9 @@ export default function AdminStudentsPage() {
     if (weightFilter !== "ALL") count++;
     if (cityFilter !== "ALL") count++;
     if (universityFilter !== "ALL") count++;
+    if (eventFilterId !== "ALL") count++;
     return count;
-  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, eventFilterId]);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -810,6 +827,8 @@ export default function AdminStudentsPage() {
     setWeightFilter("ALL");
     setCityFilter("ALL");
     setUniversityFilter("ALL");
+    setEventFilterId("ALL");
+    setEventFilterMode("NOT_APPLIED");
   };
 
   // Client-side reactive filtered students list
@@ -831,6 +850,17 @@ export default function AdminStudentsPage() {
       // Selection Status
       if (selectionFilter !== "ALL" && s.selectionStatus !== selectionFilter) {
         return false;
+      }
+
+      // Event Application Filter (Not Applied / Applied)
+      if (eventFilterId !== "ALL") {
+        const hasApplied = (s.applications || []).some((app: any) => app.eventId === eventFilterId);
+        if (eventFilterMode === "NOT_APPLIED" && hasApplied) {
+          return false;
+        }
+        if (eventFilterMode === "APPLIED" && !hasApplied) {
+          return false;
+        }
       }
 
       // Photos
@@ -920,7 +950,7 @@ export default function AdminStudentsPage() {
 
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
-  }, [students, search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [students, search, selectionFilter, eventFilterId, eventFilterMode, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 
   const toggleSelectAll = () => {
     if (selectedStudentIds.length === filteredStudents.length) {
@@ -1172,7 +1202,7 @@ export default function AdminStudentsPage() {
 
             {/* Quick Filter Buttons */}
             <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
-              {/* Gender Filter (e.g. Girls Only) */}
+              {/* Gender Filter (e.g. Girls Only / Boys Only) */}
               <select
                 value={genderFilter}
                 onChange={(e) => setGenderFilter(e.target.value)}
@@ -1183,10 +1213,73 @@ export default function AdminStudentsPage() {
                 }`}
               >
                 <option value="ALL">All Genders</option>
-                <option value="FEMALE">👩 Girls Only (Female)</option>
                 <option value="MALE">👨 Boys Only (Male)</option>
+                <option value="FEMALE">👩 Girls Only (Female)</option>
                 <option value="OTHER">Other</option>
               </select>
+
+              {/* Event Application Filter */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <select
+                  value={eventFilterId}
+                  onChange={(e) => {
+                    setEventFilterId(e.target.value);
+                    if (e.target.value !== "ALL" && !eventFilterMode) {
+                      setEventFilterMode("NOT_APPLIED");
+                    }
+                  }}
+                  className={`text-xs font-bold rounded-xl px-3 py-2 border transition max-w-[200px] truncate ${
+                    eventFilterId !== "ALL"
+                      ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                  title="Filter students by event application status"
+                >
+                  <option value="ALL">📅 All Events</option>
+                  {eventsList.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.name} {ev.date ? `(${new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})` : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {eventFilterId !== "ALL" && (
+                  <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setEventFilterMode("NOT_APPLIED")}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                        eventFilterMode === "NOT_APPLIED"
+                          ? "bg-red-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                      title="Show students who have NOT applied for this event"
+                    >
+                      <span>🚫 Not Applied</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEventFilterMode("APPLIED")}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                        eventFilterMode === "APPLIED"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                      title="Show students who HAVE applied for this event"
+                    >
+                      <span>✅ Applied</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEventFilterId("ALL")}
+                      className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
+                      title="Clear event filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Height Filter (e.g. > 5ft, > 5'4") */}
               <select
@@ -1241,7 +1334,7 @@ export default function AdminStudentsPage() {
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="px-2.5 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition"
+                  className="px-2.5 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer"
                   title="Clear all active filters"
                 >
                   Reset
@@ -1249,6 +1342,32 @@ export default function AdminStudentsPage() {
               )}
             </div>
           </div>
+
+          {/* ACTIVE EVENT APPLICATION FILTER SUMMARY BANNER */}
+          {eventFilterId !== "ALL" && (
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 border border-amber-300/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-amber-950 shadow-xs animate-in fade-in">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider">
+                  {eventFilterMode === "NOT_APPLIED" ? "🚫 Not Applied Filter" : "✅ Applied Filter"}
+                </span>
+                <span>
+                  Showing <strong>{filteredStudents.length}</strong> candidate{filteredStudents.length === 1 ? "" : "s"}
+                  {genderFilter !== "ALL" ? ` (${genderFilter === "MALE" ? "Male Only" : genderFilter === "FEMALE" ? "Female Only" : genderFilter})` : ""}
+                  {" "}{eventFilterMode === "NOT_APPLIED" ? "who have NOT applied for" : "who applied for"}{" "}
+                  <strong className="text-slate-900 underline underline-offset-2">
+                    {eventsList.find((e) => e.id === eventFilterId)?.name || "Selected Event"}
+                  </strong>.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEventFilterId("ALL")}
+                className="text-red-600 hover:text-red-800 text-xs font-extrabold hover:underline cursor-pointer shrink-0"
+              >
+                Clear Event Filter ✕
+              </button>
+            </div>
+          )}
 
           {/* EXPANDABLE ADVANCED FILTERS PANEL */}
           {showMoreFilters && (
