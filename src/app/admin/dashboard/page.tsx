@@ -7,7 +7,16 @@ import {
   DollarSign,
   Percent,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Eye,
+  Calendar,
+  MapPin,
+  Clock,
+  Sparkles,
+  CheckCircle2,
+  ExternalLink,
+  ChevronRight,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -45,7 +54,8 @@ export default async function AdminDashboardPage() {
     margin: 0,
   };
 
-  let upcomingEvents: any[] = [];
+  let recentEvents: any[] = [];
+  let latestActiveEvent: any = null;
 
   try {
     // 1. Overview counts
@@ -87,12 +97,26 @@ export default async function AdminDashboardPage() {
     finances.profit = totalRevenue - totalWorkerPayments - totalOtherExpenses;
     finances.margin = totalRevenue > 0 ? Math.round((finances.profit / totalRevenue) * 100) : 0;
 
-    // 3. Get upcoming events
-    upcomingEvents = await prisma.event.findMany({
-      where: { status: { in: ["OPEN", "FULL", "CLOSED"] } },
-      orderBy: { date: "asc" },
-      take: 5,
+    // 3. Get recent & upcoming events with real registered application counts
+    recentEvents = await prisma.event.findMany({
+      where: { status: { not: "ARCHIVED" } },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 8,
+      include: {
+        _count: {
+          select: {
+            applications: true,
+          },
+        },
+      },
     });
+
+    // Find the primary spotlight event (OPEN or most recent)
+    latestActiveEvent =
+      recentEvents.find((e) => e.status === "OPEN") ||
+      recentEvents.find((e) => e.status === "FULL" || e.status === "CLOSED") ||
+      recentEvents[0] ||
+      null;
   } catch (error) {
     console.error("Dashboard DB fetch error:", error);
   }
@@ -107,104 +131,238 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8 text-slate-900">
       {/* Title */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
-          Business Overview
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Real-time catering recruitment operations and financial performance</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
+            Business Overview
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">Real-time catering recruitment operations and financial performance</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/events"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center gap-2"
+          >
+            <Calendar className="w-4 h-4 text-slate-600" />
+            <span>Manage All Events</span>
+          </Link>
+          <Link
+            href="/admin/events/create"
+            className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2"
+          >
+            <span>+ Create Event</span>
+          </Link>
+        </div>
       </div>
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi, idx) => (
-          <div key={idx} className="bg-white p-6 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs text-slate-450 font-semibold uppercase tracking-wider">{kpi.name}</p>
-              <h3 className="text-3xl font-bold mt-2">{kpi.value}</h3>
+              <h3 className="text-3xl font-bold mt-2 text-slate-900">{kpi.value}</h3>
             </div>
-            <div className="w-10 h-10 bg-slate-100/50 rounded-lg flex items-center justify-center border border-slate-200">
+            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 shadow-xs">
               {kpi.icon}
             </div>
           </div>
         ))}
       </div>
 
+      {/* SPOTLIGHT RECENT EVENT QUICK ACCESS CARD */}
+      {latestActiveEvent && (
+        <div className="bg-gradient-to-r from-red-600 via-red-700 to-slate-900 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="space-y-2 z-10 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 border border-white/30">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                Latest Event Spotlight
+              </span>
+              <span className="bg-black/30 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold uppercase border border-white/20">
+                {latestActiveEvent.status}
+              </span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tight leading-snug">
+              {latestActiveEvent.name}
+            </h2>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-red-100 font-medium pt-1">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-red-200" />
+                {new Date(latestActiveEvent.date).toLocaleDateString("en-GB", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+              {latestActiveEvent.reportingTime && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-red-200" />
+                  Reporting: {formatTime12(latestActiveEvent.reportingTime)}
+                </span>
+              )}
+              {latestActiveEvent.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-red-200" />
+                  {latestActiveEvent.location}
+                </span>
+              )}
+              <span className="flex items-center gap-1 font-bold text-white bg-black/20 px-2 py-0.5 rounded-md">
+                <Users className="w-3.5 h-3.5" />
+                {latestActiveEvent._count?.applications || latestActiveEvent.applicationsCount || 0} Registered Members
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 z-10 shrink-0">
+            <Link
+              href={`/admin/events/${latestActiveEvent.id}`}
+              className="bg-white hover:bg-slate-100 text-red-700 font-extrabold text-sm px-6 py-3.5 rounded-xl shadow-lg transition flex items-center justify-center gap-2 group"
+            >
+              <Eye className="w-4 h-4 text-red-600 transition-transform group-hover:scale-110" />
+              <span>Open & View Registered Members</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Decorative background glow */}
+          <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-red-500/20 rounded-full blur-3xl pointer-events-none" />
+        </div>
+      )}
+
       {/* Financial Section */}
-      <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6">
+      <div className="bg-white p-8 rounded-2xl border border-slate-200 space-y-6 shadow-xs">
         <h2 className="text-xl font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3 flex items-center space-x-2">
           <Banknote className="text-red-600" />
           <span>Financial Performance Summary</span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="p-4 bg-gray-850/20 rounded-lg border border-slate-200">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <p className="text-xs text-slate-450 font-semibold uppercase">Client Revenue</p>
             <p className="text-2xl font-bold text-slate-900 mt-1">₹{finances.revenue.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-gray-850/20 rounded-lg border border-slate-200">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <p className="text-xs text-slate-450 font-semibold uppercase">Worker Payouts</p>
-            <p className="text-2xl font-bold text-red-400 mt-1">₹{finances.workerPayments.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">₹{finances.workerPayments.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-gray-850/20 rounded-lg border border-slate-200">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <p className="text-xs text-slate-450 font-semibold uppercase">Other Expenses</p>
-            <p className="text-2xl font-bold text-red-400 mt-1">₹{finances.expenses.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-slate-700 mt-1">₹{finances.expenses.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-emerald-950/20 rounded-lg border border-emerald-900/30">
-            <p className="text-xs text-emerald-500 font-semibold uppercase">Net Profit</p>
-            <p className="text-2xl font-bold text-emerald-400 mt-1">₹{finances.profit.toLocaleString()}</p>
+          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+            <p className="text-xs text-emerald-700 font-semibold uppercase">Net Profit</p>
+            <p className="text-2xl font-bold text-emerald-700 mt-1">₹{finances.profit.toLocaleString()}</p>
           </div>
-          <div className="p-4 bg-red-600/10 rounded-lg border border-red-600/20">
-            <p className="text-xs text-red-600 font-semibold uppercase">Profit Margin</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">{finances.margin}%</p>
+          <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+            <p className="text-xs text-red-700 font-semibold uppercase">Profit Margin</p>
+            <p className="text-2xl font-bold text-red-700 mt-1">{finances.margin}%</p>
           </div>
         </div>
       </div>
 
-      {/* Upcoming Events / Operations Queue */}
+      {/* Recent Events & Registered Staffing Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Events table */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+        {/* Left Column: Events table with direct Open links */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-            <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wider">Active Staffing Queue</h3>
-            <Link href="/admin/events" className="text-red-600 hover:underline text-xs flex items-center space-x-1">
-              <span>All Events</span>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wider">Recent Events & Staffing Queue</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Click "Open Event" to review candidate photos, calls, and selection status.</p>
+            </div>
+            <Link href="/admin/events" className="text-red-600 hover:text-red-700 font-bold text-xs flex items-center space-x-1">
+              <span>View All ({stats.totalEvents})</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {upcomingEvents.length === 0 ? (
-            <p className="text-slate-450 text-sm text-center py-6">No events in queue.</p>
+          {recentEvents.length === 0 ? (
+            <p className="text-slate-450 text-sm text-center py-6">No events on record.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead>
-                  <tr className="text-slate-450 border-b border-slate-200 uppercase text-xs">
-                    <th className="pb-3">Event Name</th>
-                    <th className="pb-3">Date</th>
-                    <th className="pb-3">Reporting</th>
-                    <th className="pb-3 text-center">Applications</th>
-                    <th className="pb-3">Status</th>
+                  <tr className="text-slate-400 bg-slate-50/75 border-b border-slate-200 uppercase text-xs">
+                    <th className="p-3">Event Name & Details</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3">Reporting</th>
+                    <th className="p-3 text-center">Registered Members</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-850">
-                  {upcomingEvents.map((ev) => (
-                    <tr key={ev.id} className="hover:bg-slate-100/20 transition">
-                      <td className="py-3 font-bold text-slate-900">
-                        <Link href={`/admin/events/${ev.id}`} className="hover:text-red-600">
-                          {ev.name}
-                        </Link>
-                      </td>
-                      <td className="py-3 text-slate-500">{new Date(ev.date).toLocaleDateString("en-GB")}</td>
-                      <td className="py-3 text-slate-500">{formatTime12(ev.reportingTime)}</td>
-                      <td className="py-3 text-center font-semibold text-slate-650">
-                        {ev.applicationsCount} / {ev.maxApplications}
-                      </td>
-                      <td className="py-3">
-                        <span className="bg-red-600/10 text-red-600 border border-red-600/20 px-2 py-0.5 rounded text-xs uppercase font-bold">
-                          {ev.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-100">
+                  {recentEvents.map((ev) => {
+                    const applicantCount = ev._count?.applications ?? ev.applicationsCount ?? 0;
+                    return (
+                      <tr key={ev.id} className="hover:bg-slate-50/80 transition group">
+                        <td className="p-3">
+                          <Link href={`/admin/events/${ev.id}`} className="font-bold text-slate-900 hover:text-red-600 transition flex items-center gap-1.5">
+                            <span>{ev.name}</span>
+                          </Link>
+                          <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                            {ev.location && <span>{ev.location}</span>}
+                            {ev.workType && <span>• {ev.workType}</span>}
+                          </div>
+                        </td>
+                        <td className="p-3 text-slate-600 text-xs font-medium">
+                          {new Date(ev.date).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="p-3 text-slate-600 text-xs font-medium">{formatTime12(ev.reportingTime)}</td>
+                        <td className="p-3 text-center">
+                          <Link
+                            href={`/admin/events/${ev.id}`}
+                            className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-full text-xs font-bold transition"
+                            title="Click to view registered members"
+                          >
+                            <Users className="w-3 h-3 text-slate-600" />
+                            <span>{applicantCount} applied</span>
+                            <span className="text-slate-400 font-normal">/ {ev.workersRequired || ev.maxApplications || 45}</span>
+                          </Link>
+                        </td>
+                        <td className="p-3">
+                          {ev.status === "OPEN" && (
+                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-extrabold flex items-center gap-1 w-fit">
+                              <Sparkles className="w-3 h-3" /> OPEN
+                            </span>
+                          )}
+                          {ev.status === "FULL" && (
+                            <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
+                              FULL
+                            </span>
+                          )}
+                          {ev.status === "CLOSED" && (
+                            <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
+                              CLOSED
+                            </span>
+                          )}
+                          {ev.status === "COMPLETED" && (
+                            <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
+                              COMPLETED
+                            </span>
+                          )}
+                          {ev.status === "SCHEDULED" && (
+                            <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
+                              SCHEDULED
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <Link
+                            href={`/admin/events/${ev.id}`}
+                            className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-xs transition hover:scale-105"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Open</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -212,26 +370,35 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Right Column: Quick Admin Tools */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
-          <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3">Quick Actions</h3>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-xs">
+          <h3 className="text-lg font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3">Quick Navigation</h3>
           <div className="grid grid-cols-1 gap-3">
             <Link
               href="/admin/events/create"
-              className="bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg text-center text-sm transition"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold p-3.5 rounded-xl text-center text-sm shadow transition flex items-center justify-center gap-2"
             >
-              Create New Event
+              <span>+ Create New Event</span>
             </Link>
             <Link
-              href="/admin/applications"
-              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
+              href="/admin/events"
+              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3.5 rounded-xl text-center text-sm border border-slate-200 transition flex items-center justify-center gap-2"
             >
-              Review Pending Applications
+              <Calendar className="w-4 h-4 text-slate-600" />
+              <span>Events & Rosters ({stats.totalEvents})</span>
             </Link>
             <Link
               href="/admin/students"
-              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3 rounded-lg text-center text-sm border border-slate-200 transition"
+              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3.5 rounded-xl text-center text-sm border border-slate-200 transition flex items-center justify-center gap-2"
             >
-              Search Student Profiles
+              <Users className="w-4 h-4 text-slate-600" />
+              <span>Student Visual Gallery ({stats.totalStudents})</span>
+            </Link>
+            <Link
+              href="/admin/applications"
+              className="bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold p-3.5 rounded-xl text-center text-sm border border-slate-200 transition flex items-center justify-center gap-2"
+            >
+              <Layers className="w-4 h-4 text-slate-600" />
+              <span>All Applications Queue ({stats.totalApplications})</span>
             </Link>
           </div>
         </div>
@@ -239,3 +406,4 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
+
