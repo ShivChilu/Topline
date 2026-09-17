@@ -13,7 +13,10 @@ import {
   Users,
   Utensils,
   Gem,
-  Award
+  Award,
+  Flame,
+  Sparkles,
+  CheckCircle,
 } from "lucide-react";
 
 export const revalidate = 0; // Dynamic rendering for latest opportunities
@@ -110,8 +113,9 @@ export default async function HomePage() {
       {heroFeaturedEvent && (
         <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-2.5 px-4 text-xs sm:text-sm font-extrabold shadow-md relative z-40 border-b border-red-700">
           <div className="max-w-7xl mx-auto flex items-center justify-center text-center gap-2 sm:gap-3 flex-wrap">
-            <span className="bg-white text-red-700 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-xs animate-pulse">
-              🔥 Urgent Hiring
+            <span className="bg-white text-red-700 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-xs flex items-center gap-1">
+              <Flame className="w-3.5 h-3.5 text-red-600" />
+              <span>Urgent Hiring</span>
             </span>
             <span className="text-white/95">
               <strong>{heroFeaturedEvent.name}</strong> • {heroFeaturedEvent.workType} • ₹{heroFeaturedEvent.paymentPerStudent}/shift
@@ -135,10 +139,11 @@ export default async function HomePage() {
           {heroFeaturedEvent ? (
             <Link
               href={`/events/${heroFeaturedEvent.id}`}
-              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-black shadow-lg shadow-red-600/30 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border animate-pulse"
+              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-black shadow-lg shadow-red-600/30 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border"
             >
-              <span>🔥 Apply for {heroFeaturedEvent.name} (₹{heroFeaturedEvent.paymentPerStudent})</span>
-              <ArrowRight className="w-5 h-5" />
+              <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>Apply for {heroFeaturedEvent.name} (₹{heroFeaturedEvent.paymentPerStudent})</span>
+              <ArrowRight className="w-5 h-5 shrink-0" />
             </Link>
           ) : (
             <Link
@@ -242,8 +247,8 @@ export default async function HomePage() {
                               : "bg-slate-100 text-slate-700 border border-slate-200"
                           }`}
                         >
-                          {isOpen && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />}
-                          {isOpen ? "🟢 Hiring Active" : event.status}
+                          {isOpen && <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                          {isOpen ? "Hiring Active" : event.status}
                         </span>
                         {event.workType && (
                           <span className="text-[11px] font-bold text-slate-500 uppercase">

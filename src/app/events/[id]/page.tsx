@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { prisma } from "@/lib/prisma";
 import EventApplicationForm from "@/components/EventApplicationForm";
-import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote } from "lucide-react";
+import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export const revalidate = 0; // Live check for status changes
@@ -81,18 +81,21 @@ export default async function EventDetailsPage(props: {
                 {event.workType}
               </span>
               {event.allowedGender === "FEMALE_ONLY" && (
-                <span className="bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                  👩 Female Candidates Only
+                <span className="bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-pink-600" />
+                  <span>Female Candidates Only</span>
                 </span>
               )}
               {event.allowedGender === "MALE_ONLY" && (
-                <span className="bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                  👨 Male Candidates Only
+                <span className="bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Male Candidates Only</span>
                 </span>
               )}
               {(!event.allowedGender || event.allowedGender === "ALL") && (
-                <span className="bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                  👥 Open to All Candidates
+                <span className="bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Open to All Candidates</span>
                 </span>
               )}
             </div>
@@ -131,11 +134,17 @@ export default async function EventDetailsPage(props: {
                   if (remainingSlots >= 1 && remainingSlots <= 5) {
                     return (
                       <span className="font-extrabold text-[#ED0000] text-xs uppercase tracking-wider flex items-center space-x-1">
-                        <span>🔥 {remainingSlots} {remainingSlots === 1 ? "Slot" : "Slots"} Left — Hurry!</span>
+                        <Flame className="w-3.5 h-3.5 text-red-600" />
+                        <span>{remainingSlots} {remainingSlots === 1 ? "Slot" : "Slots"} Left — Hurry!</span>
                       </span>
                     );
                   }
-                  return <span className="font-bold text-emerald-600 text-xs uppercase tracking-wider">🟢 Slots Open / Hiring Active</span>;
+                  return (
+                    <span className="font-bold text-emerald-600 text-xs uppercase tracking-wider flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Slots Open / Hiring Active</span>
+                    </span>
+                  );
                 })()}
               </div>
             </div>

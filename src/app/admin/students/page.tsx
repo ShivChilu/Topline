@@ -1281,8 +1281,8 @@ export default function AdminStudentsPage() {
                 }`}
               >
                 <option value="ALL">All Genders</option>
-                <option value="MALE">👨 Boys Only (Male)</option>
-                <option value="FEMALE">👩 Girls Only (Female)</option>
+                <option value="MALE">Boys Only (Male)</option>
+                <option value="FEMALE">Girls Only (Female)</option>
                 <option value="OTHER">Other</option>
               </select>
 
@@ -1303,7 +1303,7 @@ export default function AdminStudentsPage() {
                   }`}
                   title="Filter students by event application status"
                 >
-                  <option value="ALL">📅 All Events</option>
+                  <option value="ALL">All Events</option>
                   {eventsList.map((ev) => (
                     <option key={ev.id} value={ev.id}>
                       {ev.name} {ev.date ? `(${new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})` : ""}
@@ -1323,7 +1323,8 @@ export default function AdminStudentsPage() {
                       }`}
                       title="Show students who have NOT applied for this event"
                     >
-                      <span>🚫 Not Applied</span>
+                      <XCircle className="w-3 h-3" />
+                      <span>Not Applied</span>
                     </button>
                     <button
                       type="button"
@@ -1335,7 +1336,8 @@ export default function AdminStudentsPage() {
                       }`}
                       title="Show students who HAVE applied for this event"
                     >
-                      <span>✅ Applied</span>
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Applied</span>
                     </button>
                     <button
                       type="button"
@@ -1360,15 +1362,15 @@ export default function AdminStudentsPage() {
                 }`}
               >
                 <option value="ALL">All Heights</option>
-                <option value="5_0">📏 ≥ 5&apos;0&quot; (152 cm+)</option>
-                <option value="5_2">📏 ≥ 5&apos;2&quot; (157 cm+)</option>
-                <option value="5_3">📏 ≥ 5&apos;3&quot; (160 cm+)</option>
-                <option value="5_4">📏 ≥ 5&apos;4&quot; (162 cm+)</option>
-                <option value="5_5">📏 ≥ 5&apos;5&quot; (165 cm+)</option>
-                <option value="5_6">📏 ≥ 5&apos;6&quot; (167 cm+)</option>
-                <option value="5_8">📏 ≥ 5&apos;8&quot; (172 cm+)</option>
-                <option value="5_10">📏 ≥ 5&apos;10&quot; (178 cm+)</option>
-                <option value="6_0">📏 ≥ 6&apos;0&quot; (183 cm+)</option>
+                <option value="5_0">≥ 5&apos;0&quot; (152 cm+)</option>
+                <option value="5_2">≥ 5&apos;2&quot; (157 cm+)</option>
+                <option value="5_3">≥ 5&apos;3&quot; (160 cm+)</option>
+                <option value="5_4">≥ 5&apos;4&quot; (162 cm+)</option>
+                <option value="5_5">≥ 5&apos;5&quot; (165 cm+)</option>
+                <option value="5_6">≥ 5&apos;6&quot; (167 cm+)</option>
+                <option value="5_8">≥ 5&apos;8&quot; (172 cm+)</option>
+                <option value="5_10">≥ 5&apos;10&quot; (178 cm+)</option>
+                <option value="6_0">≥ 6&apos;0&quot; (183 cm+)</option>
               </select>
 
               {/* Selection Status */}
@@ -1378,9 +1380,9 @@ export default function AdminStudentsPage() {
                 className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
               >
                 <option value="ALL">All Selection Statuses</option>
-                <option value="SELECTED">✓ Selected Only</option>
-                <option value="UNDER_REVIEW">⏳ Under Review</option>
-                <option value="NOT_SELECTED">✗ Not Selected</option>
+                <option value="SELECTED">Selected Only</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="NOT_SELECTED">Not Selected</option>
               </select>
 
               {/* More Filters Toggle Button */}
@@ -1415,8 +1417,18 @@ export default function AdminStudentsPage() {
           {eventFilterId !== "ALL" && (
             <div className="bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 border border-amber-300/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-amber-950 shadow-xs animate-in fade-in">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider">
-                  {eventFilterMode === "NOT_APPLIED" ? "🚫 Not Applied Filter" : "✅ Applied Filter"}
+                <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1">
+                  {eventFilterMode === "NOT_APPLIED" ? (
+                    <>
+                      <XCircle className="w-3 h-3 text-amber-900" />
+                      <span>Not Applied Filter</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-amber-900" />
+                      <span>Applied Filter</span>
+                    </>
+                  )}
                 </span>
                 <span>
                   Showing <strong>{filteredStudents.length}</strong> candidate{filteredStudents.length === 1 ? "" : "s"}
@@ -1439,14 +1451,14 @@ export default function AdminStudentsPage() {
 
           {/* EXPANDABLE ADVANCED FILTERS PANEL */}
           {showMoreFilters && (
-            <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-in fade-in">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-in fade-in slide-in-from-top-2">
               {/* City Filter */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">City / Region</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">City</label>
                 <select
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600 truncate"
                 >
                   <option value="ALL">All Cities</option>
                   {availableCities.map((c) => (
@@ -1511,8 +1523,8 @@ export default function AdminStudentsPage() {
                   className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
                 >
                   <option value="ALL">All Photos</option>
-                  <option value="WITH_PHOTOS">📸 With Photos Only</option>
-                  <option value="WITHOUT_PHOTOS">⚠️ Without Photos</option>
+                  <option value="WITH_PHOTOS">With Photos Only</option>
+                  <option value="WITHOUT_PHOTOS">Without Photos</option>
                 </select>
               </div>
 
@@ -1525,7 +1537,7 @@ export default function AdminStudentsPage() {
                   className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
                 >
                   <option value="ALL">All Profiles</option>
-                  <option value="100_READY">✨ 100% Ready (Review)</option>
+                  <option value="100_READY">100% Ready (Review)</option>
                   <option value="COMPLETE">≥ 80% Complete</option>
                   <option value="INCOMPLETE">&lt; 80% Incomplete</option>
                 </select>

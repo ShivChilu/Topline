@@ -13,10 +13,14 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle2,
+  CheckCircle,
   Lock,
   Sparkles,
   Search,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Flame,
+  Utensils,
+  User,
 } from "lucide-react";
 
 export const revalidate = 0; // Disable static cache for live availability updates
@@ -235,15 +239,17 @@ export default async function OpportunitiesPage(props: {
               <div className="space-y-3 max-w-2xl">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-xs font-black uppercase tracking-wider shadow-sm animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                    🔥 Urgent Hiring Now
+                    <Flame className="w-3.5 h-3.5 text-white" />
+                    <span>Urgent Hiring Now</span>
                   </span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    🟢 Slots Open
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-emerald-400" />
+                    <span>Slots Open</span>
                   </span>
                   {featuredOpenEvent.workType && (
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                      🍽️ {featuredOpenEvent.workType}
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
+                      <Utensils className="w-3 h-3 text-slate-400" />
+                      <span>{featuredOpenEvent.workType}</span>
                     </span>
                   )}
                 </div>
@@ -325,7 +331,7 @@ export default async function OpportunitiesPage(props: {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {openEvents.length > 0 && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
               <span>Open Only ({openEvents.length})</span>
             </Link>
             <Link
@@ -372,17 +378,26 @@ export default async function OpportunitiesPage(props: {
                   <div className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border uppercase tracking-wider ${statusBadgeColor}`}>
-                          {isScheduled ? "⏰ Scheduled" : event.status}
+                        <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border uppercase tracking-wider flex items-center gap-1 ${statusBadgeColor}`}>
+                          {isScheduled ? (
+                            <>
+                              <Clock className="w-3 h-3" />
+                              <span>Scheduled</span>
+                            </>
+                          ) : (
+                            <span>{event.status}</span>
+                          )}
                         </span>
                         {event.allowedGender === "FEMALE_ONLY" && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 uppercase">
-                            👩 Female Only
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 border border-pink-200 uppercase flex items-center gap-1">
+                            <User className="w-3 h-3 text-pink-600" />
+                            <span>Female Only</span>
                           </span>
                         )}
                         {event.allowedGender === "MALE_ONLY" && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase">
-                            👨 Male Only
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase flex items-center gap-1">
+                            <User className="w-3 h-3 text-blue-600" />
+                            <span>Male Only</span>
                           </span>
                         )}
                       </div>
@@ -413,8 +428,9 @@ export default async function OpportunitiesPage(props: {
                         {(() => {
                           if (isScheduled && event.scheduledPublishAt) {
                             return (
-                              <span className="font-bold text-purple-700">
-                                ⏰ Opens: {new Date(event.scheduledPublishAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {new Date(event.scheduledPublishAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                              <span className="font-bold text-purple-700 flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-purple-600" />
+                                <span>Opens: {new Date(event.scheduledPublishAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {new Date(event.scheduledPublishAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
                               </span>
                             );
                           }
@@ -425,11 +441,17 @@ export default async function OpportunitiesPage(props: {
                           if (remainingSlots <= 5) {
                             return (
                               <span className="font-extrabold text-amber-600 flex items-center gap-1">
-                                🔥 Hurry! Only {remainingSlots} {remainingSlots === 1 ? "slot" : "slots"} left
+                                <Flame className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Only {remainingSlots} {remainingSlots === 1 ? "slot" : "slots"} left</span>
                               </span>
                             );
                           }
-                          return <span className="font-semibold text-emerald-600">🟢 Hiring Active • Slots Open</span>;
+                          return (
+                            <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Hiring Active • Slots Open</span>
+                            </span>
+                          );
                         })()}
                       </div>
                     </div>
