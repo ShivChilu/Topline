@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HeroSlideshow from "@/components/HeroSlideshow";
 import { prisma } from "@/lib/prisma";
+import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import {
   Calendar,
   MapPin,
@@ -50,10 +51,16 @@ export default async function HomePage() {
 
   try {
     // Fetch all published events and sort with marketing priority (OPEN first)
-    const allVisibleEvents = await prisma.event.findMany({
+    const rawVisibleEvents = await prisma.event.findMany({
       where: { visibility: "VISIBLE", status: { not: "ARCHIVED" } },
       orderBy: { date: "asc" },
     });
+
+    const allVisibleEvents = rawVisibleEvents.map((e) => ({
+      ...e,
+      status: getEffectiveEventStatus(e),
+      isPast: isEventPast(e.date),
+    }));
 
     const statusPriority: Record<string, number> = {
       OPEN: 1,

@@ -217,22 +217,32 @@ export async function GET(request: Request) {
       take: recentOnly ? 3 : undefined,
     });
 
-    const formattedEvents = events.map((e) => ({
-      ...e,
-      _id: e.id,
-      customFormFields: e.eventFormFields.map((ef) => ({
-        id: ef.formField.id,
-        key: ef.formField.key,
-        label: ef.formField.label,
-        type: ef.formField.type.toLowerCase(),
-        description: ef.formField.description || "",
-        placeholder: ef.formField.placeholder || "",
-        options: ef.formField.options,
-        required: ef.isRequired,
-        min: null,
-        max: null,
-      })),
-    }));
+    const formattedEvents = events.map((e) => {
+      const isPast = e.date ? new Date(e.date).getTime() < new Date().setHours(0, 0, 0, 0) : false;
+      const effectiveStatus = (e.status !== "ARCHIVED" && e.status !== "DRAFT" && isPast)
+        ? "COMPLETED"
+        : e.status;
+
+      return {
+        ...e,
+        _id: e.id,
+        status: effectiveStatus,
+        rawStatus: e.status,
+        isPast,
+        customFormFields: e.eventFormFields.map((ef) => ({
+          id: ef.formField.id,
+          key: ef.formField.key,
+          label: ef.formField.label,
+          type: ef.formField.type.toLowerCase(),
+          description: ef.formField.description || "",
+          placeholder: ef.formField.placeholder || "",
+          options: ef.formField.options,
+          required: ef.isRequired,
+          min: null,
+          max: null,
+        })),
+      };
+    });
 
     return NextResponse.json({ success: true, events: formattedEvents });
   } catch (error: any) {

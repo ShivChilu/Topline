@@ -156,8 +156,10 @@ export default function EventApplicationForm({
     );
   }
 
-  // CLOSED / FULL EVENT GATE
+  // CLOSED / FULL / COMPLETED EVENT GATE
   if (status !== "OPEN") {
+    const isCompleted = status === "COMPLETED";
+    const isFull = status === "FULL";
     return (
       <div className="bg-[#0c0d12] p-8 rounded-2xl border border-rose-900/40 shadow-xl text-center space-y-4">
         <div className="w-14 h-14 bg-rose-500/10 rounded-2xl border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500">
@@ -165,20 +167,30 @@ export default function EventApplicationForm({
         </div>
         <div className="space-y-1.5 max-w-md mx-auto">
           <div className="inline-block bg-rose-500/20 text-rose-400 text-[10px] font-extrabold px-3 py-1 rounded-full border border-rose-500/30 uppercase tracking-wider">
-            {status === "FULL" ? "⚠️ Applications Full" : "🔒 Applications Closed"}
+            {isCompleted
+              ? "Event Concluded"
+              : isFull
+              ? "Applications Full"
+              : "Applications Closed"}
           </div>
           <h3 className="text-xl font-extrabold text-white">
-            {status === "FULL" ? "Registration Full" : "Registration Form Closed"}
+            {isCompleted
+              ? "Event Concluded"
+              : isFull
+              ? "Registration Full"
+              : "Registration Form Closed"}
           </h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            {status === "FULL"
+            {isCompleted
+              ? "The date for this event has passed and registrations are officially closed. Please explore other upcoming events."
+              : isFull
               ? "All available candidate slots for this event have been filled. New applications are currently paused."
-              : "The application form for this event is currently closed by administrators. You can check back later or explore other open assignments."}
+              : "The application form for this event is currently closed. You can check back later or explore other open assignments."}
           </p>
         </div>
         <div className="pt-2">
           <Link
-            href="/events"
+            href="/opportunities"
             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl text-xs uppercase tracking-wider transition shadow-md inline-flex items-center justify-center gap-2"
           >
             Browse Other Events

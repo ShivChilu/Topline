@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { prisma } from "@/lib/prisma";
 import EventApplicationForm from "@/components/EventApplicationForm";
+import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -48,6 +49,9 @@ export default async function EventDetailsPage(props: {
   if (!event || event.visibility === "HIDDEN") {
     notFound();
   }
+
+  const effectiveStatus = getEffectiveEventStatus(event);
+  const isPast = isEventPast(event.date);
 
   const customFormFields = event.eventFormFields.map((eff: any) => ({
     id: eff.formField.id,
@@ -127,8 +131,11 @@ export default async function EventDetailsPage(props: {
               <p className="text-xs text-slate-500 uppercase font-semibold">Availability</p>
               <div className="flex items-center mt-1">
                 {(() => {
+                  if (isPast || effectiveStatus === "COMPLETED") {
+                    return <span className="font-extrabold text-slate-500 uppercase text-xs tracking-wider">Event Concluded</span>;
+                  }
                   const remainingSlots = event.workersRequired - event.applicationsCount;
-                  if (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED") {
+                  if (remainingSlots <= 0 || effectiveStatus === "FULL" || effectiveStatus === "CLOSED") {
                     return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">FULL</span>;
                   }
                   if (remainingSlots >= 1 && remainingSlots <= 5) {
@@ -225,9 +232,11 @@ export default async function EventDetailsPage(props: {
           <div className="sticky top-24">
             {(() => {
               const remainingSlots = event.workersRequired - event.applicationsCount;
-              const formStatus = (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED")
+              const formStatus = (isPast || effectiveStatus === "COMPLETED")
+                ? "COMPLETED"
+                : (remainingSlots <= 0 || effectiveStatus === "FULL" || effectiveStatus === "CLOSED")
                 ? "FULL"
-                : event.status;
+                : effectiveStatus;
               return (
                 <EventApplicationForm
                   eventId={event.id}

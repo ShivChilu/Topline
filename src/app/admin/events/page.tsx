@@ -221,9 +221,12 @@ export default function AdminEventsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEvents.map((event) => {
             const isScheduled = event.status === "SCHEDULED";
-            let statusBadgeColor = "bg-red-600/10 text-red-600 border-red-600/20";
-            if (isScheduled) statusBadgeColor = "bg-purple-100 text-purple-800 border-purple-300";
-            if (event.status === "OPEN") statusBadgeColor = "bg-emerald-100 text-emerald-800 border-emerald-300";
+            let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-300";
+            if (isScheduled) statusBadgeColor = "bg-blue-50 text-blue-800 border-blue-200";
+            if (event.status === "OPEN") statusBadgeColor = "bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold";
+            if (event.status === "FULL") statusBadgeColor = "bg-amber-50 text-amber-800 border-amber-300 font-bold";
+            if (event.status === "CLOSED") statusBadgeColor = "bg-rose-50 text-rose-800 border-rose-300 font-bold";
+            if (event.status === "COMPLETED") statusBadgeColor = "bg-purple-50 text-purple-800 border-purple-300 font-bold";
             if (event.status === "DRAFT") statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-300";
 
             return (
@@ -234,8 +237,9 @@ export default function AdminEventsPage() {
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-450 font-semibold uppercase">{event.workType}</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase border ${statusBadgeColor}`}>
-                      {isScheduled ? "⏰ Scheduled" : event.status}
+                    <span className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase border flex items-center gap-1 ${statusBadgeColor}`}>
+                      {isScheduled && <Clock className="w-3 h-3 text-blue-600" />}
+                      <span>{event.status}</span>
                     </span>
                   </div>
                   <h3 className="text-xl font-bold hover:text-red-600 transition">

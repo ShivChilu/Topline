@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
+import { isEventPast } from "@/lib/event-utils";
 import { ApplicationStatus, EventStatus } from "@prisma/client";
 
 export async function POST(
@@ -63,6 +64,14 @@ export async function POST(
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) {
       return NextResponse.json({ success: false, message: "Event not found." }, { status: 404 });
+    }
+
+    // Dynamic Past Event Date Gate: reject registrations if event date has passed
+    if (isEventPast(event.date)) {
+      return NextResponse.json(
+        { success: false, message: "Registration for this event is closed because the event date has already passed." },
+        { status: 400 }
+      );
     }
 
     let currentEvent = event;

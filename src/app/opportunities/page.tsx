@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
+import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import {
   Calendar,
   MapPin,
@@ -92,7 +93,7 @@ export default async function OpportunitiesPage(props: {
 
     const whereClause: any = {
       visibility: "VISIBLE",
-      status: searchParams.status ? searchParams.status : { not: "ARCHIVED" },
+      status: { not: "ARCHIVED" },
     };
 
     if (searchParams.search) {
@@ -108,6 +109,19 @@ export default async function OpportunitiesPage(props: {
       where: whereClause,
       orderBy: { date: "asc" },
     });
+
+    // Dynamically calculate effective status for each event based on event date
+    const processedEvents = rawEvents.map((e) => ({
+      ...e,
+      status: getEffectiveEventStatus(e),
+      isPast: isEventPast(e.date),
+    }));
+
+    // Filter by requested status if provided
+    let filteredEvents = processedEvents;
+    if (searchParams.status) {
+      filteredEvents = filteredEvents.filter((e) => e.status === searchParams.status);
+    }
 
     // Smart Marketing-First Priority Sorting:
     // 1. OPEN events (Hiring active)
@@ -125,7 +139,7 @@ export default async function OpportunitiesPage(props: {
       ARCHIVED: 8,
     };
 
-    events = [...rawEvents].sort((a, b) => {
+    events = [...filteredEvents].sort((a, b) => {
       const pA = statusPriority[a.status] || 99;
       const pB = statusPriority[b.status] || 99;
       if (pA !== pB) return pA - pB;
@@ -360,11 +374,15 @@ export default async function OpportunitiesPage(props: {
               const isOpen = event.status === "OPEN";
               const isFull = event.status === "FULL";
               const isScheduled = event.status === "SCHEDULED";
+              const isCompleted = event.status === "COMPLETED";
+              const isClosed = event.status === "CLOSED";
 
               let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
               if (isOpen) statusBadgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200 font-extrabold";
               if (isFull) statusBadgeColor = "bg-amber-50 text-amber-700 border-amber-200";
-              if (isScheduled) statusBadgeColor = "bg-purple-50 text-purple-700 border-purple-200";
+              if (isScheduled) statusBadgeColor = "bg-blue-50 text-blue-700 border-blue-200";
+              if (isCompleted) statusBadgeColor = "bg-purple-50 text-purple-700 border-purple-200";
+              if (isClosed) statusBadgeColor = "bg-rose-50 text-rose-700 border-rose-200";
 
               return (
                 <div
@@ -426,6 +444,9 @@ export default async function OpportunitiesPage(props: {
                       <div className="flex items-center space-x-2.5">
                         <Users className="w-4 h-4 text-red-600 shrink-0" />
                         {(() => {
+                          if (isCompleted || isClosed) {
+                            return <span className="font-extrabold text-slate-500 uppercase">Event Concluded</span>;
+                          }
                           if (isScheduled && event.scheduledPublishAt) {
                             return (
                               <span className="font-bold text-purple-700 flex items-center gap-1">
@@ -435,7 +456,7 @@ export default async function OpportunitiesPage(props: {
                             );
                           }
                           const remainingSlots = Math.max(0, (event.workersRequired || event.maxApplications) - event.applicationsCount);
-                          if (remainingSlots <= 0 || event.status === "FULL" || event.status === "CLOSED" || event.status === "COMPLETED") {
+                          if (remainingSlots <= 0 || event.status === "FULL") {
                             return <span className="font-extrabold text-red-600 uppercase">Applications Full</span>;
                           }
                           if (remainingSlots <= 5) {
@@ -513,7 +534,7 @@ export default async function OpportunitiesPage(props: {
                               : "bg-slate-200 text-slate-500 hover:bg-slate-300"
                           }`}
                         >
-                          <span>{isOpen ? "Apply Now" : "View Details"}</span>
+                          <span>{isOpen ? "Apply Now" : isCompleted ? "Event Concluded" : "View Details"}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       );

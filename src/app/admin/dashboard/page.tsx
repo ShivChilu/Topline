@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
+
 export const revalidate = 0; // Fresh stats on reload
 
 function formatTime12(timeStr: string) {
@@ -50,13 +52,28 @@ export default async function AdminDashboardPage() {
   let latestActiveEvent: any = null;
 
   try {
-    // 1. Overview counts
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    // 1. Overview counts (Past events dynamically excluded from open forms & counted towards completed)
     stats.totalStudents = await prisma.user.count({ where: { role: "USER" } });
     stats.totalEvents = await prisma.event.count();
-    stats.openForms = await prisma.event.count({ where: { status: "OPEN" } });
+    stats.openForms = await prisma.event.count({
+      where: {
+        status: "OPEN",
+        date: { gte: startOfToday },
+      },
+    });
     stats.totalApplications = await prisma.application.count();
     stats.selectedStudents = await prisma.application.count({ where: { status: "SELECTED" } });
-    stats.completedEvents = await prisma.event.count({ where: { status: "COMPLETED" } });
+    stats.completedEvents = await prisma.event.count({
+      where: {
+        OR: [
+          { status: "COMPLETED" },
+          { date: { lt: startOfToday }, status: { notIn: ["ARCHIVED", "DRAFT"] } },
+        ],
+      },
+    });
 
     // 2. Get recent & upcoming events with real registered application counts
     recentEvents = await prisma.event.findMany({
@@ -72,10 +89,10 @@ export default async function AdminDashboardPage() {
       },
     });
 
-    // Find the primary spotlight event (OPEN or most recent)
+    // Find the primary spotlight event (Active OPEN first, then other upcoming events, or fallback to most recent)
     latestActiveEvent =
-      recentEvents.find((e) => e.status === "OPEN") ||
-      recentEvents.find((e) => e.status === "FULL" || e.status === "CLOSED") ||
+      recentEvents.find((e) => getEffectiveEventStatus(e) === "OPEN") ||
+      recentEvents.find((e) => ["FULL", "CLOSED", "SCHEDULED"].includes(getEffectiveEventStatus(e))) ||
       recentEvents[0] ||
       null;
   } catch (error) {
@@ -132,7 +149,9 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* SPOTLIGHT RECENT EVENT QUICK ACCESS CARD */}
-      {latestActiveEvent && (
+      {latestActiveEvent && (() => {
+        const spotlightStatus = getEffectiveEventStatus(latestActiveEvent);
+        return (
         <div className="bg-gradient-to-r from-red-600 via-red-700 to-slate-900 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
           <div className="space-y-2 z-10 max-w-2xl">
             <div className="flex items-center gap-2">
@@ -141,7 +160,7 @@ export default async function AdminDashboardPage() {
                 Latest Event Spotlight
               </span>
               <span className="bg-black/30 backdrop-blur-md px-2.5 py-0.5 rounded-full text-xs font-bold uppercase border border-white/20">
-                {latestActiveEvent.status}
+                {spotlightStatus}
               </span>
             </div>
             <h2 className="text-2xl font-black tracking-tight leading-snug">
@@ -190,7 +209,8 @@ export default async function AdminDashboardPage() {
           {/* Decorative background glow */}
           <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-red-500/20 rounded-full blur-3xl pointer-events-none" />
         </div>
-      )}
+        );
+      })()}
 
 
 
@@ -227,6 +247,7 @@ export default async function AdminDashboardPage() {
                 <tbody className="divide-y divide-slate-100">
                   {recentEvents.map((ev) => {
                     const applicantCount = ev._count?.applications ?? ev.applicationsCount ?? 0;
+                    const effectiveStatus = getEffectiveEventStatus(ev);
                     return (
                       <tr key={ev.id} className="hover:bg-slate-50/80 transition group">
                         <td className="p-3">
@@ -258,29 +279,34 @@ export default async function AdminDashboardPage() {
                           </Link>
                         </td>
                         <td className="p-3">
-                          {ev.status === "OPEN" && (
+                          {effectiveStatus === "OPEN" && (
                             <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-extrabold flex items-center gap-1 w-fit">
                               <Sparkles className="w-3 h-3" /> OPEN
                             </span>
                           )}
-                          {ev.status === "FULL" && (
+                          {effectiveStatus === "FULL" && (
                             <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
                               FULL
                             </span>
                           )}
-                          {ev.status === "CLOSED" && (
+                          {effectiveStatus === "CLOSED" && (
                             <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
                               CLOSED
                             </span>
                           )}
-                          {ev.status === "COMPLETED" && (
+                          {effectiveStatus === "COMPLETED" && (
                             <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
                               COMPLETED
                             </span>
                           )}
-                          {ev.status === "SCHEDULED" && (
+                          {effectiveStatus === "SCHEDULED" && (
                             <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
                               SCHEDULED
+                            </span>
+                          )}
+                          {effectiveStatus === "DRAFT" && (
+                            <span className="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded-full text-xs uppercase font-bold w-fit">
+                              DRAFT
                             </span>
                           )}
                         </td>
