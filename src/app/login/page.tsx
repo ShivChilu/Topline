@@ -31,13 +31,17 @@ export default function StudentLoginPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccess("Login successful! Redirecting to your profile...");
+        const destination = data.redirectUrl || (data.isAdmin ? "/admin/dashboard" : "/profile");
+        const successMessage = data.isAdmin
+          ? "Admin authenticated! Redirecting to management dashboard..."
+          : "Login successful! Redirecting to your profile...";
+        setSuccess(successMessage);
         setTimeout(() => {
-          router.push("/profile");
+          router.push(destination);
           router.refresh();
         }, 800);
       } else {
-        setError(data.message || "Invalid registration number or password.");
+        setError(data.message || "Invalid registration number, username, or password.");
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -56,10 +60,10 @@ export default function StudentLoginPage() {
           <div className="text-center space-y-2">
             <BrandLogo width={64} height={64} className="mx-auto rounded-xl border border-slate-200 p-1 bg-white shadow-sm" />
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 uppercase tracking-wider">
-              Student Portal
+              Portal Sign In
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
-              Sign in to manage your registrations, view earnings, and track job statuses.
+              Sign in to access your candidate profile or administrative dashboard.
             </p>
           </div>
 
@@ -80,7 +84,7 @@ export default function StudentLoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Registration No. / Mobile Phone
+                Registration No. / Username / Mobile
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -89,7 +93,7 @@ export default function StudentLoginPage() {
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="e.g. PU-2024-887 or 9876543210"
+                  placeholder="e.g. PU-2024-887, admin, or 9876543210"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20"
                 />
               </div>
@@ -132,7 +136,7 @@ export default function StudentLoginPage() {
 
           <div className="text-center pt-4 border-t border-slate-100">
             <p className="text-xs text-slate-500">
-              Don't have an account yet?{" "}
+              Candidate not registered yet?{" "}
               <Link href="/register" className="text-red-600 font-bold hover:underline">
                 Register now
               </Link>

@@ -14,8 +14,8 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get("admin_token")?.value;
 
     if (!token) {
-      // Redirect to admin login if token is missing
-      const loginUrl = new URL("/admin/login", request.url);
+      // Redirect to main unified login if token is missing
+      const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
   }

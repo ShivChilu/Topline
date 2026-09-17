@@ -49,11 +49,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             router.push("/admin/events");
           }
         } else {
-          router.push("/admin/login");
+          router.push("/login");
         }
       } catch (err) {
         console.error("Session check error:", err);
-        router.push("/admin/login");
+        router.push("/login");
       } finally {
         setCheckingAuth(false);
       }
@@ -98,7 +98,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (confirm("Are you sure you want to log out?")) {
       try {
         await fetch("/api/admin/logout", { method: "POST" });
-        router.push("/admin/login");
+        router.push("/login");
       } catch (err) {
         console.error("Logout failed", err);
       }

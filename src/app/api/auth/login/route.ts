@@ -18,13 +18,14 @@ export async function POST(request: Request) {
 
     const cleanId = identifier.trim();
 
-    // Find student user by registrationNumber, phone, or email
+    // Find user by registrationNumber, phone, email, or username (case-insensitive for email/username)
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { registrationNumber: cleanId },
           { phone: cleanId },
           { email: cleanId.toLowerCase() },
+          { username: cleanId.toLowerCase() },
           { username: cleanId },
         ],
       },
@@ -59,15 +60,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const token = signToken({
+    const isAdmin = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role);
+
+    // Compute redirect destination
+    let redirectUrl = "/profile";
+    if (isAdmin) {
+      if (user.role === "CALLING_ADMIN") {
+        redirectUrl = "/admin/calling";
+      } else if (user.role === "EVENT_ADMIN") {
+        redirectUrl = "/admin/events";
+      } else {
+        redirectUrl = "/admin/dashboard";
+      }
+    }
+
+    const userToken = signToken({
       id: user.id,
       username: user.registrationNumber || user.phone || user.username || "",
       role: user.role,
+      name: user.name,
     });
 
     const response = NextResponse.json({
       success: true,
-      message: "Logged in successfully!",
+      message: isAdmin ? "Admin authentication successful!" : "Logged in successfully!",
+      redirectUrl,
+      isAdmin,
       user: {
         id: user.id,
         name: user.name,
@@ -79,13 +97,32 @@ export async function POST(request: Request) {
       },
     });
 
-    response.cookies.set("user_token", token, {
+    // Set user token for portal access
+    response.cookies.set("user_token", userToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60,
       path: "/",
     });
+
+    // If Admin, also set admin_token cookie for full admin suite access
+    if (isAdmin) {
+      const adminToken = signToken({
+        id: user.id,
+        username: user.username || user.email || user.registrationNumber || "admin",
+        role: user.role,
+        name: user.name,
+      });
+
+      response.cookies.set("admin_token", adminToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: "/",
+        sameSite: "lax",
+      });
+    }
 
     return response;
   } catch (error: any) {
