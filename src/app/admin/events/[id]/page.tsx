@@ -2,7 +2,6 @@
 
 import { useEffect, useState, use, useMemo, useRef } from "react";
 import Link from "next/link";
-import EventPhotoGalleryManager from "@/components/EventPhotoGalleryManager";
 import {
   ArrowLeft,
   Calendar,
@@ -139,8 +138,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // View state: photo gallery (default), table, event photos
-  const [activeView, setActiveView] = useState<"gallery" | "table" | "eventPhotos">("gallery");
+  // View state: photo gallery (default), table
+  const [activeView, setActiveView] = useState<"gallery" | "table">("gallery");
 
   // Selection & bulk
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -2124,15 +2123,6 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 <List className="w-3.5 h-3.5" />
                 Table View
               </button>
-              <button
-                onClick={() => setActiveView("eventPhotos")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  activeView === "eventPhotos" ? "bg-white text-red-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Camera className="w-3.5 h-3.5" />
-                Event Photos
-              </button>
             </div>
           </div>
         </div>
@@ -2233,7 +2223,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         )}
 
         {/* Bulk Actions Bar */}
-        {selectedIds.length > 0 && activeView !== "eventPhotos" && (
+        {selectedIds.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-red-800 bg-red-200 px-2.5 py-1 rounded-full">
@@ -3076,15 +3066,6 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* ---------------------------------------------------- */}
-      {/* VIEW 3: EVENT PHOTO GALLERY (EVENT / SETUP PHOTOS) */}
-      {/* ---------------------------------------------------- */}
-      {activeView === "eventPhotos" && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <EventPhotoGalleryManager eventId={eventId} />
         </div>
       )}
 
