@@ -128,6 +128,8 @@ export async function GET() {
         dynamicFields,
         completeness,
         recentApplications: user.applications,
+        role: user.role,
+        isActive: user.isActive,
       },
     });
   } catch (error: any) {

@@ -64,22 +64,13 @@ export default function Navbar() {
 
               {loggedInUser ? (
                 isAdmin ? (
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={adminDashboardUrl}
-                      className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition shadow-sm"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Admin Dashboard</span>
-                    </Link>
-                    <Link
-                      href="/profile"
-                      className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition"
-                      title="Profile Settings"
-                    >
-                      <User className="w-4 h-4" />
-                    </Link>
-                  </div>
+                  <Link
+                    href={adminDashboardUrl}
+                    className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Admin Dashboard</span>
+                  </Link>
                 ) : (
                   <Link
                     href="/profile"

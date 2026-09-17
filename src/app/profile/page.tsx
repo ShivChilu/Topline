@@ -140,6 +140,18 @@ export default function StudentProfilePage() {
       const data = await res.json();
       if (res.ok && data.success && data.user) {
         const u = data.user;
+        const isAdminRole = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(u.role);
+        if (isAdminRole) {
+          const redirectUrl =
+            u.role === "CALLING_ADMIN"
+              ? "/admin/calling"
+              : u.role === "EVENT_ADMIN"
+              ? "/admin/events"
+              : "/admin/dashboard";
+          router.replace(redirectUrl);
+          return;
+        }
+
         setUser(u);
         setPhotos(u.studentPhotos || []);
         setDynamicFields(u.dynamicFields || []);
