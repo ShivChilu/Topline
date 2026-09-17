@@ -748,6 +748,8 @@ export async function sendCustomBroadcastEmail({
       .map((para) => `<p style="margin-top: 0; margin-bottom: 16px; color: #d1d5db; line-height: 1.7;">${para.replace(/\n/g, "<br/>")}</p>`)
       .join("");
 
+    const hasInlineCta = (messageBody.includes("[") && messageBody.includes("](")) || /\{\{\s*applyLink\s*\}\}/i.test(messageBody);
+
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -779,9 +781,11 @@ export async function sendCustomBroadcastEmail({
             ${formattedBody}
           </div>
 
+          ${!hasInlineCta ? `
           <div style="text-align: center; margin-top: 28px;">
             <a href="${portalUrl}" class="btn" style="color: #ffffff;">${buttonLabel}</a>
           </div>
+          ` : ""}
         </div>
         ${includeBranding ? `
         <div class="footer">

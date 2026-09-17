@@ -3050,7 +3050,7 @@ export default function AdminStudentsPage() {
                   onClick={() => {
                     setCustomEmailSubject("🎉 Opportunity: You are eligible for {{eventName}} — Apply Now!");
                     setCustomEmailBody(
-                      "Hi {{name}},\n\n🎉 You are eligible for the upcoming Topline ODC event!\n\n🍽️ {{eventWorkType}}\n📅 Date: {{eventDate}} 🕒 Pickup Time: {{pickupTime}}\n\nRequirements:\n• Clean shave is mandatory • Short & well-groomed hair • Black formal shoes 👞 • High-length formal socks 🧦 • Good grooming and professional appearance\n\nIf you are interested and available, please apply for the event through the link below:\n[Apply for the Event – Topline ODC]({{applyLink}})\n\nRegards,\nTopline ODC Team"
+                      "Hi {{name}},\n\n🎉 You are eligible for the upcoming Topline ODC event!\n\n[Apply for the Event – Topline ODC]({{applyLink}})\n\n🍽️ {{eventWorkType}}\n📅 Date: {{eventDate}} 🕒 Pickup Time: {{pickupTime}}\n\nRequirements:\n• Clean shave is mandatory • Short & well-groomed hair • Black formal shoes 👞 • High-length formal socks 🧦 • Good grooming and professional appearance\n\nIf you are interested and available, please confirm your slot through the link below:\n[Apply for the Event – Topline ODC]({{applyLink}})\n\nRegards,\nTopline ODC Team"
                     );
                   }}
                   className="px-2.5 py-1 bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 rounded-lg font-bold transition flex items-center gap-1 shadow-2xs"
