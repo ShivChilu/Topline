@@ -809,6 +809,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       if (data.success) {
         showToast(data.message || `Email successfully dispatched to ${emailTargetApps.length} candidate(s).`);
         setEmailModalOpen(false);
+        fetchEventData(true);
       } else {
         showToast(`Warning: ${data.message}`);
       }

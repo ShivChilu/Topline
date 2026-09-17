@@ -98,6 +98,25 @@ export async function GET(request: Request) {
                 },
               },
             },
+            emailLogs: {
+              where: eventId ? { eventId } : undefined,
+              select: {
+                id: true,
+                templateName: true,
+                subject: true,
+                bodyPreview: true,
+                sentAt: true,
+                openedAt: true,
+                openCount: true,
+                clickedAt: true,
+                clickCount: true,
+                clickedAction: true,
+                clickedUrl: true,
+                eventId: true,
+                applicationId: true,
+              },
+              orderBy: { sentAt: "desc" },
+            },
           },
         },
         fieldResponses: {
@@ -159,6 +178,8 @@ export async function GET(request: Request) {
             clickCount: true,
             clickedAction: true,
             clickedUrl: true,
+            eventId: true,
+            applicationId: true,
           },
           orderBy: { sentAt: "desc" },
         },
@@ -222,6 +243,26 @@ export async function GET(request: Request) {
         url: `/api/photos/student?photoId=${p.id}`,
       }));
 
+      // Merge emailLogs for this application and its user for this event:
+      const targetEventId = app.eventId || eventId;
+      const combinedLogsMap = new Map<string, any>();
+      (app.emailLogs || []).forEach((l: any) => {
+        combinedLogsMap.set(l.id, l);
+      });
+      (app.user?.emailLogs || []).forEach((l: any) => {
+        if (
+          !targetEventId ||
+          l.eventId === targetEventId ||
+          l.applicationId === app.id ||
+          (!l.eventId && !l.applicationId)
+        ) {
+          combinedLogsMap.set(l.id, l);
+        }
+      });
+      const eventEmailLogs = Array.from(combinedLogsMap.values()).sort(
+        (a: any, b: any) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
+      );
+
       return {
         id: app.id,
         _id: app.id,
@@ -257,6 +298,7 @@ export async function GET(request: Request) {
         manualOrder: app.manualOrder,
         createdAt: app.createdAt,
         updatedAt: app.updatedAt,
+        emailLogs: eventEmailLogs,
         attendance: app.attendance
           ? {
               ...app.attendance,
@@ -270,6 +312,21 @@ export async function GET(request: Request) {
         })),
         photoUrl: resolvedPhotoUrl,
         completenessScore: Math.min(score, 100),
+        user: app.user
+          ? {
+              id: app.user.id,
+              _id: app.user.id,
+              name: app.user.name || app.name,
+              phone: authoritativePhone,
+              email: app.user.email || "N/A",
+              registrationNumber: app.user.registrationNumber || app.registrationNumber,
+              university: app.user.university || "N/A",
+              city: app.user.city || "N/A",
+              gender: app.user.gender || "N/A",
+              selectionStatus: app.user.selectionStatus || "UNDER_REVIEW",
+              emailLogs: eventEmailLogs,
+            }
+          : null,
         studentId: app.user
           ? {
               id: app.user.id,
@@ -290,6 +347,7 @@ export async function GET(request: Request) {
               profilePhotoUrl: resolvedPhotoUrl,
               studentPhotos: formattedStudentPhotos,
               selectionStatus: app.user.selectionStatus || "UNDER_REVIEW",
+              emailLogs: eventEmailLogs,
               dynamicProfileFields: (app.user.profileFieldValues || [])
                 .filter((pv: any) => pv && pv.profileField)
                 .map((pv: any) => ({
