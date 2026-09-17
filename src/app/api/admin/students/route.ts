@@ -130,7 +130,36 @@ export async function GET(request: Request) {
           select: {
             id: true,
             status: true,
+            paymentStatus: true,
+            callingRemarks: true,
+            createdAt: true,
+            selectedAt: true,
+            confirmedAt: true,
+            event: {
+              select: {
+                id: true,
+                name: true,
+                date: true,
+                location: true,
+                workType: true,
+                reportingTime: true,
+                startTime: true,
+                endTime: true,
+                paymentPerStudent: true,
+                status: true,
+              },
+            },
+            attendance: {
+              select: {
+                id: true,
+                attendanceStatus: true,
+                checkInTime: true,
+                checkOutTime: true,
+                manualRemarks: true,
+              },
+            },
           },
+          orderBy: { createdAt: "desc" },
         },
         emailLogs: {
           select: {
@@ -152,15 +181,95 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
+    const now = new Date();
+
     const formattedStudents = students.map((s) => {
       const userApps = s.applications || [];
       const userPhotos = s.studentPhotos || [];
       const userFieldValues = s.profileFieldValues || [];
 
-      const appliedCount = userApps.length;
-      const selectedCount = userApps.filter((a) => a.status === "SELECTED").length;
-      const attendedCount = userApps.filter((a) => a.status === "ATTENDED").length;
-      const cancelledCount = userApps.filter((a) => a.status === "CANCELLED").length;
+      let totalEarned = 0;
+
+      const mappedApps = userApps.map((app) => {
+        const ev = app.event || {};
+        const att = app.attendance;
+        const appStatus = (app.status || "APPLIED").toUpperCase();
+        const attStatus = att?.attendanceStatus ? String(att.attendanceStatus).toUpperCase() : null;
+
+        const isAttended = appStatus === "ATTENDED" || attStatus === "PRESENT" || attStatus === "LATE";
+        
+        // Is it a past / completed event?
+        const isPastEvent = ev.date ? new Date(ev.date) < now : false;
+        const isCompletedEvent = ev.status === "COMPLETED";
+
+        // Confirmed but not present (No-show):
+        // 1. Explicitly marked ABSENT in attendance or application
+        // 2. Confirmed attendance (status CONFIRMED or confirmedAt) for an event that has completed / passed, but never marked PRESENT / ATTENDED
+        const isExplicitAbsent = appStatus === "ABSENT" || attStatus === "ABSENT";
+        const isConfirmedNoShow = (appStatus === "CONFIRMED" || Boolean(app.confirmedAt)) && (isPastEvent || isCompletedEvent) && !isAttended;
+        const isNoShow = isExplicitAbsent || isConfirmedNoShow;
+
+        if (isAttended && ev.paymentPerStudent) {
+          totalEarned += Number(ev.paymentPerStudent) || 0;
+        }
+
+        let displayStatus = appStatus;
+        let displayBadge = "APPLIED";
+        if (isAttended) {
+          displayStatus = "ATTENDED";
+          displayBadge = "PRESENT";
+        } else if (isNoShow) {
+          displayStatus = "NO_SHOW";
+          displayBadge = "CONFIRMED_ABSENT";
+        } else if (appStatus === "CONFIRMED") {
+          displayStatus = "CONFIRMED";
+          displayBadge = isPastEvent ? "AWAITING_LOGS" : "CONFIRMED_UPCOMING";
+        } else if (appStatus === "SELECTED") {
+          displayStatus = "SELECTED";
+          displayBadge = "SELECTED";
+        } else if (appStatus === "CANCELLED" || appStatus === "REJECTED") {
+          displayStatus = "CANCELLED";
+          displayBadge = "CANCELLED";
+        } else if (appStatus === "ON_HOLD") {
+          displayStatus = "ON_HOLD";
+          displayBadge = "ON_HOLD";
+        }
+
+        return {
+          id: app.id,
+          eventId: ev.id || "",
+          eventName: ev.name || "Event Assignment",
+          eventDate: ev.date || null,
+          eventLocation: ev.location || "",
+          workType: ev.workType || "",
+          paymentPerStudent: ev.paymentPerStudent || 0,
+          reportingTime: ev.reportingTime || "",
+          startTime: ev.startTime || "",
+          endTime: ev.endTime || "",
+          eventStatus: ev.status || "OPEN",
+          status: appStatus,
+          displayStatus,
+          displayBadge,
+          isAttended,
+          isNoShow,
+          paymentStatus: app.paymentStatus || "UNPAID",
+          attendanceStatus: attStatus,
+          checkInTime: att?.checkInTime || null,
+          checkOutTime: att?.checkOutTime || null,
+          attendanceRemarks: att?.manualRemarks || null,
+          callingRemarks: app.callingRemarks || null,
+          createdAt: app.createdAt,
+          selectedAt: app.selectedAt,
+          confirmedAt: app.confirmedAt,
+        };
+      });
+
+      const appliedCount = mappedApps.length;
+      const selectedCount = mappedApps.filter((a) => a.status === "SELECTED" || a.status === "CONFIRMED" || a.isAttended).length;
+      const confirmedCount = mappedApps.filter((a) => a.status === "CONFIRMED" || Boolean(a.confirmedAt) || a.isAttended).length;
+      const attendedCount = mappedApps.filter((a) => a.isAttended).length;
+      const noShowCount = mappedApps.filter((a) => a.isNoShow).length;
+      const cancelledCount = mappedApps.filter((a) => a.status === "CANCELLED" || a.status === "REJECTED").length;
 
       // Primary photo fallback - use fast lightweight streaming URL
       const primaryPhoto = userPhotos.find((p) => p.isPrimary) || userPhotos[0];
@@ -214,9 +323,11 @@ export async function GET(request: Request) {
         isActive: s.isActive,
         appliedCount,
         selectedCount,
+        confirmedCount,
         attendedCount,
+        noShowCount,
         cancelledCount,
-        totalEarnings: attendedCount * 800,
+        totalEarnings: totalEarned > 0 ? totalEarned : attendedCount * 800,
         completenessScore: score,
         photos: formattedPhotos,
         dynamicFields: userFieldValues
@@ -226,7 +337,8 @@ export async function GET(request: Request) {
             key: v.profileField?.key || "",
             value: v.value || "",
           })),
-        recentApplications: userApps.slice(0, 5),
+        applications: mappedApps,
+        recentApplications: mappedApps.slice(0, 5),
         createdAt: s.createdAt,
       };
     });

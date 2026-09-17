@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import Link from "next/link";
 import {
   Search,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Clock,
   ShieldAlert,
@@ -38,6 +40,7 @@ import {
   Activity,
   MessageSquare,
   PhoneCall,
+  CalendarDays,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import {
@@ -45,13 +48,12 @@ import {
   matchesHeight,
   matchesAge,
   matchesWeight,
-  parseHeightInCm,
 } from "@/lib/candidate-filters";
 
 interface StudentPhoto {
   id: string;
   url: string;
-  photoType: string;
+  photoType: "FORMAL" | "FULL_LENGTH" | "CASUAL" | "OTHER";
   caption?: string;
   isPrimary: boolean;
 }
@@ -62,7 +64,7 @@ interface DynamicField {
   value: string;
 }
 
-export interface StudentEmailLog {
+interface StudentEmailLog {
   id: string;
   templateName?: string | null;
   subject: string;
@@ -74,6 +76,34 @@ export interface StudentEmailLog {
   clickCount: number;
   clickedAction?: string | null;
   clickedUrl?: string | null;
+}
+
+export interface StudentApplication {
+  id: string;
+  eventId: string;
+  eventName: string;
+  eventDate: string | null;
+  eventLocation: string;
+  workType: string;
+  paymentPerStudent: number;
+  reportingTime: string;
+  startTime?: string;
+  endTime?: string;
+  eventStatus: string;
+  status: string;
+  displayStatus: string;
+  displayBadge: string;
+  isAttended: boolean;
+  isNoShow: boolean;
+  paymentStatus: string;
+  attendanceStatus?: string | null;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  attendanceRemarks?: string | null;
+  callingRemarks?: string | null;
+  createdAt: string;
+  selectedAt?: string | null;
+  confirmedAt?: string | null;
 }
 
 interface Student {
@@ -101,13 +131,16 @@ interface Student {
   isActive: boolean;
   appliedCount: number;
   selectedCount: number;
+  confirmedCount?: number;
   attendedCount: number;
+  noShowCount?: number;
   cancelledCount: number;
   totalEarnings: number;
   completenessScore: number;
   photos: StudentPhoto[];
   dynamicFields: DynamicField[];
   emailLogs?: StudentEmailLog[];
+  applications?: StudentApplication[];
   recentApplications: any[];
   createdAt: string;
 }
@@ -164,6 +197,7 @@ export default function AdminStudentsPage() {
 
   // Detail Modal
   const [inspectStudent, setInspectStudent] = useState<Student | null>(null);
+  const [inspectEventFilter, setInspectEventFilter] = useState<"ALL" | "ATTENDED" | "NO_SHOW" | "CONFIRMED" | "APPLIED">("ALL");
   const [customNote, setCustomNote] = useState("");
   const [savingRemarks, setSavingRemarks] = useState(false);
   const [sendEmailToggle, setSendEmailToggle] = useState(true);
@@ -283,6 +317,7 @@ export default function AdminStudentsPage() {
   const openInspectStudent = (student: Student) => {
     setInspectStudent(student);
     setCustomNote(student.adminRemarks || "");
+    setInspectEventFilter("ALL");
   };
 
   // Handle single candidate selection change with optimistic update
@@ -1555,6 +1590,28 @@ export default function AdminStudentsPage() {
                           )}
                         </div>
 
+                        {/* Reliability Quick Stats (Attended vs No-Show) */}
+                        <div
+                          onClick={() => openInspectStudent(student)}
+                          className="mt-2 flex items-center justify-between text-[11px] bg-slate-50 border border-slate-200/80 p-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition"
+                          title="Click to view full event attendance history"
+                        >
+                          <div className="flex items-center gap-1 font-bold text-emerald-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{student.attendedCount} Attended</span>
+                          </div>
+                          {(student.noShowCount || 0) > 0 ? (
+                            <div className="flex items-center gap-1 font-extrabold text-rose-700 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded text-[10px]">
+                              <AlertCircle className="w-3 h-3 text-rose-600" />
+                              <span>{student.noShowCount} No-Show</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[10.5px]">
+                              {student.appliedCount} applied
+                            </span>
+                          )}
+                        </div>
+
                         {/* Admin remarks preview snippet if present */}
                         {student.adminRemarks && (
                           <div
@@ -1714,7 +1771,8 @@ export default function AdminStudentsPage() {
                   <th className="p-4">University & City</th>
                   <th className="p-4">Phone / Email</th>
                   <th className="p-4 text-center">Applied</th>
-                  <th className="p-4 text-center">Attended</th>
+                  <th className="p-4 text-center">Attended (Present)</th>
+                  <th className="p-4 text-center">Confirmed No-Show</th>
                   <th className="p-4">Total Earnings</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
@@ -1822,8 +1880,22 @@ export default function AdminStudentsPage() {
                       <div className="text-slate-400">{student.email || "N/A"}</div>
                     </td>
                     <td className="p-4 text-center font-bold text-slate-700">{student.appliedCount}</td>
-                    <td className="p-4 text-center font-bold text-emerald-600">{student.attendedCount}</td>
-                    <td className="p-4 font-extrabold text-red-600">₹{student.totalEarnings.toLocaleString()}</td>
+                    <td className="p-4 text-center">
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-extrabold">
+                        ✓ {student.attendedCount}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      {(student.noShowCount || 0) > 0 ? (
+                        <span className="bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded-full text-xs font-extrabold flex items-center justify-center gap-1 w-fit mx-auto">
+                          <AlertCircle className="w-3 h-3 text-rose-600" />
+                          <span>{student.noShowCount}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">0</span>
+                      )}
+                    </td>
+                    <td className="p-4 font-extrabold text-slate-900 font-mono">₹{student.totalEarnings.toLocaleString()}</td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -2174,27 +2246,290 @@ export default function AdminStudentsPage() {
               )}
 
               {/* Event Attendance & Reliability History */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Event Reliability Record
-                </h4>
-                <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-slate-400 block font-semibold">Applied</span>
-                    <span className="text-base font-extrabold text-slate-800">{inspectStudent.appliedCount}</span>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Activity className="w-4 h-4 text-indigo-600" />
+                      <span>Event Attendance & Reliability Record</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Track attended events (present) vs confirmed but not present (no-show/absent).
+                    </p>
                   </div>
-                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                    <span className="text-emerald-700 block font-semibold">Selected</span>
-                    <span className="text-base font-extrabold text-emerald-800">{inspectStudent.selectedCount}</span>
+                  {inspectStudent.totalEarnings > 0 && (
+                    <span className="self-start sm:self-auto text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      ₹{inspectStudent.totalEarnings.toLocaleString("en-IN")} Total Earned
+                    </span>
+                  )}
+                </div>
+
+                {/* 5-Metric Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+                  {/* Attended (Present) */}
+                  <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-300 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1 text-emerald-700 font-bold mb-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Attended</span>
+                      </div>
+                      <span className="text-xl font-black text-emerald-900">{inspectStudent.attendedCount || 0}</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-600 font-semibold mt-1">Present at Event</span>
                   </div>
-                  <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
-                    <span className="text-indigo-700 block font-semibold">Attended</span>
-                    <span className="text-base font-extrabold text-indigo-800">{inspectStudent.attendedCount}</span>
+
+                  {/* Confirmed No-Show */}
+                  <div className="p-3 bg-rose-50/80 rounded-xl border border-rose-300 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1 text-rose-700 font-bold mb-1">
+                        <UserX className="w-3.5 h-3.5 text-rose-600" />
+                        <span>No-Show</span>
+                      </div>
+                      <span className="text-xl font-black text-rose-900">{inspectStudent.noShowCount || 0}</span>
+                    </div>
+                    <span className="text-[10px] text-rose-600 font-semibold mt-1">Confirmed Absent</span>
                   </div>
-                  <div className="p-3 bg-rose-50 rounded-xl border border-rose-200">
-                    <span className="text-rose-700 block font-semibold">Cancelled</span>
-                    <span className="text-base font-extrabold text-rose-800">{inspectStudent.cancelledCount}</span>
+
+                  {/* Confirmed Total */}
+                  <div className="p-3 bg-sky-50 rounded-xl border border-sky-200 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1 text-sky-700 font-bold mb-1">
+                        <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Confirmed</span>
+                      </div>
+                      <span className="text-xl font-black text-sky-900">{inspectStudent.confirmedCount || 0}</span>
+                    </div>
+                    <span className="text-[10px] text-sky-600 font-semibold mt-1">Total Confirmed</span>
                   </div>
+
+                  {/* Selected */}
+                  <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1 text-purple-700 font-bold mb-1">
+                        <Check className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Selected</span>
+                      </div>
+                      <span className="text-xl font-black text-purple-900">{inspectStudent.selectedCount || 0}</span>
+                    </div>
+                    <span className="text-[10px] text-purple-600 font-semibold mt-1">Approved Slots</span>
+                  </div>
+
+                  {/* Applied */}
+                  <div className="p-3 bg-slate-100/80 rounded-xl border border-slate-300 col-span-2 sm:col-span-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1 text-slate-600 font-bold mb-1">
+                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Applied</span>
+                      </div>
+                      <span className="text-xl font-black text-slate-800">{inspectStudent.appliedCount || 0}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-semibold mt-1">All Applications</span>
+                  </div>
+                </div>
+
+                {/* Filter Tabs for Application History */}
+                <div className="pt-2 border-t border-slate-200">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-2.5">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Event History Breakdown ({inspectStudent.applications?.length || 0})
+                    </span>
+                    <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setInspectEventFilter("ALL")}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition ${
+                          inspectEventFilter === "ALL"
+                            ? "bg-slate-900 text-white shadow-xs"
+                            : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                        }`}
+                      >
+                        All ({inspectStudent.applications?.length || 0})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInspectEventFilter("ATTENDED")}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                          inspectEventFilter === "ATTENDED"
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3 h-3" />
+                        Attended ({inspectStudent.attendedCount || 0})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInspectEventFilter("NO_SHOW")}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                          inspectEventFilter === "NO_SHOW"
+                            ? "bg-rose-600 text-white shadow-xs"
+                            : "bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200"
+                        }`}
+                      >
+                        <UserX className="w-3 h-3" />
+                        No-Show ({inspectStudent.noShowCount || 0})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInspectEventFilter("CONFIRMED")}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition ${
+                          inspectEventFilter === "CONFIRMED"
+                            ? "bg-sky-600 text-white shadow-xs"
+                            : "bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200"
+                        }`}
+                      >
+                        Confirmed ({inspectStudent.confirmedCount || 0})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInspectEventFilter("APPLIED")}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition ${
+                          inspectEventFilter === "APPLIED"
+                            ? "bg-slate-700 text-white shadow-xs"
+                            : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                        }`}
+                      >
+                        Applied ({inspectStudent.appliedCount || 0})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filtered Application Cards */}
+                  {(() => {
+                    const filteredApps = (inspectStudent.applications || []).filter((app) => {
+                      if (inspectEventFilter === "ATTENDED") return app.isAttended;
+                      if (inspectEventFilter === "NO_SHOW") return app.isNoShow;
+                      if (inspectEventFilter === "CONFIRMED") return app.status === "CONFIRMED" || Boolean(app.confirmedAt);
+                      if (inspectEventFilter === "APPLIED") return true;
+                      return true;
+                    });
+
+                    if (filteredApps.length === 0) {
+                      return (
+                        <div className="p-4 bg-white rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-500">
+                          {inspectEventFilter === "ATTENDED" && "No attended events found for this candidate yet."}
+                          {inspectEventFilter === "NO_SHOW" && "Great! No confirmed no-shows or unexplained absences recorded for this candidate."}
+                          {inspectEventFilter === "CONFIRMED" && "No confirmed events found."}
+                          {inspectEventFilter === "APPLIED" && "Candidate has not applied to any events."}
+                          {inspectEventFilter === "ALL" && "No event applications on record."}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                        {filteredApps.map((app) => (
+                          <div
+                            key={app.id}
+                            className={`p-3 bg-white rounded-xl border text-xs shadow-xs space-y-2 transition ${
+                              app.isAttended
+                                ? "border-emerald-200 bg-emerald-50/20"
+                                : app.isNoShow
+                                ? "border-rose-200 bg-rose-50/20"
+                                : app.status === "CONFIRMED"
+                                ? "border-sky-200 bg-sky-50/10"
+                                : "border-slate-200"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-0.5">
+                                <Link
+                                  href={`/admin/events/${app.eventId}`}
+                                  target="_blank"
+                                  className="font-bold text-slate-900 hover:text-indigo-600 flex items-center gap-1.5 transition group"
+                                >
+                                  <span>{app.eventName}</span>
+                                  <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 transition" />
+                                </Link>
+                                <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                  <span className="flex items-center gap-1">
+                                    <CalendarDays className="w-3 h-3 text-slate-400" />
+                                    {app.eventDate
+                                      ? new Date(app.eventDate).toLocaleDateString("en-GB", {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        })
+                                      : "Date TBD"}
+                                  </span>
+                                  {app.eventLocation && (
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3 text-slate-400" />
+                                      {app.eventLocation}
+                                    </span>
+                                  )}
+                                  {app.workType && (
+                                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">
+                                      {app.workType}
+                                    </span>
+                                  )}
+                                  {app.paymentPerStudent > 0 && (
+                                    <span className="font-semibold text-emerald-700">
+                                      ₹{app.paymentPerStudent}/shift
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Action Badges */}
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                {app.isAttended ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    Attended (Present)
+                                  </span>
+                                ) : app.isNoShow ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                    <UserX className="w-3 h-3 text-rose-600" />
+                                    Confirmed - No-Show
+                                  </span>
+                                ) : app.status === "CONFIRMED" ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300 flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-sky-600" />
+                                    Confirmed Attending
+                                  </span>
+                                ) : app.status === "SELECTED" ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-purple-100 text-purple-800 border border-purple-300">
+                                    Selected
+                                  </span>
+                                ) : app.status === "CANCELLED" ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                    Cancelled
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {app.status}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Additional attendance details / check-in / remarks */}
+                            {(app.checkInTime || app.attendanceRemarks || app.callingRemarks) && (
+                              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+                                {app.checkInTime && (
+                                  <span className="flex items-center gap-1 font-semibold text-emerald-700">
+                                    <Clock className="w-3 h-3" />
+                                    Checked In: {new Date(app.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                )}
+                                {app.attendanceRemarks && (
+                                  <span className="italic text-slate-500">
+                                    Attendance Note: {app.attendanceRemarks}
+                                  </span>
+                                )}
+                                {app.callingRemarks && (
+                                  <span className="italic text-slate-500">
+                                    Calling Note: {app.callingRemarks}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
