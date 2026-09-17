@@ -728,11 +728,14 @@ export async function sendCustomBroadcastEmail({
 
     const portalUrl = getTrackedUrl(actionKey, destinationUrl);
 
-    // Convert markdown link syntax [Text](url) to styled button and replace links with tracked/styled links
+    // Convert markdown link syntax [Text](url) to styled tracked button and replace links with tracked/styled links
     const processedBody = messageBody
       .replace(
         /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-        `<div style="text-align: center; margin: 16px 0;"><a href="$2" style="display: inline-block; background-color: #ED0000; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); text-align: center;">$1</a></div>`
+        (_match, text, rawUrl) => {
+          const trackedUrl = getTrackedUrl("APPLY_OR_CUSTOM_CTA", rawUrl);
+          return `<div style="text-align: center; margin: 16px 0;"><a href="${trackedUrl}" style="display: inline-block; background-color: #ED0000; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); text-align: center;">${text}</a></div>`;
+        }
       )
       .replace(
         /\{\{\s*profileLink\s*\}\}/gi,

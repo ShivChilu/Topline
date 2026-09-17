@@ -339,6 +339,7 @@ export async function GET(request: Request) {
           })),
         applications: mappedApps,
         recentApplications: mappedApps.slice(0, 5),
+        emailLogs: s.emailLogs || [],
         createdAt: s.createdAt,
       };
     });

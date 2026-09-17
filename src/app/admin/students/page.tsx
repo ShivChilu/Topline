@@ -2126,9 +2126,36 @@ export default function AdminStudentsPage() {
                           </a>
                         </div>
                       ) : (
-                        <div>N/A</div>
+                        <div className="text-slate-400">No Phone</div>
                       )}
-                      <div className="text-slate-400">{student.email || "N/A"}</div>
+                      <div className="text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="truncate max-w-[150px]">{student.email || "N/A"}</span>
+                        {student.emailLogs && student.emailLogs.length > 0 && (
+                          <span
+                            onClick={() => openInspectStudent(student)}
+                            className="cursor-pointer inline-flex items-center gap-1"
+                            title={`Click to view email delivery & click history (${student.emailLogs.length} sent)`}
+                          >
+                            <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                              {student.emailLogs.length} sent
+                            </span>
+                            {student.emailLogs.some((l) => l.openedAt || l.openCount > 0) ? (
+                              <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <Eye className="w-2.5 h-2.5" /> Opened
+                              </span>
+                            ) : (
+                              <span className="bg-amber-50 text-amber-700 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                Unopened
+                              </span>
+                            )}
+                            {student.emailLogs.some((l) => l.clickedAt || l.clickCount > 0) && (
+                              <span className="bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <MousePointerClick className="w-2.5 h-2.5" /> Clicked
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 text-center font-bold text-slate-700">{student.appliedCount}</td>
                     <td className="p-4 text-center">
