@@ -198,9 +198,9 @@ export default function EventApplicationForm({
         </div>
 
         <div className="space-y-2 max-w-md mx-auto">
-          <h3 className="text-xl font-extrabold text-white">Student Login Required</h3>
+          <h3 className="text-xl font-extrabold text-white">Login Required</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            To apply for Topline catering and event assignments, you must sign in with your permanent student account. Your permanent profile details and grooming photos will be linked automatically.
+            To apply for Topline catering and event assignments, you must sign in to your account. Your profile details and grooming photos will be linked automatically.
           </p>
         </div>
 

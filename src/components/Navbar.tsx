@@ -95,7 +95,7 @@ export default function Navbar() {
                   className="flex items-center space-x-1.5 bg-slate-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"
                 >
                   <LogIn className="w-3.5 h-3.5" />
-                  <span>Portal Login</span>
+                  <span>Login</span>
                 </Link>
               )}
             </div>
@@ -185,7 +185,7 @@ export default function Navbar() {
                   onClick={() => setIsOpen(false)}
                   className="bg-slate-900 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
                 >
-                  Portal Login / Register
+                  Login / Register
                 </Link>
               )}
             </div>

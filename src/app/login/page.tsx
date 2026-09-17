@@ -32,10 +32,7 @@ export default function StudentLoginPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         const destination = data.redirectUrl || (data.isAdmin ? "/admin/dashboard" : "/profile");
-        const successMessage = data.isAdmin
-          ? "Admin authenticated! Redirecting to management dashboard..."
-          : "Login successful! Redirecting to your profile...";
-        setSuccess(successMessage);
+        setSuccess("Login successful! Redirecting...");
         setTimeout(() => {
           router.push(destination);
           router.refresh();
@@ -60,10 +57,10 @@ export default function StudentLoginPage() {
           <div className="text-center space-y-2">
             <BrandLogo width={64} height={64} className="mx-auto rounded-xl border border-slate-200 p-1 bg-white shadow-sm" />
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 uppercase tracking-wider">
-              Portal Sign In
+              Login
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
-              Sign in to access your candidate profile or administrative dashboard.
+              Sign in to access your candidate profile and event updates.
             </p>
           </div>
 
@@ -84,7 +81,7 @@ export default function StudentLoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Registration No. / Username / Mobile
+                Registration No. / Mobile / Username
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -93,7 +90,7 @@ export default function StudentLoginPage() {
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="e.g. PU-2024-887, admin, or 9876543210"
+                  placeholder="e.g. PU-2024-887 or 9876543210"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20"
                 />
               </div>
@@ -127,9 +124,9 @@ export default function StudentLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl uppercase tracking-wider text-sm transition shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
+              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl uppercase tracking-wider text-sm transition shadow-md hover:shadow-lg flex items-center justify-center space-x-2 cursor-pointer"
             >
-              <span>{loading ? "Signing in..." : "Sign In to Portal"}</span>
+              <span>{loading ? "Signing in..." : "Login"}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
