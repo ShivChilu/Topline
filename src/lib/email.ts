@@ -1042,3 +1042,114 @@ export async function sendAdminEventAssignmentEmail({
     return { success: false, message: error.message };
   }
 }
+
+/**
+ * Student Password Reset Verification Email (OTP & Direct Magic Link)
+ */
+export async function sendPasswordResetEmail({
+  studentName,
+  email,
+  otp,
+  resetToken,
+  userId,
+}: {
+  studentName: string;
+  email: string;
+  otp: string;
+  resetToken: string;
+  userId?: string | null;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email address provided for password reset." };
+    }
+
+    const subject = `🔐 Password Reset Code: ${otp} — Topline ODC`;
+    const resetUrl = `${getAppBaseUrl()}/reset-password?token=${encodeURIComponent(resetToken)}`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId: userId || undefined,
+      templateName: "Student Password Reset Verification",
+      subject,
+      bodyPreview: `Your Topline ODC password reset code is ${otp}. Valid for 5 minutes.`,
+    });
+
+    const trackedResetUrl = getTrackedUrl("PASSWORD_RESET_CLICK", resetUrl);
+
+    // Format OTP characters with spacing
+    const formattedOtp = otp.split("").join(" ");
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 560px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { background: #ED0000; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: 1.5px; }
+        .content { padding: 32px 24px; text-align: center; }
+        .badge { display: inline-block; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 20px; }
+        .otp-card { background: #0f172a; border: 2px dashed #3b82f6; border-radius: 14px; padding: 24px; margin: 24px 0; text-align: center; }
+        .otp-code { font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #60a5fa; margin: 10px 0; }
+        .timer-badge { display: inline-block; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 6px; margin-top: 6px; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 15px; margin: 18px 0; box-shadow: 0 4px 14px rgba(237, 0, 0, 0.4); text-align: center; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .note { font-size: 13px; color: #9ca3af; line-height: 1.6; margin-top: 16px; text-align: left; background: #1e293b; padding: 14px; border-radius: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE ODC</h1>
+        </div>
+        <div class="content">
+          <div class="badge">🔐 PASSWORD RESET REQUEST</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 20px;">Hello, ${studentName || "Student"}!</h2>
+          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 16px 0;">
+            We received a request to reset your Topline ODC account password. Use the 6-digit verification code below to set your new password:
+          </p>
+
+          <!-- 6-DIGIT OTP BOX -->
+          <div class="otp-card">
+            <div style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Verification Code (OTP)</div>
+            <div class="otp-code">${formattedOtp}</div>
+            <div class="timer-badge">⏰ Valid for strictly 5 minutes</div>
+          </div>
+
+          <p style="color: #94a3b8; font-size: 13px; margin: 16px 0 6px 0;">
+            Or click the button below to open the secure password reset page directly:
+          </p>
+
+          <div>
+            <a href="${trackedResetUrl}" class="btn" style="color: #ffffff;">Reset My Password</a>
+          </div>
+
+          <div class="note">
+            <strong style="color: #f3f4f6;">⚠️ Security Notice:</strong><br />
+            This reset code will expire in <strong>5 minutes</strong>. If you did not request a password reset, please ignore this email. Your current password remains unchanged and secure.
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
+          This is an automated security verification message.
+        </div>
+      </div>
+      ${getTrackingPixelHtml()}
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: email,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send password reset email:", error);
+    return { success: false, message: error.message };
+  }
+}

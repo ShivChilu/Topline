@@ -158,6 +158,9 @@ model User {
   // Email Communication & Delivery Logs
   emailLogs           EmailLog[]
   
+  // Password Reset Tokens
+  passwordResetTokens PasswordResetToken[]
+
   // Audit trail & actions
   auditLogs           AuditLog[]
   whatsappAdditions   Application[]        @relation("WhatsappAddedBy")
@@ -172,6 +175,24 @@ model User {
   @@index([selectionStatus])
   @@index([university])
   @@index([city])
+}
+
+// -------------------------------------------------------------
+// PASSWORD RESET TOKENS
+// -------------------------------------------------------------
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  otp       String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+  @@index([otp])
 }
 
 // -------------------------------------------------------------
