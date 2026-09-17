@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensurePasswordResetTable } from "@/lib/ensure-tables";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    await ensurePasswordResetTable();
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token");
 

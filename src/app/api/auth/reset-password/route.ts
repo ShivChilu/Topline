@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signToken } from "@/lib/auth";
+import { ensurePasswordResetTable } from "@/lib/ensure-tables";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    await ensurePasswordResetTable();
     const body = await request.json();
     const { identifier, otp, token, newPassword } = body;
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { ensurePasswordResetTable } from "@/lib/ensure-tables";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ function maskEmail(email: string): string {
 
 export async function POST(request: Request) {
   try {
+    await ensurePasswordResetTable();
     const body = await request.json();
     const { identifier } = body;
 
