@@ -1562,10 +1562,10 @@ export default function AdminStudentsPage() {
                   disabled={actionLoading === "bulk"}
                   onClick={() => openCustomEmailModal(students.filter((s) => selectedStudentIds.includes(s.id)))}
                   className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
-                  title="Send custom broadcast email with dynamic tags to selected students"
+                  title="Send invitation or custom broadcast email with dynamic tags to selected students"
                 >
                   <Mail className="w-3.5 h-3.5" />
-                  Send Custom Message ({selectedStudentIds.length})
+                  Send Email / Invitation ({selectedStudentIds.length})
                 </button>
                 <button
                   disabled={actionLoading === "bulk"}
