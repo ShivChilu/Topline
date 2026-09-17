@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock } from "lucide-react";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 
 export default function AdminEventsPage() {
@@ -287,12 +287,19 @@ export default function AdminEventsPage() {
                       <QrCode className="w-4 h-4 text-red-600" />
                     </Link>
                     <Link
+                      href={`/admin/events/${event._id}/edit`}
+                      className="p-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded transition"
+                      title="Edit Event Details"
+                    >
+                      <Edit2 className="w-4 h-4 text-indigo-600" />
+                    </Link>
+                    <Link
                       href={`/events/${event._id}`}
                       target="_blank"
                       className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-650 transition"
                       title="Preview Public Page"
                     >
-                      <Edit className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4 text-slate-600" />
                     </Link>
                     <button
                       onClick={() => {

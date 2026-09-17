@@ -161,6 +161,59 @@ export async function PATCH(
       data: allowedData,
     });
 
+    if (Array.isArray(body.customFormFields)) {
+      // Clear existing form field relations for this event
+      await prisma.eventFormField.deleteMany({ where: { eventId } });
+
+      for (let idx = 0; idx < body.customFormFields.length; idx++) {
+        const f = body.customFormFields[idx];
+        const fieldKey = (f.label || `field_${Date.now()}_${idx}`).toLowerCase().replace(/[^a-z0-9_]/g, "_");
+
+        const typeMap: Record<string, any> = {
+          text: "TEXT",
+          paragraph: "PARAGRAPH",
+          number: "NUMBER",
+          email: "EMAIL",
+          phone: "PHONE",
+          date: "DATE",
+          time: "TIME",
+          select: "SELECT",
+          checkbox: "CHECKBOX",
+          radio: "RADIO",
+          yesno: "YESNO",
+          rating: "RATING",
+          file: "FILE",
+        };
+
+        const fieldType = typeMap[f.type] || "TEXT";
+
+        let existingField = await prisma.formField.findUnique({ where: { key: fieldKey } });
+        if (!existingField) {
+          existingField = await prisma.formField.create({
+            data: {
+              key: fieldKey,
+              label: f.label || "Question",
+              type: fieldType,
+              description: f.description || "",
+              placeholder: f.placeholder || "",
+              options: Array.isArray(f.options) ? f.options : [],
+              isRequired: Boolean(f.required),
+              displayOrder: idx,
+            },
+          });
+        }
+
+        await prisma.eventFormField.create({
+          data: {
+            eventId,
+            fieldId: existingField.id,
+            isRequired: Boolean(f.required),
+            displayOrder: idx,
+          },
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Event updated successfully!",

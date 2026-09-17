@@ -40,6 +40,7 @@ import {
   Info,
   Send,
   Eye,
+  Edit2,
   Edit3,
   GripVertical,
   FileText,
@@ -1358,6 +1359,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <span>Reopen (+Slots)</span>
           </button>
 
+          {/* Edit Event Details Button */}
+          <Link
+            href={`/admin/events/${eventId}/edit`}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+            title="Edit event specifications, payout rate, shift timings, guidelines, and custom questions"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+            <span>Edit Event</span>
+          </Link>
+
           {/* Duplicate as New Button */}
           <Link
             href={`/admin/events/create?cloneFrom=${eventId}`}
@@ -1416,6 +1427,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <Unlock className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Reopen Event (+Add Slots)</span>
                 </button>
+                <Link
+                  href={`/admin/events/${eventId}/edit`}
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 flex items-center gap-2 transition"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Edit Event Specifications</span>
+                </Link>
                 <Link
                   href={`/admin/events/create?cloneFrom=${eventId}`}
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
