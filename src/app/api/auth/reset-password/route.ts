@@ -89,6 +89,18 @@ export async function POST(request: Request) {
       );
     }
 
+    const targetUser = resetRecord.user;
+    const isAdmin = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(targetUser.role) || targetUser.role !== "USER";
+    if (isAdmin) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Password reset is not allowed for administrative accounts. Please contact the Super Admin.",
+        },
+        { status: 403 }
+      );
+    }
+
     const newPasswordHash = hashPassword(newPassword);
 
     // Update user password and burn the used token

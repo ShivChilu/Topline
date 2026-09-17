@@ -52,6 +52,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const isAdmin = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role) || user.role !== "USER";
+    if (isAdmin) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Password reset via OTP is not allowed for administrative accounts. Please contact the Super Admin to update your credentials.",
+        },
+        { status: 403 }
+      );
+    }
+
     if (!user.isActive) {
       return NextResponse.json(
         {

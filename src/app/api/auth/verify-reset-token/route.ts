@@ -28,6 +28,7 @@ export async function GET(request: Request) {
             name: true,
             email: true,
             registrationNumber: true,
+            role: true,
           },
         },
       },
@@ -40,6 +41,17 @@ export async function GET(request: Request) {
           message: "This password reset link is invalid or has expired (links expire after 5 minutes). Please request a new one.",
         },
         { status: 400 }
+      );
+    }
+
+    const isAdmin = ["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(resetRecord.user.role) || resetRecord.user.role !== "USER";
+    if (isAdmin) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Password reset is not allowed for administrative accounts.",
+        },
+        { status: 403 }
       );
     }
 
