@@ -46,14 +46,6 @@ export default async function AdminDashboardPage() {
     completedEvents: 0,
   };
 
-  let finances = {
-    revenue: 0,
-    workerPayments: 0,
-    expenses: 0,
-    profit: 0,
-    margin: 0,
-  };
-
   let recentEvents: any[] = [];
   let latestActiveEvent: any = null;
 
@@ -66,38 +58,7 @@ export default async function AdminDashboardPage() {
     stats.selectedStudents = await prisma.application.count({ where: { status: "SELECTED" } });
     stats.completedEvents = await prisma.event.count({ where: { status: "COMPLETED" } });
 
-    // 2. Load events to calculate finances (exclude DRAFT events)
-    const activeEvents = await prisma.event.findMany({
-      where: { status: { not: "DRAFT" } },
-    });
-
-    // Calculate worker payouts by querying applications with positive statuses
-    const applications = await prisma.application.findMany({
-      include: { event: true },
-    });
-
-    let totalWorkerPayments = 0;
-    applications.forEach((app) => {
-      if (app.event && ["SELECTED", "CONFIRMED", "ATTENDED", "PAID"].includes(app.status)) {
-        totalWorkerPayments += app.paymentOverride ?? app.event.paymentPerStudent ?? 0;
-      }
-    });
-
-    let totalRevenue = 0;
-    let totalOtherExpenses = 0;
-
-    activeEvents.forEach((ev) => {
-      totalRevenue += ev.clientRevenue || 0;
-      totalOtherExpenses += ev.otherExpenses || 0;
-    });
-
-    finances.revenue = totalRevenue;
-    finances.workerPayments = totalWorkerPayments;
-    finances.expenses = totalOtherExpenses;
-    finances.profit = totalRevenue - totalWorkerPayments - totalOtherExpenses;
-    finances.margin = totalRevenue > 0 ? Math.round((finances.profit / totalRevenue) * 100) : 0;
-
-    // 3. Get recent & upcoming events with real registered application counts
+    // 2. Get recent & upcoming events with real registered application counts
     recentEvents = await prisma.event.findMany({
       where: { status: { not: "ARCHIVED" } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -231,35 +192,7 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Financial Section */}
-      <div className="bg-white p-8 rounded-2xl border border-slate-200 space-y-6 shadow-xs">
-        <h2 className="text-xl font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-3 flex items-center space-x-2">
-          <Banknote className="text-red-600" />
-          <span>Financial Performance Summary</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <p className="text-xs text-slate-450 font-semibold uppercase">Client Revenue</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">₹{finances.revenue.toLocaleString()}</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <p className="text-xs text-slate-450 font-semibold uppercase">Worker Payouts</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">₹{finances.workerPayments.toLocaleString()}</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <p className="text-xs text-slate-450 font-semibold uppercase">Other Expenses</p>
-            <p className="text-2xl font-bold text-slate-700 mt-1">₹{finances.expenses.toLocaleString()}</p>
-          </div>
-          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-            <p className="text-xs text-emerald-700 font-semibold uppercase">Net Profit</p>
-            <p className="text-2xl font-bold text-emerald-700 mt-1">₹{finances.profit.toLocaleString()}</p>
-          </div>
-          <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-            <p className="text-xs text-red-700 font-semibold uppercase">Profit Margin</p>
-            <p className="text-2xl font-bold text-red-700 mt-1">{finances.margin}%</p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Recent Events & Registered Staffing Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

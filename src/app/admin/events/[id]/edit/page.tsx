@@ -63,8 +63,6 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [workersRequired, setWorkersRequired] = useState(15);
   const [maxApplications, setMaxApplications] = useState(25);
   const [paymentPerStudent, setPaymentPerStudent] = useState(800);
-  const [clientRevenue, setClientRevenue] = useState(0);
-  const [otherExpenses, setOtherExpenses] = useState(0);
   const [clientId, setClientId] = useState("");
   const [visibility, setVisibility] = useState("VISIBLE");
   const [allowedGender, setAllowedGender] = useState("ALL");
@@ -135,8 +133,6 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           setWorkersRequired(ev.workersRequired ?? 15);
           setMaxApplications(ev.maxApplications ?? 25);
           setPaymentPerStudent(ev.paymentPerStudent ?? 800);
-          setClientRevenue(ev.clientRevenue ?? 0);
-          setOtherExpenses(ev.otherExpenses ?? 0);
           setClientId(ev.clientId || "");
           setVisibility(ev.visibility || "VISIBLE");
           setAllowedGender(ev.allowedGender || "ALL");
@@ -269,8 +265,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       workersRequired: Number(workersRequired) || 1,
       maxApplications: Number(maxApplications) || 1,
       paymentPerStudent: Number(paymentPerStudent) || 0,
-      clientRevenue: Number(clientRevenue) || 0,
-      otherExpenses: Number(otherExpenses) || 0,
+      clientRevenue: 0,
+      otherExpenses: 0,
       clientId: clientId || null,
       visibility,
       allowedGender,
@@ -509,12 +505,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
 
-          {/* Capacity, Staff Count & Financial Payouts */}
+          {/* Capacity, Staff Count & Student Payout */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-xs">
             <div className="border-b border-slate-100 pb-3">
               <h2 className="text-base font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
                 <IndianRupee className="w-4 h-4 text-emerald-600" />
-                <span>Capacity, Requirements & Financials</span>
+                <span>Capacity, Staff Requirements & Student Payout</span>
               </h2>
             </div>
 
@@ -564,33 +560,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Client Revenue (₹) [Internal]
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={clientRevenue}
-                  onChange={(e) => setClientRevenue(Number(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
-                />
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Other Operational Expenses (₹) [Internal]
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={otherExpenses}
-                  onChange={(e) => setOtherExpenses(Number(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Description & Guidelines */}

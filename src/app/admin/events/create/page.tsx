@@ -46,8 +46,6 @@ function CreateEventForm() {
   const [workersRequired, setWorkersRequired] = useState(15);
   const [maxApplications, setMaxApplications] = useState(25);
   const [paymentPerStudent, setPaymentPerStudent] = useState(800);
-  const [clientRevenue, setClientRevenue] = useState(15000);
-  const [otherExpenses, setOtherExpenses] = useState(1000);
   const [clientId, setClientId] = useState("");
   const [visibility, setVisibility] = useState("VISIBLE");
   const [allowedGender, setAllowedGender] = useState("ALL");
@@ -138,8 +136,6 @@ function CreateEventForm() {
         setWorkersRequired(ev.workersRequired || 15);
         setMaxApplications(ev.maxApplications || 25);
         setPaymentPerStudent(ev.paymentPerStudent || 800);
-        setClientRevenue(ev.clientRevenue || 0);
-        setOtherExpenses(ev.otherExpenses || 0);
         setClientId(ev.clientId || "");
         setVisibility(ev.visibility || "VISIBLE");
         setAllowedGender(ev.allowedGender || "ALL");
@@ -290,8 +286,8 @@ function CreateEventForm() {
       workersRequired: Number(workersRequired) || 15,
       maxApplications: Number(maxApplications) || 25,
       paymentPerStudent: Number(paymentPerStudent) || 800,
-      clientRevenue: Number(clientRevenue) || 0,
-      otherExpenses: Number(otherExpenses) || 0,
+      clientRevenue: 0,
+      otherExpenses: 0,
       clientId: clientId || null,
       customFormFields: customFields,
       visibility,
@@ -784,26 +780,6 @@ function CreateEventForm() {
                 type="number"
                 value={paymentPerStudent}
                 onChange={(e) => setPaymentPerStudent(Number(e.target.value))}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Client Revenue (₹ total)</label>
-              <input
-                type="number"
-                value={clientRevenue}
-                onChange={(e) => setClientRevenue(Number(e.target.value))}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Other Expenses (₹ total)</label>
-              <input
-                type="number"
-                value={otherExpenses}
-                onChange={(e) => setOtherExpenses(Number(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
               />
             </div>

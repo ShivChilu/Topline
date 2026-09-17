@@ -1149,22 +1149,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     return { total, applied, underReview, selected, notSelected, confirmed, attended, absent, cancelled, paid, unpaid, calls0, calls1, calls2 };
   }, [applications]);
 
-  // Financials
-  const financials = useMemo(() => {
-    if (!event) return { revenue: 0, expenses: 0, workerPayments: 0, profit: 0, profitMargin: 0 };
-    let workerTotal = 0;
-    applications.forEach((app) => {
-      const s = (app.status || "").toUpperCase();
-      if (["SELECTED", "CONFIRMED", "ATTENDED", "PAID"].includes(s)) {
-        workerTotal += app.paymentOverride ?? event.paymentPerStudent ?? 0;
-      }
-    });
-    const rev = event.clientRevenue || 0;
-    const exp = event.otherExpenses || 0;
-    const prof = rev - workerTotal - exp;
-    const margin = rev > 0 ? Math.round((prof / rev) * 100) : 0;
-    return { revenue: rev, expenses: exp, workerPayments: workerTotal, profit: prof, profitMargin: margin };
-  }, [event, applications]);
+
 
   // Email Engagement & Click Tracking Analytics
   const emailAnalytics = useMemo(() => {
@@ -1667,37 +1652,27 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* Financials & Quota Card (Hidden for Event Admin and Calling Admin) */}
-      {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Workers Required</span>
-            <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.workersRequired}</span>
-          </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Max Applications</span>
-            <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.maxApplications}</span>
-          </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Pay / Student</span>
-            <span className="text-xl font-extrabold text-red-600 font-mono mt-0.5 block">₹{event.paymentPerStudent}</span>
-          </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Client Revenue</span>
-            <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">₹{financials.revenue.toLocaleString()}</span>
-          </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Worker Payout</span>
-            <span className="text-xl font-extrabold text-slate-700 font-mono mt-0.5 block">₹{financials.workerPayments.toLocaleString()}</span>
-          </div>
-          <div>
-            <span className="text-[11px] font-bold text-emerald-600 uppercase block">Est. Net Profit</span>
-            <span className="text-xl font-extrabold text-emerald-600 font-mono mt-0.5 block">
-              ₹{financials.profit.toLocaleString()} ({financials.profitMargin}%)
-            </span>
-          </div>
+      {/* Staffing Quota & Student Payout Card */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Workers Required</span>
+          <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.workersRequired} Staff</span>
         </div>
-      )}
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Max Applications Cap</span>
+          <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.maxApplications} Slots</span>
+        </div>
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Student Payout / Candidate</span>
+          <span className="text-xl font-extrabold text-red-600 font-mono mt-0.5 block">₹{event.paymentPerStudent}</span>
+        </div>
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Student Payout Budget</span>
+          <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">
+            ₹{((event.workersRequired || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
+          </span>
+        </div>
+      </div>
 
       {/* Dynamic Statistics Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
