@@ -61,8 +61,33 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Initialize Groq SDK
+    // 3. Initialize Groq SDK & Determine Available Model
     const groq = new Groq({ apiKey });
+
+    let chosenModel = process.env.GROQ_MODEL || "llama-3.1-70b-versatile";
+    try {
+      const modelsList = await groq.models.list();
+      const availableIds = (modelsList.data || []).map((m: any) => m.id);
+
+      const preferred = [
+        process.env.GROQ_MODEL,
+        "llama-3.1-70b-versatile",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+      ].filter(Boolean) as string[];
+
+      const match = preferred.find((p) => availableIds.includes(p));
+      if (match) {
+        chosenModel = match;
+      } else if (availableIds.length > 0) {
+        chosenModel = availableIds.find((id) => id.includes("llama") || id.includes("mixtral")) || availableIds[0];
+      }
+    } catch (modelErr) {
+      console.warn("[AdminCopilot] Could not list models, defaulting to fallback:", chosenModel);
+    }
 
     // 4. Construct Message Chain
     const formattedMessages: any[] = [
@@ -95,7 +120,7 @@ export async function POST(req: Request) {
       iterations++;
 
       const completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: chosenModel,
         messages: formattedMessages,
         tools: COPILOT_TOOLS,
         tool_choice: "auto",

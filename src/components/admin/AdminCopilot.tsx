@@ -43,7 +43,7 @@ export default function AdminCopilot() {
       id: "welcome",
       role: "assistant",
       content:
-        "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot** powered by Groq (Llama-3.3-70B). I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
+        "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot** powered by Groq Llama. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
