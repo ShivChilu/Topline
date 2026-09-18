@@ -61,21 +61,78 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Initialize Groq SDK
+    // 3. Initialize Groq SDK & Discover Active Models for this API Key
     const groq = new Groq({ apiKey });
 
-    // Active production models on Groq
-    const CANDIDATE_MODELS = [
-      process.env.GROQ_MODEL,
+    let availableModelIds: string[] = [];
+    try {
+      const modelsList = await groq.models.list();
+      availableModelIds = (modelsList.data || []).map((m: any) => m.id as string);
+    } catch (listErr: any) {
+      console.warn("[AdminCopilot] Could not list models from Groq:", listErr?.message);
+    }
+
+    // Filter out moderation guardrails, audio whisper, and third-party partner lab models that require terms
+    const usableModels = availableModelIds.filter((id) => {
+      const lower = id.toLowerCase();
+      return (
+        !lower.includes("guard") &&
+        !lower.includes("whisper") &&
+        !lower.includes("canopylabs") &&
+        !lower.includes("orpheus") &&
+        !lower.includes("safeguard") &&
+        !lower.includes("embed")
+      );
+    });
+
+    // Build prioritized candidate list based on what the user's key actually has access to
+    const candidatePool: string[] = [];
+
+    // 1. Explicit user override if configured
+    if (process.env.GROQ_MODEL) {
+      candidatePool.push(process.env.GROQ_MODEL);
+    }
+
+    // 2. High priority standard models (if in usableModels)
+    const priorityStandard = [
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
-    ].filter(Boolean) as string[];
+      "llama-3.2-11b-vision-preview",
+      "llama-3.2-3b-preview",
+      "llama-3.2-1b-preview",
+      "deepseek-r1-distill-llama-70b",
+      "gemma2-9b-it",
+    ];
+
+    for (const model of priorityStandard) {
+      if (usableModels.includes(model) && !candidatePool.includes(model)) {
+        candidatePool.push(model);
+      }
+    }
+
+    // 3. Add any other usable chat models discovered on their account
+    for (const model of usableModels) {
+      if (!candidatePool.includes(model)) {
+        candidatePool.push(model);
+      }
+    }
+
+    // 4. If usableModels was empty (e.g. list failed), fall back to standard candidates
+    if (candidatePool.length === 0) {
+      candidatePool.push(
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama-3.2-11b-vision-preview",
+        "llama-3.2-3b-preview",
+        "deepseek-r1-distill-llama-70b"
+      );
+    }
 
     const createCompletionWithFallback = async (params: any) => {
       const modelErrors: string[] = [];
 
-      // 1. Try candidates with full function tools
-      for (const candidate of CANDIDATE_MODELS) {
+      // Pass 1: Try candidate models with function calling tools
+      for (const candidate of candidatePool) {
         try {
           const res = await groq.chat.completions.create({
             ...params,
@@ -89,9 +146,9 @@ export async function POST(req: Request) {
         }
       }
 
-      // 2. If function tool execution rejected on simple queries, try standard conversational completion
+      // Pass 2: If tool calling failed or not supported on this model (e.g. DeepSeek/Gemma/restricted tier), try direct conversational completion
       if (params.tools && params.tools.length > 0) {
-        for (const candidate of CANDIDATE_MODELS) {
+        for (const candidate of candidatePool) {
           try {
             console.warn(`[AdminCopilot] Retrying ${candidate} as direct chat completion...`);
             const res = await groq.chat.completions.create({
@@ -107,7 +164,9 @@ export async function POST(req: Request) {
         }
       }
 
-      throw new Error(`AI model connection failed: ${modelErrors.join(" | ")}`);
+      throw new Error(
+        `AI model execution failed.\nAvailable models on your Groq key: [${availableModelIds.join(", ") || "none found"}].\nErrors: ${modelErrors.join(" | ")}`
+      );
     };
 
     // 4. Construct Message Chain
