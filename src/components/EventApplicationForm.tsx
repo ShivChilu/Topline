@@ -13,7 +13,8 @@ import {
   ArrowRight,
   User,
   Phone,
-  GraduationCap
+  GraduationCap,
+  Gift,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
@@ -417,7 +418,30 @@ export default function EventApplicationForm({
         <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
         <h3 className="text-2xl font-bold text-emerald-400">Application Submitted!</h3>
         <p className="text-slate-300 text-sm whitespace-pre-wrap">{message}</p>
-        <div className="pt-4 flex justify-center gap-3">
+
+        {/* Promote referral program if student does NOT have a referral code yet */}
+        {!loggedInUser?.referralCode && (
+          <div className="bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-slate-950 border border-purple-500/40 p-4 rounded-xl text-xs space-y-2 text-left mt-2">
+            <div className="flex items-center gap-1.5 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+              <Gift className="w-4 h-4" />
+              <span>Bring Your Friends to this Event!</span>
+            </div>
+            <p className="text-purple-100 text-[11px] leading-relaxed">
+              Want to work events alongside your college friends? Activate your referral code in your profile to earn ₹25 direct to your UPI ID for every friend who joins & completes their first event!
+            </p>
+            <div className="pt-1">
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3.5 py-1.5 rounded-lg text-xs uppercase tracking-wider transition shadow-sm"
+              >
+                <span>Activate Referral Code (Earn ₹25)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-3 flex justify-center gap-3">
           <Link
             href="/profile"
             className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700"
@@ -563,6 +587,29 @@ export default function EventApplicationForm({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Referral Program Promotion (Only shown if student has NOT created a referral code yet) */}
+      {!loggedInUser.referralCode && (
+        <div className="bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-slate-950 border border-purple-500/40 rounded-2xl p-4 text-xs space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="bg-amber-400 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
+              <Gift className="w-3.5 h-3.5" />
+              Refer & Earn ₹25
+            </span>
+            <span className="text-[11px] font-bold text-purple-200">Invite College Friends</span>
+          </div>
+          <p className="text-slate-300 text-[11px] leading-relaxed">
+            Want to work events with your batchmates? Activate your referral code in your profile to earn ₹25 direct to UPI when your friends join & complete their first event work!
+          </p>
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-1 text-amber-300 hover:text-amber-200 font-bold text-xs underline"
+          >
+            <span>Activate your referral code</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       )}
 

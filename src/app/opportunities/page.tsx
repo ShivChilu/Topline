@@ -22,6 +22,7 @@ import {
   Flame,
   Utensils,
   User,
+  Gift,
 } from "lucide-react";
 
 export const revalidate = 0; // Disable static cache for live availability updates
@@ -62,6 +63,7 @@ export default async function OpportunitiesPage(props: {
             name: true,
             role: true,
             registrationNumber: true,
+            referralCode: true,
             applications: {
               select: {
                 eventId: true,
@@ -241,6 +243,35 @@ export default async function OpportunitiesPage(props: {
               className="text-xs font-extrabold text-emerald-800 hover:underline shrink-0"
             >
               My Profile
+            </Link>
+          </div>
+        )}
+
+        {/* Dynamic Referral Promotion (Only shown to signed-in students who have NOT created a referral code yet) */}
+        {user && !user.referralCode && ["STUDENT", "USER"].includes(user.role) && (
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-purple-500/40 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-2xl relative z-10">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                  <Gift className="w-3.5 h-3.5" />
+                  Refer & Earn ₹25
+                </span>
+                <span className="text-xs font-bold text-purple-200">Invite College Batchmates</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-white">
+                Earn ₹25 Cash by Referring Friends to Topline!
+              </h3>
+              <p className="text-xs text-purple-200/90 leading-relaxed">
+                Want to work catering events with your friends? Activate your referral code in your profile to earn ₹25 direct to UPI for every friend who joins and completes their first event shift.
+              </p>
+            </div>
+
+            <Link
+              href="/profile"
+              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center gap-1.5 active:scale-95 whitespace-nowrap relative z-10"
+            >
+              <span>Get My Referral Code</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         )}

@@ -4,6 +4,8 @@ import Footer from "@/components/Footer";
 import HeroSlideshow from "@/components/HeroSlideshow";
 import { prisma } from "@/lib/prisma";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
 import {
   Calendar,
   MapPin,
@@ -18,6 +20,7 @@ import {
   Flame,
   Sparkles,
   CheckCircle,
+  Gift,
 } from "lucide-react";
 
 export const revalidate = 0; // Dynamic rendering for latest opportunities
@@ -101,6 +104,28 @@ export default async function HomePage() {
     console.error("Error loading home page content:", error);
   }
 
+  // Check if a signed-in student has NOT created a referral code yet
+  let unactivatedReferralUser: { id: string; name: string } | null = null;
+  try {
+    const cookieStore = await cookies();
+    const userToken = cookieStore.get("user_token")?.value;
+    if (userToken) {
+      const decoded = verifyToken(userToken);
+      if (decoded?.id) {
+        const u = await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: { id: true, name: true, referralCode: true, role: true },
+        });
+        // Only show if user is signed in, is a student, and has NOT created a referral code yet
+        if (u && !u.referralCode && ["STUDENT", "USER"].includes(u.role)) {
+          unactivatedReferralUser = { id: u.id, name: u.name || "Student" };
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Home page referral auth check error:", err);
+  }
+
   const defaultServices = [
     { name: "Catering Staff", desc: "Expert food handlers and buffet counter management.", icon: <Utensils className="text-red-600 w-6 h-6" /> },
     { name: "Hospitality Staff", desc: "Front-desk, guest hospitality coordinators, and hostesses.", icon: <Gem className="text-red-600 w-6 h-6" /> },
@@ -169,6 +194,39 @@ export default async function HomePage() {
           </Link>
         </div>
       </HeroSlideshow>
+
+      {/* Dynamic Referral Program Spotlight for Signed-In Students Without Referral Code */}
+      {unactivatedReferralUser && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 mb-8 relative z-20">
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-7 border border-purple-500/40 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-500/20 via-indigo-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+
+            <div className="space-y-1.5 max-w-2xl relative z-10">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                  <Gift className="w-3.5 h-3.5" />
+                  ₹25 Cash Reward
+                </span>
+                <span className="text-xs font-bold text-purple-200">Topline Student Referral Program</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white">
+                Hey {unactivatedReferralUser.name}, Earn ₹25 for Every Friend You Refer!
+              </h3>
+              <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
+                You haven&apos;t created your referral code yet. Activate your code in your profile to start inviting college batchmates and get ₹25 deposited directly to your UPI ID when they complete their first event work.
+              </p>
+            </div>
+
+            <Link
+              href="/profile"
+              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-6 py-3 rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shrink-0 flex items-center gap-2 active:scale-95 whitespace-nowrap relative z-10"
+            >
+              <span>Activate Referral Code (Earn ₹25)</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* What We Provide Section */}
       <section className="py-24 border-t border-slate-100 bg-white relative">
