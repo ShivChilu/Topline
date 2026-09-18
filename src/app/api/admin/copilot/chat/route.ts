@@ -64,26 +64,44 @@ export async function POST(req: Request) {
     // 3. Initialize Groq SDK & Determine Available Model
     const groq = new Groq({ apiKey });
 
-    let chosenModel = process.env.GROQ_MODEL || "llama-3.1-70b-versatile";
+    let chosenModel = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
     try {
       const modelsList = await groq.models.list();
-      const availableIds = (modelsList.data || []).map((m: any) => m.id);
+      const allIds = (modelsList.data || []).map((m: any) => m.id as string);
+
+      // Filter out moderation, whisper, vision, safeguard, and embedding models
+      const validChatModels = allIds.filter((id) => {
+        const lower = id.toLowerCase();
+        return (
+          !lower.includes("guard") &&
+          !lower.includes("whisper") &&
+          !lower.includes("embed") &&
+          !lower.includes("vision") &&
+          !lower.includes("safeguard") &&
+          !lower.includes("prompt-guard")
+        );
+      });
 
       const preferred = [
         process.env.GROQ_MODEL,
-        "llama-3.1-70b-versatile",
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
+        "llama-3.1-70b-versatile",
         "llama3-70b-8192",
         "llama3-8b-8192",
+        "gemma2-9b-it",
         "mixtral-8x7b-32768",
+        "deepseek-r1-distill-llama-70b",
+        "qwen-2.5-32b",
       ].filter(Boolean) as string[];
 
-      const match = preferred.find((p) => availableIds.includes(p));
+      const match = preferred.find((p) => validChatModels.includes(p));
       if (match) {
         chosenModel = match;
-      } else if (availableIds.length > 0) {
-        chosenModel = availableIds.find((id) => id.includes("llama") || id.includes("mixtral")) || availableIds[0];
+      } else if (validChatModels.length > 0) {
+        chosenModel =
+          validChatModels.find((id) => id.toLowerCase().includes("llama") || id.toLowerCase().includes("mixtral") || id.toLowerCase().includes("gemma")) ||
+          validChatModels[0];
       }
     } catch (modelErr) {
       console.warn("[AdminCopilot] Could not list models, defaulting to fallback:", chosenModel);

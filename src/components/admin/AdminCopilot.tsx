@@ -339,7 +339,7 @@ export default function AdminCopilot() {
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-400">
-                  Llama-3.3-70B • Real-time DB Queries & Actions
+                  Groq AI • Real-time DB Queries & Actions
                 </p>
               </div>
             </div>
