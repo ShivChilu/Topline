@@ -321,4 +321,115 @@ export const COPILOT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+
+  // 12. QUERY EVENT CALLING & CANDIDATE LOGS (READ)
+  {
+    type: "function",
+    function: {
+      name: "query_event_calling_candidates",
+      description: "Query and filter applicants for an event by calling status (first call done/pending, second call done/pending), remarks keywords (e.g. 'switch off', 'busy', 'not reachable', 'confirmed', 'interested'), WhatsApp group status, or application status.",
+      parameters: {
+        type: "object",
+        properties: {
+          eventId: {
+            type: "string",
+            description: "Event ID (optional if admin only has 1 event or specify eventNameKeyword).",
+          },
+          eventNameKeyword: {
+            type: "string",
+            description: "Event title or date keyword (e.g. '21st September').",
+          },
+          callStatus: {
+            type: "string",
+            enum: [
+              "ALL",
+              "FIRST_CALL_DONE",
+              "FIRST_CALL_PENDING",
+              "SECOND_CALL_DONE",
+              "SECOND_CALL_PENDING",
+              "SWITCH_OFF",
+              "NOT_REACHABLE",
+              "INTERESTED",
+              "NOT_INTERESTED",
+              "CONFIRMED"
+            ],
+            description: "Filter by 2-call progress or specific call outcome.",
+          },
+          remarksKeyword: {
+            type: "string",
+            description: "Search keyword matching calling remarks (e.g. 'switch off', 'exam', 'traveling', 'busy').",
+          },
+          whatsappStatus: {
+            type: "string",
+            enum: ["ALL", "ADDED", "PENDING"],
+            description: "Filter by WhatsApp community/group join status.",
+          },
+          applicationStatus: {
+            type: "string",
+            enum: ["ALL", "APPLIED", "SELECTED", "UNDER_REVIEW", "CONFIRMED", "CANCELLED", "ATTENDED", "ABSENT"],
+            description: "Filter by event application selection status.",
+          },
+          searchQuery: {
+            type: "string",
+            description: "Search keyword matching student name, phone, or roll number.",
+          },
+          limit: {
+            type: "number",
+            description: "Max candidates to return (default: 50).",
+          },
+        },
+      },
+    },
+  },
+
+  // 13. UPDATE CANDIDATE CALL STATUS & REMARKS (WRITE)
+  {
+    type: "function",
+    function: {
+      name: "update_candidate_call_status",
+      description: "Mark a candidate's call status (e.g. first call done, second call done), add calling remarks (e.g. 'switch off', 'not reachable', 'confirmed for event'), or update WhatsApp group added status.",
+      parameters: {
+        type: "object",
+        properties: {
+          studentIdentifiers: {
+            type: "array",
+            items: { type: "string" },
+            description: "Student names, mobile numbers, or roll numbers to update.",
+          },
+          eventId: {
+            type: "string",
+            description: "Event ID (optional if event keyword is provided).",
+          },
+          eventNameKeyword: {
+            type: "string",
+            description: "Event name or date keyword.",
+          },
+          callRound: {
+            type: "string",
+            enum: ["CALL_1", "CALL_2", "GENERAL"],
+            description: "Which call round to mark (default: CALL_1).",
+          },
+          isDone: {
+            type: "boolean",
+            description: "Whether the call was completed (default: true).",
+          },
+          remarks: {
+            type: "string",
+            description: "Calling remarks to record (e.g. 'switch off', 'not reachable', 'interested & confirmed', 'exam on that day').",
+          },
+          whatsappGroupAdded: {
+            type: "boolean",
+            description: "Optional flag to mark whether student was added to the event WhatsApp group.",
+          },
+          applicationStatus: {
+            type: "string",
+            enum: ["APPLIED", "SELECTED", "UNDER_REVIEW", "CONFIRMED", "CANCELLED", "ATTENDED", "ABSENT", "NOT_SELECTED"],
+            description: "Optional new status to update the candidate to.",
+          },
+        },
+        required: ["studentIdentifiers"],
+      },
+    },
+  },
 ];
+

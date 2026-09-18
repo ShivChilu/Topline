@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       select: { id: true, role: true, isActive: true },
     });
 
-    if (!adminUser || !adminUser.isActive || !["ADMIN", "SUPERADMIN"].includes(adminUser.role)) {
+    if (!adminUser || !adminUser.isActive || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(adminUser.role)) {
       return NextResponse.json({ success: false, message: "Forbidden." }, { status: 403 });
     }
 

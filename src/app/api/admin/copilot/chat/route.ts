@@ -40,9 +40,32 @@ export async function POST(req: Request) {
       select: { id: true, name: true, role: true, isActive: true },
     });
 
-    if (!adminUser || !adminUser.isActive || !["ADMIN", "SUPERADMIN"].includes(adminUser.role)) {
-      return NextResponse.json({ success: false, message: "Access restricted to Super Admin." }, { status: 403 });
+    if (!adminUser || !adminUser.isActive || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(adminUser.role)) {
+      return NextResponse.json({ success: false, message: "Access restricted to authorized Admin / Event Admin." }, { status: 403 });
     }
+
+    const isEventAdmin = adminUser.role === "EVENT_ADMIN";
+    const assignedEvents = isEventAdmin
+      ? await prisma.adminAssignedEvent.findMany({
+          where: { adminId: adminUser.id },
+          select: { eventId: true, event: { select: { id: true, name: true, date: true, location: true } } },
+        })
+      : [];
+    const allowedEventIds = assignedEvents.map((a) => a.eventId);
+
+    const activeSystemPrompt = isEventAdmin
+      ? `You are Topline Event Admin AI Copilot.
+You assist Event Admin "${adminUser.name}" with managing candidates, checking 2-call logs (first call done, switch off, not reachable, interested, confirmed), adding calling remarks, verifying WhatsApp group status, and marking event attendance for their assigned events.
+
+Assigned Events for this Event Admin:
+${assignedEvents.map((a) => `- ${a.event.name} (ID: ${a.eventId}, Date: ${a.event.date.toISOString().split("T")[0]})`).join("\n") || "No assigned events yet."}
+
+SECURITY & ACCESS RULES:
+1. Candidate & Calling Logs: You can answer any question regarding candidate calling progress (e.g. "who are marked as switch off", "show students where first call is done", "which students are confirmed", "mark Ram as switch off"). Use the \`query_event_calling_candidates\` and \`update_candidate_call_status\` tools.
+2. Attendance: You can check and mark check-in/check-out/attendance for assigned events using \`mark_event_attendance\`.
+3. Strict Restrictions: You MUST NOT disclose company revenue, client billing/contracts, referral payout chains, or master student list profiles who haven't applied to these assigned events.
+4. Output: Format candidate lists as clean, neat Markdown tables.`
+      : SYSTEM_PROMPT;
 
     // 2. Parse User Query
     const body = await req.json();
@@ -171,7 +194,7 @@ export async function POST(req: Request) {
 
     // 4. Construct Message Chain
     const formattedMessages: any[] = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: activeSystemPrompt },
     ];
 
     // Append conversation history (ignore prior error messages to prevent prompt contamination)
@@ -197,6 +220,12 @@ export async function POST(req: Request) {
     let iterations = 0;
     const MAX_ITERATIONS = 6;
     let finalReply = "";
+
+    const executionContext = {
+      userRole: adminUser.role,
+      adminUserId: adminUser.id,
+      allowedEventIds,
+    };
 
     // 5. Recursive Tool-Calling Loop
     while (iterations < MAX_ITERATIONS) {
@@ -226,8 +255,8 @@ export async function POST(req: Request) {
             parsedArgs = {};
           }
 
-          // Execute tool directly against database
-          const toolResult = await executeCopilotTool(toolName, parsedArgs);
+          // Execute tool directly against database with role security context
+          const toolResult = await executeCopilotTool(toolName, parsedArgs, executionContext);
           toolExecutions.push({
             toolName,
             args: parsedArgs,
@@ -241,7 +270,6 @@ export async function POST(req: Request) {
             content: JSON.stringify(toolResult),
           });
         }
-      } else {
         // No more tool calls, final response generated
         finalReply = responseMessage.content || "";
         break;

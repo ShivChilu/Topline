@@ -1,10 +1,50 @@
 import { prisma } from "@/lib/prisma";
 
-export async function executeCopilotTool(toolName: string, args: any): Promise<any> {
+export async function executeCopilotTool(
+  toolName: string,
+  args: any,
+  context?: { userRole?: string; adminUserId?: string; allowedEventIds?: string[] }
+): Promise<any> {
   try {
     switch (toolName) {
       // 1. SYSTEM OVERVIEW
       case "get_system_overview": {
+        if (context?.userRole === "EVENT_ADMIN") {
+          const allowedIds = context.allowedEventIds || [];
+          const [totalApplications, attendedApplications, pendingReviewCount] = await Promise.all([
+            prisma.application.count({ where: { eventId: { in: allowedIds } } }),
+            prisma.application.count({
+              where: {
+                eventId: { in: allowedIds },
+                OR: [{ status: "ATTENDED" }, { attendance: { attendanceStatus: "PRESENT" } }],
+              },
+            }),
+            prisma.application.count({
+              where: { eventId: { in: allowedIds }, status: "UNDER_REVIEW" },
+            }),
+          ]);
+
+          const assignedEvents = await prisma.event.findMany({
+            where: { id: { in: allowedIds } },
+            orderBy: { date: "desc" },
+            select: { id: true, name: true, date: true, status: true, workersRequired: true, applicationsCount: true },
+          });
+
+          return {
+            success: true,
+            stats: {
+              assignedEventsCount: assignedEvents.length,
+              totalApplications,
+              attendedApplications,
+              pendingReviewCount,
+            },
+            assignedEvents: assignedEvents.map((e) => ({
+              ...e,
+              date: e.date.toISOString().split("T")[0],
+            })),
+          };
+        }
+
         const [totalStudents, selectedStudents, underReviewStudents, activeEvents, totalApplications, attendedApplications, pendingReferrals] = await Promise.all([
           prisma.user.count({ where: { role: "USER" } }),
           prisma.user.count({ where: { role: "USER", selectionStatus: "SELECTED" } }),
@@ -43,6 +83,15 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
       case "query_students": {
         const { searchQuery, selectionStatus, gender, university, city, minCompleteness, limit = 25 } = args;
         const where: any = { role: "USER" };
+
+        // Role-based scope: Event Admins can only query candidates who applied to their assigned events
+        if (context?.userRole === "EVENT_ADMIN") {
+          where.applications = {
+            some: {
+              eventId: { in: context.allowedEventIds || [] },
+            },
+          };
+        }
 
         if (selectionStatus && selectionStatus !== "ALL") {
           where.selectionStatus = selectionStatus;
@@ -299,6 +348,10 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
         const { searchQuery, status, limit = 20 } = args;
         const where: any = {};
 
+        if (context?.userRole === "EVENT_ADMIN") {
+          where.id = { in: context.allowedEventIds || [] };
+        }
+
         if (status && status !== "ALL") {
           where.status = status;
         }
@@ -420,6 +473,10 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
 
       // 6. QUERY REFERRALS
       case "query_referrals": {
+        if (context?.userRole === "EVENT_ADMIN") {
+          return { success: false, message: "Permission Denied: Event Admins cannot view referral chains or payouts." };
+        }
+
         const { status, referrerNameOrPhone } = args;
         const where: any = {};
 
@@ -483,10 +540,21 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
           });
         }
         if (!targetEvent) {
-          targetEvent = await prisma.event.findFirst({ orderBy: { date: "desc" } });
+          if (context?.userRole === "EVENT_ADMIN" && context.allowedEventIds && context.allowedEventIds.length > 0) {
+            targetEvent = await prisma.event.findFirst({
+              where: { id: { in: context.allowedEventIds } },
+              orderBy: { date: "desc" },
+            });
+          } else {
+            targetEvent = await prisma.event.findFirst({ orderBy: { date: "desc" } });
+          }
         }
         if (!targetEvent) {
           return { success: false, message: "Could not find any active event to mark attendance for." };
+        }
+
+        if (context?.userRole === "EVENT_ADMIN" && context.allowedEventIds && !context.allowedEventIds.includes(targetEvent.id)) {
+          return { success: false, message: "Permission Denied: You do not have access to mark attendance for this event." };
         }
 
         // Resolve Students
@@ -756,6 +824,10 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
 
       // 11. PROCESS REFERRAL PAYOUT (WRITE)
       case "process_referral_payout": {
+        if (context?.userRole === "EVENT_ADMIN") {
+          return { success: false, message: "Permission Denied: Event Admins cannot process referral payouts." };
+        }
+
         const { referralId, status } = args;
         const updated = await prisma.referral.update({
           where: { id: referralId },
@@ -776,6 +848,296 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
         };
       }
 
+      // 12. QUERY EVENT CALLING & CANDIDATE LOGS (READ)
+      case "query_event_calling_candidates": {
+        const { eventId, eventNameKeyword, callStatus, remarksKeyword, whatsappStatus, applicationStatus, searchQuery, limit = 50 } = args;
+
+        // Resolve target event
+        let targetEventId = eventId;
+        if (!targetEventId && eventNameKeyword) {
+          const matched = await prisma.event.findFirst({
+            where: {
+              OR: [
+                { name: { contains: eventNameKeyword, mode: "insensitive" } },
+                { description: { contains: eventNameKeyword, mode: "insensitive" } },
+              ],
+            },
+            select: { id: true, name: true },
+          });
+          if (matched) targetEventId = matched.id;
+        }
+
+        // Scope check for EVENT_ADMIN
+        if (context?.userRole === "EVENT_ADMIN") {
+          if (!targetEventId && context.allowedEventIds && context.allowedEventIds.length === 1) {
+            targetEventId = context.allowedEventIds[0];
+          }
+          if (targetEventId && context.allowedEventIds && !context.allowedEventIds.includes(targetEventId)) {
+            return { success: false, message: "Permission Denied: You do not have access to this event." };
+          }
+        }
+
+        const where: any = {};
+        if (targetEventId) {
+          where.eventId = targetEventId;
+        } else if (context?.userRole === "EVENT_ADMIN" && context.allowedEventIds) {
+          where.eventId = { in: context.allowedEventIds };
+        }
+
+        // Call status filtering
+        if (callStatus) {
+          switch (callStatus) {
+            case "FIRST_CALL_DONE":
+              where.call1Done = true;
+              break;
+            case "FIRST_CALL_PENDING":
+              where.call1Done = false;
+              break;
+            case "SECOND_CALL_DONE":
+              where.call2Done = true;
+              break;
+            case "SECOND_CALL_PENDING":
+              where.call2Done = false;
+              break;
+            case "SWITCH_OFF":
+              where.OR = [
+                { call1Remarks: { contains: "switch", mode: "insensitive" } },
+                { call2Remarks: { contains: "switch", mode: "insensitive" } },
+                { callingRemarks: { contains: "switch", mode: "insensitive" } },
+              ];
+              break;
+            case "NOT_REACHABLE":
+              where.OR = [
+                { call1Remarks: { contains: "reachable", mode: "insensitive" } },
+                { call2Remarks: { contains: "reachable", mode: "insensitive" } },
+                { callingRemarks: { contains: "reachable", mode: "insensitive" } },
+              ];
+              break;
+            case "INTERESTED":
+              where.OR = [
+                { call1Remarks: { contains: "interested", mode: "insensitive" } },
+                { call2Remarks: { contains: "interested", mode: "insensitive" } },
+                { callingRemarks: { contains: "interested", mode: "insensitive" } },
+              ];
+              break;
+            case "NOT_INTERESTED":
+              where.OR = [
+                { call1Remarks: { contains: "not interested", mode: "insensitive" } },
+                { call2Remarks: { contains: "not interested", mode: "insensitive" } },
+                { callingRemarks: { contains: "not interested", mode: "insensitive" } },
+              ];
+              break;
+            case "CONFIRMED":
+              where.OR = [
+                { status: "CONFIRMED" },
+                { call1Remarks: { contains: "confirm", mode: "insensitive" } },
+                { call2Remarks: { contains: "confirm", mode: "insensitive" } },
+              ];
+              break;
+          }
+        }
+
+        if (remarksKeyword && remarksKeyword.trim()) {
+          const kw = remarksKeyword.trim();
+          where.OR = [
+            { call1Remarks: { contains: kw, mode: "insensitive" } },
+            { call2Remarks: { contains: kw, mode: "insensitive" } },
+            { callingRemarks: { contains: kw, mode: "insensitive" } },
+          ];
+        }
+
+        if (whatsappStatus && whatsappStatus !== "ALL") {
+          where.whatsappGroupAdded = whatsappStatus === "ADDED";
+        }
+
+        if (applicationStatus && applicationStatus !== "ALL") {
+          where.status = applicationStatus;
+        }
+
+        if (searchQuery && searchQuery.trim()) {
+          const sq = searchQuery.trim();
+          where.AND = [
+            {
+              OR: [
+                { name: { contains: sq, mode: "insensitive" } },
+                { mobileNumber: { contains: sq, mode: "insensitive" } },
+                { registrationNumber: { contains: sq, mode: "insensitive" } },
+              ],
+            },
+          ];
+        }
+
+        const applications = await prisma.application.findMany({
+          where,
+          take: Math.min(Number(limit) || 50, 150),
+          orderBy: [{ lastActionAt: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true,
+            name: true,
+            mobileNumber: true,
+            registrationNumber: true,
+            status: true,
+            callCount: true,
+            call1Done: true,
+            call1At: true,
+            call1Remarks: true,
+            call2Done: true,
+            call2At: true,
+            call2Remarks: true,
+            callingRemarks: true,
+            whatsappGroupAdded: true,
+            lastActionAt: true,
+            event: {
+              select: { id: true, name: true, date: true, location: true },
+            },
+            attendance: {
+              select: { attendanceStatus: true, checkInTime: true },
+            },
+            user: {
+              select: { university: true, city: true, gender: true, height: true },
+            },
+          },
+        });
+
+        return {
+          success: true,
+          count: applications.length,
+          candidates: applications.map((a) => ({
+            id: a.id,
+            name: a.name,
+            phone: a.mobileNumber,
+            rollNo: a.registrationNumber,
+            status: a.status,
+            university: a.user?.university || "N/A",
+            gender: a.user?.gender || "N/A",
+            height: a.user?.height || "N/A",
+            eventName: a.event?.name,
+            eventDate: a.event?.date?.toISOString().split("T")[0],
+            firstCall: a.call1Done ? `Done (${a.call1Remarks || "No remarks"})` : "Pending",
+            secondCall: a.call2Done ? `Done (${a.call2Remarks || "No remarks"})` : "Pending",
+            whatsappAdded: a.whatsappGroupAdded ? "Yes" : "No",
+            generalRemarks: a.callingRemarks || "None",
+            attendanceStatus: a.attendance?.attendanceStatus || (a.status === "ATTENDED" ? "PRESENT" : "Not marked"),
+          })),
+        };
+      }
+
+      // 13. UPDATE CANDIDATE CALL STATUS & REMARKS (WRITE)
+      case "update_candidate_call_status": {
+        const { studentIdentifiers = [], eventId, eventNameKeyword, callRound = "CALL_1", isDone = true, remarks, whatsappGroupAdded, applicationStatus } = args;
+
+        if (!studentIdentifiers || studentIdentifiers.length === 0) {
+          return { success: false, message: "No candidate specified to update." };
+        }
+
+        // Resolve target event
+        let targetEventId = eventId;
+        if (!targetEventId && eventNameKeyword) {
+          const matched = await prisma.event.findFirst({
+            where: {
+              OR: [
+                { name: { contains: eventNameKeyword, mode: "insensitive" } },
+                { description: { contains: eventNameKeyword, mode: "insensitive" } },
+              ],
+            },
+            select: { id: true, name: true },
+          });
+          if (matched) targetEventId = matched.id;
+        }
+
+        // Scope check for EVENT_ADMIN
+        if (context?.userRole === "EVENT_ADMIN") {
+          if (!targetEventId && context.allowedEventIds && context.allowedEventIds.length === 1) {
+            targetEventId = context.allowedEventIds[0];
+          }
+          if (targetEventId && context.allowedEventIds && !context.allowedEventIds.includes(targetEventId)) {
+            return { success: false, message: "Permission Denied: You do not have access to this event." };
+          }
+        }
+
+        const updateResults: any[] = [];
+
+        for (const rawId of studentIdentifiers) {
+          const idStr = String(rawId).trim();
+          const appWhere: any = {
+            OR: [
+              { id: idStr },
+              { userId: idStr },
+              { name: { contains: idStr, mode: "insensitive" } },
+              { mobileNumber: { contains: idStr } },
+              { registrationNumber: { equals: idStr, mode: "insensitive" } },
+            ],
+          };
+
+          if (targetEventId) {
+            appWhere.eventId = targetEventId;
+          } else if (context?.userRole === "EVENT_ADMIN" && context.allowedEventIds) {
+            appWhere.eventId = { in: context.allowedEventIds };
+          }
+
+          const matchedApps = await prisma.application.findMany({
+            where: appWhere,
+            include: { event: { select: { id: true, name: true } } },
+          });
+
+          if (matchedApps.length === 0) {
+            updateResults.push({ identifier: idStr, status: "NOT_FOUND" });
+            continue;
+          }
+
+          for (const app of matchedApps) {
+            const dataToSet: any = {
+              lastActionAt: new Date(),
+            };
+
+            if (callRound === "CALL_1") {
+              dataToSet.call1Done = Boolean(isDone);
+              dataToSet.call1At = new Date();
+              if (remarks) dataToSet.call1Remarks = remarks;
+              dataToSet.callCount = { increment: 1 };
+            } else if (callRound === "CALL_2") {
+              dataToSet.call2Done = Boolean(isDone);
+              dataToSet.call2At = new Date();
+              if (remarks) dataToSet.call2Remarks = remarks;
+              dataToSet.callCount = { increment: 1 };
+            } else {
+              if (remarks) dataToSet.callingRemarks = remarks;
+            }
+
+            if (whatsappGroupAdded !== undefined) {
+              dataToSet.whatsappGroupAdded = Boolean(whatsappGroupAdded);
+              dataToSet.whatsappGroupAddedAt = Boolean(whatsappGroupAdded) ? new Date() : null;
+            }
+
+            if (applicationStatus) {
+              dataToSet.status = applicationStatus;
+            }
+
+            const updatedApp = await prisma.application.update({
+              where: { id: app.id },
+              data: dataToSet,
+            });
+
+            updateResults.push({
+              identifier: idStr,
+              studentName: app.name,
+              rollNo: app.registrationNumber,
+              eventName: app.event.name,
+              status: "UPDATED",
+              callRound,
+              remarksRecorded: remarks || "None",
+              newAppStatus: updatedApp.status,
+            });
+          }
+        }
+
+        return {
+          success: true,
+          message: `✓ Successfully updated call status/remarks for ${updateResults.filter((r) => r.status === "UPDATED").length} candidate(s).`,
+          details: updateResults,
+        };
+      }
+
       default:
         return { success: false, message: `Unknown tool: ${toolName}` };
     }
@@ -787,3 +1149,4 @@ export async function executeCopilotTool(toolName: string, args: any): Promise<a
     };
   }
 }
+

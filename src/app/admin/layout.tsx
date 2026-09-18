@@ -213,8 +213,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
 
-        {/* Super Admin AI Copilot Chatbot */}
-        {(adminRole === "superadmin" || adminRole === "admin" || !adminRole) && (
+        {/* AI Operations Copilot (Super Admin & Event Admin) */}
+        {(["superadmin", "admin", "event_admin"].includes(adminRole?.toLowerCase() || "") || !adminRole) && (
           <AdminCopilot />
         )}
       </div>
