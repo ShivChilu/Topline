@@ -143,23 +143,23 @@ export default async function HomePage() {
 
       {/* Top Urgent Recruitment Announcement Bar */}
       {heroFeaturedEvent && (
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-2 px-3 sm:py-2.5 sm:px-4 text-xs font-bold shadow-md relative z-40 border-b border-red-700">
-          <div className="max-w-7xl mx-auto flex items-center justify-between sm:justify-center text-center gap-2 sm:gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="bg-white text-red-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
-                <Flame className="w-3 h-3 text-red-600" />
+        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-1.5 px-3 sm:py-2.5 sm:px-4 text-xs font-bold shadow-md relative z-40 border-b border-red-700">
+          <div className="max-w-7xl mx-auto flex items-center justify-between sm:justify-center text-left sm:text-center gap-2 sm:gap-3 flex-nowrap w-full">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 sm:flex-initial overflow-hidden">
+              <span className="bg-white text-red-700 px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1 shadow-2xs">
+                <Flame className="w-3 h-3 text-red-600 animate-pulse shrink-0" />
                 <span>Urgent</span>
               </span>
-              <span className="text-white text-xs truncate">
-                <strong>{heroFeaturedEvent.name}</strong> • ₹{heroFeaturedEvent.paymentPerStudent}/shift
+              <span className="text-white text-[11.5px] sm:text-xs truncate font-medium min-w-0">
+                <strong className="font-extrabold">{heroFeaturedEvent.name}</strong> • ₹{heroFeaturedEvent.paymentPerStudent}/shift
               </span>
             </div>
             <Link
               href={`/events/${heroFeaturedEvent.id}`}
-              className="bg-white hover:bg-slate-100 text-red-700 font-black px-2.5 py-1 rounded-lg text-[11px] transition inline-flex items-center gap-1 shadow-xs shrink-0"
+              className="bg-white hover:bg-slate-100 text-red-700 font-black px-2.5 py-1 rounded-lg text-[10.5px] sm:text-[11px] transition inline-flex items-center gap-1 shadow-xs shrink-0 whitespace-nowrap active:scale-95"
             >
               <span>Apply</span>
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRight className="w-3 h-3 shrink-0" />
             </Link>
           </div>
         </div>
