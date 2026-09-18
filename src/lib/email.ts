@@ -179,6 +179,23 @@ export async function createTrackedEmailSession({
   return { emailLogId, getTrackedUrl, getTrackingPixelHtml };
 }
 
+export async function getMainWhatsAppGroupLink(): Promise<string> {
+  try {
+    const config = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
+    if (config?.value && typeof config.value === "object" && "whatsappLink" in (config.value as any)) {
+      const link = String((config.value as any).whatsappLink).trim();
+      if (link && (link.startsWith("http://") || link.startsWith("https://"))) {
+        return link;
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching main WhatsApp group link:", err);
+  }
+  return "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh";
+}
+
 /**
  * Global Student Profile Selection Confirmation Email Template
  */
@@ -196,8 +213,9 @@ export async function sendStudentSelectionEmail({
       return { success: false, message: "No email address provided for student." };
     }
 
-    const subject = `🎉 Verified & Selected: Welcome to Topline ODC Roster`;
+    const subject = `Topline ODC — Profile Verified & Selected for Event Roster`;
     const portalUrl = `${getAppBaseUrl()}/events`;
+    const mainWhatsAppGroupUrl = await getMainWhatsAppGroupLink();
 
     const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
       to: email,
@@ -209,6 +227,7 @@ export async function sendStudentSelectionEmail({
     });
 
     const trackedPortalUrl = getTrackedUrl("OPEN_PORTAL", portalUrl);
+    const trackedWhatsAppUrl = getTrackedUrl("JOIN_MAIN_WHATSAPP", mainWhatsAppGroupUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -228,7 +247,7 @@ export async function sendStudentSelectionEmail({
         .label { color: #9ca3af; font-weight: 500; }
         .value { color: #ffffff; font-weight: 600; }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
-        .btn { display: inline-block; background: #ED0000; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
+        .btn { display: inline-block; background: #ED0000; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 700; margin-top: 20px; }
       </style>
     </head>
     <body>
@@ -237,32 +256,47 @@ export async function sendStudentSelectionEmail({
           <h1>TOPLINE ODC</h1>
         </div>
         <div class="content">
-          <div class="badge">✓ PROFILE SELECTED & VERIFIED</div>
+          <div class="badge">✓ PROFILE SELECTED &amp; VERIFIED</div>
           <h2 style="color: #ffffff; margin-top: 0;">Congratulations, ${studentName}!</h2>
           <p style="color: #d1d5db; line-height: 1.6;">
-            We are pleased to inform you that your profile has been successfully <strong>selected and approved</strong> by the Topline Operations Team for upcoming premium catering and event assignments.
+            We are pleased to inform you that your student profile has been successfully <strong>selected and approved</strong> by the Topline Operations Team for upcoming premium catering, hotel, and banquet event assignments.
           </p>
+
+          <!-- OFFICIAL MAIN WHATSAPP GROUP JOIN BOX -->
+          <div style="background: #064e3b; border: 1.5px solid #10b981; border-radius: 10px; padding: 20px; margin: 22px 0; text-align: center; box-shadow: 0 4px 15px rgba(6, 78, 59, 0.4);">
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">
+              💬 Join Our Official WhatsApp Community
+            </div>
+            <p style="font-size: 13px; color: #d1fae5; margin: 0 0 16px 0; line-height: 1.5;">
+              If you are not yet in our official Topline WhatsApp group, join now to receive instant catering shift announcements, urgent vacancy alerts, and direct coordinator updates!
+            </p>
+            <div style="text-align: center;">
+              <a href="${trackedWhatsAppUrl}" target="_blank" style="display: inline-block; background: #25D366; color: #022c22 !important; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);">
+                👉 Join Official WhatsApp Group
+              </a>
+            </div>
+          </div>
 
           <div class="card">
             <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Profile Details</div>
             <div class="row"><span class="label">Full Name:</span> <span class="value">${studentName}</span></div>
             ${registrationNumber ? `<div class="row"><span class="label">Roll / Reg Number:</span> <span class="value">${registrationNumber}</span></div>` : ""}
             ${university ? `<div class="row"><span class="label">University / College:</span> <span class="value">${university}</span></div>` : ""}
-            <div class="row"><span class="label">Profile Status:</span> <span class="value" style="color: #10b981;">Selected / Active</span></div>
+            <div class="row"><span class="label">Profile Status:</span> <span class="value" style="color: #10b981;">Selected / Active Roster</span></div>
           </div>
 
           ${notes ? `<div style="background: #374151; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #e5e7eb; margin-bottom: 20px;"><strong>Admin Note:</strong> ${notes}</div>` : ""}
 
           <p style="color: #9ca3af; font-size: 14px; line-height: 1.5;">
-            You can now log in to the Topline Student Portal to view upcoming events, check scheduled shifts, and confirm attendance.
+            You can now log in to the Topline Student Portal to view upcoming events, apply for high-paying catering shifts, and confirm your attendance.
           </p>
 
-          <div style="text-align: center;">
+          <div style="text-align: center; margin-top: 10px;">
             <a href="${trackedPortalUrl}" class="btn" style="color: #ffffff;">View Available Events</a>
           </div>
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
+          &copy; ${new Date().getFullYear()} Topline ODC &amp; Catering Management. All rights reserved.<br />
           This is an automated system notification.
         </div>
       </div>
@@ -455,6 +489,8 @@ export async function sendEventSelectionEmail({
     const confirmUrl = getTrackedUrl("CONFIRM_YES", rawConfirmUrl);
     const declineUrl = getTrackedUrl("DECLINE_NO", rawDeclineUrl);
     const portalUrl = getTrackedUrl("OPEN_PORTAL", rawPortalUrl);
+    const mainWhatsAppUrl = await getMainWhatsAppGroupLink();
+    const trackedMainWhatsAppUrl = getTrackedUrl("JOIN_MAIN_WHATSAPP", mainWhatsAppUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -532,6 +568,19 @@ export async function sendEventSelectionEmail({
 
           ${notes ? `<div style="background: #374151; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #e5e7eb; margin-bottom: 20px;"><strong>Admin / Coordinator Note:</strong> ${notes}</div>` : ""}
 
+          <!-- OFFICIAL MAIN WHATSAPP GROUP JOIN BOX -->
+          <div style="background: #064e3b; border: 1.5px solid #10b981; border-radius: 10px; padding: 16px; margin: 20px 0; text-align: center;">
+            <div style="font-size: 14px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
+              💬 Official Topline WhatsApp Community
+            </div>
+            <p style="font-size: 12px; color: #d1fae5; margin: 0 0 12px 0; line-height: 1.4;">
+              Not in our main group yet? Join for quick event slot announcements and daily shift updates!
+            </p>
+            <a href="${trackedMainWhatsAppUrl}" target="_blank" style="display: inline-block; background: #25D366; color: #022c22 !important; text-decoration: none; padding: 10px 22px; border-radius: 6px; font-weight: 800; font-size: 13px; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);">
+              👉 Join Main WhatsApp Group
+            </a>
+          </div>
+
           <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin-top: 20px;">
             Please ensure you are punctual, groomed as per standards, and carry your college / government photo ID.
           </p>
@@ -541,7 +590,7 @@ export async function sendEventSelectionEmail({
           </div>
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management. All rights reserved.<br />
+          &copy; ${new Date().getFullYear()} Topline ODC &amp; Catering Management. All rights reserved.<br />
           This is an automated system notification.
         </div>
       </div>

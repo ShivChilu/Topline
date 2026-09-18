@@ -53,6 +53,9 @@ function interpolateTags(template: string, student: any, event?: any): string {
     completenessScore: student.completenessScore ? `${student.completenessScore}%` : "65%",
     profileLink: `${getAppBaseUrl()}/profile`,
     portalLink: `${getAppBaseUrl()}/events`,
+    whatsappLink: "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh",
+    mainWhatsAppLink: "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh",
+    whatsappGroupLink: event?.whatsappGroupLink || "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh",
     // Dynamic Event Tags
     eventName: event?.name || "Topline Event",
     eventDate: eventDateFormatted,
