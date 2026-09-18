@@ -30,7 +30,7 @@ const REJECTED_PHONES = new Set([
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phone, email, university, registrationNumber, password } = body;
+    const { name, phone, email, university, registrationNumber, password, referralCode } = body;
 
     // 1. Full Name Validation
     if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -116,7 +116,23 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Check for Duplicate Records in Database
+    // 7. Validate Referral Code if provided (Optional)
+    let referrerUser: any = null;
+    let cleanRefCode: string | null = null;
+    if (referralCode && typeof referralCode === "string" && referralCode.trim()) {
+      cleanRefCode = referralCode.trim().toUpperCase();
+      referrerUser = await prisma.user.findUnique({
+        where: { referralCode: cleanRefCode },
+        select: { id: true, name: true, phone: true, email: true },
+      });
+
+      // Anti-loophole: prevent self-referral via same phone or email
+      if (referrerUser && (referrerUser.phone === cleanPhone || referrerUser.email?.toLowerCase() === cleanEmail)) {
+        referrerUser = null; // Disallow self-referral silently
+      }
+    }
+
+    // 8. Check for Duplicate Records in Database
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
@@ -148,26 +164,44 @@ export async function POST(request: Request) {
       }
     }
 
-    // 8. Hash Password securely
+    // 9. Hash Password securely
     const passwordHash = await hashPassword(password);
 
-    // 9. Transactional User Creation
-    const newUser = await prisma.user.create({
-      data: {
-        username: `student_${cleanReg.toLowerCase().replace(/[^a-z0-9]/g, "")}_${Date.now().toString().slice(-4)}`,
-        name: cleanName,
-        phone: cleanPhone,
-        email: cleanEmail,
-        university: cleanUniversity,
-        registrationNumber: cleanReg,
-        passwordHash,
-        role: "USER",
-        isActive: true,
-        selectionStatus: "UNDER_REVIEW",
-      },
+    // 10. Transactional User Creation & Referral Linking
+    const newUser = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          username: `student_${cleanReg.toLowerCase().replace(/[^a-z0-9]/g, "")}_${Date.now().toString().slice(-4)}`,
+          name: cleanName,
+          phone: cleanPhone,
+          email: cleanEmail,
+          university: cleanUniversity,
+          registrationNumber: cleanReg,
+          passwordHash,
+          role: "USER",
+          isActive: true,
+          selectionStatus: "UNDER_REVIEW",
+          referredById: referrerUser ? referrerUser.id : null,
+        },
+      });
+
+      // If registered with a valid referral code, create the Referral record in PENDING state
+      if (referrerUser && cleanRefCode) {
+        await tx.referral.create({
+          data: {
+            referrerId: referrerUser.id,
+            refereeId: created.id,
+            codeUsed: cleanRefCode,
+            status: "PENDING",
+            rewardAmount: 25.0,
+          },
+        });
+      }
+
+      return created;
     });
 
-    // 10. Issue 30-day persistent session token
+    // 11. Issue 30-day persistent session token
     const token = signToken({
       id: newUser.id,
       username: newUser.registrationNumber || newUser.phone || newUser.username,

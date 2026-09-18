@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { processReferralQualification } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -247,6 +248,12 @@ export async function POST(
         where: { id: applicationId },
         data: { status: newAppStatus },
       });
+    }
+
+    if (normStatus === "PRESENT" || normStatus === "LATE") {
+      processReferralQualification(actualUserId, eventId).catch((err) =>
+        console.error("[Referral Error] Failed processing in admin manual attendance:", err)
+      );
     }
 
     return NextResponse.json({

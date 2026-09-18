@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApplicationStatus, AttendanceStatus, EventStatus } from "@prisma/client";
+import { processReferralQualification } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -182,6 +183,11 @@ export async function POST(request: Request) {
         },
       }),
     ]);
+
+    // 8. Referral Engine: Unlock ₹25 reward if this is referee's 1st completed event
+    processReferralQualification(user.id, event.id).catch((err) =>
+      console.error("[Referral Error] Failed processing in student mark attendance:", err)
+    );
 
     return NextResponse.json({
       success: true,

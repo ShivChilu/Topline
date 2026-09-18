@@ -41,6 +41,12 @@ import {
   CheckCircle,
   RefreshCw,
   Plus,
+  Gift,
+  Share2,
+  Copy,
+  ChevronDown,
+  ChevronUp,
+  Wallet,
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
 import { compressImage } from "@/lib/image-compress";
@@ -78,9 +84,20 @@ export default function StudentProfilePage() {
   const [uploadType, setUploadType] = useState<"FORMAL" | "FULL_LENGTH" | "CASUAL">("FORMAL");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Active navigation tab: "overview" | "gigs" | "edit" | "photos"
-  const [activeTab, setActiveTab] = useState<"overview" | "gigs" | "edit" | "photos">("overview");
+  // Active navigation tab: "overview" | "gigs" | "referral" | "photos" | "edit"
+  const [activeTab, setActiveTab] = useState<"overview" | "gigs" | "referral" | "photos" | "edit">("overview");
   const [gigFilter, setGigFilter] = useState<"ALL" | "CONFIRMED" | "SELECTED" | "ATTENDED" | "APPLIED">("ALL");
+
+  // Referral System States
+  const [referralData, setReferralData] = useState<any>(null);
+  const [loadingReferral, setLoadingReferral] = useState(false);
+  const [referralUpiInput, setReferralUpiInput] = useState("");
+  const [customCodeInput, setCustomCodeInput] = useState("");
+  const [savingReferral, setSavingReferral] = useState(false);
+  const [copiedRefCode, setCopiedRefCode] = useState(false);
+  const [copiedRefLink, setCopiedRefLink] = useState(false);
+  const [editingUpi, setEditingUpi] = useState(false);
+  const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
 
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
@@ -194,8 +211,120 @@ export default function StudentProfilePage() {
     }
   };
 
+  const fetchReferralData = async (silent = false) => {
+    try {
+      if (!silent) setLoadingReferral(true);
+      const res = await fetch(`/api/user/referral?t=${Date.now()}`, { cache: "no-store" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setReferralData(data);
+        if (data.user?.upiId) {
+          setReferralUpiInput(data.user.upiId);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching referral data:", err);
+    } finally {
+      if (!silent) setLoadingReferral(false);
+    }
+  };
+
+  const handleSaveReferral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!referralUpiInput || !isValidUPI(referralUpiInput.trim())) {
+      showFeedback("error", "Please enter a valid UPI ID (e.g., 9876543210@paytm or yourname@oksbi).");
+      return;
+    }
+
+    try {
+      setSavingReferral(true);
+      const res = await fetch("/api/user/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upiId: referralUpiInput.trim(),
+          customCode: customCodeInput.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showFeedback("success", data.message || "Referral details updated successfully!");
+        setEditingUpi(false);
+        setCustomCodeInput("");
+        fetchReferralData(true);
+        fetchProfile(true);
+      } else {
+        showFeedback("error", data.message || "Failed to update referral details.");
+      }
+    } catch (err: any) {
+      showFeedback("error", err.message || "Network error. Failed to update referral.");
+    } finally {
+      setSavingReferral(false);
+    }
+  };
+
+  const handleCopyRefCode = () => {
+    const code = referralData?.user?.referralCode;
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedRefCode(true);
+    showFeedback("success", "Referral code copied to clipboard!");
+    setTimeout(() => setCopiedRefCode(false), 2500);
+  };
+
+  const handleCopyRefLink = () => {
+    const link = referralData?.user?.inviteUrl;
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    setCopiedRefLink(true);
+    showFeedback("success", "Referral invite link copied to clipboard!");
+    setTimeout(() => setCopiedRefLink(false), 2500);
+  };
+
+  const handleShareWhatsApp = () => {
+    const code = referralData?.user?.referralCode || "";
+    const url = referralData?.user?.inviteUrl || window.location.origin;
+    const msg = `Hey! 👋 Join Topline to work flexible student event & catering gigs and earn quick daily payouts. Register using my invite code ${code} or click here: ${url}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank");
+  };
+
+  const handleShareTelegram = () => {
+    const code = referralData?.user?.referralCode || "";
+    const url = referralData?.user?.inviteUrl || window.location.origin;
+    const msg = `Join Topline to work flexible student event & catering gigs and earn quick daily payouts! Use code: ${code}`;
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(msg)}`;
+    window.open(tgUrl, "_blank");
+  };
+
+  const handleNativeShare = async () => {
+    const code = referralData?.user?.referralCode || "";
+    const url = referralData?.user?.inviteUrl || window.location.origin;
+    const shareData = {
+      title: "Join Topline & Earn with Me",
+      text: `Join Topline to work flexible student event & catering gigs! Use my referral code ${code}:`,
+      url: url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User cancelled or share failed
+      }
+    } else {
+      handleCopyRefLink();
+    }
+  };
+
+  const toggleFaq = (index: number) => {
+    setFaqOpen((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
   useEffect(() => {
     fetchProfile(false);
+    fetchReferralData(false);
   }, []);
 
   const handleLogout = async () => {
@@ -651,7 +780,7 @@ export default function StudentProfilePage() {
           </div>
 
           {/* QUICK ACTION SHORTCUT STRIP */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mt-5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setActiveTab("overview")}
@@ -676,6 +805,19 @@ export default function StudentProfilePage() {
             >
               <Calendar className="w-3.5 h-3.5 text-blue-500" />
               <span>My Events ({user.recentApplications?.length || 0})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("referral")}
+              className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === "referral"
+                  ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md font-black"
+                  : "bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-purple-900 border border-purple-200"
+              }`}
+            >
+              <Gift className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>Refer & Earn (₹25)</span>
             </button>
 
             <button
@@ -986,6 +1128,62 @@ export default function StudentProfilePage() {
               </div>
             )}
 
+            {/* Refer & Earn Overview Spotlight Card */}
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-purple-500/30 shadow-md relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-500/20 via-indigo-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div className="space-y-1.5 max-w-xl">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      Earn Cash
+                    </span>
+                    <span className="text-xs font-bold text-purple-200">Topline Student Referral Program</span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-black text-white">
+                    Refer Friends & Earn ₹25 Direct to UPI
+                  </h3>
+                  <p className="text-xs text-purple-200/90 leading-relaxed">
+                    Invite your college classmates and friends. Earn ₹25 deposited directly into your UPI account for every friend who joins Topline and completes their first gig.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
+                  {referralData?.user?.hasCode ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold px-3.5 py-2.5 rounded-xl text-xs transition shadow flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-white" />
+                        <span>WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("referral")}
+                        className="bg-white hover:bg-slate-100 text-purple-900 font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                      >
+                        <span>View Earnings ({referralData.stats?.totalReferred || 0})</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("referral")}
+                      className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                    >
+                      <Gift className="w-4 h-4" />
+                      <span>Activate & Get Code</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Recent Gigs Summary List */}
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1248,6 +1446,549 @@ export default function StudentProfilePage() {
                   );
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TAB: REFER & EARN (₹25 PER FRIEND) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "referral" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Referral Hero Header */}
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-purple-500/30 shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-purple-500/20 via-indigo-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+                <div className="space-y-2 max-w-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-amber-400 text-slate-950 font-black px-3 py-1 rounded-full text-xs uppercase tracking-wider shadow-sm flex items-center gap-1">
+                      <Gift className="w-3.5 h-3.5" />
+                      ₹25 Instant Cash Reward
+                    </span>
+                    <span className="text-xs font-bold text-purple-200">Official Student Affiliate</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    Refer College Friends & Earn ₹25 Direct to UPI
+                  </h2>
+                  <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
+                    Invite your friends to work flexible catering gigs with Topline. Earn ₹25 for every friend who registers with your code and completes their first gig.
+                  </p>
+                </div>
+
+                {/* Quick Earnings Box on Hero */}
+                {referralData?.user?.hasCode && (
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 sm:p-5 text-center min-w-[200px] shrink-0 space-y-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-purple-200">Total Referral Earnings</span>
+                    <div className="text-3xl font-black text-amber-300">
+                      ₹{referralData?.stats?.totalEarned || 0}
+                    </div>
+                    <div className="flex items-center justify-center gap-2 text-[11px] text-white/80 font-medium">
+                      <span>{referralData?.stats?.totalReferred || 0} Friends Invited</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {loadingReferral ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto" />
+                <p className="text-xs font-bold text-slate-500">Loading referral dashboard...</p>
+              </div>
+            ) : !referralData?.user?.hasCode ? (
+              /* ACTIVATION FORM (IF USER HAS NO REFERRAL CODE YET) */
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+                <div className="max-w-xl mx-auto text-center space-y-2">
+                  <div className="w-14 h-14 bg-purple-100 text-purple-700 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                    <Gift className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900">Activate Your Personal Referral Link</h3>
+                  <p className="text-xs text-slate-500">
+                    Enter your UPI ID so our admin team can transfer your ₹25 rewards directly to your bank account.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveReferral} className="max-w-md mx-auto space-y-4 pt-2">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                      Your Payout UPI ID *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={referralUpiInput}
+                        onChange={(e) => setReferralUpiInput(e.target.value)}
+                        placeholder="e.g. 9876543210@paytm or yourname@oksbi"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
+                      />
+                      <Wallet className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
+                    </div>
+                    <span className="text-[11px] text-slate-500 mt-1 block">
+                      Rewards will be deposited to this UPI handle upon qualification.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                      Custom Referral Code (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={customCodeInput}
+                      onChange={(e) => setCustomCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                      placeholder="e.g. TOPLINE25, RAHUL99"
+                      maxLength={12}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono uppercase focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
+                    />
+                    <span className="text-[11px] text-slate-500 mt-1 block">
+                      Leave blank to auto-generate a unique code.
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingReferral}
+                    className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 active:scale-98 text-white font-extrabold py-3.5 px-6 rounded-2xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {savingReferral ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Generating Code...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Activate & Get My Invite Link</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              /* ACTIVE REFERRAL DASHBOARD (CODE + STATS + SHARE KIT) */
+              <>
+                {/* 1. VIRAL SHARE TOOLKIT */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
+                        <Share2 className="w-5 h-5 text-purple-600" />
+                        Your Personal Referral Hub
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Share your unique code or direct link with friends across social channels.
+                      </p>
+                    </div>
+
+                    {/* Registered Payout UPI Status */}
+                    <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 px-3.5 py-2 rounded-2xl shrink-0">
+                      <Wallet className="w-4 h-4 text-purple-600 shrink-0" />
+                      <div className="text-xs">
+                        <span className="text-slate-500 font-medium block text-[10px] uppercase">Payout Target UPI</span>
+                        <span className="font-mono font-bold text-purple-950 truncate max-w-[180px] block">
+                          {referralData.user.upiId}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditingUpi(!editingUpi)}
+                        className="text-[11px] font-bold text-purple-700 hover:text-purple-900 underline ml-1 cursor-pointer"
+                      >
+                        {editingUpi ? "Cancel" : "Edit"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Inline UPI Edit Form */}
+                  {editingUpi && (
+                    <form onSubmit={handleSaveReferral} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-3 animate-in fade-in">
+                      <div className="flex-1 w-full">
+                        <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
+                          Update Registered UPI ID
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={referralUpiInput}
+                          onChange={(e) => setReferralUpiInput(e.target.value)}
+                          placeholder="e.g. 9876543210@paytm"
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-purple-600"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-4">
+                        <button
+                          type="submit"
+                          disabled={savingReferral}
+                          className="flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition cursor-pointer disabled:opacity-50"
+                        >
+                          {savingReferral ? "Saving..." : "Save UPI"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingUpi(false)}
+                          className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Code & Link Share Widgets */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Unique Referral Code Box */}
+                    <div className="p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-indigo-50/50 rounded-2xl border border-purple-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">
+                          Your Referral Code
+                        </span>
+                        <span className="text-[10px] font-bold text-purple-700 bg-white px-2 py-0.5 rounded-md border border-purple-200">
+                          Friends enter on signup
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-white border-2 border-purple-400 rounded-xl px-4 py-3 font-mono font-black text-xl text-purple-950 tracking-widest text-center shadow-inner select-all">
+                          {referralData.user.referralCode}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCopyRefCode}
+                          className={`px-4 py-3.5 rounded-xl font-black text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 shrink-0 shadow-sm cursor-pointer ${
+                            copiedRefCode
+                              ? "bg-emerald-600 text-white"
+                              : "bg-purple-600 hover:bg-purple-700 text-white active:scale-95"
+                          }`}
+                        >
+                          {copiedRefCode ? (
+                            <>
+                              <Check className="w-4 h-4 stroke-3" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Direct Auto-fill Invite Link */}
+                    <div className="p-4 sm:p-5 bg-gradient-to-br from-indigo-50 to-slate-50 rounded-2xl border border-indigo-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                          Direct Signup Link
+                        </span>
+                        <span className="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200">
+                          Auto-fills code
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={referralData.user.inviteUrl}
+                          className="flex-1 bg-white border border-indigo-300 rounded-xl px-3.5 py-3 text-xs font-mono text-slate-700 truncate shadow-inner select-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCopyRefLink}
+                          className={`px-4 py-3.5 rounded-xl font-black text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 shrink-0 shadow-sm cursor-pointer ${
+                            copiedRefLink
+                              ? "bg-emerald-600 text-white"
+                              : "bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95"
+                          }`}
+                        >
+                          {copiedRefLink ? (
+                            <>
+                              <Check className="w-4 h-4 stroke-3" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" />
+                              <span>Copy Link</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 1-Click Viral Social Share Strip */}
+                  <div className="pt-2">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2.5">
+                      Share Instantly with One Click:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="bg-[#25D366] hover:bg-[#20bd5a] active:scale-95 text-white font-extrabold py-3 px-4 rounded-2xl text-xs transition shadow flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-white" />
+                        <span>Share on WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleShareTelegram}
+                        className="bg-[#229ED9] hover:bg-[#1e8cc0] active:scale-95 text-white font-extrabold py-3 px-4 rounded-2xl text-xs transition shadow flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Share on Telegram</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleNativeShare}
+                        className="bg-slate-900 hover:bg-black active:scale-95 text-white font-extrabold py-3 px-4 rounded-2xl text-xs transition shadow flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Share2 className="w-4 h-4 text-amber-400" />
+                        <span>Share via Other Apps</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. LIVE REFERRAL METRICS & EARNINGS */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Earned</span>
+                    <span className="text-2xl font-black text-purple-700 block">
+                      ₹{referralData.stats?.totalEarned || 0}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      {referralData.stats?.qualifiedCount + referralData.stats?.paidCount || 0} verified rewards
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending Payout</span>
+                    <span className="text-2xl font-black text-amber-600 block">
+                      ₹{referralData.stats?.pendingPayout || 0}
+                    </span>
+                    <span className="text-[11px] text-amber-700 block">
+                      {referralData.stats?.qualifiedCount || 0} gigs in payout queue
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Paid to UPI</span>
+                    <span className="text-2xl font-black text-emerald-600 block">
+                      ₹{referralData.stats?.paidPayout || 0}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 block">
+                      {referralData.stats?.paidCount || 0} transferred
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Friends Registered</span>
+                    <span className="text-2xl font-black text-slate-900 block">
+                      {referralData.stats?.totalReferred || 0}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      {referralData.stats?.pendingCount || 0} awaiting 1st gig
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. HOW IT WORKS (3 STEPS) */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    How It Works
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-black text-sm flex items-center justify-center">
+                        1
+                      </div>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Share Your Link</h4>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Send your personal referral code or invite URL to your college friends, batchmates, and groups.
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 font-black text-sm flex items-center justify-center">
+                        2
+                      </div>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Friend Joins & Works 1st Gig</h4>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Your friend creates an account, gets selected for an event, and attends duty with attendance verified.
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm flex items-center justify-center">
+                        3
+                      </div>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Receive ₹25 to UPI</h4>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        ₹25 is credited to your dashboard and settled by the admin team directly to your registered UPI ID.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. REFERRED FRIENDS HISTORY LEDGER */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
+                        <Users className="w-5 h-5 text-purple-600" />
+                        Invited Friends & Referral Status ({referralData.stats?.referrals?.length || 0})
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Track the verification and payout progress of every friend you invited.
+                      </p>
+                    </div>
+                  </div>
+
+                  {(!referralData.stats?.referrals || referralData.stats.referrals.length === 0) ? (
+                    <div className="text-center py-10 space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <Users className="w-10 h-10 text-slate-300 mx-auto" />
+                      <p className="text-slate-700 font-bold text-sm">No referrals yet</p>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Share your referral code on WhatsApp or Instagram to invite friends and start earning ₹25 per friend!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-white" />
+                        <span>Share on WhatsApp</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">
+                            <th className="p-3 rounded-l-xl">Friend</th>
+                            <th className="p-3">Joined On</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3">Event Attended</th>
+                            <th className="p-3 rounded-r-xl text-right">Reward</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {referralData.stats.referrals.map((item: any) => (
+                            <tr key={item.id} className="hover:bg-slate-50 transition">
+                              <td className="p-3 font-extrabold text-slate-900">
+                                <div>{item.referee?.name || "Student"}</div>
+                                <div className="text-[10px] font-mono text-slate-400 font-normal">
+                                  {item.referee?.phone ? item.referee.phone.replace(/(\d{3})\d{4}(\d{3})/, "$1****$2") : ""}
+                                </div>
+                              </td>
+                              <td className="p-3 text-slate-500">
+                                {new Date(item.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                              </td>
+                              <td className="p-3">
+                                {item.status === "PAID" ? (
+                                  <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    Paid to UPI
+                                  </span>
+                                ) : item.status === "QUALIFIED" ? (
+                                  <span className="bg-purple-100 text-purple-800 border border-purple-300 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-purple-600" />
+                                    Earned (Pending Payout)
+                                  </span>
+                                ) : item.status === "REJECTED" ? (
+                                  <span className="bg-rose-100 text-rose-800 border border-rose-300 font-bold px-2.5 py-1 rounded-full text-[10px]">
+                                    Disqualified
+                                  </span>
+                                ) : (
+                                  <span className="bg-slate-100 text-slate-700 border border-slate-200 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    Pending 1st Gig
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-slate-600">
+                                {item.event ? (
+                                  <span className="font-semibold text-slate-800">{item.event.name}</span>
+                                ) : (
+                                  <span className="text-slate-400 italic">Not completed yet</span>
+                                )}
+                              </td>
+                              <td className="p-3 font-black text-right text-slate-900">
+                                <span className={item.status === "PAID" ? "text-emerald-600" : item.status === "QUALIFIED" ? "text-purple-600" : "text-slate-400"}>
+                                  ₹{item.rewardAmount || 25}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. COLLAPSIBLE TERMS & CONDITIONS / FAQ */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
+                      <Info className="w-5 h-5 text-slate-500" />
+                      Terms & Conditions & Program FAQ
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Everything you need to know about the referral rewards and payout schedule.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {[
+                      {
+                        q: "When is my ₹25 reward credited?",
+                        a: "The ₹25 reward is unlocked and credited to your pending balance as soon as your invited friend signs up and completes their first confirmed event assignment with verified duty attendance.",
+                      },
+                      {
+                        q: "How are referral payouts transferred?",
+                        a: "Topline administrators process referral payouts directly to your registered UPI ID. Once transferred, the transaction reference is recorded and the status is marked as 'Paid to UPI'.",
+                      },
+                      {
+                        q: "Is there any limit to how much I can earn?",
+                        a: "There is no cap or limit! You can invite as many college friends as you like and earn ₹25 for every friend who joins and attends their first gig.",
+                      },
+                      {
+                        q: "What are the rules regarding fair referrals?",
+                        a: "Self-referrals (referring your own duplicate email or phone number) or fake accounts are strictly prohibited. Rewards are only issued for authentic students who attend confirmed catering events.",
+                      },
+                    ].map((faq, i) => (
+                      <div key={i} className="border border-slate-200 rounded-2xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleFaq(i)}
+                          className="w-full p-4 text-left font-bold text-slate-900 text-xs sm:text-sm flex items-center justify-between gap-3 bg-slate-50/70 hover:bg-slate-100 transition cursor-pointer"
+                        >
+                          <span>{faq.q}</span>
+                          {faqOpen[i] ? (
+                            <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                          )}
+                        </button>
+                        {faqOpen[i] && (
+                          <div className="p-4 text-xs text-slate-600 bg-white border-t border-slate-100 leading-relaxed animate-in fade-in duration-150">
+                            {faq.a}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}

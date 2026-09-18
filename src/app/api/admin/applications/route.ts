@@ -4,6 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { ApplicationStatus, PaymentStatus, MessageStatus } from "@prisma/client";
 import { sendEventSelectionEmail, sendEventDeselectionEmail } from "@/lib/email";
+import { processReferralQualification } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -598,6 +599,12 @@ export async function PATCH(request: Request) {
               eventId: app.eventId,
             }).catch((err) => console.error("Event deselection email dispatch error:", err));
           }
+        }
+
+        if (nextStatus === "ATTENDED" && app.userId) {
+          processReferralQualification(app.userId, app.eventId).catch((err) =>
+            console.error("[Referral Error] Failed processing in applications bulk update:", err)
+          );
         }
       }
 

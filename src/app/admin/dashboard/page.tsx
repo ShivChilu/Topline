@@ -17,6 +17,7 @@ import {
   ExternalLink,
   ChevronRight,
   UserCheck,
+  Gift,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -46,6 +47,9 @@ export default async function AdminDashboardPage() {
     totalApplications: 0,
     selectedStudents: 0,
     completedEvents: 0,
+    totalReferrals: 0,
+    qualifiedReferrals: 0,
+    pendingReferralPayout: 0,
   };
 
   let recentEvents: any[] = [];
@@ -74,6 +78,11 @@ export default async function AdminDashboardPage() {
         ],
       },
     });
+
+    // Referral Metrics
+    stats.totalReferrals = await prisma.referral.count();
+    stats.qualifiedReferrals = await prisma.referral.count({ where: { status: "QUALIFIED" } });
+    stats.pendingReferralPayout = stats.qualifiedReferrals * 25;
 
     // 2. Get recent & upcoming events with real registered application counts
     recentEvents = await prisma.event.findMany({
@@ -351,6 +360,22 @@ export default async function AdminDashboardPage() {
             >
               <Users className="w-4 h-4 text-slate-600" />
               <span>Student Visual Gallery ({stats.totalStudents})</span>
+            </Link>
+            <Link
+              href="/admin/referrals"
+              className="bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 text-purple-950 font-bold p-3.5 rounded-xl text-center text-sm border border-purple-200 transition flex items-center justify-between shadow-2xs"
+            >
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4 text-purple-600" />
+                <span>Referrals & Payouts</span>
+              </div>
+              {stats.pendingReferralPayout > 0 ? (
+                <span className="bg-amber-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full">
+                  ₹{stats.pendingReferralPayout} Due
+                </span>
+              ) : (
+                <span className="text-xs text-purple-700 font-bold">{stats.totalReferrals} referred</span>
+              )}
             </Link>
             <Link
               href="/admin/applications"

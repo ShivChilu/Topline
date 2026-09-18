@@ -106,6 +106,13 @@ enum StudentPhotoType {
   OTHER
 }
 
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  PAID
+  REJECTED
+}
+
 // -------------------------------------------------------------
 // USER & PROFILE
 // -------------------------------------------------------------
@@ -131,6 +138,14 @@ model User {
   upiId               String?
   bio                 String?
   adminRemarks        String?
+
+  // Referral System
+  referralCode        String?              @unique
+  referredById        String?
+  referredBy          User?                @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referredUsers       User[]               @relation("UserReferrals")
+  referralsSent       Referral[]           @relation("Referrer")
+  referralReceived    Referral?            @relation("Referee")
 
   // Global Student Selection Status & History
   selectionStatus     StudentSelectionStatus @default(UNDER_REVIEW)
@@ -172,6 +187,8 @@ model User {
   @@index([username])
   @@index([phone])
   @@index([registrationNumber])
+  @@index([referralCode])
+  @@index([referredById])
   @@index([selectionStatus])
   @@index([university])
   @@index([city])
@@ -252,6 +269,7 @@ model Event {
   assignedCallingAdmins       AdminAssignedEvent[]
   photos                      Photo[]
   emailLogs                   EmailLog[]
+  qualifiedReferrals          Referral[]
 
   attendanceToken             String?
   attendanceTokenEnabled      Boolean              @default(false)
@@ -600,5 +618,35 @@ model EmailLog {
   @@index([eventId])
   @@index([recipientEmail])
   @@index([sentAt])
+}
+
+// -------------------------------------------------------------
+// REFERRALS & PAYOUTS
+// -------------------------------------------------------------
+model Referral {
+  id                 String         @id @default(uuid())
+  referrerId         String
+  referrer           User           @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  refereeId          String         @unique
+  referee            User           @relation("Referee", fields: [refereeId], references: [id], onDelete: Cascade)
+  codeUsed           String
+  status             ReferralStatus @default(PENDING)
+  rewardAmount       Float          @default(25.0)
+  
+  qualifyingEventId  String?
+  qualifyingEvent    Event?         @relation(fields: [qualifyingEventId], references: [id], onDelete: SetNull)
+  
+  qualifiedAt        DateTime?
+  paidAt             DateTime?
+  paidReference      String?        // UTR number / Transaction ID / Payout notes
+  notes              String?
+  
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([referrerId])
+  @@index([refereeId])
+  @@index([status])
+  @@index([codeUsed])
 }
 

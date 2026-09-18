@@ -13,7 +13,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Gift,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 
@@ -89,6 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           { name: "Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
           { name: "Applications", href: "/admin/applications", icon: <FileSpreadsheet className="w-5 h-5" /> },
           { name: "Students", href: "/admin/students", icon: <Users2 className="w-5 h-5" /> },
+          { name: "Referrals & Payouts", href: "/admin/referrals", icon: <Gift className="w-5 h-5" /> },
           { name: "Clients", href: "/admin/clients", icon: <Building2 className="w-5 h-5" /> },
           { name: "Gallery", href: "/admin/gallery", icon: <Image className="w-5 h-5" /> },
           { name: "Website settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },
