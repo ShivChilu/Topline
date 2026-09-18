@@ -53,12 +53,16 @@ export default function AdminCopilot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
-  // Initialize Web Speech API for real-time voice transcription
+  // Initialize Web Speech API for real-time live preview while recording
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition =
@@ -68,11 +72,7 @@ export default function AdminCopilot() {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = "en-IN";
-
-        recognition.onstart = () => {
-          setIsListening(true);
-        };
+        recognition.lang = "en-US";
 
         recognition.onresult = (event: any) => {
           let liveTranscript = "";
@@ -84,49 +84,119 @@ export default function AdminCopilot() {
           }
         };
 
-        recognition.onerror = (event: any) => {
-          console.warn("[AdminCopilot] Speech recognition error:", event?.error);
-          setIsListening(false);
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
+        recognition.onerror = () => {
+          // Fall back to Whisper audio recording
         };
 
         recognitionRef.current = recognition;
-      } else {
-        setSpeechSupported(false);
       }
     }
 
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
-      }
+      stopMediaTracks();
     };
   }, []);
 
-  const toggleListening = () => {
-    if (!speechSupported) {
-      alert("Speech Recognition is not supported on this browser. Please use Chrome, Safari, or Edge.");
-      return;
+  const stopMediaTracks = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
     }
+  };
 
-    if (isListening) {
+  const startVoiceRecording = async () => {
+    try {
+      audioChunksRef.current = [];
+      setInput("");
+      setIsListening(true);
+
+      // 1. Start live speech recognition preview if available
       try {
-        recognitionRef.current?.stop();
-      } catch {}
-      setIsListening(false);
-    } else {
-      try {
-        setInput("");
         recognitionRef.current?.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn("[AdminCopilot] Could not start speech recognition:", err);
+      } catch {}
+
+      // 2. Start MediaRecorder for high-accuracy Groq Whisper transcription
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+
+        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          stopMediaTracks();
+          if (audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, {
+              type: recorder.mimeType || "audio/webm",
+            });
+            await sendAudioToWhisper(audioBlob);
+          }
+        };
+
+        mediaRecorderRef.current = recorder;
+        recorder.start(250); // collect 250ms chunks
       }
+    } catch (err: any) {
+      console.warn("[AdminCopilot] Mic access error:", err);
+      setIsListening(false);
+      stopMediaTracks();
+      alert("Microphone access was denied or not available. Please allow mic permission in your browser settings.");
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    setIsListening(false);
+
+    try {
+      recognitionRef.current?.stop();
+    } catch {}
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    } else {
+      stopMediaTracks();
+    }
+  };
+
+  const sendAudioToWhisper = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      const fileExt = audioBlob.type.includes("mp4") ? "mp4" : "webm";
+      formData.append("file", audioBlob, `voice_query.${fileExt}`);
+
+      const res = await fetch("/api/admin/copilot/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.text && data.text.trim()) {
+        setInput(data.text.trim());
+      }
+    } catch (err) {
+      console.warn("[AdminCopilot] Whisper transcription error:", err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopVoiceRecording();
+    } else {
+      startVoiceRecording();
     }
   };
 
@@ -549,7 +619,7 @@ export default function AdminCopilot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* LIVE LISTENING BANNER */}
+          {/* LIVE LISTENING / TRANSCRIBING BANNER */}
           {isListening && (
             <div className="bg-gradient-to-r from-red-500/20 via-rose-500/20 to-amber-500/20 border-t border-red-500/30 px-3 py-1.5 flex items-center justify-between text-red-300 text-[11px] animate-in fade-in">
               <div className="flex items-center gap-2">
@@ -558,17 +628,24 @@ export default function AdminCopilot() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
                 </span>
                 <span className="font-bold flex items-center gap-1.5">
-                  <span>Listening live... Speak clearly</span>
-                  <span className="hidden sm:inline text-white/60 font-normal">(transcribing directly)</span>
+                  <span>Recording voice... Speak clearly</span>
+                  <span className="text-white/60 font-normal">(tap Done to finish)</span>
                 </span>
               </div>
               <button
                 type="button"
-                onClick={toggleListening}
-                className="text-[10px] uppercase font-black bg-red-500/30 hover:bg-red-500/50 text-white px-2 py-0.5 rounded-md cursor-pointer transition border border-red-400/40 active:scale-95"
+                onClick={stopVoiceRecording}
+                className="text-[10px] uppercase font-black bg-red-500/40 hover:bg-red-500/60 text-white px-2.5 py-1 rounded-lg cursor-pointer transition border border-red-400/50 active:scale-95 shadow-xs"
               >
-                Done
+                Done ✓
               </button>
+            </div>
+          )}
+
+          {isTranscribing && (
+            <div className="bg-amber-500/10 border-t border-amber-500/30 px-3 py-1.5 flex items-center gap-2 text-amber-300 text-[11px] animate-pulse">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin-slow" />
+              <span className="font-semibold">Transcribing speech with Groq Whisper AI...</span>
             </div>
           )}
 
@@ -577,10 +654,7 @@ export default function AdminCopilot() {
             onSubmit={(e) => {
               e.preventDefault();
               if (isListening) {
-                try {
-                  recognitionRef.current?.stop();
-                } catch {}
-                setIsListening(false);
+                stopVoiceRecording();
               }
               handleSend();
             }}
@@ -591,29 +665,41 @@ export default function AdminCopilot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isListening ? "Listening... speak now..." : "Ask AI Copilot or request action..."}
+              placeholder={
+                isListening
+                  ? "🎙️ Recording voice... Click 'Done' or Mic when finished..."
+                  : isTranscribing
+                  ? "Transcribing your voice..."
+                  : "Ask AI Copilot or request action..."
+              }
               className={`flex-1 min-w-0 bg-slate-900 border text-slate-100 text-xs rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 focus:outline-none transition ${
                 isListening
                   ? "border-red-500/60 ring-2 ring-red-500/30 placeholder:text-red-400 font-medium"
+                  : isTranscribing
+                  ? "border-amber-500/50 placeholder:text-amber-400"
                   : "border-slate-700 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 placeholder:text-slate-500"
               }`}
-              disabled={loading}
+              disabled={loading || isTranscribing}
             />
 
             {/* MIC BUTTON */}
             <button
               type="button"
               onClick={toggleListening}
-              disabled={loading}
+              disabled={loading || isTranscribing}
               className={`p-2 sm:p-2.5 rounded-xl transition shadow-md cursor-pointer active:scale-95 shrink-0 border ${
                 isListening
                   ? "bg-red-600 text-white border-red-400 ring-4 ring-red-500/40 animate-pulse"
+                  : isTranscribing
+                  ? "bg-amber-600 text-white border-amber-400 animate-spin"
                   : "bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700 hover:text-amber-400 hover:border-amber-500/50"
               }`}
-              title={isListening ? "Stop Listening" : "Voice Input (Speech-to-Text)"}
+              title={isListening ? "Stop Recording" : "Voice Input (Speech-to-Text)"}
             >
               {isListening ? (
                 <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white animate-bounce" />
+              ) : isTranscribing ? (
+                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white animate-spin" />
               ) : (
                 <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
@@ -622,7 +708,7 @@ export default function AdminCopilot() {
             {/* SEND BUTTON */}
             <button
               type="submit"
-              disabled={loading || !input.trim()}
+              disabled={loading || isTranscribing || !input.trim()}
               className="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 disabled:opacity-40 text-white p-2 sm:p-2.5 rounded-xl transition shadow-md cursor-pointer active:scale-95 shrink-0"
               title="Send to Copilot"
             >
