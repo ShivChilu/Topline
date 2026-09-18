@@ -64,15 +64,14 @@ export async function POST(req: Request) {
     // 3. Initialize Groq SDK
     const groq = new Groq({ apiKey });
 
-    // Known reliable chat & tool-use models on Groq
+    // Active, production-ready chat & function-calling models on Groq
     const CANDIDATE_MODELS = [
       process.env.GROQ_MODEL,
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
-      "llama3-70b-8192",
-      "llama3-8b-8192",
-      "gemma2-9b-it",
-      "mixtral-8x7b-32768",
+      "llama-3.2-3b-preview",
+      "llama-3.2-1b-preview",
+      "qwen-2.5-32b",
     ].filter(Boolean) as string[];
 
     const createCompletionWithFallback = async (params: any) => {
@@ -86,10 +85,10 @@ export async function POST(req: Request) {
           return res;
         } catch (err: any) {
           lastErr = err;
-          console.warn(`[AdminCopilot] Model ${candidate} failed: ${err?.message}. Trying next fallback...`);
+          console.warn(`[AdminCopilot] Model ${candidate} failed: ${err?.message || err}. Trying next candidate...`);
         }
       }
-      throw lastErr || new Error("All Groq AI models failed to respond.");
+      throw lastErr || new Error("Unable to connect to Groq AI service. Please check your API key and model access.");
     };
 
     // 4. Construct Message Chain
@@ -97,8 +96,11 @@ export async function POST(req: Request) {
       { role: "system", content: SYSTEM_PROMPT },
     ];
 
-    // Append conversation history (limited to last 10 messages for context efficiency)
-    const recentHistory = history.slice(-10);
+    // Append conversation history (ignore prior error messages to prevent prompt contamination)
+    const recentHistory = history
+      .slice(-10)
+      .filter((msg: any) => !msg.content?.startsWith("⚠️ Error:") && !msg.content?.startsWith("Error:"));
+
     for (const msg of recentHistory) {
       if (msg.role === "user" || msg.role === "assistant") {
         formattedMessages.push({
