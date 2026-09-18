@@ -61,51 +61,36 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Initialize Groq SDK & Determine Available Model
+    // 3. Initialize Groq SDK
     const groq = new Groq({ apiKey });
 
-    let chosenModel = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
-    try {
-      const modelsList = await groq.models.list();
-      const allIds = (modelsList.data || []).map((m: any) => m.id as string);
+    // Known reliable chat & tool-use models on Groq
+    const CANDIDATE_MODELS = [
+      process.env.GROQ_MODEL,
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
+      "llama3-70b-8192",
+      "llama3-8b-8192",
+      "gemma2-9b-it",
+      "mixtral-8x7b-32768",
+    ].filter(Boolean) as string[];
 
-      // Filter out moderation, whisper, vision, safeguard, and embedding models
-      const validChatModels = allIds.filter((id) => {
-        const lower = id.toLowerCase();
-        return (
-          !lower.includes("guard") &&
-          !lower.includes("whisper") &&
-          !lower.includes("embed") &&
-          !lower.includes("vision") &&
-          !lower.includes("safeguard") &&
-          !lower.includes("prompt-guard")
-        );
-      });
-
-      const preferred = [
-        process.env.GROQ_MODEL,
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
-        "llama-3.1-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "gemma2-9b-it",
-        "mixtral-8x7b-32768",
-        "deepseek-r1-distill-llama-70b",
-        "qwen-2.5-32b",
-      ].filter(Boolean) as string[];
-
-      const match = preferred.find((p) => validChatModels.includes(p));
-      if (match) {
-        chosenModel = match;
-      } else if (validChatModels.length > 0) {
-        chosenModel =
-          validChatModels.find((id) => id.toLowerCase().includes("llama") || id.toLowerCase().includes("mixtral") || id.toLowerCase().includes("gemma")) ||
-          validChatModels[0];
+    const createCompletionWithFallback = async (params: any) => {
+      let lastErr: any = null;
+      for (const candidate of CANDIDATE_MODELS) {
+        try {
+          const res = await groq.chat.completions.create({
+            ...params,
+            model: candidate,
+          });
+          return res;
+        } catch (err: any) {
+          lastErr = err;
+          console.warn(`[AdminCopilot] Model ${candidate} failed: ${err?.message}. Trying next fallback...`);
+        }
       }
-    } catch (modelErr) {
-      console.warn("[AdminCopilot] Could not list models, defaulting to fallback:", chosenModel);
-    }
+      throw lastErr || new Error("All Groq AI models failed to respond.");
+    };
 
     // 4. Construct Message Chain
     const formattedMessages: any[] = [
@@ -137,8 +122,7 @@ export async function POST(req: Request) {
     while (iterations < MAX_ITERATIONS) {
       iterations++;
 
-      const completion = await groq.chat.completions.create({
-        model: chosenModel,
+      const completion = await createCompletionWithFallback({
         messages: formattedMessages,
         tools: COPILOT_TOOLS,
         tool_choice: "auto",
