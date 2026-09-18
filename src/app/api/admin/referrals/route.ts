@@ -37,9 +37,18 @@ export async function GET(request: Request) {
     const qualifiedCount = await prisma.referral.count({ where: { status: ReferralStatus.QUALIFIED } });
     const paidCount = await prisma.referral.count({ where: { status: ReferralStatus.PAID } });
 
-    const pendingPayoutAmount = qualifiedCount * DEFAULT_REFERRAL_REWARD;
-    const settledPayoutAmount = paidCount * DEFAULT_REFERRAL_REWARD;
-    const totalEarningsGenerated = (qualifiedCount + paidCount) * DEFAULT_REFERRAL_REWARD;
+    const qualifiedSum = await prisma.referral.aggregate({
+      where: { status: ReferralStatus.QUALIFIED },
+      _sum: { rewardAmount: true },
+    });
+    const paidSum = await prisma.referral.aggregate({
+      where: { status: ReferralStatus.PAID },
+      _sum: { rewardAmount: true },
+    });
+
+    const pendingPayoutAmount = qualifiedSum._sum.rewardAmount || 0;
+    const settledPayoutAmount = paidSum._sum.rewardAmount || 0;
+    const totalEarningsGenerated = pendingPayoutAmount + settledPayoutAmount;
 
     // 2. Full Ledger with relations
     const allReferrals = await prisma.referral.findMany({

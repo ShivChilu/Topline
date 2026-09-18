@@ -136,9 +136,15 @@ export async function getUserReferralStats(userId: string) {
   const qualifiedCount = referrals.filter((r) => r.status === ReferralStatus.QUALIFIED).length;
   const paidCount = referrals.filter((r) => r.status === ReferralStatus.PAID).length;
 
-  const totalEarned = (qualifiedCount + paidCount) * DEFAULT_REFERRAL_REWARD;
-  const pendingPayout = qualifiedCount * DEFAULT_REFERRAL_REWARD;
-  const paidEarnings = paidCount * DEFAULT_REFERRAL_REWARD;
+  const totalEarned = referrals
+    .filter((r) => r.status === ReferralStatus.QUALIFIED || r.status === ReferralStatus.PAID)
+    .reduce((sum, r) => sum + (r.rewardAmount || DEFAULT_REFERRAL_REWARD), 0);
+  const pendingPayout = referrals
+    .filter((r) => r.status === ReferralStatus.QUALIFIED)
+    .reduce((sum, r) => sum + (r.rewardAmount || DEFAULT_REFERRAL_REWARD), 0);
+  const paidEarnings = referrals
+    .filter((r) => r.status === ReferralStatus.PAID)
+    .reduce((sum, r) => sum + (r.rewardAmount || DEFAULT_REFERRAL_REWARD), 0);
 
   return {
     totalInvited,
