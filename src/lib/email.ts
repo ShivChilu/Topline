@@ -417,14 +417,14 @@ export async function sendEventSelectionEmail({
       return res;
     };
 
-    let subject = `🎉 Congratulations! Selected for ${eventName} — Topline ODC`;
+    let subject = `Confirm your slot for ${eventName}`;
     if (customSubject && customSubject.trim()) {
       subject = replacePlaceholders(customSubject.trim());
     }
 
     let renderedIntroHtml = `
-      <p style="color: #d1d5db; line-height: 1.6; margin-top: 6px;">
-        You have been shortlisted and <strong>SELECTED</strong> for the upcoming event duty assignment:
+      <p style="color: #d1d5db; line-height: 1.5; margin: 8px 0 16px 0; font-size: 14px;">
+        You are selected for <strong>${eventName}</strong>. Please confirm your availability immediately below to secure your slot on the duty roster.
       </p>
     `;
 

@@ -28,8 +28,8 @@ const SELECTION_EMAIL_PRESETS: SelectionEmailPreset[] = [
     badge: "Recommended",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
     description: "Standard formal invitation asking the candidate to confirm attendance and join WhatsApp.",
-    subject: "🎉 Congratulations! Selected for {{eventName}} — Topline ODC",
-    body: "You have been shortlisted and SELECTED for the upcoming event duty assignment.\n\nPlease review your assignment details below and confirm your availability immediately to secure your slot on the duty roster.",
+    subject: "Confirm your slot for {{eventName}}",
+    body: "You are selected for {{eventName}}. Please confirm your availability immediately below to secure your slot on the duty roster.",
   },
   {
     id: "urgent",
@@ -37,8 +37,8 @@ const SELECTION_EMAIL_PRESETS: SelectionEmailPreset[] = [
     badge: "Urgent Roster",
     badgeColor: "bg-rose-100 text-rose-800 border-rose-300",
     description: "Time-sensitive selection with a 2-hour confirmation window before slot is released.",
-    subject: "⚡ URGENT: Confirm Your Duty Slot for {{eventName}} — Topline ODC",
-    body: "URGENT NOTICE: You have been selected for duty at {{eventName}}.\n\nYou MUST confirm your availability within 2 hours by clicking YES below. Unconfirmed slots will be automatically reassigned to waitlisted candidates.",
+    subject: "⚡ URGENT: Confirm your slot for {{eventName}}",
+    body: "You are selected for duty at {{eventName}}. You must confirm your availability within 2 hours by clicking YES below to secure your slot.",
   },
   {
     id: "lead_steward",
@@ -113,9 +113,9 @@ export default function SelectionEmailReviewModal({
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
 
   // Template State
-  const [subject, setSubject] = useState<string>("🎉 Congratulations! Selected for {{eventName}} — Topline ODC");
+  const [subject, setSubject] = useState<string>("Confirm your slot for {{eventName}}");
   const [messageBody, setMessageBody] = useState<string>(
-    "You have been shortlisted and SELECTED for the upcoming event duty assignment.\n\nPlease review your assignment details below and confirm your availability immediately to secure your slot on the duty roster."
+    "You are selected for {{eventName}}. Please confirm your availability immediately below to secure your slot on the duty roster."
   );
   const [confirmationDeadline, setConfirmationDeadline] = useState<string>("Today before 8:00 PM");
   const [instructions, setInstructions] = useState<string>(event?.instructions || "");
@@ -622,7 +622,7 @@ export default function SelectionEmailReviewModal({
                   value={subject}
                   onFocus={() => setLastFocusedField("subject")}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. 🎉 Congratulations! Selected for {{eventName}} — Topline ODC"
+                  placeholder="e.g. Confirm your slot for {{eventName}}"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600"
                 />
               </div>
