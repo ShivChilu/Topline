@@ -18,15 +18,15 @@ export default function TermsPage() {
           <p>
             Welcome to TOPLINE ODC. These terms and conditions outline the rules and regulations for the use of TOPLINE ODC's recruitment systems.
           </p>
-          <h2 className="text-xl font-bold text-white mt-6">1. Student Conduct</h2>
+          <h2 className="text-xl font-bold text-slate-900 mt-6">1. Student Conduct</h2>
           <p>
             Students applying for shifts must review and adhere strictly to our Do's and Don'ts policy, including dress code requirements, shift arrival schedules, and behavioral expectations during resort and wedding assignments.
           </p>
-          <h2 className="text-xl font-bold text-white mt-6">2. Cancellations & Reliability</h2>
+          <h2 className="text-xl font-bold text-slate-900 mt-6">2. Cancellations & Reliability</h2>
           <p>
             Last-minute cancellations without a valid reason within 24 hours of an event will lead to a reliability score penalty and potential suspension from future events.
           </p>
-          <h2 className="text-xl font-bold text-white mt-6">3. Payment Terms</h2>
+          <h2 className="text-xl font-bold text-slate-900 mt-6">3. Payment Terms</h2>
           <p>
             Payments are processed after attendance verification by the event captain, typically within 24-48 hours of completing the assignment.
           </p>

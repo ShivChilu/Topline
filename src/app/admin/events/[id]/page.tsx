@@ -1288,7 +1288,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   ? "bg-amber-50 text-amber-700 border-amber-200"
                   : "bg-slate-100 text-slate-700 border-slate-200"
               }`}>
-                {event.status === "SCHEDULED" ? "⏰ Scheduled" : event.status}
+                {event.status === "SCHEDULED" ? "Scheduled" : event.status}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">

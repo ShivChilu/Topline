@@ -47,18 +47,18 @@ export default function HowItWorksPage() {
           A transparent, simple, and digitized process designed for students to find hospitality assignments and hotels to secure reliable staff.
         </p>
 
-        <div className="space-y-12">
+        <div className="space-y-4 sm:space-y-6">
           {steps.map((step, idx) => (
             <div
               key={idx}
-              className="flex flex-col md:flex-row items-center gap-6 light-panel rounded-2xl p-8 rounded-xl border border-slate-200 hover:border-red-600/50 transition duration-300"
+              className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:border-red-500/40 hover:shadow-md transition duration-300"
             >
-              <div className="p-4 bg-[#161822] rounded-lg border border-slate-200">
+              <div className="p-3.5 bg-red-50 text-red-600 rounded-2xl border border-red-100 shrink-0">
                 {step.icon}
               </div>
-              <div className="text-center md:text-left">
-                <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                <p className="text-slate-500 max-w-2xl">{step.desc}</p>
+              <div className="text-center sm:text-left">
+                <h3 className="text-lg sm:text-xl font-black text-slate-900 mb-1.5">{step.title}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">{step.desc}</p>
               </div>
             </div>
           ))}

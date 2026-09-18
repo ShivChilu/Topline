@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   Settings,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Phone,
 } from "lucide-react";
 
 const isReservedField = (label: string) => {
@@ -572,7 +573,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
               </div>
 
               {/* Mobile View Card List */}
-              <div className="block md:hidden space-y-4">
+              <div className="block md:hidden p-4 sm:p-6 space-y-4">
                 {filteredAttendance.length === 0 ? (
                   <p className="text-center py-6 text-xs text-slate-400">No matching students registered under this event.</p>
                 ) : (
@@ -594,8 +595,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {item.studentName}</h3>
                               <p className="text-xs text-slate-500 font-mono">Reg No: {item.registrationNumber}</p>
                               {phoneVal ? (
-                                <a href={`tel:${phoneVal}`} className="text-xs text-red-655 font-bold hover:underline inline-flex items-center mt-1">
-                                  📞 {phoneVal}
+                                <a href={`tel:${phoneVal}`} className="text-xs text-red-600 font-bold hover:underline inline-flex items-center gap-1 mt-1">
+                                  <Phone className="w-3 h-3 text-red-600" />
+                                  <span>{phoneVal}</span>
                                 </a>
                               ) : (
                                 <span className="text-xs text-slate-450 block mt-1">Mobile number not available</span>

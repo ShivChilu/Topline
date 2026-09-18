@@ -51,17 +51,17 @@ export default async function DosDontsPage() {
           Compliance with these guidelines is mandatory for all students on shift duty. Violations may result in suspension.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
           {/* DO SECTION */}
-          <div className="bg-[#0b0c10]/40 p-8 rounded-xl border border-emerald-900/30 shadow-2xl space-y-6">
-            <div className="flex items-center space-x-2 text-emerald-400">
-              <CheckCircle2 className="w-6 h-6" />
-              <h2 className="text-2xl font-bold tracking-wider uppercase">What You Should Do</h2>
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-emerald-200 shadow-sm space-y-6">
+            <div className="flex items-center space-x-2 text-emerald-600">
+              <CheckCircle2 className="w-6 h-6 shrink-0" />
+              <h2 className="text-xl sm:text-2xl font-black tracking-wider uppercase">What You Should Do</h2>
             </div>
-            <ul className="space-y-4">
+            <ul className="space-y-3.5">
               {dos.map((item, idx) => (
-                <li key={idx} className="flex items-start space-x-3 text-slate-600 text-sm md:text-base">
-                  <span className="text-emerald-400 font-bold select-none">•</span>
+                <li key={idx} className="flex items-start space-x-3 text-slate-700 text-sm md:text-base leading-relaxed">
+                  <span className="text-emerald-600 font-bold select-none">•</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -69,15 +69,15 @@ export default async function DosDontsPage() {
           </div>
 
           {/* DONT SECTION */}
-          <div className="bg-[#0b0c10]/40 p-8 rounded-xl border border-red-900/30 shadow-2xl space-y-6">
-            <div className="flex items-center space-x-2 text-red-400">
-              <AlertOctagon className="w-6 h-6" />
-              <h2 className="text-2xl font-bold tracking-wider uppercase">What You Should Avoid</h2>
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-rose-200 shadow-sm space-y-6">
+            <div className="flex items-center space-x-2 text-rose-600">
+              <AlertOctagon className="w-6 h-6 shrink-0" />
+              <h2 className="text-xl sm:text-2xl font-black tracking-wider uppercase">What You Should Avoid</h2>
             </div>
-            <ul className="space-y-4">
+            <ul className="space-y-3.5">
               {donts.map((item, idx) => (
-                <li key={idx} className="flex items-start space-x-3 text-slate-600 text-sm md:text-base">
-                  <span className="text-red-400 font-bold select-none">•</span>
+                <li key={idx} className="flex items-start space-x-3 text-slate-700 text-sm md:text-base leading-relaxed">
+                  <span className="text-rose-600 font-bold select-none">•</span>
                   <span>{item}</span>
                 </li>
               ))}

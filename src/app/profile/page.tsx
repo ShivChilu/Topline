@@ -813,7 +813,7 @@ export default function StudentProfilePage() {
             <button
               type="button"
               onClick={() => setActiveTab("referral")}
-              className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+              className={`col-span-2 sm:col-span-1 p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === "referral"
                   ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md font-black"
                   : "bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-purple-900 border border-purple-200"
@@ -858,46 +858,63 @@ export default function StudentProfilePage() {
           <div className="space-y-3">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Active Event Assignments & Attendance
+              <span>Your Active Shift Assignments</span>
             </h3>
 
-            {activeConfirmedGigs.map((app: any) => {
-              const ev = app.event || {};
-              const isConfirmed = app.status === "CONFIRMED";
-              const isSelected = app.status === "SELECTED";
-              const isAttended = app.status === "ATTENDED";
+            <div className="space-y-3">
+              {activeConfirmedGigs.map((app: any) => {
+                const ev = app.event || {};
+                const isConfirmed = app.status === "CONFIRMED";
+                const isAttended = app.status === "ATTENDED";
+                const isSelected = app.status === "SELECTED";
 
-              return (
-                <div
-                  key={app.id}
-                  className={`rounded-3xl p-5 sm:p-6 border shadow-md transition ${
-                    isAttended
-                      ? "bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/80 border-emerald-300"
-                      : isConfirmed
-                      ? "bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white border-teal-500/50 shadow-xl"
-                      : "bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-amber-300"
-                  }`}
-                >
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="space-y-1.5 min-w-0">
+                return (
+                  <div
+                    key={app.id}
+                    className={`rounded-3xl p-5 sm:p-6 border transition-all duration-300 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-5 ${
+                      isConfirmed
+                        ? "bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white border-emerald-500/50 shadow-emerald-950/20"
+                        : isAttended
+                        ? "bg-white border-emerald-300 shadow-emerald-500/5"
+                        : "bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent bg-white border-amber-300 shadow-amber-500/5"
+                    }`}
+                  >
+                    {/* Left: Duty Details */}
+                    <div className="space-y-2 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                            isAttended
-                              ? "bg-emerald-600 text-white"
-                              : isConfirmed
-                              ? "bg-teal-500 text-slate-950 font-extrabold"
-                              : "bg-amber-500 text-white"
+                          className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs ${
+                            isConfirmed
+                              ? "bg-emerald-400 text-slate-950 font-black"
+                              : isAttended
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              : "bg-amber-400 text-slate-950 font-black"
                           }`}
                         >
-                          {isAttended ? "🎉 Attended (Present)" : isConfirmed ? "✓ Confirmed Roster" : "✨ Selected (Awaiting RSVP)"}
+                          {isConfirmed ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Duty Confirmed &amp; Ready</span>
+                            </>
+                          ) : isAttended ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Shift Completed (Attended)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="w-3 h-3" />
+                              <span>Selected • Confirm Availability</span>
+                            </>
+                          )}
                         </span>
 
                         {ev.reportingTime && (
-                          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
                             isConfirmed ? "bg-white/10 text-teal-200" : "bg-white text-slate-700 border border-slate-200"
                           }`}>
-                            ⏰ Report by {ev.reportingTime}
+                            <Clock className="w-3 h-3" />
+                            <span>Report by {ev.reportingTime}</span>
                           </span>
                         )}
                       </div>
@@ -907,9 +924,24 @@ export default function StudentProfilePage() {
                       </h4>
 
                       <div className={`flex items-center gap-3 text-xs font-medium flex-wrap ${isConfirmed ? "text-teal-200/90" : "text-slate-600"}`}>
-                        {ev.date && <span>📅 {new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>}
-                        {ev.location && <span>📍 {ev.location}</span>}
-                        {ev.paymentPerStudent && <span>💰 ₹{ev.paymentPerStudent}</span>}
+                        {ev.date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-red-500" />
+                            <span>{new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                          </span>
+                        )}
+                        {ev.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-red-500" />
+                            <span>{ev.location}</span>
+                          </span>
+                        )}
+                        {ev.paymentPerStudent && (
+                          <span className="flex items-center gap-1 font-bold">
+                            <Banknote className="w-3.5 h-3.5 text-emerald-500" />
+                            <span>₹{ev.paymentPerStudent}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -996,9 +1028,9 @@ export default function StudentProfilePage() {
                       )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -1332,11 +1364,31 @@ export default function StudentProfilePage() {
                           <Link href={`/events/${ev.id}`} className="font-black text-slate-900 hover:text-red-600 text-sm">
                             {ev.name}
                           </Link>
-                          <div className="flex items-center gap-2 text-slate-500 text-[11px] mt-0.5 flex-wrap">
-                            {ev.date && <span>📅 {new Date(ev.date).toLocaleDateString("en-GB")}</span>}
-                            {ev.location && <span>📍 {ev.location}</span>}
-                            {ev.reportingTime && <span>⏰ {ev.reportingTime}</span>}
-                            {ev.paymentPerStudent && <span className="font-bold text-slate-800">💰 ₹{ev.paymentPerStudent}</span>}
+                          <div className="flex items-center gap-2.5 text-slate-500 text-[11px] mt-0.5 flex-wrap">
+                            {ev.date && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-red-500" />
+                                <span>{new Date(ev.date).toLocaleDateString("en-GB")}</span>
+                              </span>
+                            )}
+                            {ev.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-red-500" />
+                                <span>{ev.location}</span>
+                              </span>
+                            )}
+                            {ev.reportingTime && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-red-500" />
+                                <span>{ev.reportingTime}</span>
+                              </span>
+                            )}
+                            {ev.paymentPerStudent && (
+                              <span className="font-bold text-slate-800 flex items-center gap-1">
+                                <Banknote className="w-3 h-3 text-emerald-600" />
+                                <span>₹{ev.paymentPerStudent}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
 

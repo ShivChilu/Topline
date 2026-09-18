@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Menu, X, User, LogIn, ShieldCheck } from "lucide-react";
+import { Menu, X, User, LogIn, ShieldCheck, Gift } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
@@ -142,41 +142,54 @@ export default function Navbar() {
               </Link>
             ))}
 
-            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
               {loggedInUser ? (
                 isAdmin ? (
                   <>
                     <Link
                       href={adminDashboardUrl}
                       onClick={() => setIsOpen(false)}
-                      className="bg-red-600 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider shadow-sm"
+                      className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 py-3 rounded-xl font-bold uppercase text-xs tracking-wider shadow-sm transition active:scale-98"
                     >
-                      👑 Admin Dashboard ({loggedInUser.name})
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Admin Control Center</span>
                     </Link>
                     <Link
                       href="/profile"
                       onClick={() => setIsOpen(false)}
-                      className="bg-slate-100 text-slate-800 block text-center py-2 rounded-xl font-bold text-xs"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center py-2.5 rounded-xl font-bold text-xs transition"
                     >
                       Account Settings
                     </Link>
                   </>
                 ) : (
-                  <Link
-                    href="/profile"
-                    onClick={() => setIsOpen(false)}
-                    className="bg-red-600 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
-                  >
-                    My Profile ({loggedInUser.name})
-                  </Link>
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 py-3 rounded-xl font-bold uppercase text-xs tracking-wider shadow-sm transition active:scale-98"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>My Profile ({loggedInUser.name})</span>
+                    </Link>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition"
+                    >
+                      <Gift className="w-4 h-4 text-purple-600" />
+                      <span>Refer &amp; Earn (Up to ₹150)</span>
+                    </Link>
+                  </>
                 )
               ) : (
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
-                  className="bg-slate-900 text-white block text-center py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider"
+                  className="bg-slate-900 hover:bg-black text-white flex items-center justify-center gap-2 py-3 rounded-xl font-bold uppercase text-xs tracking-wider shadow-sm transition active:scale-98"
                 >
-                  Login / Register
+                  <LogIn className="w-4 h-4" />
+                  <span>Login / Register</span>
                 </Link>
               )}
             </div>

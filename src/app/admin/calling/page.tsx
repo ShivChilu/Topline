@@ -801,7 +801,7 @@ export default function CallingDashboard() {
                         : "bg-amber-50/80 text-amber-900 border-amber-200 hover:bg-amber-100"
                     }`}
                   >
-                    <span>⏳ 0 Calls (Pending)</span>
+                    <span>0 Calls (Pending)</span>
                     <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
                       callFilter === "0_CALLS" ? "bg-white/25 text-white" : "bg-amber-100 text-amber-900"
                     }`}>

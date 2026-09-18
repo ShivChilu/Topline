@@ -175,7 +175,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
               <nav className="flex-grow space-y-2">
                 {menuItems.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
                       key={item.name}

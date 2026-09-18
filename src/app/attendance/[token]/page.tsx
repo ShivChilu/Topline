@@ -159,18 +159,33 @@ export default function PublicAttendancePage() {
 
               <div>
                 <h2 className="text-xl font-black text-slate-900">
-                  {result.alreadyMarked ? "Attendance Already Recorded!" : "🎉 Attendance Marked Successfully!"}
+                  {result.alreadyMarked ? "Attendance Already Recorded!" : "Attendance Marked Successfully!"}
                 </h2>
-                <p className="text-emerald-700 text-xs font-bold mt-1">✓ Verified Confirmed Duty Assignment</p>
+                <p className="text-emerald-700 text-xs font-bold mt-1">Verified Confirmed Duty Assignment</p>
               </div>
 
               {event && (
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-700 text-left space-y-1">
                   <div className="font-extrabold text-slate-900 truncate">{event.name}</div>
-                  <div className="flex items-center gap-2 text-slate-500 text-[11px] font-medium flex-wrap">
-                    {event.date && <span>📅 {new Date(event.date).toLocaleDateString("en-GB")}</span>}
-                    {event.location && <span>📍 {event.location}</span>}
-                    {event.reportingTime && <span>⏰ {event.reportingTime}</span>}
+                  <div className="flex items-center gap-2.5 text-slate-500 text-[11px] font-medium flex-wrap">
+                    {event.date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-red-600" />
+                        <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
+                      </span>
+                    )}
+                    {event.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-red-600" />
+                        <span>{event.location}</span>
+                      </span>
+                    )}
+                    {event.reportingTime && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-red-600" />
+                        <span>{event.reportingTime}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -219,10 +234,25 @@ export default function PublicAttendancePage() {
               {event && (
                 <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 text-xs space-y-1.5">
                   <div className="font-extrabold text-slate-900 text-sm truncate">{event.name}</div>
-                  <div className="flex items-center gap-2 text-slate-600 text-[11px] flex-wrap">
-                    {event.date && <span>📅 {new Date(event.date).toLocaleDateString("en-GB")}</span>}
-                    {event.location && <span>📍 {event.location}</span>}
-                    {event.reportingTime && <span>⏰ {event.reportingTime}</span>}
+                  <div className="flex items-center gap-2.5 text-slate-600 text-[11px] flex-wrap">
+                    {event.date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-red-600" />
+                        <span>{new Date(event.date).toLocaleDateString("en-GB")}</span>
+                      </span>
+                    )}
+                    {event.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-red-600" />
+                        <span>{event.location}</span>
+                      </span>
+                    )}
+                    {event.reportingTime && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-red-600" />
+                        <span>{event.reportingTime}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}

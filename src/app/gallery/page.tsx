@@ -80,7 +80,7 @@ export default async function GalleryPage() {
                   alt={img.caption || "Event image"}
                   className="object-cover w-full h-full group-hover:scale-110 transition duration-500"
                 />
-                <span className="absolute top-3 left-3 bg-red-600 text-black text-xs font-semibold px-2 py-1 rounded uppercase tracking-wider">
+                <span className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
                   {img.category}
                 </span>
               </div>

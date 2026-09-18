@@ -539,10 +539,10 @@ export default function AdminSettingsPage() {
                   onChange={(e) => setNewRole(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold focus:outline-none focus:border-red-600 text-xs"
                 >
-                  <option value="event_admin">🎪 Event Admin (Assigned Events Only — Restricted Templates)</option>
-                  <option value="calling">📞 Calling Operator (Calling Dashboard)</option>
-                  <option value="admin">🎖️ Operations Captain (Full Admin Access)</option>
-                  <option value="superadmin">👑 Super Administrator</option>
+                  <option value="event_admin">Event Admin (Assigned Events Only — Restricted Templates)</option>
+                  <option value="calling">Calling Operator (Calling Dashboard)</option>
+                  <option value="admin">Operations Captain (Full Admin Access)</option>
+                  <option value="superadmin">Super Administrator</option>
                 </select>
               </div>
             </div>
@@ -553,7 +553,7 @@ export default function AdminSettingsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
                   <div>
                     <label className="block text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                      🎪 Assign Managed Events ({assignedEventsInput.length} Selected)
+                      Assign Managed Events ({assignedEventsInput.length} Selected)
                     </label>
                     <span className="text-[11px] text-slate-500">
                       Select which events this administrator is allowed to view and manage.
@@ -668,9 +668,9 @@ export default function AdminSettingsPage() {
                               </div>
                               {(evDate || evLocation) && (
                                 <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                                  {evDate && <span>📅 {evDate}</span>}
+                                  {evDate && <span>Date: {evDate}</span>}
                                   {evDate && evLocation && <span> • </span>}
-                                  {evLocation && <span>📍 {evLocation}</span>}
+                                  {evLocation && <span>Location: {evLocation}</span>}
                                 </div>
                               )}
                             </div>
@@ -739,7 +739,7 @@ export default function AdminSettingsPage() {
                                 </span>
                               </div>
                               <span className="text-slate-500 text-[11px] block mt-0.5 truncate">
-                                📅 {new Date(ev.date).toLocaleDateString("en-GB")} — 📍 {ev.location}
+                                {new Date(ev.date).toLocaleDateString("en-GB")} — {ev.location}
                               </span>
                             </div>
                           </label>
@@ -996,10 +996,10 @@ export default function AdminSettingsPage() {
                     onChange={(e) => setEditingRole(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-red-600 text-xs"
                   >
-                    <option value="event_admin">🎪 Event Admin</option>
-                    <option value="calling">📞 Calling Operator</option>
-                    <option value="admin">🎖️ Captain (Admin)</option>
-                    <option value="superadmin">👑 Super Admin</option>
+                    <option value="event_admin">Event Admin</option>
+                    <option value="calling">Calling Operator</option>
+                    <option value="admin">Operations Captain (Admin)</option>
+                    <option value="superadmin">Super Admin</option>
                   </select>
                 </div>
               </div>
@@ -1168,9 +1168,9 @@ export default function AdminSettingsPage() {
                                 </div>
                                 {(evDate || evLocation) && (
                                   <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                                    {evDate && <span>📅 {evDate}</span>}
+                                    {evDate && <span>Date: {evDate}</span>}
                                     {evDate && evLocation && <span> • </span>}
-                                    {evLocation && <span>📍 {evLocation}</span>}
+                                    {evLocation && <span>Location: {evLocation}</span>}
                                   </div>
                                 )}
                               </div>
@@ -1244,7 +1244,7 @@ export default function AdminSettingsPage() {
                                   </span>
                                 </div>
                                 <span className="text-slate-500 text-[10px] block truncate">
-                                  📅 {new Date(ev.date).toLocaleDateString("en-GB")} — 📍 {ev.location}
+                                  {new Date(ev.date).toLocaleDateString("en-GB")} — {ev.location}
                                 </span>
                               </div>
                             </label>

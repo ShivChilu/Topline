@@ -49,8 +49,8 @@ export default function AdminLoginPage() {
         </div>
 
         {error && (
-          <div className="flex items-center space-x-2 bg-red-950/20 border border-red-900/30 text-red-400 p-3 rounded-lg text-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="flex items-center space-x-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs sm:text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
         )}
@@ -58,31 +58,31 @@ export default function AdminLoginPage() {
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Username</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Username</label>
             <div className="relative">
-              <User className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
+              <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-slate-900 focus:outline-none focus:border-red-600 text-base sm:text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Password</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-450" />
+              <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-slate-900 focus:outline-none focus:border-red-600 text-base sm:text-sm"
               />
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition duration-200 text-sm"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition duration-200 text-xs uppercase tracking-wider shadow-md cursor-pointer"
           >
             {loading ? "Authenticating..." : "Login to Dashboard"}
           </button>
