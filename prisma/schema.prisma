@@ -158,8 +158,9 @@ model User {
   // Dynamic Profile Field Responses
   profileFieldValues  StudentProfileFieldValue[]
   
-  // Calling Admin assigned events
+  // Calling Admin & Event Admin assigned events
   assignedEvents      AdminAssignedEvent[]
+  customPermissions   String[]             @default([]) // Global IAM feature permissions (e.g. "students:add_from_master", "events:close_resume")
   
   // Applications created by user
   applications        Application[]
@@ -288,14 +289,15 @@ model Event {
   @@index([attendanceToken])
 }
 
-// Calling Admin assignment relationship
+// Event Admin & Calling Admin assignment relationship
 model AdminAssignedEvent {
-  id        String   @id @default(uuid())
-  adminId   String
-  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  adminId     String
+  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  permissions String[] @default([]) // Per-event granular permissions (e.g. "students:add_from_master", "events:close_resume")
+  createdAt   DateTime @default(now())
 
   @@unique([adminId, eventId])
 }

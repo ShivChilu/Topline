@@ -4,6 +4,8 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { Role, PaymentStatus } from "@prisma/client";
 
+import { hasEventPermission } from "@/lib/permissions";
+
 async function getLoggedInAdmin() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
@@ -12,7 +14,7 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
-    include: { assignedEvents: { select: { eventId: true } } },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
   });
   if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "CALLING_ADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
@@ -109,16 +111,33 @@ export async function PATCH(
     const eventId = params.id;
     const body = await request.json();
 
-    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
+    if (admin.role === "CALLING_ADMIN") {
+      return NextResponse.json({ success: false, message: "Forbidden. Calling Admins cannot modify events." }, { status: 403 });
+    }
+
+    if (admin.role === "EVENT_ADMIN") {
       const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
       if (!isAssigned) {
         return NextResponse.json({ success: false, message: "Forbidden. You are not assigned to this event." }, { status: 403 });
       }
 
-      // Event admin is allowed to update whatsappGroupLink
+      const onlyUpdatingStatus = Object.keys(body).length === 1 && body.status !== undefined;
       const onlyUpdatingWhatsapp = Object.keys(body).every((k) => ["whatsappGroupLink"].includes(k));
-      if (!onlyUpdatingWhatsapp) {
-        return NextResponse.json({ success: false, message: "Forbidden. Event Admins can only update WhatsApp group settings." }, { status: 403 });
+
+      if (onlyUpdatingStatus) {
+        if (!hasEventPermission(admin, "events:close_resume", eventId)) {
+          return NextResponse.json(
+            { success: false, message: "Forbidden. You do not have permission ('events:close_resume') to close or resume registration for this event." },
+            { status: 403 }
+          );
+        }
+      } else if (!onlyUpdatingWhatsapp) {
+        if (!hasEventPermission(admin, "events:edit", eventId)) {
+          return NextResponse.json(
+            { success: false, message: "Forbidden. You do not have permission ('events:edit') to modify event specifications." },
+            { status: 403 }
+          );
+        }
       }
     }
 

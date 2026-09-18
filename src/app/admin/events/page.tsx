@@ -12,6 +12,8 @@ export default function AdminEventsPage() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("ALL");
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
+  const [globalPermissions, setGlobalPermissions] = useState<string[]>([]);
+  const [eventPermissionsMap, setEventPermissionsMap] = useState<Record<string, string[]>>({});
   const [reopenModalEvent, setReopenModalEvent] = useState<any>(null);
 
   // Delete modal states
@@ -27,10 +29,33 @@ export default function AdminEventsPage() {
       const data = await res.json();
       if (data.success) {
         setCurrentAdminRole(data.role);
+        setGlobalPermissions(data.customPermissions || []);
+        const map: Record<string, string[]> = {};
+        if (Array.isArray(data.assignedEventPermissions)) {
+          data.assignedEventPermissions.forEach((a: any) => {
+            map[a.eventId] = a.permissions || [];
+          });
+        }
+        setEventPermissionsMap(map);
       }
     } catch (err) {
       console.error("Error fetching user role:", err);
     }
+  };
+
+  const canForEvent = (eventId: string, action: string) => {
+    if (!currentAdminRole || currentAdminRole === "superadmin" || currentAdminRole === "admin") return true;
+    if (currentAdminRole === "calling") return false;
+    if (currentAdminRole === "event_admin") {
+      const eventPerms = eventPermissionsMap[eventId] || [];
+      return (
+        globalPermissions.includes("*") ||
+        globalPermissions.includes(action) ||
+        eventPerms.includes("*") ||
+        eventPerms.includes(action)
+      );
+    }
+    return false;
   };
 
   const fetchEvents = async () => {
@@ -283,7 +308,7 @@ export default function AdminEventsPage() {
                     >
                       <Eye className="w-4 h-4" />
                     </Link>
-                    {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                    {canForEvent(event._id, "events:duplicate") && (
                       <Link
                         href={`/admin/events/create?cloneFrom=${event._id}`}
                         className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded font-bold text-xs transition flex items-center gap-1"
@@ -300,7 +325,7 @@ export default function AdminEventsPage() {
                     >
                       <QrCode className="w-4 h-4 text-red-600" />
                     </Link>
-                    {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                    {canForEvent(event._id, "events:edit") && (
                       <Link
                         href={`/admin/events/${event._id}/edit`}
                         className="p-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded transition"
@@ -329,10 +354,10 @@ export default function AdminEventsPage() {
                       <Copy className="w-4 h-4 text-slate-600" />
                     </button>
                   </div>
-                  {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                  {currentAdminRole !== "calling" && (
                     <div className="flex gap-2 items-center flex-wrap">
                       {/* Resume Form or Reopen Event with Additional Slots Button */}
-                      {event.status === "CLOSED" && (
+                      {event.status === "CLOSED" && canForEvent(event._id, "events:close_resume") && (
                         <button
                           onClick={() => handleUpdateStatus(event._id, "OPEN")}
                           className="bg-emerald-600/10 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
@@ -343,7 +368,7 @@ export default function AdminEventsPage() {
                         </button>
                       )}
 
-                      {(event.status === "CLOSED" || event.status === "FULL" || event.status === "COMPLETED") && (
+                      {(event.status === "CLOSED" || event.status === "FULL" || event.status === "COMPLETED") && canForEvent(event._id, "events:reopen_slots") && (
                         <button
                           onClick={() => setReopenModalEvent(event)}
                           className="bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"

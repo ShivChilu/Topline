@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, UserPlus, Key, Users, Mail, Trash2, Edit2, Shield, Calendar, Sparkles, Check, Send, Plus, RefreshCw, X, ExternalLink, Search, CheckCircle2, AlertCircle, MapPin, Gift, Banknote } from "lucide-react";
+import { Save, UserPlus, Key, Users, Mail, Trash2, Edit2, Shield, Calendar, Sparkles, Check, Send, Plus, RefreshCw, X, ExternalLink, Search, CheckCircle2, AlertCircle, MapPin, Gift, Banknote, Lock, Unlock } from "lucide-react";
+import { EVENT_PERMISSIONS, PERMISSION_PRESETS, EventPermissionKey } from "@/lib/permissions";
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,7 @@ export default function AdminSettingsPage() {
   const [createEventToAdd, setCreateEventToAdd] = useState("");
   const [sendCredentialsEmailToggle, setSendCredentialsEmailToggle] = useState(true);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [newPermissions, setNewPermissions] = useState<string[]>(["events:view_roster", "attendance:mark"]);
 
   // Edit Admin states
   const [editingAdmin, setEditingAdmin] = useState<any>(null);
@@ -41,6 +43,7 @@ export default function AdminSettingsPage() {
   const [editingPassword, setEditingPassword] = useState("");
   const [editingRole, setEditingRole] = useState("event_admin");
   const [editingAssignedEvents, setEditingAssignedEvents] = useState<string[]>([]);
+  const [editingPermissions, setEditingPermissions] = useState<string[]>([]);
   const [editEventToAdd, setEditEventToAdd] = useState("");
   const [editEventSearchQuery, setEditEventSearchQuery] = useState("");
   const [isRefreshingEvents, setIsRefreshingEvents] = useState(false);
@@ -173,6 +176,7 @@ export default function AdminSettingsPage() {
           phone: newPhone.trim() || undefined,
           password: newPassword,
           role: newRole,
+          permissions: newRole === "event_admin" ? newPermissions : [],
           assignedEvents: ["event_admin", "calling"].includes(newRole) ? assignedEventsInput : [],
           sendEmailCredentials: sendCredentialsEmailToggle,
         }),
@@ -186,6 +190,7 @@ export default function AdminSettingsPage() {
         setNewPhone("");
         setNewPassword("");
         setAssignedEventsInput([]);
+        setNewPermissions(["events:view_roster", "attendance:mark"]);
         fetchAdmins();
       } else {
         alert(data.message || "Failed to create admin.");
@@ -214,6 +219,7 @@ export default function AdminSettingsPage() {
           phone: editingPhone.trim() || undefined,
           role: editingRole,
           isActive: editingIsActive,
+          permissions: editingRole === "event_admin" ? editingPermissions : [],
           assignedEvents: ["event_admin", "calling"].includes(editingRole) ? editingAssignedEvents : [],
           ...(editingPassword.trim() && { password: editingPassword.trim() }),
           resendCredentials: resendCredentialsToggle,
@@ -746,7 +752,92 @@ export default function AdminSettingsPage() {
                         );
                       })
                     )}
+                    </div>
                   </div>
+                </div>
+            )}
+
+            {/* Feature Access & IAM Permissions for Event Admin */}
+            {newRole === "event_admin" && (
+              <div className="space-y-3 border border-indigo-200 rounded-2xl p-4 bg-indigo-50/50">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-2.5">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="w-4 h-4 text-indigo-600" />
+                      <label className="block text-xs font-extrabold text-indigo-950 uppercase tracking-wider">
+                        IAM Feature Permissions ({newPermissions.length} Enabled)
+                      </label>
+                    </div>
+                    <span className="text-[11px] text-indigo-700/80">
+                      Configure what buttons, lifecycle actions, and master database tools this Event Admin is authorized to use.
+                    </span>
+                  </div>
+
+                  {/* One-Click Presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {PERMISSION_PRESETS.map((preset) => {
+                      const isActive =
+                        preset.permissions.length === newPermissions.length &&
+                        preset.permissions.every((p) => newPermissions.includes(p));
+
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setNewPermissions(preset.permissions)}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${
+                            isActive
+                              ? "bg-indigo-600 text-white border-indigo-700 font-extrabold"
+                              : "bg-white text-indigo-900 border-indigo-200 hover:bg-indigo-100"
+                          }`}
+                          title={preset.description}
+                        >
+                          {preset.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Granular Checkbox Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {EVENT_PERMISSIONS.map((perm) => {
+                    const isChecked = newPermissions.includes(perm.key);
+                    const isLocked = perm.key === "events:view_roster";
+
+                    return (
+                      <label
+                        key={perm.key}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${
+                          isChecked
+                            ? "bg-white border-indigo-300 shadow-2xs"
+                            : "bg-white/60 border-slate-200 hover:bg-white text-slate-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isLocked}
+                          onChange={(e) => {
+                            if (isLocked) return;
+                            if (e.target.checked) {
+                              setNewPermissions([...newPermissions, perm.key]);
+                            } else {
+                              setNewPermissions(newPermissions.filter((k) => k !== perm.key));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-indigo-600 mt-0.5 accent-indigo-600 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-slate-900">{perm.label}</span>
+                            <span className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded uppercase tracking-wider">{perm.category}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-tight mt-0.5">{perm.description}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -895,17 +986,37 @@ export default function AdminSettingsPage() {
                   </td>
                   <td className="py-4 px-3 text-xs max-w-xs">
                     {["event_admin", "calling"].includes(adm.role) ? (
-                      adm.assignedEvents && adm.assignedEvents.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {adm.assignedEvents.map((ev: any) => (
-                            <span key={ev._id || ev.id} className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-700" title={ev.name}>
-                              {ev.name}
+                      <div>
+                        {adm.assignedEvents && adm.assignedEvents.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {adm.assignedEvents.map((ev: any) => (
+                              <span key={ev._id || ev.id} className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-700" title={ev.name}>
+                                {ev.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-rose-500 font-bold text-[11px] block mb-1">⚠️ No events assigned</span>
+                        )}
+                        {adm.role === "event_admin" && (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.2 rounded text-[10px] font-extrabold flex items-center gap-1">
+                              <Shield className="w-2.5 h-2.5" />
+                              {(adm.customPermissions?.length || adm.assignedEvents?.[0]?.permissions?.length || 2)} Perms
                             </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-rose-500 font-bold text-[11px]">⚠️ No events assigned</span>
-                      )
+                            {(adm.customPermissions?.includes("students:add_from_master") || adm.assignedEvents?.[0]?.permissions?.includes("students:add_from_master")) && (
+                              <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded text-[9px] font-bold">
+                                +Master DB
+                              </span>
+                            )}
+                            {(adm.customPermissions?.includes("events:close_resume") || adm.assignedEvents?.[0]?.permissions?.includes("events:close_resume")) && (
+                              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded text-[9px] font-bold">
+                                Form Control
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-emerald-700 font-semibold text-xs">🌐 Global Access</span>
                     )}
@@ -925,6 +1036,13 @@ export default function AdminSettingsPage() {
                           setEditingPassword("");
                           setResendCredentialsToggle(false);
                           setEditingAssignedEvents(adm.assignedEvents ? adm.assignedEvents.map((e: any) => e._id || e.id || e) : []);
+                          const existingPerms =
+                            Array.isArray(adm.customPermissions) && adm.customPermissions.length > 0
+                              ? adm.customPermissions
+                              : Array.isArray(adm.assignedEvents?.[0]?.permissions) && adm.assignedEvents[0].permissions.length > 0
+                              ? adm.assignedEvents[0].permissions
+                              : ["events:view_roster", "attendance:mark"];
+                          setEditingPermissions(existingPerms);
                         }}
                         className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition font-bold flex items-center gap-1"
                       >
@@ -1273,6 +1391,91 @@ export default function AdminSettingsPage() {
                           );
                         })}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Feature Access & IAM Permissions for Event Admin in Edit Modal */}
+              {editingRole === "event_admin" && (
+                <div className="space-y-3 border border-indigo-200 rounded-2xl p-3.5 sm:p-4 bg-indigo-50/50">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-2.5">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-indigo-600" />
+                        <label className="block text-xs font-extrabold text-indigo-950 uppercase tracking-wider">
+                          IAM Feature Permissions ({editingPermissions.length} Enabled)
+                        </label>
+                      </div>
+                      <span className="text-[11px] text-indigo-700/80">
+                        Configure what buttons, lifecycle actions, and master candidate tools this administrator is authorized to execute.
+                      </span>
+                    </div>
+
+                    {/* One-Click Presets */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {PERMISSION_PRESETS.map((preset) => {
+                        const isActive =
+                          preset.permissions.length === editingPermissions.length &&
+                          preset.permissions.every((p) => editingPermissions.includes(p));
+
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setEditingPermissions(preset.permissions)}
+                            className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition shadow-2xs cursor-pointer ${
+                              isActive
+                                ? "bg-indigo-600 text-white border-indigo-700 font-extrabold"
+                                : "bg-white text-indigo-900 border-indigo-200 hover:bg-indigo-100"
+                            }`}
+                            title={preset.description}
+                          >
+                            {preset.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Granular Checkbox Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {EVENT_PERMISSIONS.map((perm) => {
+                      const isChecked = editingPermissions.includes(perm.key);
+                      const isLocked = perm.key === "events:view_roster";
+
+                      return (
+                        <label
+                          key={perm.key}
+                          className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${
+                            isChecked
+                              ? "bg-white border-indigo-300 shadow-2xs"
+                              : "bg-white/60 border-slate-200 hover:bg-white text-slate-600"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isLocked}
+                            onChange={(e) => {
+                              if (isLocked) return;
+                              if (e.target.checked) {
+                                setEditingPermissions([...editingPermissions, perm.key]);
+                              } else {
+                                setEditingPermissions(editingPermissions.filter((k) => k !== perm.key));
+                              }
+                            }}
+                            className="rounded border-slate-300 text-indigo-600 mt-0.5 accent-indigo-600 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-bold text-slate-900">{perm.label}</span>
+                              <span className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded uppercase tracking-wider">{perm.category}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 leading-tight mt-0.5">{perm.description}</p>
+                          </div>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -35,6 +35,7 @@ export async function GET() {
         phone: true,
         role: true,
         isActive: true,
+        customPermissions: true,
         createdAt: true,
         assignedEvents: {
           include: {
@@ -63,7 +64,11 @@ export async function GET() {
           ? "superadmin"
           : "admin",
       isActive: a.isActive,
-      assignedEvents: a.assignedEvents.map((ae) => ae.event),
+      customPermissions: a.customPermissions || [],
+      assignedEvents: a.assignedEvents.map((ae) => ({
+        ...ae.event,
+        permissions: ae.permissions || [],
+      })),
       createdAt: a.createdAt,
     }));
 
@@ -80,7 +85,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { username, password, role, assignedEvents, name, email, phone, sendEmailCredentials = true } = await request.json();
+    const {
+      username,
+      password,
+      role,
+      assignedEvents,
+      name,
+      email,
+      phone,
+      permissions,
+      customPermissions,
+      sendEmailCredentials = true,
+    } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ success: false, message: "Username and password are required." }, { status: 400 });
@@ -110,6 +126,12 @@ export async function POST(request: Request) {
     else if (role === "calling") roleEnum = Role.CALLING_ADMIN;
     else if (role === "event_admin") roleEnum = Role.EVENT_ADMIN;
 
+    const permsList: string[] = Array.isArray(permissions)
+      ? permissions
+      : Array.isArray(customPermissions)
+      ? customPermissions
+      : [];
+
     const newAdmin = await prisma.user.create({
       data: {
         username: cleanUsername,
@@ -119,6 +141,7 @@ export async function POST(request: Request) {
         passwordHash: hashPassword(password),
         role: roleEnum,
         isActive: true,
+        customPermissions: permsList,
       },
     });
 
@@ -126,16 +149,24 @@ export async function POST(request: Request) {
 
     // Assign events if calling admin or event admin
     if (Array.isArray(assignedEvents) && assignedEvents.length > 0) {
-      await prisma.adminAssignedEvent.createMany({
-        data: assignedEvents.map((eventId: string) => ({
+      const eventIds = assignedEvents.map((item: any) => (typeof item === "string" ? item : item.eventId));
+      const eventAssignmentsData = assignedEvents.map((item: any) => {
+        const eventId = typeof item === "string" ? item : item.eventId;
+        const itemPerms = typeof item === "object" && Array.isArray(item.permissions) ? item.permissions : permsList;
+        return {
           adminId: newAdmin.id,
           eventId,
-        })),
+          permissions: itemPerms,
+        };
+      });
+
+      await prisma.adminAssignedEvent.createMany({
+        data: eventAssignmentsData,
         skipDuplicates: true,
       });
 
       const eventsData = await prisma.event.findMany({
-        where: { id: { in: assignedEvents } },
+        where: { id: { in: eventIds } },
       });
       assignedEventNames = eventsData.map((e) => e.name);
 
@@ -193,7 +224,20 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { adminId, username, password, role, assignedEvents, isActive, name, email, phone, resendCredentials } = body;
+    const {
+      adminId,
+      username,
+      password,
+      role,
+      assignedEvents,
+      isActive,
+      name,
+      email,
+      phone,
+      permissions,
+      customPermissions,
+      resendCredentials,
+    } = body;
 
     // 1. Edit another admin (requires SUPERADMIN)
     if (adminId) {
@@ -235,6 +279,16 @@ export async function PATCH(request: Request) {
       if (password && password.trim()) updateData.passwordHash = hashPassword(password);
       if (isActive !== undefined) updateData.isActive = isActive;
 
+      const permsList: string[] | undefined = Array.isArray(permissions)
+        ? permissions
+        : Array.isArray(customPermissions)
+        ? customPermissions
+        : undefined;
+
+      if (permsList !== undefined) {
+        updateData.customPermissions = permsList;
+      }
+
       let newRoleEnum = adminToEdit.role;
       if (role) {
         if (role === "superadmin") newRoleEnum = Role.SUPERADMIN;
@@ -253,25 +307,34 @@ export async function PATCH(request: Request) {
       let newlyAssignedEvents: any[] = [];
 
       if (Array.isArray(assignedEvents)) {
+        const eventIds = assignedEvents.map((item: any) => (typeof item === "string" ? item : item.eventId));
         const existingAssignments = await prisma.adminAssignedEvent.findMany({
           where: { adminId },
           select: { eventId: true },
         });
         const existingIds = existingAssignments.map((a) => a.eventId);
-        const newlyAssignedIds = assignedEvents.filter((id: string) => !existingIds.includes(id));
+        const newlyAssignedIds = eventIds.filter((id: string) => !existingIds.includes(id));
 
         await prisma.adminAssignedEvent.deleteMany({ where: { adminId } });
         if (assignedEvents.length > 0) {
-          await prisma.adminAssignedEvent.createMany({
-            data: assignedEvents.map((eventId: string) => ({
+          const effectivePerms = permsList !== undefined ? permsList : adminToEdit.customPermissions || [];
+          const eventAssignmentsData = assignedEvents.map((item: any) => {
+            const eventId = typeof item === "string" ? item : item.eventId;
+            const itemPerms = typeof item === "object" && Array.isArray(item.permissions) ? item.permissions : effectivePerms;
+            return {
               adminId,
               eventId,
-            })),
+              permissions: itemPerms,
+            };
+          });
+
+          await prisma.adminAssignedEvent.createMany({
+            data: eventAssignmentsData,
             skipDuplicates: true,
           });
 
           const eventsData = await prisma.event.findMany({
-            where: { id: { in: assignedEvents } },
+            where: { id: { in: eventIds } },
           });
           assignedEventNames = eventsData.map((e) => e.name);
           newlyAssignedEvents = eventsData.filter((e) => newlyAssignedIds.includes(e.id));

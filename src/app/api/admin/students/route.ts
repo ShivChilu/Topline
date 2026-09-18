@@ -15,8 +15,9 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -24,7 +25,23 @@ export async function GET(request: Request) {
   try {
     const admin = await getLoggedInAdmin();
     if (!admin) {
-      return NextResponse.json({ success: false, message: "Unauthorized. Master student data access restricted to full administrators." }, { status: 403 });
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    if (admin.role === "EVENT_ADMIN") {
+      const hasPermissionToView =
+        admin.customPermissions?.includes("students:add_from_master") ||
+        admin.customPermissions?.includes("*") ||
+        admin.assignedEvents?.some(
+          (a) => a.permissions?.includes("students:add_from_master") || a.permissions?.includes("*")
+        );
+
+      if (!hasPermissionToView) {
+        return NextResponse.json(
+          { success: false, message: "Forbidden. You do not have permission ('students:add_from_master') to access master student records." },
+          { status: 403 }
+        );
+      }
     }
 
     const { searchParams } = new URL(request.url);

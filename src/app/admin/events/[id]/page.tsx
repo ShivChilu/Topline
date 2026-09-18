@@ -210,10 +210,38 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [copiedWhatsappLink, setCopiedWhatsappLink] = useState(false);
   const [copiedPhoneNumbers, setCopiedPhoneNumbers] = useState(false);
 
-  // Admin Role & Template Manager Modal
+  // Admin Role & IAM Feature Permissions
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
+  const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomEmailTemplate[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/users/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setCurrentAdminRole(data.role);
+          const perms = new Set<string>();
+          (data.customPermissions || []).forEach((p: string) => perms.add(p));
+          if (Array.isArray(data.assignedEventPermissions)) {
+            const assignment = data.assignedEventPermissions.find((a: any) => a.eventId === eventId);
+            (assignment?.permissions || []).forEach((p: string) => perms.add(p));
+          }
+          setAdminPermissions(Array.from(perms));
+        }
+      })
+      .catch(() => {});
+  }, [eventId]);
+
+  const can = (action: string) => {
+    if (!currentAdminRole || currentAdminRole === "superadmin" || currentAdminRole === "admin") return true;
+    if (currentAdminRole === "calling") return false;
+    if (currentAdminRole === "event_admin") {
+      return adminPermissions.includes("*") || adminPermissions.includes(action);
+    }
+    return false;
+  };
 
   // Selection Email Preview & Template Customization Modal State
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
@@ -1351,77 +1379,84 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <span>Refresh Data</span>
           </button>
 
-          {/* Admin Lifecycle & Form Controls (Hidden for Event Admins and Calling Admins) */}
-          {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-            <>
-              {/* Close or Resume Form Quick Action Button */}
-              {event.status === "CLOSED" ? (
-                <button
-                  type="button"
-                  onClick={() => handleToggleEventFormStatus("OPEN")}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
-                  title="Resume and open registration form for this event"
-                >
-                  <Unlock className="w-3.5 h-3.5" />
-                  <span>Resume Form (Open)</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleToggleEventFormStatus("CLOSED")}
-                  className="bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
-                  title="Close and pause application form for this event"
-                >
-                  <Lock className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Close Form</span>
-                </button>
-              )}
-
-              {/* Reopen Event with Additional Slots Button */}
+          {/* Close or Resume Form Quick Action Button */}
+          {can("events:close_resume") && (
+            event.status === "CLOSED" ? (
               <button
                 type="button"
-                onClick={() => setIsReopenModalOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-                title="Reopen event or add additional candidate seats/slots"
+                onClick={() => handleToggleEventFormStatus("OPEN")}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
+                title="Resume and open registration form for this event"
               >
                 <Unlock className="w-3.5 h-3.5" />
-                <span>Reopen (+Slots)</span>
+                <span>Resume Form (Open)</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleToggleEventFormStatus("CLOSED")}
+                className="bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+                title="Close and pause application form for this event"
+              >
+                <Lock className="w-3.5 h-3.5 text-rose-600" />
+                <span>Close Form</span>
+              </button>
+            )
+          )}
+
+          {/* Reopen Event with Additional Slots Button */}
+          {can("events:reopen_slots") && (
+            <button
+              type="button"
+              onClick={() => setIsReopenModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+              title="Reopen event or add additional candidate seats/slots"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>Reopen (+Slots)</span>
+            </button>
+          )}
+
+          {/* Edit Event Details Button */}
+          {can("events:edit") && (
+            <Link
+              href={`/admin/events/${eventId}/edit`}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+              title="Edit event specifications, payout rate, shift timings, guidelines, and custom questions"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit Event</span>
+            </Link>
+          )}
+
+          {/* Duplicate as New Button */}
+          {can("events:duplicate") && (
+            <Link
+              href={`/admin/events/create?cloneFrom=${eventId}`}
+              className="bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition"
+              title="Duplicate this event configuration and create as a new event"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Duplicate as New</span>
+            </Link>
+          )}
+
+          {/* + Create / Actions Dropdown */}
+          {currentAdminRole !== "calling" && (
+            <div className="relative group">
+              <button
+                type="button"
+                className="bg-red-600 hover:bg-red-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Create / Actions</span>
+                <ChevronRight className="w-3 h-3 rotate-90" />
               </button>
 
-              {/* Edit Event Details Button */}
-              <Link
-                href={`/admin/events/${eventId}/edit`}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
-                title="Edit event specifications, payout rate, shift timings, guidelines, and custom questions"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Edit Event</span>
-              </Link>
-
-              {/* Duplicate as New Button */}
-              <Link
-                href={`/admin/events/create?cloneFrom=${eventId}`}
-                className="bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition"
-                title="Duplicate this event configuration and create as a new event"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>Duplicate as New</span>
-              </Link>
-
-              {/* + Create / Actions Dropdown */}
-              <div className="relative group">
-                <button
-                  type="button"
-                  className="bg-red-600 hover:bg-red-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Create / Actions</span>
-                  <ChevronRight className="w-3 h-3 rotate-90" />
-                </button>
-
-                <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
-                  <div className="py-1">
-                    {event.status === "CLOSED" ? (
+              <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
+                <div className="py-1">
+                  {can("events:close_resume") && (
+                    event.status === "CLOSED" ? (
                       <button
                         type="button"
                         onClick={() => handleToggleEventFormStatus("OPEN")}
@@ -1439,7 +1474,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <Lock className="w-3.5 h-3.5 text-rose-600" />
                         <span>Close Form (Stop Applications)</span>
                       </button>
-                    )}
+                    )
+                  )}
+                  {can("students:add_from_master") && (
                     <button
                       type="button"
                       onClick={() => setIsAddFromMasterModalOpen(true)}
@@ -1448,6 +1485,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <Users className="w-3.5 h-3.5 text-blue-600" />
                       <span>+ Add Student from Master DB</span>
                     </button>
+                  )}
+                  {can("events:reopen_slots") && (
                     <button
                       type="button"
                       onClick={() => setIsReopenModalOpen(true)}
@@ -1456,6 +1495,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <Unlock className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Reopen Event (+Add Slots)</span>
                     </button>
+                  )}
+                  {can("events:edit") && (
                     <Link
                       href={`/admin/events/${eventId}/edit`}
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 flex items-center gap-2 transition"
@@ -1463,6 +1504,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
                       <span>Edit Event Specifications</span>
                     </Link>
+                  )}
+                  {can("events:duplicate") && (
                     <Link
                       href={`/admin/events/create?cloneFrom=${eventId}`}
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
@@ -1470,6 +1513,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                       <span>Duplicate & Edit as New</span>
                     </Link>
+                  )}
+                  {currentAdminRole !== "event_admin" && (
                     <Link
                       href="/admin/events/create"
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
@@ -1477,6 +1522,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <Plus className="w-3.5 h-3.5 text-red-600" />
                       <span>Create Brand New Event</span>
                     </Link>
+                  )}
+                  {can("events:manage_templates") && (
                     <button
                       type="button"
                       onClick={() => setTemplateModalOpen(true)}
@@ -1485,43 +1532,47 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <FileText className="w-3.5 h-3.5 text-blue-600" />
                       <span>Create / Manage Templates</span>
                     </button>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      type="button"
-                      onClick={() => setIsLiveAttendanceModalOpen(true)}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-purple-900 bg-purple-50/70 hover:bg-purple-100 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <QrCode className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Live Attendance & QR Hub</span>
-                    </button>
-                    <Link
-                      href={`/admin/events/${eventId}/attendance`}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
-                    >
-                      <Clock className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Legacy Attendance Logs</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleExportVcf()}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Export Contacts (.vcf)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyAllPhones()}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Copy className="w-3.5 h-3.5 text-teal-600" />
-                      <span>Copy Phone Numbers</span>
-                    </button>
-                  </div>
+                  )}
+                </div>
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsLiveAttendanceModalOpen(true)}
+                    className="w-full text-left px-4 py-2 text-xs font-semibold text-purple-900 bg-purple-50/70 hover:bg-purple-100 flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <QrCode className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Live Attendance & QR Hub</span>
+                  </button>
+                  <Link
+                    href={`/admin/events/${eventId}/attendance`}
+                    className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Legacy Attendance Logs</span>
+                  </Link>
+                  {can("events:export_data") && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleExportVcf()}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Export Contacts (.vcf)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyAllPhones()}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Copy Phone Numbers</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* Live Attendance Hub Button */}
@@ -1914,8 +1965,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 </button>
               )}
             </div>
-            {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              {can("students:add_from_master") && (
                 <button
                   type="button"
                   onClick={() => setIsAddFromMasterModalOpen(true)}
@@ -1925,6 +1976,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <Users className="w-3.5 h-3.5 text-blue-600" />
                   <span>+ Add Student</span>
                 </button>
+              )}
+              {can("events:manage_templates") && (
                 <button
                   type="button"
                   onClick={() => setTemplateModalOpen(true)}
@@ -1934,8 +1987,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <FileText className="w-3.5 h-3.5 text-red-600" />
                   <span>Create Template</span>
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Filters & Queue Switch */}
@@ -4170,7 +4223,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       )}
 
       {/* Add Student from Master Database Modal */}
-      {isAddFromMasterModalOpen && currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+      {isAddFromMasterModalOpen && can("students:add_from_master") && (
         <AddStudentFromMasterModal
           isOpen={isAddFromMasterModalOpen}
           eventId={eventId}

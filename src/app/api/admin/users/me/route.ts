@@ -20,7 +20,7 @@ export async function GET() {
       where: { id: decoded.id },
       include: {
         assignedEvents: {
-          select: { eventId: true },
+          select: { eventId: true, permissions: true },
         },
       },
     });
@@ -47,7 +47,9 @@ export async function GET() {
       username: user.username,
       name: user.name,
       role: roleLower,
+      customPermissions: user.customPermissions || [],
       assignedEvents,
+      assignedEventPermissions: user.assignedEvents,
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { ApplicationStatus } from "@prisma/client";
 import { sendEventSelectionEmail } from "@/lib/email";
 
+import { hasEventPermission } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 async function getLoggedInAdmin() {
@@ -15,9 +17,9 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
-    include: { assignedEvents: { select: { eventId: true } } },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -33,11 +35,11 @@ export async function POST(
     }
 
     const eventId = params.id;
-    if (admin.role === "EVENT_ADMIN") {
-      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
-      if (!isAssigned) {
-        return NextResponse.json({ success: false, message: "Forbidden. You do not have access to manage this event." }, { status: 403 });
-      }
+    if (!hasEventPermission(admin, "students:add_from_master", eventId)) {
+      return NextResponse.json(
+        { success: false, message: "Forbidden. You do not have permission ('students:add_from_master') to enroll candidates from the Master Database for this event." },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();

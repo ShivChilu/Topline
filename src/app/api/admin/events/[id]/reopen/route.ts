@@ -4,6 +4,8 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { EventStatus } from "@prisma/client";
 
+import { hasEventPermission } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 async function getLoggedInAdmin() {
@@ -14,8 +16,9 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
 }
 
@@ -27,10 +30,16 @@ export async function POST(
   try {
     const admin = await getLoggedInAdmin();
     if (!admin) {
-      return NextResponse.json({ success: false, message: "Forbidden. Only Super Admins and Admins can reopen events." }, { status: 403 });
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
     const eventId = params.id;
+    if (!hasEventPermission(admin, "events:reopen_slots", eventId)) {
+      return NextResponse.json(
+        { success: false, message: "Forbidden. You do not have permission ('events:reopen_slots') to reopen this event or add slots." },
+        { status: 403 }
+      );
+    }
     const body = await request.json();
     const {
       additionalSlots = 5,
