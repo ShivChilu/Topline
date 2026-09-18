@@ -249,29 +249,29 @@ export default async function OpportunitiesPage(props: {
 
         {/* Dynamic Referral Promotion (Only shown to signed-in students who have NOT created a referral code yet) */}
         {user && !user.referralCode && ["STUDENT", "USER"].includes(user.role) && (
-          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-purple-500/40 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1.5 max-w-2xl relative z-10">
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-purple-500/40 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full box-border">
+            <div className="space-y-1.5 max-w-2xl relative z-10 w-full min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                  <Gift className="w-3.5 h-3.5" />
-                  Refer & Earn Up to ₹150
+                  <Gift className="w-3.5 h-3.5 shrink-0" />
+                  Refer &amp; Earn Up to ₹150
                 </span>
-                <span className="text-xs font-bold text-purple-200">Invite College Batchmates</span>
+                <span className="text-[11px] sm:text-xs font-bold text-purple-200">Invite College Batchmates</span>
               </div>
-              <h3 className="text-lg sm:text-xl font-black text-white">
+              <h3 className="text-base sm:text-xl font-black text-white break-words leading-snug">
                 Earn Up to ₹150 Cash by Referring Friends to Topline!
               </h3>
-              <p className="text-xs text-purple-200/90 leading-relaxed">
+              <p className="text-xs text-purple-200/90 leading-relaxed break-words">
                 Want to work catering events with your friends? Activate your referral code in your profile to earn up to ₹150 direct to UPI for every friend who joins and completes their first event shift.
               </p>
             </div>
 
             <Link
               href="/profile"
-              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center gap-1.5 active:scale-95 whitespace-nowrap relative z-10"
+              className="w-full md:w-auto bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-3 rounded-xl sm:rounded-2xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center justify-center gap-1.5 active:scale-95 text-center relative z-10 box-border"
             >
               <span>Get My Referral Code</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </Link>
           </div>
         )}

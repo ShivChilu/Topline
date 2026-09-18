@@ -228,28 +228,28 @@ export default async function EventDetailsPage(props: {
           )}
 
           {/* Refer Friends to Work This Event */}
-          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 border border-purple-500/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1.5 max-w-xl">
-              <div className="flex items-center gap-2">
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-4 sm:p-6 border border-purple-500/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full box-border">
+            <div className="space-y-1.5 max-w-xl w-full min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                  <Gift className="w-3.5 h-3.5" />
+                  <Gift className="w-3.5 h-3.5 shrink-0" />
                   Refer &amp; Earn Up to ₹150
                 </span>
-                <span className="text-xs font-bold text-purple-200">Work With Friends</span>
+                <span className="text-[11px] sm:text-xs font-bold text-purple-200">Work With Friends</span>
               </div>
-              <h3 className="text-lg font-black text-white">
+              <h3 className="text-base sm:text-lg font-black text-white break-words leading-snug">
                 Want to Work This Event With College Friends?
               </h3>
-              <p className="text-xs text-purple-200/90 leading-relaxed">
+              <p className="text-xs text-purple-200/90 leading-relaxed break-words">
                 Invite your classmates to apply for this event. Earn up to ₹150 direct cash to your UPI ID when they attend and complete their first event shift!
               </p>
             </div>
             <Link
               href="/profile"
-              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center justify-center gap-1.5 active:scale-95 text-center relative z-10 box-border"
             >
               <span>Get Referral Link</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </Link>
           </div>
         </div>

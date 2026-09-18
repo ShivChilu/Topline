@@ -197,32 +197,32 @@ export default async function HomePage() {
 
       {/* Dynamic Referral Program Spotlight for Signed-In Students Without Referral Code */}
       {unactivatedReferralUser && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 mb-8 relative z-20">
-          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-7 border border-purple-500/40 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <section className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 mb-8 relative z-20 w-full box-border">
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-purple-500/40 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5 w-full box-border">
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-500/20 via-indigo-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
 
-            <div className="space-y-1.5 max-w-2xl relative z-10">
+            <div className="space-y-2 max-w-2xl relative z-10 w-full min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                  <Gift className="w-3.5 h-3.5" />
+                  <Gift className="w-3.5 h-3.5 shrink-0" />
                   Up to ₹150 Cash Reward
                 </span>
-                <span className="text-xs font-bold text-purple-200">Topline Student Referral Program</span>
+                <span className="text-[11px] sm:text-xs font-bold text-purple-200">Topline Student Referral Program</span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white">
+              <h3 className="text-base sm:text-2xl font-black text-white leading-snug break-words">
                 Hey {unactivatedReferralUser.name}, Earn Up to ₹150 for Every Friend You Refer!
               </h3>
-              <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
+              <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed break-words">
                 You haven&apos;t created your referral code yet. Activate your code in your profile to start inviting college batchmates and get up to ₹150 deposited directly to your UPI ID when they complete their first event work.
               </p>
             </div>
 
             <Link
               href="/profile"
-              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-6 py-3 rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shrink-0 flex items-center gap-2 active:scale-95 whitespace-nowrap relative z-10"
+              className="w-full md:w-auto bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-3 rounded-xl sm:rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shrink-0 flex items-center justify-center gap-2 active:scale-95 text-center relative z-10 box-border"
             >
               <span>Activate Referral Code (Earn Up to ₹150)</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </Link>
           </div>
         </section>
