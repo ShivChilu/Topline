@@ -7,6 +7,25 @@ import { ReferralStatus } from "@prisma/client";
 export const DEFAULT_REFERRAL_REWARD = 25.0;
 
 /**
+ * Dynamically fetches the active referral reward amount configured by the Admin in Settings.
+ * Falls back to DEFAULT_REFERRAL_REWARD (25.0) if not configured.
+ */
+export async function getActiveReferralRewardAmount(): Promise<number> {
+  try {
+    const config = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
+    if (config?.value && typeof config.value === "object" && "referralRewardAmount" in (config.value as any)) {
+      const val = Number((config.value as any).referralRewardAmount);
+      if (!isNaN(val) && val > 0) return val;
+    }
+  } catch (err) {
+    console.error("Error fetching dynamic referral reward amount:", err);
+  }
+  return DEFAULT_REFERRAL_REWARD;
+}
+
+/**
  * Generates a clean, unique alphanumeric referral code based on the student's name.
  * e.g. "SHIV25", "RAHUL482", "PRIYA77"
  */

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signToken } from "@/lib/auth";
+import { getActiveReferralRewardAmount } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -187,13 +188,14 @@ export async function POST(request: Request) {
 
       // If registered with a valid referral code, create the Referral record in PENDING state
       if (referrerUser && cleanRefCode) {
+        const activeReward = await getActiveReferralRewardAmount();
         await tx.referral.create({
           data: {
             referrerId: referrerUser.id,
             refereeId: created.id,
             codeUsed: cleanRefCode,
             status: "PENDING",
-            rewardAmount: 25.0,
+            rewardAmount: activeReward,
           },
         });
       }

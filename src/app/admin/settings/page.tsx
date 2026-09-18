@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, UserPlus, Key, Users, Mail, Trash2, Edit2, Shield, Calendar, Sparkles, Check, Send, Plus, RefreshCw, X, ExternalLink, Search, CheckCircle2, AlertCircle, MapPin } from "lucide-react";
+import { Save, UserPlus, Key, Users, Mail, Trash2, Edit2, Shield, Calendar, Sparkles, Check, Send, Plus, RefreshCw, X, ExternalLink, Search, CheckCircle2, AlertCircle, MapPin, Gift, Banknote } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -16,6 +16,7 @@ export default function AdminSettingsPage() {
   const [aboutText, setAboutText] = useState("");
   const [dosText, setDosText] = useState("");
   const [dontsText, setDontsText] = useState("");
+  const [referralRewardAmount, setReferralRewardAmount] = useState<number | string>(25);
 
   // Admin users state
   const [admins, setAdmins] = useState<any[]>([]);
@@ -68,6 +69,7 @@ export default function AdminSettingsPage() {
         setAboutText(val.aboutText || "");
         setDosText(Array.isArray(val.dos) ? val.dos.join("\n") : "");
         setDontsText(Array.isArray(val.donts) ? val.donts.join("\n") : "");
+        setReferralRewardAmount(val.referralRewardAmount !== undefined ? val.referralRewardAmount : 25);
       }
     } catch (err) {
       console.error(err);
@@ -122,6 +124,7 @@ export default function AdminSettingsPage() {
       aboutText,
       dos,
       donts,
+      referralRewardAmount: Number(referralRewardAmount) > 0 ? Number(referralRewardAmount) : 25,
     };
 
     try {
@@ -388,6 +391,56 @@ export default function AdminSettingsPage() {
               placeholder="Do not leave early&#10;Do not damage hotel property"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:border-red-600 text-xs h-36"
             ></textarea>
+          </div>
+        </div>
+
+        {/* Referral Program Reward Setting */}
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-5 rounded-2xl border border-purple-200/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Gift className="w-5 h-5 text-purple-600" />
+              <h3 className="font-extrabold text-sm text-purple-950 uppercase tracking-wider">
+                Student Referral Reward Amount (₹)
+              </h3>
+            </div>
+            <span className="text-[11px] font-bold text-purple-700 bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
+              Live Configuration
+            </span>
+          </div>
+          <p className="text-xs text-purple-800/80 leading-relaxed">
+            Set the cash bonus in Rupees awarded to a referrer student when their invited friend completes their 1st verified catering event duty.
+          </p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
+            <div className="relative w-full sm:w-56">
+              <span className="absolute left-3.5 top-2.5 text-sm font-black text-purple-700">₹</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                required
+                value={referralRewardAmount}
+                onChange={(e) => setReferralRewardAmount(e.target.value)}
+                placeholder="25"
+                className="w-full bg-white border border-purple-300 rounded-xl pl-8 pr-3.5 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+              <span className="font-bold text-purple-900">Quick presets:</span>
+              {[25, 50, 100, 150, 200].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setReferralRewardAmount(amt)}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                    Number(referralRewardAmount) === amt
+                      ? "bg-purple-600 text-white shadow-xs"
+                      : "bg-white hover:bg-purple-100 text-purple-800 border border-purple-200"
+                  }`}
+                >
+                  ₹{amt}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

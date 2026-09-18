@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { ReferralStatus } from "@prisma/client";
-import { DEFAULT_REFERRAL_REWARD } from "@/lib/referral";
+import { getActiveReferralRewardAmount } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -187,7 +187,7 @@ export async function GET(request: Request) {
         pendingPayoutAmount,
         settledPayoutAmount,
         totalEarningsGenerated,
-        rewardPerReferral: DEFAULT_REFERRAL_REWARD,
+        rewardPerReferral: await getActiveReferralRewardAmount(),
       },
       referrers: referrersList,
       ledger: allReferrals.map((r) => ({
@@ -253,7 +253,7 @@ export async function POST(request: Request) {
           referrerId,
           status: ReferralStatus.QUALIFIED,
         },
-        select: { id: true },
+        select: { id: true, rewardAmount: true },
       });
       targetIds = eligible.map((e) => e.id);
     }
@@ -264,6 +264,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const settledAgg = await prisma.referral.aggregate({
+      where: {
+        id: { in: targetIds },
+        status: ReferralStatus.QUALIFIED,
+      },
+      _sum: { rewardAmount: true },
+    });
+    const totalSettledAmount = settledAgg._sum.rewardAmount || 0;
 
     const now = new Date();
     const cleanRef = paidReference && typeof paidReference === "string" ? paidReference.trim() : "Offline UPI Transfer Completed";
@@ -289,7 +298,7 @@ export async function POST(request: Request) {
         target: referrerId || targetIds.join(","),
         metadata: {
           settledCount: updateResult.count,
-          totalAmount: updateResult.count * DEFAULT_REFERRAL_REWARD,
+          totalAmount: totalSettledAmount,
           paidReference: cleanRef,
           referralIds: targetIds,
         },
@@ -298,11 +307,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully marked ${updateResult.count} referral(s) as PAID (Total: ₹${
-        updateResult.count * DEFAULT_REFERRAL_REWARD
-      }).`,
+      message: `Successfully marked ${updateResult.count} referral(s) as PAID (Total: ₹${totalSettledAmount}).`,
       settledCount: updateResult.count,
-      settledAmount: updateResult.count * DEFAULT_REFERRAL_REWARD,
+      settledAmount: totalSettledAmount,
     });
   } catch (error: any) {
     console.error("Admin referrals settlement POST error:", error);
