@@ -15,6 +15,10 @@ import {
   Phone,
   GraduationCap,
   Gift,
+  MessageCircle,
+  Copy,
+  Check,
+  Share2,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
@@ -57,6 +61,27 @@ export default function EventApplicationForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [copiedRef, setCopiedRef] = useState(false);
+
+  const handleShareEventWhatsApp = () => {
+    const code = loggedInUser?.referralCode || "";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://toplineodc.co.in";
+    const refUrl = code ? `${baseUrl}/events/${eventId}?ref=${encodeURIComponent(code)}` : `${baseUrl}/events/${eventId}`;
+    const msg = code
+      ? `Hey! 👋 I just applied for this catering event on Topline ODC. Come join me and let's work together! Sign up with my referral code ${code} or click here: ${refUrl}`
+      : `Hey! 👋 Check out this catering event on Topline ODC. Join me and apply here: ${refUrl}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank");
+  };
+
+  const handleCopyReferralEventLink = () => {
+    const code = loggedInUser?.referralCode || "";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://toplineodc.co.in";
+    const refUrl = code ? `${baseUrl}/events/${eventId}?ref=${encodeURIComponent(code)}` : `${baseUrl}/events/${eventId}`;
+    navigator.clipboard.writeText(refUrl);
+    setCopiedRef(true);
+    setTimeout(() => setCopiedRef(false), 2500);
+  };
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -138,6 +163,71 @@ export default function EventApplicationForm({
             )}
           </div>
         )}
+
+        {/* Refer a Friend: Your Slot is Booked! */}
+        <div className="bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-950 border border-purple-500/40 p-5 rounded-2xl space-y-3 text-left shadow-xl">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+              <Gift className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Your Slot is Booked • Refer a Friend!</span>
+            </div>
+            <span className="bg-purple-500/20 text-purple-300 font-bold text-[10px] px-2.5 py-0.5 rounded-full border border-purple-500/30">
+              Earn Up to ₹150
+            </span>
+          </div>
+
+          <p className="text-purple-100 text-xs leading-relaxed">
+            Want your college friends or batchmates to work this event with you? Invite them now and earn up to ₹150 direct cash to your UPI ID when they attend!
+          </p>
+
+          {loggedInUser?.referralCode ? (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2 bg-slate-900/90 border border-purple-400/40 rounded-xl p-2.5">
+                <span className="text-[10px] font-bold uppercase text-purple-300 pl-1">Your Code:</span>
+                <span className="font-mono font-black text-amber-300 text-sm tracking-wider flex-1 text-center select-all">
+                  {loggedInUser.referralCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyReferralEventLink}
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedRef ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-white" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleShareEventWhatsApp}
+                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 fill-slate-950" />
+                <span>Invite Friends on WhatsApp</span>
+              </button>
+            </div>
+          ) : (
+            <div className="pt-1">
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md active:scale-98"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Activate Referral Code (Earn Up to ₹150)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <Link
@@ -419,27 +509,70 @@ export default function EventApplicationForm({
         <h3 className="text-2xl font-bold text-emerald-400">Application Submitted!</h3>
         <p className="text-slate-300 text-sm whitespace-pre-wrap">{message}</p>
 
-        {/* Promote referral program if student does NOT have a referral code yet */}
-        {!loggedInUser?.referralCode && (
-          <div className="bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-slate-950 border border-purple-500/40 p-4 rounded-xl text-xs space-y-2 text-left mt-2">
+        {/* Refer a Friend Promo on Application Success */}
+        <div className="bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-950 border border-purple-500/40 p-5 rounded-2xl space-y-3 text-left shadow-xl">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
-              <Gift className="w-4 h-4" />
-              <span>Bring Your Friends to this Event!</span>
+              <Gift className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Your Slot is Booked • Refer a Friend!</span>
             </div>
-            <p className="text-purple-100 text-[11px] leading-relaxed">
-              Want to work events alongside your college friends? Activate your referral code in your profile to earn up to ₹150 direct to your UPI ID for every friend who joins &amp; completes their first event!
-            </p>
+            <span className="bg-purple-500/20 text-purple-300 font-bold text-[10px] px-2.5 py-0.5 rounded-full border border-purple-500/30">
+              Earn Up to ₹150
+            </span>
+          </div>
+
+          <p className="text-purple-100 text-xs leading-relaxed">
+            Want your college friends or batchmates to work this event with you? Invite them now and earn up to ₹150 direct cash to your UPI ID when they attend!
+          </p>
+
+          {loggedInUser?.referralCode ? (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2 bg-slate-900/90 border border-purple-400/40 rounded-xl p-2.5">
+                <span className="text-[10px] font-bold uppercase text-purple-300 pl-1">Your Code:</span>
+                <span className="font-mono font-black text-amber-300 text-sm tracking-wider flex-1 text-center select-all">
+                  {loggedInUser.referralCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyReferralEventLink}
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedRef ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-white" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleShareEventWhatsApp}
+                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 fill-slate-950" />
+                <span>Invite Friends on WhatsApp</span>
+              </button>
+            </div>
+          ) : (
             <div className="pt-1">
               <Link
                 href="/profile"
-                className="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3.5 py-1.5 rounded-lg text-xs uppercase tracking-wider transition shadow-sm"
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md active:scale-98"
               >
+                <Sparkles className="w-3.5 h-3.5" />
                 <span>Activate Referral Code (Earn Up to ₹150)</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="pt-3 flex justify-center gap-3">
           <Link

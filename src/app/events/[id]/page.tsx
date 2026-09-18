@@ -1,9 +1,10 @@
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { prisma } from "@/lib/prisma";
 import EventApplicationForm from "@/components/EventApplicationForm";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
-import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle } from "lucide-react";
+import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle, Gift, ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export const revalidate = 0; // Live check for status changes
@@ -225,6 +226,32 @@ export default async function EventDetailsPage(props: {
               </ul>
             </div>
           )}
+
+          {/* Refer Friends to Work This Event */}
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 border border-purple-500/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-xl">
+              <div className="flex items-center gap-2">
+                <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                  <Gift className="w-3.5 h-3.5" />
+                  Refer &amp; Earn Up to ₹150
+                </span>
+                <span className="text-xs font-bold text-purple-200">Work With Friends</span>
+              </div>
+              <h3 className="text-lg font-black text-white">
+                Want to Work This Event With College Friends?
+              </h3>
+              <p className="text-xs text-purple-200/90 leading-relaxed">
+                Invite your classmates to apply for this event. Earn up to ₹150 direct cash to your UPI ID when they attend and complete their first event shift!
+              </p>
+            </div>
+            <Link
+              href="/profile"
+              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
+            >
+              <span>Get Referral Link</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
 
         {/* Right Column: Application form */}
