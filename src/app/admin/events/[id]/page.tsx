@@ -950,7 +950,23 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     if (statusFilter !== "ALL") {
       const sf = statusFilter.toUpperCase();
       if (sf === "CONFIRMED_ATTENDED" || sf === "CONFIRMED_OR_ATTENDED") {
-        list = list.filter((a) => ["CONFIRMED", "ATTENDED"].includes((a.status || "").toUpperCase()));
+        list = list.filter((a) => {
+          const s = (a.status || "").toUpperCase();
+          const att = (a.attendance?.attendanceStatus || a.attendanceStatus || "").toUpperCase();
+          return ["CONFIRMED", "ATTENDED"].includes(s) || att === "PRESENT" || a.isAttended === true;
+        });
+      } else if (sf === "ATTENDED" || sf === "PRESENT") {
+        list = list.filter((a) => {
+          const s = (a.status || "").toUpperCase();
+          const att = (a.attendance?.attendanceStatus || a.attendanceStatus || "").toUpperCase();
+          return s === "ATTENDED" || att === "PRESENT" || a.isAttended === true;
+        });
+      } else if (sf === "CONFIRMED") {
+        list = list.filter((a) => {
+          const s = (a.status || "").toUpperCase();
+          const att = (a.attendance?.attendanceStatus || a.attendanceStatus || "").toUpperCase();
+          return s === "CONFIRMED" && att !== "PRESENT" && !a.isAttended;
+        });
       } else if (sf === "NOT_SELECTED") {
         list = list.filter((a) => ["NOT_SELECTED", "REJECTED"].includes((a.status || "").toUpperCase()));
       } else if (sf === "CANCELLED") {
@@ -1139,9 +1155,21 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     const underReview = applications.filter((a) => (a.status || "").toUpperCase() === "UNDER_REVIEW").length;
     const selected = applications.filter((a) => (a.status || "").toUpperCase() === "SELECTED").length;
     const notSelected = applications.filter((a) => ["NOT_SELECTED", "REJECTED"].includes((a.status || "").toUpperCase())).length;
-    const confirmed = applications.filter((a) => (a.status || "").toUpperCase() === "CONFIRMED").length;
-    const attended = applications.filter((a) => (a.status || "").toUpperCase() === "ATTENDED").length;
-    const absent = applications.filter((a) => (a.status || "").toUpperCase() === "ABSENT").length;
+    const attended = applications.filter((a) => {
+      const s = (a.status || "").toUpperCase();
+      const att = (a.attendance?.attendanceStatus || a.attendanceStatus || "").toUpperCase();
+      return s === "ATTENDED" || att === "PRESENT" || a.isAttended === true;
+    }).length;
+    const confirmed = applications.filter((a) => {
+      const s = (a.status || "").toUpperCase();
+      const att = (a.attendance?.attendanceStatus || a.attendanceStatus || "").toUpperCase();
+      return s === "CONFIRMED" && att !== "PRESENT" && !a.isAttended;
+    }).length;
+    const absent = applications.filter((a) => {
+      const s = (a.status || "").toUpperCase();
+      const att = (a.attendance?.attendanceStatus || a.attendanceStatus || "").toUpperCase();
+      return s === "ABSENT" || att === "ABSENT";
+    }).length;
     const cancelled = applications.filter((a) => (a.status || "").toUpperCase() === "CANCELLED").length;
     const paid = applications.filter((a) => a.paymentStatus === "PAID").length;
     const unpaid = total - paid;
@@ -1917,8 +1945,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             >
               <option value="ALL">All Application Statuses</option>
               <option value="CONFIRMED_ATTENDED">Confirmed + Attended ({stats.confirmed + stats.attended})</option>
+              <option value="ATTENDED">PRESENT / Attended ({stats.attended})</option>
               <option value="CONFIRMED">Confirmed (Attending) ({stats.confirmed})</option>
-              <option value="ATTENDED">Attended / Present ({stats.attended})</option>
               <option value="SELECTED">Selected ({stats.selected})</option>
               <option value="UNDER_REVIEW">Under Review ({stats.underReview})</option>
               <option value="APPLIED">Applied ({stats.applied})</option>
@@ -2386,6 +2414,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               {filteredAndSortedApplications.map((app, index) => {
                 const isSelectedCheckbox = selectedIds.includes(app._id || app.id);
                 const sStatus = (app.status || "").toUpperCase();
+                const attStatus = (app.attendance?.attendanceStatus || app.attendanceStatus || "").toUpperCase();
+                const isMarkedPresent = sStatus === "ATTENDED" || attStatus === "PRESENT" || app.isAttended === true;
+                const isMarkedLate = attStatus === "LATE";
+                const isMarkedAbsent = sStatus === "ABSENT" || attStatus === "ABSENT";
                 const student = app.studentId || {};
                 const photosList = student.studentPhotos || [];
 
@@ -2395,6 +2427,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md ${
                       isSelectedCheckbox
                         ? "border-red-500 ring-2 ring-red-500/20"
+                        : isMarkedPresent
+                        ? "border-emerald-200 hover:border-emerald-300"
                         : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
@@ -2430,46 +2464,47 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         )}
                       </div>
 
-                        {/* Event Application Status Badge */}
+                      {/* Event Application & Attendance Status Badge */}
                       <div className="absolute top-3 right-3 z-10">
-                        {sStatus === "SELECTED" && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-md flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-3" /> Selected
+                        {isMarkedPresent ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-md flex items-center gap-1 ring-2 ring-emerald-400/40 animate-in fade-in">
+                            <CheckCircle className="w-3.5 h-3.5" /> PRESENT
                           </span>
-                        )}
-                        {sStatus === "ON_HOLD" && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> On Hold / Waitlist
+                        ) : isMarkedLate ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-600 text-white shadow-md flex items-center gap-1 ring-2 ring-amber-400/40 animate-in fade-in">
+                            <Clock className="w-3.5 h-3.5" /> LATE
                           </span>
-                        )}
-                        {sStatus === "CONFIRMED" && (
+                        ) : isMarkedAbsent ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-600 text-white shadow-md flex items-center gap-1 ring-2 ring-rose-400/40 animate-in fade-in">
+                            <X className="w-3.5 h-3.5 stroke-3" /> ABSENT
+                          </span>
+                        ) : sStatus === "CONFIRMED" ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-teal-600 text-white shadow-md flex items-center gap-1">
                             <CheckCircle className="w-3 h-3" /> Confirmed (Attending)
                           </span>
-                        )}
-                        {sStatus === "CANCELLED" && (
+                        ) : sStatus === "SELECTED" ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-md flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-3" /> Selected
+                          </span>
+                        ) : sStatus === "ON_HOLD" ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> On Hold / Waitlist
+                          </span>
+                        ) : sStatus === "CANCELLED" ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-600 text-white shadow-md flex items-center gap-1">
                             <X className="w-3 h-3 stroke-3" /> Declined / Cancelled
                           </span>
-                        )}
-                        {sStatus === "UNDER_REVIEW" && (
+                        ) : sStatus === "UNDER_REVIEW" ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
                             <Clock className="w-3 h-3" /> Under Review
                           </span>
-                        )}
-                        {(sStatus === "NOT_SELECTED" || sStatus === "REJECTED") && (
+                        ) : sStatus === "NOT_SELECTED" || sStatus === "REJECTED" ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-md flex items-center gap-1">
                             <X className="w-3 h-3 stroke-3" /> Not Selected
                           </span>
-                        )}
-                        {sStatus === "ATTENDED" && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-md flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> PRESENT
-                          </span>
-                        )}
-                        {sStatus === "APPLIED" && (
+                        ) : (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-white shadow-md">
-                            Applied
+                            {sStatus || "Applied"}
                           </span>
                         )}
                       </div>
@@ -2848,6 +2883,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               <tbody className="divide-y divide-slate-100">
                 {filteredAndSortedApplications.map((app, idx) => {
                   const sStatus = (app.status || "").toUpperCase();
+                  const attStatus = (app.attendance?.attendanceStatus || app.attendanceStatus || "").toUpperCase();
+                  const isRowMarkedPresent = sStatus === "ATTENDED" || attStatus === "PRESENT" || app.isAttended === true;
+                  const isRowMarkedLate = attStatus === "LATE";
+                  const isRowMarkedAbsent = sStatus === "ABSENT" || attStatus === "ABSENT";
                   const isChecked = selectedIds.includes(app._id || app.id);
                   const student = app.studentId || {};
 
@@ -2931,8 +2970,14 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border ${
-                          sStatus === "CONFIRMED"
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border inline-flex items-center gap-1 ${
+                          isRowMarkedPresent
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold"
+                            : isRowMarkedLate
+                            ? "bg-amber-100 text-amber-800 border-amber-300 font-extrabold"
+                            : isRowMarkedAbsent
+                            ? "bg-rose-100 text-rose-800 border-rose-300 font-extrabold"
+                            : sStatus === "CONFIRMED"
                             ? "bg-teal-50 text-teal-800 border-teal-300 font-extrabold"
                             : sStatus === "SELECTED"
                             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
@@ -2944,11 +2989,32 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             ? "bg-amber-50 text-amber-800 border-amber-200"
                             : sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
                             ? "bg-rose-50 text-rose-800 border-rose-200"
-                            : sStatus === "ATTENDED"
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold"
                             : "bg-slate-100 text-slate-700 border-slate-200"
                         }`}>
-                          {sStatus === "ATTENDED" ? "PRESENT" : sStatus === "CONFIRMED" ? "Confirmed" : sStatus === "ON_HOLD" ? "On Hold" : sStatus === "CANCELLED" ? "Declined" : sStatus}
+                          {isRowMarkedPresent ? (
+                            <>
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>PRESENT</span>
+                            </>
+                          ) : isRowMarkedLate ? (
+                            <>
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              <span>LATE</span>
+                            </>
+                          ) : isRowMarkedAbsent ? (
+                            <>
+                              <X className="w-3.5 h-3.5 text-rose-600 stroke-3" />
+                              <span>ABSENT</span>
+                            </>
+                          ) : sStatus === "CONFIRMED" ? (
+                            "Confirmed"
+                          ) : sStatus === "ON_HOLD" ? (
+                            "On Hold"
+                          ) : sStatus === "CANCELLED" ? (
+                            "Declined"
+                          ) : (
+                            sStatus
+                          )}
                         </span>
                       </td>
                       <td className="p-4 whitespace-nowrap">
@@ -3008,10 +3074,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         </span>
                       </td>
                       <td className="p-4 text-xs">
-                        {app.attendance?.attendanceStatus ? (
-                          <span className="font-bold text-emerald-700">{app.attendance.attendanceStatus}</span>
+                        {isRowMarkedPresent ? (
+                          <span className="font-extrabold text-emerald-700 flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> PRESENT
+                          </span>
+                        ) : isRowMarkedLate ? (
+                          <span className="font-extrabold text-amber-700 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" /> LATE
+                          </span>
+                        ) : isRowMarkedAbsent ? (
+                          <span className="font-extrabold text-rose-700 flex items-center gap-1">
+                            <X className="w-3.5 h-3.5 text-rose-600 stroke-3" /> ABSENT
+                          </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-400 font-medium">Pending</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
@@ -3080,9 +3156,26 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-xl font-extrabold text-slate-900">{inspectCandidate.name}</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-slate-900 text-white">
-                      {inspectCandidate.status}
-                    </span>
+                    {((inspectCandidate.status || "").toUpperCase() === "ATTENDED" ||
+                      (inspectCandidate.attendance?.attendanceStatus || inspectCandidate.attendanceStatus || "").toUpperCase() === "PRESENT" ||
+                      inspectCandidate.isAttended === true) ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-emerald-600 text-white flex items-center gap-1 shadow-xs ring-2 ring-emerald-400/40">
+                        <CheckCircle className="w-3.5 h-3.5" /> PRESENT
+                      </span>
+                    ) : ((inspectCandidate.attendance?.attendanceStatus || inspectCandidate.attendanceStatus || "").toUpperCase() === "LATE") ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-amber-600 text-white flex items-center gap-1 shadow-xs ring-2 ring-amber-400/40">
+                        <Clock className="w-3.5 h-3.5" /> LATE
+                      </span>
+                    ) : ((inspectCandidate.status || "").toUpperCase() === "ABSENT" ||
+                      (inspectCandidate.attendance?.attendanceStatus || inspectCandidate.attendanceStatus || "").toUpperCase() === "ABSENT") ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase bg-rose-600 text-white flex items-center gap-1 shadow-xs ring-2 ring-rose-400/40">
+                        <X className="w-3.5 h-3.5 stroke-3" /> ABSENT
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-slate-900 text-white">
+                        {inspectCandidate.status}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                     <span className="font-mono font-bold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">
@@ -4047,8 +4140,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               setApplications((prev) =>
                 prev.map((app) => {
                   if (app.id === updatedApp.applicationId || app.userId === updatedApp.studentId) {
+                    const newStatus = updatedApp.status === "PRESENT" || updatedApp.status === "LATE" ? "ATTENDED" : "CONFIRMED";
                     return {
                       ...app,
+                      status: newStatus,
                       isAttended: updatedApp.status === "PRESENT" || updatedApp.status === "LATE",
                       attendanceStatus: updatedApp.status,
                       attendance: {
