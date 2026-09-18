@@ -16,6 +16,9 @@ import {
   ArrowRight,
   Bot,
   User as UserIcon,
+  Mic,
+  MicOff,
+  Radio,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -43,14 +46,89 @@ export default function AdminCopilot() {
       id: "welcome",
       role: "assistant",
       content:
-        "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot** powered by Groq Llama. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
+        "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot** powered by Groq Llama. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize Web Speech API for real-time voice transcription
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-IN";
+
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+          let liveTranscript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            liveTranscript += event.results[i][0].transcript;
+          }
+          if (liveTranscript.trim()) {
+            setInput(liveTranscript);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("[AdminCopilot] Speech recognition error:", event?.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+      } else {
+        setSpeechSupported(false);
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (!speechSupported) {
+      alert("Speech Recognition is not supported on this browser. Please use Chrome, Safari, or Edge.");
+      return;
+    }
+
+    if (isListening) {
+      try {
+        recognitionRef.current?.stop();
+      } catch {}
+      setIsListening(false);
+    } else {
+      try {
+        setInput("");
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (err) {
+        console.warn("[AdminCopilot] Could not start speech recognition:", err);
+      }
+    }
+  };
 
   // Auto scroll to bottom of chat
   useEffect(() => {
@@ -471,10 +549,39 @@ export default function AdminCopilot() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* LIVE LISTENING BANNER */}
+          {isListening && (
+            <div className="bg-gradient-to-r from-red-500/20 via-rose-500/20 to-amber-500/20 border-t border-red-500/30 px-3 py-1.5 flex items-center justify-between text-red-300 text-[11px] animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                </span>
+                <span className="font-bold flex items-center gap-1.5">
+                  <span>Listening live... Speak clearly</span>
+                  <span className="hidden sm:inline text-white/60 font-normal">(transcribing directly)</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={toggleListening}
+                className="text-[10px] uppercase font-black bg-red-500/30 hover:bg-red-500/50 text-white px-2 py-0.5 rounded-md cursor-pointer transition border border-red-400/40 active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+          )}
+
           {/* INPUT FORM */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (isListening) {
+                try {
+                  recognitionRef.current?.stop();
+                } catch {}
+                setIsListening(false);
+              }
               handleSend();
             }}
             className="p-2 sm:p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-1.5 sm:gap-2"
@@ -484,11 +591,35 @@ export default function AdminCopilot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask AI Copilot or request action..."
-              className="flex-1 min-w-0 bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition placeholder:text-slate-500"
+              placeholder={isListening ? "Listening... speak now..." : "Ask AI Copilot or request action..."}
+              className={`flex-1 min-w-0 bg-slate-900 border text-slate-100 text-xs rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 focus:outline-none transition ${
+                isListening
+                  ? "border-red-500/60 ring-2 ring-red-500/30 placeholder:text-red-400 font-medium"
+                  : "border-slate-700 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 placeholder:text-slate-500"
+              }`}
               disabled={loading}
             />
 
+            {/* MIC BUTTON */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              disabled={loading}
+              className={`p-2 sm:p-2.5 rounded-xl transition shadow-md cursor-pointer active:scale-95 shrink-0 border ${
+                isListening
+                  ? "bg-red-600 text-white border-red-400 ring-4 ring-red-500/40 animate-pulse"
+                  : "bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700 hover:text-amber-400 hover:border-amber-500/50"
+              }`}
+              title={isListening ? "Stop Listening" : "Voice Input (Speech-to-Text)"}
+            >
+              {isListening ? (
+                <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white animate-bounce" />
+              ) : (
+                <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              )}
+            </button>
+
+            {/* SEND BUTTON */}
             <button
               type="submit"
               disabled={loading || !input.trim()}
