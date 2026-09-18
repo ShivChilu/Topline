@@ -28,7 +28,7 @@ interface LiveAttendanceModalProps {
   eventName: string;
   eventDate?: string;
   reportingTime?: string;
-  onAttendanceChanged?: () => void;
+  onAttendanceChanged?: (updated?: { applicationId: string; studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }) => void;
 }
 
 export default function LiveAttendanceModal({
@@ -149,6 +149,8 @@ export default function LiveAttendanceModal({
   const handleToggleQR = async (enable: boolean) => {
     try {
       setTogglingToken(true);
+      // Optimistic update
+      setEventData((prev: any) => prev ? { ...prev, attendanceTokenEnabled: enable } : prev);
       const res = await fetch(`/api/admin/events/${eventId}/attendance-qr`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -156,7 +158,7 @@ export default function LiveAttendanceModal({
       });
       const data = await res.json();
       if (data.success) {
-        await fetchLiveAttendance(false);
+        fetchLiveAttendance(false);
         if (onAttendanceChanged) onAttendanceChanged();
       }
     } catch (err) {
@@ -173,7 +175,7 @@ export default function LiveAttendanceModal({
       const res = await fetch(`/api/admin/events/${eventId}/attendance-qr`, { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        await fetchLiveAttendance(false);
+        fetchLiveAttendance(false);
         if (onAttendanceChanged) onAttendanceChanged();
       }
     } catch (err) {
@@ -184,8 +186,62 @@ export default function LiveAttendanceModal({
   };
 
   const handleManualSpotMark = async (applicationId: string, studentId: string, status: "PRESENT" | "ABSENT") => {
+    const candidate = roster.find((c) => c.applicationId === applicationId || c.studentId === studentId);
+    const nowIso = new Date().toISOString();
+
+    // 1. INSTANT OPTIMISTIC LOCAL STATE UPDATE (<5ms)
+    setRoster((prev) =>
+      prev.map((c) => {
+        if (c.applicationId === applicationId || c.studentId === studentId) {
+          return {
+            ...c,
+            attendanceStatus: status,
+            isAttended: status === "PRESENT",
+            checkInTime: status === "PRESENT" ? nowIso : null,
+          };
+        }
+        return c;
+      })
+    );
+
+    // 2. INSTANT OPTIMISTIC STATS UPDATE
+    setStats((prev) => {
+      const deltaCheckedIn = status === "PRESENT" ? 1 : -1;
+      const newCheckedIn = Math.max(0, Math.min(prev.totalConfirmed, prev.totalCheckedIn + deltaCheckedIn));
+      const newMarkedPresent = Math.max(0, prev.markedPresent + deltaCheckedIn);
+      const newPending = Math.max(0, prev.totalConfirmed - newCheckedIn);
+      const newRate = prev.totalConfirmed > 0 ? Math.round((newCheckedIn / prev.totalConfirmed) * 100) : 0;
+      return {
+        ...prev,
+        totalCheckedIn: newCheckedIn,
+        markedPresent: newMarkedPresent,
+        pendingCheckIn: newPending,
+        turnoutRate: newRate,
+      };
+    });
+
+    // 3. INSTANT OPTIMISTIC FEED UPDATE
+    if (candidate && status === "PRESENT") {
+      setLiveFeed((prev) => [
+        {
+          id: `opt-${Date.now()}`,
+          studentName: candidate.name,
+          registrationNumber: candidate.registrationNumber,
+          status: "PRESENT",
+          checkInTime: nowIso,
+          remarks: "Admin Spot Check-In",
+        },
+        ...prev.slice(0, 19),
+      ]);
+    }
+
+    // 4. INSTANT SILENT PARENT NOTIFICATION (Zero Full Page Blocking)
+    if (onAttendanceChanged) {
+      onAttendanceChanged({ applicationId, studentId, status });
+    }
+
+    // 5. SILENT BACKGROUND SERVER SYNC
     try {
-      setActionLoadingId(applicationId);
       const res = await fetch(`/api/admin/events/${eventId}/attendance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -197,14 +253,15 @@ export default function LiveAttendanceModal({
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        await fetchLiveAttendance(false);
-        if (onAttendanceChanged) onAttendanceChanged();
+      if (!data.success) {
+        console.error("Attendance update failed on server:", data.message);
+        // Rollback on server error
+        fetchLiveAttendance(false);
       }
     } catch (err) {
-      console.error("Manual spot mark error:", err);
-    } finally {
-      setActionLoadingId(null);
+      console.error("Manual spot mark background sync error:", err);
+      // Rollback on network failure
+      fetchLiveAttendance(false);
     }
   };
 

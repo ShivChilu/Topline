@@ -245,9 +245,22 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
 
     if (!confirm(`Mark attendance as ${status} for ${selectedIds.length} selected students?`)) return;
 
+    const idsToUpdate = [...selectedIds];
+    const nowIso = new Date().toISOString();
+
+    // Optimistic UI update
+    setAttendance((prev) =>
+      prev.map((a) =>
+        idsToUpdate.includes(a.applicationId)
+          ? { ...a, status, checkInTime: status === "PRESENT" ? nowIso : a.checkInTime, remarks: "Bulk Admin Override" }
+          : a
+      )
+    );
+    setSelectedIds([]);
+
     try {
       await Promise.all(
-        selectedIds.map(async (id) => {
+        idsToUpdate.map(async (id) => {
           const item = attendance.find((a) => a.applicationId === id);
           if (item) {
             await fetch(`/api/admin/events/${eventId}/attendance`, {
@@ -263,18 +276,27 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
           }
         })
       );
-      alert("Bulk attendance updated successfully!");
-      setSelectedIds([]);
-      fetchAttendance();
+      fetchAttendance(true); // silent background refresh
     } catch (err) {
       console.error(err);
+      fetchAttendance(true);
     }
   };
 
   const handleManualMark = async (studentId: string, applicationId: string, status: string) => {
-    const remark = status === "ABSENT" ? "Reset to Absent" : prompt("Enter override remarks (e.g. QR not working, Manual select):", "Manual Override");
-    if (remark === null) return; // Cancelled
+    const remark = status === "ABSENT" ? "Reset to Absent" : "Admin Override";
+    const nowIso = new Date().toISOString();
 
+    // 1. Instant optimistic update (<5ms)
+    setAttendance((prev) =>
+      prev.map((a) =>
+        a.applicationId === applicationId || a.studentId === studentId
+          ? { ...a, status, checkInTime: status === "PRESENT" ? nowIso : a.checkInTime, remarks: remark }
+          : a
+      )
+    );
+
+    // 2. Silent background sync
     try {
       const res = await fetch(`/api/admin/events/${eventId}/attendance`, {
         method: "POST",
@@ -282,12 +304,13 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
         body: JSON.stringify({ studentId, applicationId, status, remarks: remark }),
       });
       const data = await res.json();
-      if (data.success) {
-        alert("Attendance status updated successfully!");
-        fetchAttendance();
+      if (!data.success) {
+        console.error("Failed to update attendance on server:", data.message);
       }
+      fetchAttendance(true); // silent background refresh
     } catch (err) {
       console.error(err);
+      fetchAttendance(true);
     }
   };
 

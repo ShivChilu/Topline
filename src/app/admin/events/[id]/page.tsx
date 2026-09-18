@@ -4042,8 +4042,27 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           eventDate={event?.date}
           reportingTime={event?.reportingTime}
           onClose={() => setIsLiveAttendanceModalOpen(false)}
-          onAttendanceChanged={() => {
-            fetchEventData(false);
+          onAttendanceChanged={(updatedApp) => {
+            if (updatedApp) {
+              setApplications((prev) =>
+                prev.map((app) => {
+                  if (app.id === updatedApp.applicationId || app.userId === updatedApp.studentId) {
+                    return {
+                      ...app,
+                      isAttended: updatedApp.status === "PRESENT" || updatedApp.status === "LATE",
+                      attendanceStatus: updatedApp.status,
+                      attendance: {
+                        ...(app.attendance || {}),
+                        attendanceStatus: updatedApp.status,
+                        checkInTime: new Date().toISOString(),
+                      },
+                    };
+                  }
+                  return app;
+                })
+              );
+            }
+            fetchEventData(true); // silent=true so no full-screen loading spinner
           }}
         />
       )}
