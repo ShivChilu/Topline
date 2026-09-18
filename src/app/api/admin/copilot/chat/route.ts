@@ -64,18 +64,17 @@ export async function POST(req: Request) {
     // 3. Initialize Groq SDK
     const groq = new Groq({ apiKey });
 
-    // Active, production-ready chat & function-calling models on Groq
+    // Active production models on Groq
     const CANDIDATE_MODELS = [
       process.env.GROQ_MODEL,
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
-      "llama-3.2-3b-preview",
-      "llama-3.2-1b-preview",
-      "qwen-2.5-32b",
     ].filter(Boolean) as string[];
 
     const createCompletionWithFallback = async (params: any) => {
-      let lastErr: any = null;
+      const modelErrors: string[] = [];
+
+      // 1. Try candidates with full function tools
       for (const candidate of CANDIDATE_MODELS) {
         try {
           const res = await groq.chat.completions.create({
@@ -84,11 +83,31 @@ export async function POST(req: Request) {
           });
           return res;
         } catch (err: any) {
-          lastErr = err;
-          console.warn(`[AdminCopilot] Model ${candidate} failed: ${err?.message || err}. Trying next candidate...`);
+          const msg = err?.message || JSON.stringify(err);
+          console.warn(`[AdminCopilot] Model ${candidate} with tools failed: ${msg}`);
+          modelErrors.push(`${candidate}: ${msg}`);
         }
       }
-      throw lastErr || new Error("Unable to connect to Groq AI service. Please check your API key and model access.");
+
+      // 2. If function tool execution rejected on simple queries, try standard conversational completion
+      if (params.tools && params.tools.length > 0) {
+        for (const candidate of CANDIDATE_MODELS) {
+          try {
+            console.warn(`[AdminCopilot] Retrying ${candidate} as direct chat completion...`);
+            const res = await groq.chat.completions.create({
+              messages: params.messages,
+              model: candidate,
+              temperature: 0.3,
+              max_tokens: params.max_tokens || 2048,
+            });
+            return res;
+          } catch (noToolErr: any) {
+            console.warn(`[AdminCopilot] Direct chat retry failed on ${candidate}: ${noToolErr?.message}`);
+          }
+        }
+      }
+
+      throw new Error(`AI model connection failed: ${modelErrors.join(" | ")}`);
     };
 
     // 4. Construct Message Chain

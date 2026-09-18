@@ -9,7 +9,12 @@ export const COPILOT_TOOLS: ChatCompletionTool[] = [
       description: "Get real-time dashboard statistics: total students, approved/selected count, pending review count, active events, total applications, attended count, open broadcasts, and recent activity.",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          includeRecentActivity: {
+            type: "boolean",
+            description: "Whether to include recent events & activity log in the metrics overview (default: true).",
+          },
+        },
       },
     },
   },
