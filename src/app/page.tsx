@@ -205,15 +205,15 @@ export default async function HomePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
                   <Gift className="w-3.5 h-3.5" />
-                  ₹25 Cash Reward
+                  Up to ₹150 Cash Reward
                 </span>
                 <span className="text-xs font-bold text-purple-200">Topline Student Referral Program</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-white">
-                Hey {unactivatedReferralUser.name}, Earn ₹25 for Every Friend You Refer!
+                Hey {unactivatedReferralUser.name}, Earn Up to ₹150 for Every Friend You Refer!
               </h3>
               <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
-                You haven&apos;t created your referral code yet. Activate your code in your profile to start inviting college batchmates and get ₹25 deposited directly to your UPI ID when they complete their first event work.
+                You haven&apos;t created your referral code yet. Activate your code in your profile to start inviting college batchmates and get up to ₹150 deposited directly to your UPI ID when they complete their first event work.
               </p>
             </div>
 
@@ -221,7 +221,7 @@ export default async function HomePage() {
               href="/profile"
               className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-6 py-3 rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shrink-0 flex items-center gap-2 active:scale-95 whitespace-nowrap relative z-10"
             >
-              <span>Activate Referral Code (Earn ₹25)</span>
+              <span>Activate Referral Code (Earn Up to ₹150)</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

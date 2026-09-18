@@ -1179,3 +1179,237 @@ export async function sendPasswordResetEmail({
     return { success: false, message: error.message };
   }
 }
+
+/**
+ * Admin Notification Email: Triggered when a referred student completes their 1st event shift
+ */
+export async function sendReferralCompletedAdminAlert({
+  referrerName,
+  referrerEmail,
+  referrerPhone,
+  referrerUpi,
+  refereeName,
+  refereePhone,
+  refereeEmail,
+  eventName,
+  rewardAmount,
+}: {
+  referrerName: string;
+  referrerEmail?: string | null;
+  referrerPhone?: string | null;
+  referrerUpi?: string | null;
+  refereeName: string;
+  refereePhone?: string | null;
+  refereeEmail?: string | null;
+  eventName: string;
+  rewardAmount: number;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    // 1. Determine admin recipients (all active ADMIN/SUPERADMIN users or fallbacks)
+    const admins = await prisma.user.findMany({
+      where: {
+        role: { in: ["ADMIN", "SUPERADMIN"] },
+        isActive: true,
+        email: { not: null },
+      },
+      select: { email: true, name: true },
+    });
+
+    const recipientEmails = admins.map((a) => a.email!).filter(Boolean);
+    if (recipientEmails.length === 0) {
+      // Fallback admin email if no DB admin email configured
+      const fallback = process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER || "contact@toplinecatering.com";
+      recipientEmails.push(fallback);
+    }
+
+    const subject = `💰 Referral Milestone Completed: ₹${rewardAmount} for ${referrerName}`;
+    const adminReferralsUrl = `${getAppBaseUrl()}/admin/referrals`;
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { background: #ED0000; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: 1.5px; }
+        .content { padding: 30px 24px; }
+        .badge { display: inline-block; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 16px; }
+        .reward-card { background: #0f172a; border: 2px solid #8b5cf6; border-radius: 14px; padding: 20px; margin: 20px 0; text-align: center; }
+        .reward-amt { font-size: 32px; font-weight: 900; color: #facc15; margin: 6px 0; }
+        .details-table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13px; }
+        .details-table td { padding: 8px 10px; border-bottom: 1px solid #1f2937; }
+        .details-table td:first-child { color: #9ca3af; font-weight: 600; width: 40%; }
+        .details-table td:last-child { color: #f3f4f6; font-weight: 700; }
+        .btn { display: inline-block; background: #8b5cf6; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 800; font-size: 14px; margin: 16px 0; text-align: center; }
+        .footer { padding: 18px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE ODC ADMIN ALERT</h1>
+        </div>
+        <div class="content">
+          <div class="badge">🎁 REFERRAL REWARD UNLOCKED</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 19px;">Referral Milestone Completed</h2>
+          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 14px 0;">
+            A student has completed their first event work with verified attendance, qualifying their referrer for a cash reward payout.
+          </p>
+
+          <div class="reward-card">
+            <div style="font-size: 12px; font-weight: 700; color: #c4b5fd; text-transform: uppercase;">Unlocked Reward</div>
+            <div class="reward-amt">₹${rewardAmount}</div>
+            <div style="font-size: 12px; color: #94a3b8;">Pending Offline Settlement</div>
+          </div>
+
+          <table class="details-table">
+            <tr>
+              <td>Student Referrer:</td>
+              <td>${referrerName} ${referrerPhone ? `(${referrerPhone})` : ""}</td>
+            </tr>
+            <tr>
+              <td>Referrer Email:</td>
+              <td>${referrerEmail || "N/A"}</td>
+            </tr>
+            <tr>
+              <td>Payout UPI ID:</td>
+              <td style="color: #6ee7b7; font-family: monospace;">${referrerUpi || "⚠️ Not added yet (Profile)"}</td>
+            </tr>
+            <tr>
+              <td>Friend (Referee):</td>
+              <td>${refereeName} ${refereePhone ? `(${refereePhone})` : ""}</td>
+            </tr>
+            <tr>
+              <td>Qualifying Event:</td>
+              <td>${eventName}</td>
+            </tr>
+          </table>
+
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="${adminReferralsUrl}" class="btn" style="color: #ffffff;">Open Referrals Dashboard & Settle Payout</a>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC Admin Automation.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    // Send alert to all admin recipients
+    let lastResult = { success: true };
+    for (const email of recipientEmails) {
+      lastResult = await sendEmail({
+        to: email,
+        subject,
+        html: htmlContent,
+      });
+    }
+
+    return lastResult;
+  } catch (error: any) {
+    console.error("Failed to send referral completion admin alert:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Student Referrer Email: Triggered when their referred friend attends their first event
+ */
+export async function sendReferralCompletedStudentAlert({
+  referrerName,
+  referrerEmail,
+  referrerUpi,
+  refereeName,
+  eventName,
+  rewardAmount,
+}: {
+  referrerName: string;
+  referrerEmail: string;
+  referrerUpi?: string | null;
+  refereeName: string;
+  eventName: string;
+  rewardAmount: number;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!referrerEmail) {
+      return { success: false, message: "No email address provided for student referrer." };
+    }
+
+    const subject = `🎉 Referral Reward Unlocked: ₹${rewardAmount} for inviting ${refereeName}!`;
+    const profileUrl = `${getAppBaseUrl()}/profile`;
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { background: linear-gradient(135deg, #7c3aed, #4f46e5); padding: 26px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 30px 24px; text-align: center; }
+        .badge { display: inline-block; background: rgba(250, 204, 21, 0.15); border: 1px solid #facc15; color: #fde047; padding: 6px 16px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 18px; }
+        .reward-card { background: #0f172a; border: 2px dashed #8b5cf6; border-radius: 14px; padding: 22px; margin: 20px 0; }
+        .reward-amt { font-size: 38px; font-weight: 900; color: #facc15; margin: 8px 0; }
+        .upi-box { background: #1e293b; border-radius: 10px; padding: 12px; margin: 16px 0; font-size: 13px; text-align: left; }
+        .btn { display: inline-block; background: #7c3aed; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 14px; margin: 16px 0; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4); text-align: center; }
+        .footer { padding: 18px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE STUDENT REWARDS</h1>
+        </div>
+        <div class="content">
+          <div class="badge">🎉 REWARD READY FOR PAYOUT</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 20px;">Congratulations, ${referrerName || "Topline Partner"}!</h2>
+          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 16px 0;">
+            Your friend <strong style="color: #ffffff;">${refereeName}</strong> has successfully completed their first event shift at <strong style="color: #ffffff;">${eventName}</strong>!
+          </p>
+
+          <div class="reward-card">
+            <div style="font-size: 12px; font-weight: 700; color: #c4b5fd; text-transform: uppercase;">Your Unlocked Bonus</div>
+            <div class="reward-amt">₹${rewardAmount}</div>
+            <div style="font-size: 12px; color: #94a3b8;">Approved & Queued for UPI Transfer</div>
+          </div>
+
+          <div class="upi-box">
+            <div style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">Payout Destination UPI:</div>
+            <div style="color: #6ee7b7; font-family: monospace; font-size: 14px; font-weight: 700; margin-top: 4px;">
+              ${referrerUpi ? referrerUpi : "⚠️ No UPI ID found! Please add your UPI ID in profile."}
+            </div>
+          </div>
+
+          <div>
+            <a href="${profileUrl}" class="btn" style="color: #ffffff;">View My Referral Earnings</a>
+          </div>
+
+          <p style="color: #9ca3af; font-size: 12px; line-height: 1.6; margin-top: 20px;">
+            Our administrative team will process your payment via UPI. Keep inviting your college friends to earn up to ₹150 for every verified friend!
+          </p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: referrerEmail,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send referral completion student email:", error);
+    return { success: false, message: error.message };
+  }
+}

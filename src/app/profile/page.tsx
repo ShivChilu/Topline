@@ -820,7 +820,7 @@ export default function StudentProfilePage() {
               }`}
             >
               <Gift className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span>Refer & Earn (₹25)</span>
+              <span>Refer & Earn (Up to ₹150)</span>
             </button>
 
             <button
@@ -1144,10 +1144,10 @@ export default function StudentProfilePage() {
                     <span className="text-xs font-bold text-purple-200">Topline Student Referral Program</span>
                   </div>
                   <h3 className="text-lg sm:text-xl font-black text-white">
-                    Refer Friends & Earn ₹25 Direct to UPI
+                    Refer Friends & Earn Up to ₹150 Direct to UPI
                   </h3>
                   <p className="text-xs text-purple-200/90 leading-relaxed">
-                    Invite your college classmates and friends. Earn ₹25 deposited directly into your UPI account for every friend who joins Topline and completes their first event.
+                    Invite your college classmates and friends. Earn up to ₹150 deposited directly into your UPI account for every friend who joins Topline and completes their first event.
                   </p>
                 </div>
 
@@ -1467,15 +1467,15 @@ export default function StudentProfilePage() {
                   <div className="flex items-center gap-2">
                     <span className="bg-amber-400 text-slate-950 font-black px-3 py-1 rounded-full text-xs uppercase tracking-wider shadow-sm flex items-center gap-1">
                       <Gift className="w-3.5 h-3.5" />
-                      ₹25 Instant Cash Reward
+                      Up to ₹150 Cash Reward
                     </span>
                     <span className="text-xs font-bold text-purple-200">Official Student Affiliate</span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                    Refer College Friends & Earn ₹25 Direct to UPI
+                    Refer College Friends & Earn Up to ₹150 Direct to UPI
                   </h2>
                   <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
-                    Invite your friends to work flexible catering events with Topline. Earn ₹25 for every friend who registers with your code and completes their first event work.
+                    Invite your friends to work flexible catering events with Topline. Earn up to ₹150 for every friend who registers with your code and completes their first event work.
                   </p>
                 </div>
 
@@ -1508,7 +1508,7 @@ export default function StudentProfilePage() {
                   </div>
                   <h3 className="text-xl font-black text-slate-900">Activate Your Personal Referral Link</h3>
                   <p className="text-xs text-slate-500">
-                    Enter your UPI ID so our admin team can transfer your ₹25 rewards directly to your bank account.
+                    Enter your UPI ID so our admin team can transfer your referral cash rewards directly to your bank account.
                   </p>
                 </div>
 
@@ -1655,7 +1655,7 @@ export default function StudentProfilePage() {
                         <li className="flex items-start gap-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
                           <div>
-                            <strong className="text-slate-800">Reward Qualification:</strong> The ₹25 referral bonus is unlocked once your referred friend completes registration with your code, applies for an event, and completes their first event work with verified attendance.
+                            <strong className="text-slate-800">Reward Qualification:</strong> The referral cash bonus (up to ₹150, minimum ₹20, as configured by Topline management) is unlocked once your referred friend completes registration with your code, applies for an event, and completes their first event work with verified attendance.
                           </div>
                         </li>
                         <li className="flex items-start gap-2">
@@ -1952,9 +1952,9 @@ export default function StudentProfilePage() {
                       <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm flex items-center justify-center">
                         3
                       </div>
-                      <h4 className="font-extrabold text-slate-900 text-sm">Receive ₹25 to UPI</h4>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Receive Cash to UPI</h4>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        ₹25 is credited to your dashboard and settled by the admin team directly to your registered UPI ID.
+                        Cash reward (up to ₹150) is credited to your dashboard and settled by the admin team directly to your registered UPI ID.
                       </p>
                     </div>
                   </div>
@@ -1979,7 +1979,7 @@ export default function StudentProfilePage() {
                       <Users className="w-10 h-10 text-slate-300 mx-auto" />
                       <p className="text-slate-700 font-bold text-sm">No referrals yet</p>
                       <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                        Share your referral code on WhatsApp or Instagram to invite friends and start earning ₹25 per friend!
+                        Share your referral code on WhatsApp or Instagram to invite friends and start earning up to ₹150 per friend!
                       </p>
                       <button
                         type="button"
@@ -2071,8 +2071,8 @@ export default function StudentProfilePage() {
                   <div className="space-y-2.5">
                     {[
                       {
-                        q: "When is my ₹25 reward credited?",
-                        a: "The ₹25 reward is unlocked and credited to your pending balance as soon as your invited friend signs up and completes their first confirmed event assignment with verified duty attendance.",
+                        q: "When is my referral cash reward credited?",
+                        a: "The referral reward (up to ₹150) is unlocked and credited to your pending balance as soon as your invited friend signs up and completes their first confirmed event assignment with verified duty attendance.",
                       },
                       {
                         q: "How are referral payouts transferred?",
@@ -2080,7 +2080,7 @@ export default function StudentProfilePage() {
                       },
                       {
                         q: "Is there any limit to how much I can earn?",
-                        a: "There is no cap or limit! You can invite as many college friends as you like and earn ₹25 for every friend who joins and attends their first event shift.",
+                        a: "There is no cap or limit! You can invite as many college friends as you like and earn up to ₹150 for every friend who joins and attends their first event shift.",
                       },
                       {
                         q: "What are the rules regarding fair referrals?",

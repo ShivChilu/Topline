@@ -254,15 +254,15 @@ export default async function OpportunitiesPage(props: {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
                   <Gift className="w-3.5 h-3.5" />
-                  Refer & Earn ₹25
+                  Refer & Earn Up to ₹150
                 </span>
                 <span className="text-xs font-bold text-purple-200">Invite College Batchmates</span>
               </div>
               <h3 className="text-lg sm:text-xl font-black text-white">
-                Earn ₹25 Cash by Referring Friends to Topline!
+                Earn Up to ₹150 Cash by Referring Friends to Topline!
               </h3>
               <p className="text-xs text-purple-200/90 leading-relaxed">
-                Want to work catering events with your friends? Activate your referral code in your profile to earn ₹25 direct to UPI for every friend who joins and completes their first event shift.
+                Want to work catering events with your friends? Activate your referral code in your profile to earn up to ₹150 direct to UPI for every friend who joins and completes their first event shift.
               </p>
             </div>
 

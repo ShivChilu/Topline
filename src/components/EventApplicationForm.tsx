@@ -427,14 +427,14 @@ export default function EventApplicationForm({
               <span>Bring Your Friends to this Event!</span>
             </div>
             <p className="text-purple-100 text-[11px] leading-relaxed">
-              Want to work events alongside your college friends? Activate your referral code in your profile to earn ₹25 direct to your UPI ID for every friend who joins & completes their first event!
+              Want to work events alongside your college friends? Activate your referral code in your profile to earn up to ₹150 direct to your UPI ID for every friend who joins &amp; completes their first event!
             </p>
             <div className="pt-1">
               <Link
                 href="/profile"
                 className="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3.5 py-1.5 rounded-lg text-xs uppercase tracking-wider transition shadow-sm"
               >
-                <span>Activate Referral Code (Earn ₹25)</span>
+                <span>Activate Referral Code (Earn Up to ₹150)</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -596,12 +596,12 @@ export default function EventApplicationForm({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="bg-amber-400 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <Gift className="w-3.5 h-3.5" />
-              Refer & Earn ₹25
+              Refer & Earn Up to ₹150
             </span>
             <span className="text-[11px] font-bold text-purple-200">Invite College Friends</span>
           </div>
           <p className="text-slate-300 text-[11px] leading-relaxed">
-            Want to work events with your batchmates? Activate your referral code in your profile to earn ₹25 direct to UPI when your friends join & complete their first event work!
+            Want to work events with your batchmates? Activate your referral code in your profile to earn up to ₹150 direct to UPI when your friends join &amp; complete their first event work!
           </p>
           <Link
             href="/profile"

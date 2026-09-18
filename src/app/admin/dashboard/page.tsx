@@ -83,7 +83,11 @@ export default async function AdminDashboardPage() {
     // Referral Metrics
     stats.totalReferrals = await prisma.referral.count();
     stats.qualifiedReferrals = await prisma.referral.count({ where: { status: "QUALIFIED" } });
-    stats.pendingReferralPayout = stats.qualifiedReferrals * 25;
+    const pendingReferralSum = await prisma.referral.aggregate({
+      where: { status: "QUALIFIED" },
+      _sum: { rewardAmount: true },
+    });
+    stats.pendingReferralPayout = pendingReferralSum._sum.rewardAmount || 0;
 
     // 2. Get recent & upcoming events with real registered application counts
     recentEvents = await prisma.event.findMany({

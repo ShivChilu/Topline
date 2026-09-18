@@ -166,7 +166,7 @@ export default function AdminReferralsPage() {
               Referrals & Offline Payouts
             </h1>
             <span className="bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider">
-              ₹{metrics.rewardPerReferral || 25} / Qualified Event
+              ₹{metrics.rewardPerReferral || 50} / Active Default
             </span>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
@@ -320,7 +320,7 @@ export default function AdminReferralsPage() {
               <>
                 <option value="ALL">All Statuses</option>
                 <option value="PENDING">PENDING (Awaiting 1st Event)</option>
-                <option value="QUALIFIED">QUALIFIED (₹25 Unlocked)</option>
+                <option value="QUALIFIED">QUALIFIED (Reward Unlocked)</option>
                 <option value="PAID">PAID (Settled)</option>
               </>
             )}
@@ -596,7 +596,7 @@ export default function AdminReferralsPage() {
                   <span className="text-xs text-slate-400 font-bold uppercase">Payable Amount</span>
                   <p className="text-2xl font-black text-emerald-600">₹{settlingReferrer.unpaidBalance}</p>
                   <p className="text-[10px] text-emerald-700 font-bold">
-                    {settlingReferrer.qualifiedCount} referral(s) × ₹25
+                    {settlingReferrer.qualifiedCount} eligible referral reward(s)
                   </p>
                 </div>
               </div>

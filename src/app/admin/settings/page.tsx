@@ -124,7 +124,7 @@ export default function AdminSettingsPage() {
       aboutText,
       dos,
       donts,
-      referralRewardAmount: Number(referralRewardAmount) > 0 ? Number(referralRewardAmount) : 25,
+      referralRewardAmount: Number(referralRewardAmount) >= 20 ? Number(referralRewardAmount) : 25,
     };
 
     try {
@@ -404,29 +404,29 @@ export default function AdminSettingsPage() {
               </h3>
             </div>
             <span className="text-[11px] font-bold text-purple-700 bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
-              Live Configuration
+              Min ₹20 • Up to ₹150+
             </span>
           </div>
           <p className="text-xs text-purple-800/80 leading-relaxed">
-            Set the cash bonus in Rupees awarded to a referrer student when their invited friend completes their 1st verified catering event duty.
+            Set the cash bonus in Rupees (minimum ₹20) awarded to a referrer student when their invited friend completes their 1st verified catering event duty. Students are advertised &quot;Earn up to ₹150&quot;.
           </p>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
             <div className="relative w-full sm:w-56">
               <span className="absolute left-3.5 top-2.5 text-sm font-black text-purple-700">₹</span>
               <input
                 type="number"
-                min="1"
+                min="20"
                 step="1"
                 required
                 value={referralRewardAmount}
                 onChange={(e) => setReferralRewardAmount(e.target.value)}
-                placeholder="25"
+                placeholder="50"
                 className="w-full bg-white border border-purple-300 rounded-xl pl-8 pr-3.5 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
               />
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
               <span className="font-bold text-purple-900">Quick presets:</span>
-              {[25, 50, 100, 150, 200].map((amt) => (
+              {[20, 25, 50, 75, 100, 150].map((amt) => (
                 <button
                   key={amt}
                   type="button"

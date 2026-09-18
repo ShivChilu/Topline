@@ -1,14 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { ReferralStatus } from "@prisma/client";
+import {
+  sendReferralCompletedAdminAlert,
+  sendReferralCompletedStudentAlert,
+} from "@/lib/email";
 
 /**
- * Standard referral reward amount in INR (₹)
+ * Minimum allowable referral reward amount in INR (₹)
+ */
+export const MIN_REFERRAL_REWARD = 20.0;
+
+/**
+ * Standard referral reward fallback amount in INR (₹)
  */
 export const DEFAULT_REFERRAL_REWARD = 25.0;
 
 /**
  * Dynamically fetches the active referral reward amount configured by the Admin in Settings.
- * Falls back to DEFAULT_REFERRAL_REWARD (25.0) if not configured.
+ * Enforces a minimum of ₹20. Falls back to DEFAULT_REFERRAL_REWARD if not configured.
  */
 export async function getActiveReferralRewardAmount(): Promise<number> {
   try {
@@ -17,7 +26,8 @@ export async function getActiveReferralRewardAmount(): Promise<number> {
     });
     if (config?.value && typeof config.value === "object" && "referralRewardAmount" in (config.value as any)) {
       const val = Number((config.value as any).referralRewardAmount);
-      if (!isNaN(val) && val > 0) return val;
+      if (!isNaN(val) && val >= MIN_REFERRAL_REWARD) return val;
+      if (!isNaN(val) && val > 0) return Math.max(MIN_REFERRAL_REWARD, val);
     }
   } catch (err) {
     console.error("Error fetching dynamic referral reward amount:", err);
@@ -58,7 +68,8 @@ export async function generateUniqueReferralCode(name: string): Promise<string> 
 /**
  * Qualification Trigger Engine (Zero Loopholes):
  * Checks if a student (referee) who just marked/completed attendance was referred by someone.
- * If this is their FIRST attended event and they have a PENDING referral, it unlocks the ₹25 reward!
+ * If this is their FIRST attended event and they have a PENDING referral, it unlocks the reward
+ * and sends email notifications to both the Admin and the Student Referrer.
  */
 export async function processReferralQualification(refereeUserId: string, eventId: string) {
   if (!refereeUserId) return null;
@@ -73,6 +84,9 @@ export async function processReferralQualification(refereeUserId: string, eventI
       include: {
         referrer: {
           select: { id: true, name: true, phone: true, email: true, upiId: true },
+        },
+        referee: {
+          select: { id: true, name: true, phone: true, email: true },
         },
       },
     });
@@ -94,20 +108,69 @@ export async function processReferralQualification(refereeUserId: string, eventI
       return null;
     }
 
-    // 4. Atomically transition referral status to QUALIFIED
+    // 4. Determine final reward amount (snapshotted reward or current active reward)
+    const activeReward = await getActiveReferralRewardAmount();
+    const finalRewardAmount =
+      pendingReferral.rewardAmount && pendingReferral.rewardAmount >= MIN_REFERRAL_REWARD
+        ? pendingReferral.rewardAmount
+        : activeReward;
+
+    // 5. Fetch qualifying event details for email reporting
+    let eventName = "Catering Event Duty";
+    if (eventId) {
+      const eventRecord = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { name: true },
+      });
+      if (eventRecord?.name) {
+        eventName = eventRecord.name;
+      }
+    }
+
+    // 6. Atomically transition referral status to QUALIFIED
     const updatedReferral = await prisma.referral.update({
       where: { id: pendingReferral.id },
       data: {
         status: ReferralStatus.QUALIFIED,
         qualifyingEventId: eventId || null,
         qualifiedAt: new Date(),
-        rewardAmount: DEFAULT_REFERRAL_REWARD,
+        rewardAmount: finalRewardAmount,
       },
     });
 
     console.log(
-      `[Referral System] Qualified referral ${updatedReferral.id}: Referee ${refereeUserId} completed 1st event ${eventId}. Reward ₹${DEFAULT_REFERRAL_REWARD} unlocked for Referrer ${pendingReferral.referrerId}`
+      `[Referral System] Qualified referral ${updatedReferral.id}: Referee ${refereeUserId} completed 1st event ${eventId}. Reward ₹${finalRewardAmount} unlocked for Referrer ${pendingReferral.referrerId}`
     );
+
+    // 7. Dispatch Email Notifications (Non-blocking)
+    // 7A: Notify Admin team to process the reward payment
+    sendReferralCompletedAdminAlert({
+      referrerName: pendingReferral.referrer.name || "Student Partner",
+      referrerEmail: pendingReferral.referrer.email,
+      referrerPhone: pendingReferral.referrer.phone,
+      referrerUpi: pendingReferral.referrer.upiId,
+      refereeName: pendingReferral.referee.name || "Referred Student",
+      refereePhone: pendingReferral.referee.phone,
+      refereeEmail: pendingReferral.referee.email,
+      eventName,
+      rewardAmount: finalRewardAmount,
+    }).catch((err) => {
+      console.error("[Referral System] Error sending admin referral alert email:", err);
+    });
+
+    // 7B: Notify Student Referrer about their unlocked reward
+    if (pendingReferral.referrer.email) {
+      sendReferralCompletedStudentAlert({
+        referrerName: pendingReferral.referrer.name || "Student Partner",
+        referrerEmail: pendingReferral.referrer.email,
+        referrerUpi: pendingReferral.referrer.upiId,
+        refereeName: pendingReferral.referee.name || "Your Friend",
+        eventName,
+        rewardAmount: finalRewardAmount,
+      }).catch((err) => {
+        console.error("[Referral System] Error sending student referral reward email:", err);
+      });
+    }
 
     return {
       qualified: true,

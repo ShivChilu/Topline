@@ -166,7 +166,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Referral program activated successfully! Share your link to start earning ₹25 per friend.",
+      message: "Referral program activated successfully! Share your link to start earning up to ₹150 per friend.",
       user: {
         ...updatedUser,
         hasCode: true,
