@@ -165,17 +165,17 @@ export default async function OpportunitiesPage(props: {
       <div className="absolute top-[50%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
 
       <Navbar />
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full space-y-8">
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full space-y-6 sm:space-y-8">
         {/* Page Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold uppercase tracking-wider">
+        <div className="text-center space-y-1.5 sm:space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-red-600" />
             Topline Catering Assignments
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 uppercase tracking-wider">
-            Available Events & Opportunities
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Available Events &amp; Opportunities
           </h1>
-          <p className="text-sm text-slate-500 max-w-2xl mx-auto">
+          <p className="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto">
             Explore verified five-star hotel catering, banquet steward shifts, and luxury hospitality opportunities across the region.
           </p>
         </div>

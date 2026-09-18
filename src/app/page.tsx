@@ -143,21 +143,23 @@ export default async function HomePage() {
 
       {/* Top Urgent Recruitment Announcement Bar */}
       {heroFeaturedEvent && (
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-2.5 px-4 text-xs sm:text-sm font-extrabold shadow-md relative z-40 border-b border-red-700">
-          <div className="max-w-7xl mx-auto flex items-center justify-center text-center gap-2 sm:gap-3 flex-wrap">
-            <span className="bg-white text-red-700 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-xs flex items-center gap-1">
-              <Flame className="w-3.5 h-3.5 text-red-600" />
-              <span>Urgent Hiring</span>
-            </span>
-            <span className="text-white/95">
-              <strong>{heroFeaturedEvent.name}</strong> • {heroFeaturedEvent.workType} • ₹{heroFeaturedEvent.paymentPerStudent}/shift
-            </span>
+        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-2 px-3 sm:py-2.5 sm:px-4 text-xs font-bold shadow-md relative z-40 border-b border-red-700">
+          <div className="max-w-7xl mx-auto flex items-center justify-between sm:justify-center text-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="bg-white text-red-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
+                <Flame className="w-3 h-3 text-red-600" />
+                <span>Urgent</span>
+              </span>
+              <span className="text-white text-xs truncate">
+                <strong>{heroFeaturedEvent.name}</strong> • ₹{heroFeaturedEvent.paymentPerStudent}/shift
+              </span>
+            </div>
             <Link
               href={`/events/${heroFeaturedEvent.id}`}
-              className="bg-white hover:bg-slate-100 text-red-700 font-extrabold px-3 py-1 rounded-lg text-xs transition inline-flex items-center gap-1 shadow-xs ml-1"
+              className="bg-white hover:bg-slate-100 text-red-700 font-black px-2.5 py-1 rounded-lg text-[11px] transition inline-flex items-center gap-1 shadow-xs shrink-0"
             >
-              <span>Apply Now</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Apply</span>
+              <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
         </div>
@@ -167,28 +169,28 @@ export default async function HomePage() {
 
       {/* Hero Slideshow Section */}
       <HeroSlideshow headline={homeContent.headline} subheadline={homeContent.subheadline}>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[420px] sm:max-w-none mx-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 w-full max-w-[420px] sm:max-w-none mx-auto">
           {heroFeaturedEvent ? (
             <Link
               href={`/events/${heroFeaturedEvent.id}`}
-              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-black shadow-lg shadow-red-600/30 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border"
+              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md shadow-red-600/30 hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
             >
               <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
               <span>Apply for {heroFeaturedEvent.name} (₹{heroFeaturedEvent.paymentPerStudent})</span>
-              <ArrowRight className="w-5 h-5 shrink-0" />
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </Link>
           ) : (
             <Link
               href="/opportunities"
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 box-border"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
             >
               <span>Upcoming Events</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4" />
             </Link>
           )}
           <Link
             href="/opportunities"
-            className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center box-border"
+            className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-bold border border-slate-200 shadow-xs transition-all duration-300 flex items-center justify-center box-border active:scale-95"
           >
             Browse All Events
           </Link>
@@ -197,63 +199,63 @@ export default async function HomePage() {
 
       {/* Dynamic Referral Program Spotlight for Signed-In Students Without Referral Code */}
       {unactivatedReferralUser && (
-        <section className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 -mt-6 sm:-mt-8 mb-8 relative z-20 w-full box-border">
-          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-purple-500/40 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5 w-full box-border">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 sm:-mt-6 mb-6 sm:mb-10 relative z-20 w-full box-border">
+          <div className="bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-purple-500/40 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-3.5 sm:gap-5 w-full box-border">
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-500/20 via-indigo-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
 
-            <div className="space-y-2 max-w-2xl relative z-10 w-full min-w-0">
+            <div className="space-y-1.5 sm:space-y-2 max-w-2xl relative z-10 w-full min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                  <Gift className="w-3.5 h-3.5 shrink-0" />
+                  <Gift className="w-3 h-3 shrink-0" />
                   Up to ₹150 Cash Reward
                 </span>
-                <span className="text-[11px] sm:text-xs font-bold text-purple-200">Topline Student Referral Program</span>
+                <span className="text-[11px] sm:text-xs font-bold text-purple-200">Student Referral Program</span>
               </div>
-              <h3 className="text-base sm:text-2xl font-black text-white leading-snug break-words">
+              <h3 className="text-sm sm:text-xl md:text-2xl font-black text-white leading-snug break-words">
                 Hey {unactivatedReferralUser.name}, Earn Up to ₹150 for Every Friend You Refer!
               </h3>
-              <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed break-words">
-                You haven&apos;t created your referral code yet. Activate your code in your profile to start inviting college batchmates and get up to ₹150 deposited directly to your UPI ID when they complete their first event work.
+              <p className="text-xs sm:text-sm text-purple-100/90 leading-relaxed break-words">
+                Activate your custom code to invite batchmates. Get up to ₹150 deposited directly to your UPI when they complete their first event shift.
               </p>
             </div>
 
             <Link
               href="/profile"
-              className="w-full md:w-auto bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-5 py-3 rounded-xl sm:rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shrink-0 flex items-center justify-center gap-2 active:scale-95 text-center relative z-10 box-border"
+              className="w-full md:w-auto bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shrink-0 flex items-center justify-center gap-1.5 active:scale-95 text-center relative z-10 box-border"
             >
-              <span>Activate Referral Code (Earn Up to ₹150)</span>
+              <span>Activate Referral Code</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
             </Link>
           </div>
         </section>
       )}
 
-      {/* What We Provide Section */}
-      <section className="py-24 border-t border-slate-100 bg-white relative">
+      {/* What We Provide Section (App-Like 2-Col Mobile Grid, Rich Desktop Grid) */}
+      <section className="py-10 sm:py-16 md:py-20 border-t border-slate-100 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider uppercase">
-              <span className="gradient-text">What We Provide</span>
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="text-red-600 text-xs font-extrabold uppercase tracking-wider">Topline Services</span>
+            <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+              What We Provide
             </h2>
-            <p className="mt-4 text-slate-500 max-w-2xl mx-auto text-lg font-sans">
-              Tailored event crew staffing solutions built on professional standard criteria.
+            <p className="mt-1.5 sm:mt-2 text-slate-500 max-w-xl mx-auto text-xs sm:text-base font-sans">
+              Tailored event crew staffing solutions built on professional hospitality criteria.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
             {defaultServices.map((service, idx) => (
               <div
                 key={idx}
-                className="light-panel p-8 rounded-2xl flex flex-col relative overflow-hidden group"
+                className="bg-slate-50/60 hover:bg-white p-3.5 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col relative overflow-hidden group"
               >
-                {/* Accent line & soft glow */}
-                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
-                <div className="absolute -top-10 -right-10 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition-colors duration-300"></div>
-
-                <div className="w-12 h-12 bg-red-650/10 rounded-xl flex items-center justify-center border border-red-600/20 mb-6 relative z-10">
-                  {service.icon}
+                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-red-600/10 rounded-lg sm:rounded-xl flex items-center justify-center border border-red-600/20 mb-2.5 sm:mb-4 shrink-0">
+                  <div className="scale-75 sm:scale-100">{service.icon}</div>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 relative z-10">{service.name}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed flex-grow font-sans relative z-10">{service.desc}</p>
+                <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-1 leading-snug">{service.name}</h3>
+                <p className="text-slate-500 text-[11px] sm:text-sm leading-relaxed flex-grow font-sans line-clamp-2 sm:line-clamp-none">
+                  {service.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -261,95 +263,89 @@ export default async function HomePage() {
       </section>
 
       {/* Latest Opportunities Section */}
-      <section className="py-24 bg-slate-50 border-t border-slate-150 relative">
+      <section className="py-10 sm:py-16 md:py-20 bg-slate-50/80 border-t border-slate-200/80 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
+          <div className="flex items-center justify-between mb-6 sm:mb-10">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider uppercase">
-                <span className="gradient-text">Upcoming Events</span>
+              <span className="text-red-600 text-xs font-extrabold uppercase tracking-wider">Student Recruitment</span>
+              <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
+                Upcoming Events
               </h2>
-              <p className="mt-2 text-slate-500 text-lg">
-                High-paying catering and hospitality slots currently recruiting students.
-              </p>
             </div>
             <Link
               href="/opportunities"
-              className="mt-4 md:mt-0 flex items-center space-x-2 text-red-600 hover:text-red-700 font-bold transition duration-300"
+              className="text-red-600 hover:text-red-700 font-bold text-xs sm:text-sm flex items-center gap-1 transition"
             >
-              <span>See All Upcoming Events</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>View All</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {activeEvents.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-slate-500 text-lg">No active student recruitment forms open at this time.</p>
-              <p className="text-slate-400 text-sm mt-1">Check back later or join the WhatsApp group.</p>
+            <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 shadow-xs">
+              <p className="text-slate-500 text-sm sm:text-base font-bold">No active recruitment forms open right now.</p>
+              <p className="text-slate-400 text-xs mt-1">Check back soon or join our student WhatsApp group.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {activeEvents.map((event: any) => {
                 const isOpen = event.status === "OPEN";
                 return (
                   <div
                     key={event.id}
-                    className={`rounded-2xl overflow-hidden flex flex-col justify-between relative group transition-all duration-300 ${
+                    className={`rounded-2xl overflow-hidden flex flex-col justify-between relative bg-white border transition-all duration-300 ${
                       isOpen
-                        ? "bg-white border-2 border-red-500/80 shadow-md ring-4 ring-red-500/10 hover:shadow-xl transform hover:-translate-y-1"
-                        : "light-panel shadow-sm hover:shadow-md"
+                        ? "border-red-400/80 shadow-md ring-2 ring-red-500/10 hover:shadow-lg"
+                        : "border-slate-200 shadow-xs hover:shadow-md"
                     }`}
                   >
-                    {/* Left accent bar on hover */}
-                    <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
-                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition-colors duration-300"></div>
-
-                    <div className="p-6 relative z-10">
+                    <div className="p-4 sm:p-6 relative z-10">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span
-                          className={`text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider ${
+                          className={`text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                             isOpen
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1.5"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1"
                               : "bg-slate-100 text-slate-700 border border-slate-200"
                           }`}
                         >
-                          {isOpen && <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                          {isOpen && <CheckCircle className="w-3 h-3 text-emerald-600 shrink-0" />}
                           {isOpen ? "Hiring Active" : event.status}
                         </span>
                         {event.workType && (
-                          <span className="text-[11px] font-bold text-slate-500 uppercase">
+                          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase">
                             {event.workType}
                           </span>
                         )}
                       </div>
-                      <h3 className="mt-4 text-xl font-bold text-slate-900 hover:text-red-700 transition duration-300">
+                      <h3 className="mt-3 text-base sm:text-xl font-bold text-slate-900 hover:text-red-700 transition leading-snug">
                         <Link href={`/events/${event.id}`}>{event.name}</Link>
                       </h3>
-                      <p className="mt-2 text-sm text-slate-500 line-clamp-2">{event.description}</p>
-                      <div className="mt-6 space-y-3.5 text-sm text-slate-600 font-medium">
-                        <div className="flex items-center space-x-2.5">
-                          <Calendar className="w-4 h-4 text-red-600" />
+                      <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">{event.description}</p>
+                      <div className="mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-medium">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-3.5 h-3.5 text-red-600 shrink-0" />
                           <span>{new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
                         </div>
-                        <div className="flex items-center space-x-2.5">
-                          <MapPin className="w-4 h-4 text-red-600" />
-                          <span>{event.location}</span>
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                          <span className="truncate">{event.location}</span>
                         </div>
-                        <div className="flex items-center space-x-2.5">
-                          <Clock className="w-4 h-4 text-red-600" />
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-3.5 h-3.5 text-red-600 shrink-0" />
                           <span>Reporting: {formatTime12(event.reportingTime)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="bg-slate-50/75 px-6 py-5 flex items-center justify-between border-t border-slate-100 relative z-10">
+                    <div className="bg-slate-50/80 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between border-t border-slate-100 relative z-10">
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Per Student Pay</p>
-                        <p className="text-xl font-extrabold text-red-600 font-mono">₹{event.paymentPerStudent}</p>
+                        <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Per Student Pay</p>
+                        <p className="text-lg sm:text-xl font-black text-red-600 font-mono">₹{event.paymentPerStudent}</p>
                       </div>
                       <Link
                         href={`/events/${event.id}`}
-                        className={`text-xs font-extrabold px-5 py-2.5 rounded-xl shadow-sm transition duration-300 flex items-center gap-1 ${
+                        className={`text-xs font-extrabold px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl shadow-xs transition flex items-center gap-1 active:scale-95 ${
                           isOpen
-                            ? "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-red-600/20"
+                            ? "bg-red-600 hover:bg-red-700 text-white shadow-red-600/20"
                             : "bg-slate-200 hover:bg-slate-300 text-slate-700"
                         }`}
                       >
@@ -365,22 +361,26 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it Works Summary */}
-      <section className="py-24 border-t border-slate-100 bg-white">
+      {/* How it Works Summary (Compact 2x2 on Mobile, 4-Col on Desktop) */}
+      <section className="py-10 sm:py-16 md:py-20 border-t border-slate-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-red-700 uppercase mb-16">
-            Process For Students
+          <span className="text-red-600 text-xs font-extrabold uppercase tracking-wider">How It Works</span>
+          <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1 mb-6 sm:mb-10">
+            Simple 4-Step Process for Students
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
             {[
-              { title: "1. Browse Slots", desc: "Find open hospitality events matching your free dates." },
-              { title: "2. Submit Form", desc: "Fill out the registration details to submit your application." },
-              { title: "3. Check-In & Work", desc: "Confirm selection, wear uniforms, scan attendance QR code." },
-              { title: "4. Fast Payout", desc: "Complete work shifts, verify checkout, and get paid." },
-            ].map((step, idx) => (
-              <div key={idx} className="light-panel p-6 rounded-2xl flex flex-col items-center text-center">
-                <h3 className="text-red-700 font-extrabold text-lg mb-2">{step.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
+              { step: "01", title: "Browse Slots", desc: "Find open catering & hospitality shifts matching your schedule." },
+              { step: "02", title: "Submit Form", desc: "Fill basic details & college ID to register your application." },
+              { step: "03", title: "Attend & Check-In", desc: "Confirm selection, wear uniform, scan QR attendance." },
+              { step: "04", title: "Direct Payout", desc: "Complete event duty and get paid straight to your bank/UPI." },
+            ].map((item, idx) => (
+              <div key={idx} className="bg-slate-50/60 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 flex flex-col items-center text-center">
+                <span className="w-7 h-7 sm:w-8 sm:h-8 bg-red-600 text-white rounded-full flex items-center justify-center font-mono font-black text-xs sm:text-sm mb-2 sm:mb-3 shadow-xs">
+                  {item.step}
+                </span>
+                <h3 className="text-slate-900 font-bold text-xs sm:text-base mb-1">{item.title}</h3>
+                <p className="text-slate-500 text-[11px] sm:text-xs leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -388,54 +388,54 @@ export default async function HomePage() {
       </section>
 
       {/* Why TOPLINE Section */}
-      <section className="py-24 border-t border-slate-100 bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="py-10 sm:py-16 md:py-20 border-t border-slate-100 bg-slate-50/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
           <div>
-            <span className="text-red-800 text-sm font-extrabold tracking-widest uppercase">
+            <span className="text-red-600 text-xs font-extrabold tracking-wider uppercase">
               Partnership & Quality
             </span>
-            <h2 className="mt-2 text-3xl sm:text-4xl font-display font-extrabold tracking-wider text-slate-900 uppercase">
+            <h2 className="mt-1 text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               Why Hotels & Resorts Choose TOPLINE
             </h2>
-            <p className="mt-4 text-slate-500 leading-relaxed font-sans">
-              We eliminate the stress of manual hiring coordination. Our system provides automated registration tracking, real-time application limit configurations, duplicate checks, digital verification records, and automated check-ins.
+            <p className="mt-2.5 text-slate-500 leading-relaxed text-xs sm:text-base font-sans">
+              We eliminate the stress of manual hiring coordination. Our system provides automated registration tracking, pre-screened student staff, and instant attendance check-ins.
             </p>
-            <div className="mt-8 space-y-4">
+            <div className="mt-5 sm:mt-8 space-y-3 sm:space-y-4">
               {[
-                { title: "Pre-Screened Students", desc: "We only verify students with clean history records and valid college ID cards." },
+                { title: "Pre-Screened Students", desc: "We verify students with clean history records and valid college ID cards." },
                 { title: "Strict Grooming & Conduct", desc: "Strictly enforced dress codes and professional behavior guidelines." },
-                { title: "Automated Attendance & Payments", desc: "Digital check-in tracking prevents payroll errors and time theft." },
+                { title: "Automated Attendance & QR Check-Ins", desc: "Digital check-in tracking prevents payroll errors and time theft." },
               ].map((item, idx) => (
-                <div key={idx} className="flex items-start space-x-3">
-                  <Shield className="text-red-700 w-5 h-5 mt-1 flex-shrink-0" />
+                <div key={idx} className="flex items-start space-x-2.5 sm:space-x-3">
+                  <Shield className="text-red-600 w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h4 className="font-bold text-slate-900">{item.title}</h4>
-                    <p className="text-sm text-slate-500">{item.desc}</p>
+                    <h4 className="font-bold text-xs sm:text-sm text-slate-900">{item.title}</h4>
+                    <p className="text-[11px] sm:text-xs text-slate-500">{item.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
             {galleryImages.length > 0 ? (
               galleryImages.map((img: any) => (
-                <div key={img.id} className="h-48 relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                <div key={img.id} className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 shadow-xs">
                   <img src={img.imageUrl} alt={img.caption || ""} className="object-cover w-full h-full" />
                 </div>
               ))
             ) : (
               <>
-                <div className="h-48 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                  <Utensils className="text-slate-300 w-8 h-8" />
+                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
+                  <Utensils className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <div className="h-48 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                  <Gem className="text-slate-300 w-8 h-8" />
+                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
+                  <Gem className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <div className="h-48 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                  <Users className="text-slate-300 w-8 h-8" />
+                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
+                  <Users className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <div className="h-48 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                  <Award className="text-slate-300 w-8 h-8" />
+                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
+                  <Award className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
               </>
             )}
@@ -444,18 +444,18 @@ export default async function HomePage() {
       </section>
 
       {/* Contact CTA Section */}
-      <section className="py-24 border-t border-slate-100 bg-white">
+      <section className="py-10 sm:py-16 md:py-20 border-t border-slate-100 bg-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 uppercase tracking-wider">
-            Ready to partner with TOPLINE?
+          <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Ready to Partner with TOPLINE?
           </h2>
-          <p className="mt-4 text-slate-500 max-w-xl mx-auto text-lg">
-            Get in touch to deploy reliable student crews at your luxury hotel, catering event, or resort. Or view our upcoming events to apply.
+          <p className="mt-2 text-slate-500 max-w-xl mx-auto text-xs sm:text-base">
+            Deploy dependable student event teams at your hotel, catering event, or resort. Or apply for upcoming shifts today.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/contact"
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-black px-8 py-3.5 rounded-lg text-lg font-bold shadow-sm transition"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition active:scale-95"
             >
               Get in Touch
             </Link>
@@ -463,13 +463,14 @@ export default async function HomePage() {
               href={homeContent.whatsappLink || "https://chat.whatsapp.com/Fo4S0lA5xYULLJCm9p0oPh"}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto bg-white hover:bg-emerald-50 text-emerald-700 hover:text-white px-8 py-3.5 rounded-lg text-lg font-bold border border-emerald-500/20 hover:border-emerald-500 transition duration-300 flex items-center justify-center"
+              className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 px-6 py-3 rounded-xl text-xs sm:text-sm font-bold border border-slate-200 transition flex items-center justify-center active:scale-95"
             >
-              Join WhatsApp Group
+              Join WhatsApp Community
             </a>
           </div>
         </div>
       </section>
+
 
       <Footer />
     </div>

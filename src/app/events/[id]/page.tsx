@@ -76,38 +76,38 @@ export default async function EventDetailsPage(props: {
       <div className="absolute top-[50%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
 
       <Navbar />
-      <main className="flex-grow max-w-6xl mx-auto px-4 py-16 w-full grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+      <main className="flex-grow max-w-6xl mx-auto px-4 py-8 sm:py-12 md:py-16 w-full grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 relative z-10">
         
         {/* Left Column: Event details */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-6 sm:space-y-8">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-red-600/10 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full border border-red-600/20 uppercase tracking-widest">
+              <span className="bg-red-600/10 text-red-600 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full border border-red-600/20 uppercase tracking-widest">
                 {event.workType}
               </span>
               {event.allowedGender === "FEMALE_ONLY" && (
-                <span className="bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                <span className="bg-pink-100 text-pink-700 border border-pink-200 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-pink-600" />
                   <span>Female Candidates Only</span>
                 </span>
               )}
               {event.allowedGender === "MALE_ONLY" && (
-                <span className="bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                <span className="bg-blue-100 text-blue-700 border border-blue-200 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-blue-600" />
                   <span>Male Candidates Only</span>
                 </span>
               )}
               {(!event.allowedGender || event.allowedGender === "ALL") && (
-                <span className="bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                <span className="bg-slate-100 text-slate-700 border border-slate-200 text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-slate-500" />
                   <span>Open to All Candidates</span>
                 </span>
               )}
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-4 uppercase tracking-wider">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mt-3 tracking-tight">
               {event.name}
             </h1>
-            <p className="text-slate-600 mt-4 text-base leading-relaxed">{event.description}</p>
+            <p className="text-slate-600 mt-3 text-xs sm:text-base leading-relaxed">{event.description}</p>
           </div>
 
           {/* Quick Metrics */}
