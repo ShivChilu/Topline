@@ -44,6 +44,7 @@ import {
   Users,
   Filter,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import {
@@ -238,6 +239,36 @@ export default function AdminStudentsPage() {
   const [eventFilterMode, setEventFilterMode] = useState<"NOT_APPLIED" | "APPLIED">("NOT_APPLIED");
   const [eventsList, setEventsList] = useState<any[]>([]);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+
+  // Dynamic Multi-Event Selection & Common Student Comparison
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [multiEventMatchMode, setMultiEventMatchMode] = useState<
+    "COMMON_ATTENDED" | "COMMON_APPLIED" | "ANY_ATTENDED" | "ANY_APPLIED" | "NOT_ATTENDED" | "NOT_APPLIED"
+  >("COMMON_ATTENDED");
+  const [isEventPickerOpen, setIsEventPickerOpen] = useState(false);
+  const [eventPickerSearch, setEventPickerSearch] = useState("");
+  const eventPickerRef = useRef<HTMLDivElement | null>(null);
+
+  // Close event picker on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (eventPickerRef.current && !eventPickerRef.current.contains(e.target as Node)) {
+        setIsEventPickerOpen(false);
+      }
+    };
+    if (isEventPickerOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEventPickerOpen]);
+
+  const toggleEventSelection = (eventId: string) => {
+    setSelectedEventIds((prev) =>
+      prev.includes(eventId) ? prev.filter((id) => id !== eventId) : [...prev, eventId]
+    );
+  };
 
   // Email Campaign & Engagement Filter
   const [selectedCampaignKey, setSelectedCampaignKey] = useState<string>("ALL");
@@ -885,6 +916,69 @@ export default function AdminStudentsPage() {
     };
   }, [students]);
 
+  // Helper: Did student attend a specific event?
+  const didStudentAttendEvent = (student: Student, eventId: string): boolean => {
+    const app = (student.applications || []).find((a) => a.eventId === eventId);
+    if (!app) return false;
+    return Boolean(
+      app.isAttended ||
+      app.attendanceStatus === "PRESENT" ||
+      app.status === "ATTENDED"
+    );
+  };
+
+  // Helper: Did student apply for a specific event?
+  const didStudentApplyEvent = (student: Student, eventId: string): boolean => {
+    return (student.applications || []).some((a) => a.eventId === eventId);
+  };
+
+  // Real-time dynamic comparison stats for selected events
+  const selectedEventsStats = useMemo(() => {
+    if (selectedEventIds.length === 0) {
+      return { commonAttended: 0, commonApplied: 0, anyAttended: 0, anyApplied: 0, notAttended: 0, notApplied: 0 };
+    }
+
+    if (selectedEventIds.length === 1) {
+      const evId = selectedEventIds[0];
+      const attended = students.filter((s) => didStudentAttendEvent(s, evId)).length;
+      const applied = students.filter((s) => didStudentApplyEvent(s, evId)).length;
+      return {
+        commonAttended: attended,
+        commonApplied: applied,
+        anyAttended: attended,
+        anyApplied: applied,
+        notAttended: students.length - attended,
+        notApplied: students.length - applied,
+      };
+    }
+
+    // 2 or more events (Dynamic Intersection / Common candidates across all selected events)
+    const commonAttended = students.filter((s) =>
+      selectedEventIds.every((evId) => didStudentAttendEvent(s, evId))
+    ).length;
+
+    const commonApplied = students.filter((s) =>
+      selectedEventIds.every((evId) => didStudentApplyEvent(s, evId))
+    ).length;
+
+    const anyAttended = students.filter((s) =>
+      selectedEventIds.some((evId) => didStudentAttendEvent(s, evId))
+    ).length;
+
+    const anyApplied = students.filter((s) =>
+      selectedEventIds.some((evId) => didStudentApplyEvent(s, evId))
+    ).length;
+
+    return {
+      commonAttended,
+      commonApplied,
+      anyAttended,
+      anyApplied,
+      notAttended: students.length - anyAttended,
+      notApplied: students.length - anyApplied,
+    };
+  }, [students, selectedEventIds]);
+
   // Aggregate Email Communication & Action Analytics
   const emailAnalytics = useMemo(() => {
     let totalEmailsSent = 0;
@@ -1209,11 +1303,12 @@ export default function AdminStudentsPage() {
     if (weightFilter !== "ALL") count++;
     if (cityFilter !== "ALL") count++;
     if (universityFilter !== "ALL") count++;
+    if (selectedEventIds.length > 0) count += selectedEventIds.length;
     if (eventFilterId !== "ALL") count++;
     if (selectedCampaignKey !== "ALL") count++;
     if (selectedEmailStatusFilter !== "ALL") count++;
     return count;
-  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, eventFilterId, selectedCampaignKey, selectedEmailStatusFilter]);
+  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, selectedEventIds, eventFilterId, selectedCampaignKey, selectedEmailStatusFilter]);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -1227,6 +1322,9 @@ export default function AdminStudentsPage() {
     setWeightFilter("ALL");
     setCityFilter("ALL");
     setUniversityFilter("ALL");
+    setSelectedEventIds([]);
+    setMultiEventMatchMode("COMMON_ATTENDED");
+    setIsEventPickerOpen(false);
     setEventFilterId("ALL");
     setEventFilterMode("NOT_APPLIED");
     setSelectedCampaignKey("ALL");
@@ -1254,8 +1352,50 @@ export default function AdminStudentsPage() {
         return false;
       }
 
-      // Event Application Filter (Multi-Event Frequency or Specific Event)
-      if (eventFilterId !== "ALL") {
+      // Dynamic Multi-Event Selection & Intersection Filter (Common students across selected events)
+      if (selectedEventIds.length > 0) {
+        if (selectedEventIds.length === 1) {
+          const evId = selectedEventIds[0];
+          const hasAttended = didStudentAttendEvent(s, evId);
+          const hasApplied = didStudentApplyEvent(s, evId);
+
+          if (multiEventMatchMode === "COMMON_ATTENDED" || multiEventMatchMode === "ANY_ATTENDED") {
+            if (!hasAttended) return false;
+          } else if (multiEventMatchMode === "NOT_ATTENDED") {
+            if (hasAttended) return false;
+          } else if (multiEventMatchMode === "COMMON_APPLIED" || multiEventMatchMode === "ANY_APPLIED") {
+            if (!hasApplied) return false;
+          } else if (multiEventMatchMode === "NOT_APPLIED") {
+            if (hasApplied) return false;
+          }
+        } else {
+          // 2 or more selected events (Dynamic Intersection / Common candidates across all selected events)
+          if (multiEventMatchMode === "COMMON_ATTENDED") {
+            // Must have attended ALL selected events (came for both/all)
+            const attendedAll = selectedEventIds.every((evId) => didStudentAttendEvent(s, evId));
+            if (!attendedAll) return false;
+          } else if (multiEventMatchMode === "COMMON_APPLIED") {
+            // Must have applied for ALL selected events
+            const appliedAll = selectedEventIds.every((evId) => didStudentApplyEvent(s, evId));
+            if (!appliedAll) return false;
+          } else if (multiEventMatchMode === "ANY_ATTENDED") {
+            const attendedAny = selectedEventIds.some((evId) => didStudentAttendEvent(s, evId));
+            if (!attendedAny) return false;
+          } else if (multiEventMatchMode === "ANY_APPLIED") {
+            const appliedAny = selectedEventIds.some((evId) => didStudentApplyEvent(s, evId));
+            if (!appliedAny) return false;
+          } else if (multiEventMatchMode === "NOT_ATTENDED") {
+            const attendedAny = selectedEventIds.some((evId) => didStudentAttendEvent(s, evId));
+            if (attendedAny) return false;
+          } else if (multiEventMatchMode === "NOT_APPLIED") {
+            const appliedAny = selectedEventIds.some((evId) => didStudentApplyEvent(s, evId));
+            if (appliedAny) return false;
+          }
+        }
+      }
+
+      // Event Application Preset Filter (Frequency Count)
+      if (eventFilterId !== "ALL" && selectedEventIds.length === 0) {
         const appCount = (s.applications || []).length;
         if (eventFilterId === "APPLIED_3_PLUS") {
           if (appCount < 3) return false;
@@ -1269,15 +1409,6 @@ export default function AdminStudentsPage() {
           if (appCount < 1) return false;
         } else if (eventFilterId === "APPLIED_ZERO") {
           if (appCount !== 0) return false;
-        } else {
-          // Specific Event ID
-          const hasApplied = (s.applications || []).some((app: any) => app.eventId === eventFilterId);
-          if (eventFilterMode === "NOT_APPLIED" && hasApplied) {
-            return false;
-          }
-          if (eventFilterMode === "APPLIED" && !hasApplied) {
-            return false;
-          }
         }
       }
 
@@ -1409,7 +1540,7 @@ export default function AdminStudentsPage() {
 
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
-  }, [students, search, selectionFilter, eventFilterId, eventFilterMode, selectedCampaignKey, selectedEmailStatusFilter, activeCampaign, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [students, search, selectionFilter, selectedEventIds, multiEventMatchMode, eventFilterId, eventFilterMode, selectedCampaignKey, selectedEmailStatusFilter, activeCampaign, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 
   const toggleSelectAll = () => {
     if (selectedStudentIds.length === filteredStudents.length) {
@@ -1828,105 +1959,6 @@ export default function AdminStudentsPage() {
       {/* FILTER BAR */}
       {activeTab !== "fields" && (
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
-          {/* MULTI-EVENT APPLICATION FREQUENCY QUICK PILLS */}
-          <div className="flex flex-wrap items-center gap-2 pt-0.5 pb-2 border-b border-slate-100">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-slate-500" />
-              Event Applications:
-            </span>
-
-            {/* All 3+ Events */}
-            <button
-              type="button"
-              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_3_PLUS" ? "ALL" : "APPLIED_3_PLUS"))}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
-                eventFilterId === "APPLIED_3_PLUS"
-                  ? "bg-orange-600 text-white shadow-md shadow-orange-500/20 ring-2 ring-orange-500/30"
-                  : "bg-orange-50/70 hover:bg-orange-100 text-orange-900 border border-orange-200/80"
-              }`}
-            >
-              <span>🔥 All 3+ Events</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                  eventFilterId === "APPLIED_3_PLUS" ? "bg-white text-orange-700" : "bg-orange-200/80 text-orange-900"
-                }`}
-              >
-                {stats.applied3Plus}
-              </span>
-            </button>
-
-            {/* Any 2 Events */}
-            <button
-              type="button"
-              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_2_EXACT" ? "ALL" : "APPLIED_2_EXACT"))}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
-                eventFilterId === "APPLIED_2_EXACT"
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-blue-500/30"
-                  : "bg-blue-50/70 hover:bg-blue-100 text-blue-900 border border-blue-200/80"
-              }`}
-            >
-              <span>⭐ Any 2 Events</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                  eventFilterId === "APPLIED_2_EXACT" ? "bg-white text-blue-700" : "bg-blue-200/80 text-blue-900"
-                }`}
-              >
-                {stats.applied2}
-              </span>
-            </button>
-
-            {/* 1 Event */}
-            <button
-              type="button"
-              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_1_EXACT" ? "ALL" : "APPLIED_1_EXACT"))}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
-                eventFilterId === "APPLIED_1_EXACT"
-                  ? "bg-purple-600 text-white shadow-md shadow-purple-500/20 ring-2 ring-purple-500/30"
-                  : "bg-purple-50/70 hover:bg-purple-100 text-purple-900 border border-purple-200/80"
-              }`}
-            >
-              <span>📌 1 Event</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                  eventFilterId === "APPLIED_1_EXACT" ? "bg-white text-purple-700" : "bg-purple-200/80 text-purple-900"
-                }`}
-              >
-                {stats.applied1}
-              </span>
-            </button>
-
-            {/* Never Applied (0 Events) */}
-            <button
-              type="button"
-              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_ZERO" ? "ALL" : "APPLIED_ZERO"))}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
-                eventFilterId === "APPLIED_ZERO"
-                  ? "bg-slate-800 text-white shadow-md shadow-slate-700/20 ring-2 ring-slate-600/30"
-                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-              }`}
-            >
-              <span>⭕ 0 Events (Never Applied)</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                  eventFilterId === "APPLIED_ZERO" ? "bg-white text-slate-900" : "bg-slate-200 text-slate-800"
-                }`}
-              >
-                {stats.appliedZero}
-              </span>
-            </button>
-
-            {/* Clear Filter if active */}
-            {eventFilterId !== "ALL" && (
-              <button
-                type="button"
-                onClick={() => setEventFilterId("ALL")}
-                className="text-[11px] font-bold text-red-600 hover:text-red-800 hover:underline px-2 py-1 transition cursor-pointer"
-              >
-                Reset Event Filter ✕
-              </button>
-            )}
-          </div>
-
           <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
             {/* Search & Create Template Button */}
             <div className="flex items-center gap-2.5 w-full lg:w-auto flex-1 max-w-xl">
@@ -1953,7 +1985,7 @@ export default function AdminStudentsPage() {
 
             {/* Quick Filter Buttons */}
             <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
-              {/* Gender Filter (e.g. Girls Only / Boys Only) */}
+              {/* Gender Filter */}
               <select
                 value={genderFilter}
                 onChange={(e) => setGenderFilter(e.target.value)}
@@ -1969,97 +2001,259 @@ export default function AdminStudentsPage() {
                 <option value="OTHER">Other</option>
               </select>
 
-              {/* Event Application Filter */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <select
-                  value={eventFilterId}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEventFilterId(val);
-                    if (val !== "ALL" && !val.startsWith("APPLIED_") && !eventFilterMode) {
-                      setEventFilterMode("NOT_APPLIED");
-                    }
-                  }}
-                  className={`text-xs font-bold rounded-xl px-3 py-2 border transition max-w-[220px] truncate ${
-                    eventFilterId !== "ALL"
-                      ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20"
-                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+              {/* DYNAMIC MULTI-EVENT COMPARATOR SELECTOR POPOVER */}
+              <div className="relative" ref={eventPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsEventPickerOpen((prev) => !prev)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                    selectedEventIds.length > 0
+                      ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20 shadow-xs"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                   }`}
-                  title="Filter students by event application count or specific event status"
+                  title="Select multiple events to find common students, or select 1 event to see attendees"
                 >
-                  <option value="ALL">All Events / Candidates</option>
-
-                  <optgroup label="📊 Application Frequency">
-                    <option value="APPLIED_3_PLUS">🔥 All 3+ Events ({stats.applied3Plus})</option>
-                    <option value="APPLIED_2_EXACT">⭐ Any 2 Events ({stats.applied2})</option>
-                    <option value="APPLIED_1_EXACT">📌 1 Event ({stats.applied1})</option>
-                    <option value="APPLIED_2_OR_MORE">✨ 2 or More Events ({stats.appliedAtLeast2})</option>
-                    <option value="APPLIED_ZERO">⭕ 0 Events / Never Applied ({stats.appliedZero})</option>
-                  </optgroup>
-
-                  {eventsList.length > 0 && (
-                    <optgroup label="📅 Specific Events">
-                      {eventsList.map((ev) => (
-                        <option key={ev.id} value={ev.id}>
-                          {ev.name} {ev.date ? `(${new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})` : ""}
-                        </option>
-                      ))}
-                    </optgroup>
+                  <CalendarDays className={`w-3.5 h-3.5 ${selectedEventIds.length > 0 ? "text-amber-600" : "text-slate-500"}`} />
+                  <span className="max-w-[170px] truncate">
+                    {selectedEventIds.length === 0
+                      ? "Select Events to Compare"
+                      : selectedEventIds.length === 1
+                      ? `${eventsList.find((e) => e.id === selectedEventIds[0])?.name || "1 Event Selected"}`
+                      : `🔥 ${selectedEventIds.length} Events (Common Candidates)`}
+                  </span>
+                  {selectedEventIds.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-200 text-amber-900">
+                      {selectedEventIds.length}
+                    </span>
                   )}
-                </select>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isEventPickerOpen ? "rotate-180" : ""}`} />
+                </button>
 
-                {eventFilterId !== "ALL" && !eventFilterId.startsWith("APPLIED_") && (
-                  <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setEventFilterMode("NOT_APPLIED")}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
-                        eventFilterMode === "NOT_APPLIED"
-                          ? "bg-red-600 text-white shadow-xs"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                      title="Show students who have NOT applied for this event"
-                    >
-                      <XCircle className="w-3 h-3" />
-                      <span>Not Applied</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEventFilterMode("APPLIED")}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
-                        eventFilterMode === "APPLIED"
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                      title="Show students who HAVE applied for this event"
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Applied</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEventFilterId("ALL")}
-                      className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
-                      title="Clear event filter"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                {/* Popover Dropdown Panel */}
+                {isEventPickerOpen && (
+                  <div className="absolute left-0 lg:right-0 lg:left-auto mt-2 w-[320px] sm:w-[380px] bg-white rounded-2xl border border-slate-200 shadow-2xl z-50 p-3.5 space-y-3 animate-in fade-in zoom-in-95">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <div>
+                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-amber-600" />
+                          Compare Events ({selectedEventIds.length}/{eventsList.length})
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Select 2+ events for common students, or 1 event for attendees.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEventIds(eventsList.map((e) => e.id))}
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline px-1.5 py-0.5 cursor-pointer"
+                        >
+                          All
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEventIds([])}
+                          className="text-[11px] font-bold text-slate-500 hover:text-slate-700 hover:underline px-1.5 py-0.5 cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search across events if multiple */}
+                    {eventsList.length > 3 && (
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={eventPickerSearch}
+                          onChange={(e) => setEventPickerSearch(e.target.value)}
+                          placeholder="Search events..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    )}
+
+                    {/* Events Checklist */}
+                    <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                      {eventsList
+                        .filter((ev) => {
+                          if (!eventPickerSearch.trim()) return true;
+                          const q = eventPickerSearch.toLowerCase().trim();
+                          return (ev.name || "").toLowerCase().includes(q) || (ev.date || "").toLowerCase().includes(q);
+                        })
+                        .map((ev) => {
+                          const isChecked = selectedEventIds.includes(ev.id);
+                          const appCount = students.filter((s) => (s.applications || []).some((a: any) => a.eventId === ev.id)).length;
+                          const attCount = students.filter((s) => didStudentAttendEvent(s, ev.id)).length;
+
+                          return (
+                            <label
+                              key={ev.id}
+                              className={`flex items-start gap-2.5 p-2 rounded-xl border transition cursor-pointer ${
+                                isChecked
+                                  ? "bg-amber-50/90 border-amber-300 shadow-xs ring-1 ring-amber-400/30"
+                                  : "bg-slate-50/60 hover:bg-slate-100 border-slate-100"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleEventSelection(ev.id)}
+                                className="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-xs font-bold text-slate-900 truncate block">
+                                    {ev.name}
+                                  </span>
+                                  {ev.date && (
+                                    <span className="text-[10px] font-semibold text-slate-500 shrink-0 bg-white px-1.5 py-0.2 rounded border border-slate-200">
+                                      {new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 text-[10px]">
+                                  <span className="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+                                    ✓ {attCount} Attended
+                                  </span>
+                                  <span className="font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
+                                    📝 {appCount} Applied
+                                  </span>
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-600">
+                        {selectedEventIds.length === 0
+                          ? "No event chosen"
+                          : selectedEventIds.length === 1
+                          ? "1 event active"
+                          : `${selectedEventIds.length} events comparing`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEventPickerOpen(false)}
+                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                      >
+                        Apply Filter
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                {eventFilterId !== "ALL" && eventFilterId.startsWith("APPLIED_") && (
-                  <button
-                    type="button"
-                    onClick={() => setEventFilterId("ALL")}
-                    className="p-1.5 text-slate-400 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition cursor-pointer border border-slate-200"
-                    title="Clear frequency filter"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
                 )}
               </div>
 
-              {/* Height Filter (e.g. > 5ft, > 5'4") */}
+              {/* SINGLE EVENT ATTENDANCE / APPLICATION TOGGLES */}
+              {selectedEventIds.length === 1 && (
+                <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setMultiEventMatchMode("COMMON_ATTENDED")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      multiEventMatchMode === "COMMON_ATTENDED" || multiEventMatchMode === "ANY_ATTENDED"
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Show students who attended (came for) this event"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Attended ({selectedEventsStats.commonAttended})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMultiEventMatchMode("NOT_ATTENDED")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      multiEventMatchMode === "NOT_ATTENDED"
+                        ? "bg-rose-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Show students who did NOT attend this event"
+                  >
+                    <XCircle className="w-3 h-3" />
+                    <span>Not Attended ({selectedEventsStats.notAttended})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMultiEventMatchMode("COMMON_APPLIED")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      multiEventMatchMode === "COMMON_APPLIED" || multiEventMatchMode === "ANY_APPLIED"
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Show students who applied for this event"
+                  >
+                    <FileText className="w-3 h-3" />
+                    <span>Applied ({selectedEventsStats.commonApplied})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEventIds([])}
+                    className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
+                    title="Clear event selection"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* MULTI-EVENT COMMON STUDENTS COMPARISON TOGGLES */}
+              {selectedEventIds.length >= 2 && (
+                <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs flex-wrap gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMultiEventMatchMode("COMMON_ATTENDED")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      multiEventMatchMode === "COMMON_ATTENDED"
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Show common students who came for (attended) ALL selected events"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Common: Came for Both ({selectedEventsStats.commonAttended})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMultiEventMatchMode("COMMON_APPLIED")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      multiEventMatchMode === "COMMON_APPLIED"
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Show common students who applied for ALL selected events"
+                  >
+                    <Users className="w-3 h-3" />
+                    <span>Common: Applied for Both ({selectedEventsStats.commonApplied})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMultiEventMatchMode("ANY_ATTENDED")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      multiEventMatchMode === "ANY_ATTENDED"
+                        ? "bg-purple-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Show students who attended at least one of these events"
+                  >
+                    <span>Attended Any ({selectedEventsStats.anyAttended})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEventIds([])}
+                    className="p-1 text-slate-400 hover:text-red-600 transition cursor-pointer"
+                    title="Clear all selected events"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Height Filter */}
               <select
                 value={heightFilter}
                 onChange={(e) => setHeightFilter(e.target.value)}
@@ -2097,7 +2291,7 @@ export default function AdminStudentsPage() {
               <button
                 type="button"
                 onClick={() => setShowMoreFilters(!showMoreFilters)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
                   showMoreFilters || activeFilterCount > 0
                     ? "bg-slate-900 text-white border-slate-900 shadow-sm"
                     : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
@@ -2121,56 +2315,93 @@ export default function AdminStudentsPage() {
             </div>
           </div>
 
-          {/* ACTIVE EVENT APPLICATION FILTER SUMMARY BANNER */}
-          {eventFilterId !== "ALL" && (
-            <div className="bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 border border-amber-300/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-amber-950 shadow-xs animate-in fade-in">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1">
-                  {eventFilterId.startsWith("APPLIED_") ? (
-                    <>
-                      <Activity className="w-3 h-3 text-amber-900" />
-                      <span>Frequency Filter</span>
-                    </>
-                  ) : eventFilterMode === "NOT_APPLIED" ? (
-                    <>
-                      <XCircle className="w-3 h-3 text-amber-900" />
-                      <span>Not Applied Filter</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3 h-3 text-amber-900" />
-                      <span>Applied Filter</span>
-                    </>
-                  )}
-                </span>
-                <span>
-                  Showing <strong>{filteredStudents.length}</strong> candidate{filteredStudents.length === 1 ? "" : "s"}
-                  {genderFilter !== "ALL" ? ` (${genderFilter === "MALE" ? "Male Only" : genderFilter === "FEMALE" ? "Female Only" : genderFilter})` : ""}
-                  {" "}
-                  {eventFilterId === "APPLIED_3_PLUS"
-                    ? "who applied for All 3+ Events"
-                    : eventFilterId === "APPLIED_2_EXACT"
-                    ? "who applied for Any 2 Events"
-                    : eventFilterId === "APPLIED_1_EXACT"
-                    ? "who applied for 1 Event"
-                    : eventFilterId === "APPLIED_2_OR_MORE"
-                    ? "who applied for 2 or More Events"
-                    : eventFilterId === "APPLIED_ZERO"
-                    ? "who have NEVER applied for any event (0 events)"
-                    : `${eventFilterMode === "NOT_APPLIED" ? "who have NOT applied for" : "who applied for"} `}
-                  {!eventFilterId.startsWith("APPLIED_") && (
-                    <strong className="text-slate-900 underline underline-offset-2">
-                      {eventsList.find((e) => e.id === eventFilterId)?.name || "Selected Event"}
-                    </strong>
-                  )}.
-                </span>
+          {/* DYNAMIC MULTI-EVENT COMPARISON ACTIVE FILTER SUMMARY BANNER */}
+          {selectedEventIds.length > 0 && (
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 border border-amber-300/80 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs animate-in fade-in">
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1">
+                    {selectedEventIds.length >= 2 ? (
+                      <>
+                        <Sparkles className="w-3 h-3 text-amber-900" />
+                        <span>Common Students Comparison ({selectedEventIds.length} Events)</span>
+                      </>
+                    ) : (
+                      <>
+                        <CalendarDays className="w-3 h-3 text-amber-900" />
+                        <span>Single Event Filter</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="font-medium">
+                    Showing <strong>{filteredStudents.length}</strong> {selectedEventIds.length >= 2 ? "common " : ""}candidate{filteredStudents.length === 1 ? "" : "s"}
+                    {genderFilter !== "ALL" ? ` (${genderFilter === "MALE" ? "Male Only" : genderFilter === "FEMALE" ? "Female Only" : genderFilter})` : ""}{" "}
+                    {selectedEventIds.length === 1 ? (
+                      <>
+                        who <strong>
+                          {multiEventMatchMode === "COMMON_ATTENDED" || multiEventMatchMode === "ANY_ATTENDED"
+                            ? "attended (came for)"
+                            : multiEventMatchMode === "NOT_ATTENDED"
+                            ? "did NOT attend"
+                            : multiEventMatchMode === "COMMON_APPLIED" || multiEventMatchMode === "ANY_APPLIED"
+                            ? "applied for"
+                            : "did NOT apply for"}
+                        </strong>:
+                      </>
+                    ) : (
+                      <>
+                        who <strong>
+                          {multiEventMatchMode === "COMMON_ATTENDED"
+                            ? `came (attended) for ALL ${selectedEventIds.length} selected events`
+                            : multiEventMatchMode === "COMMON_APPLIED"
+                            ? `applied for ALL ${selectedEventIds.length} selected events`
+                            : multiEventMatchMode === "ANY_ATTENDED"
+                            ? "attended at least one of these events"
+                            : "applied for at least one of these events"}
+                        </strong>:
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                {/* Selected Events Tag Chips */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  {selectedEventIds.map((id) => {
+                    const ev = eventsList.find((e) => e.id === id);
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white/95 border border-amber-300 text-[11px] font-bold text-slate-800 shadow-2xs"
+                      >
+                        <span>{ev?.name || "Event"}</span>
+                        {ev?.date && (
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            ({new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleEventSelection(id)}
+                          className="text-slate-400 hover:text-red-600 transition ml-0.5 cursor-pointer"
+                          title="Remove event from comparison"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
+
               <button
                 type="button"
-                onClick={() => setEventFilterId("ALL")}
-                className="text-red-600 hover:text-red-800 text-xs font-extrabold hover:underline cursor-pointer shrink-0"
+                onClick={() => {
+                  setSelectedEventIds([]);
+                  setMultiEventMatchMode("COMMON_ATTENDED");
+                }}
+                className="text-red-600 hover:text-red-800 text-xs font-extrabold hover:underline cursor-pointer shrink-0 self-end sm:self-auto"
               >
-                Clear Event Filter ✕
+                Clear Comparison ✕
               </button>
             </div>
           )}
