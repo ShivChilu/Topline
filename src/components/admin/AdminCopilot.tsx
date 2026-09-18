@@ -38,6 +38,25 @@ const QUICK_PROMPTS = [
   "📈 Email open rate & WhatsApp join counts",
 ];
 
+const formatToolName = (name: string): string => {
+  const map: Record<string, string> = {
+    get_system_overview: "System Overview",
+    query_candidates_by_criteria: "Candidate Query",
+    update_candidate_selection_status: "Update Candidate Status",
+    compare_multi_event_attendance: "Event Attendance Comparison",
+    mark_event_attendance: "Attendance Update",
+    get_event_overview_and_stats: "Event Statistics",
+    query_referral_ledger: "Referral Records",
+    query_email_broadcast_logs: "Broadcast Logs",
+    query_client_management: "Client Data",
+    manage_event_lifecycle: "Event Management",
+    update_student_profile: "Student Profile Update",
+    query_event_calling_candidates: "Candidate Calling Logs",
+    update_candidate_call_status: "Calling Status Update",
+  };
+  return map[name] || name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 export default function AdminCopilot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -46,7 +65,7 @@ export default function AdminCopilot() {
       id: "welcome",
       role: "assistant",
       content:
-        "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot** powered by Groq Llama. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
+        "👋 **Hello!**\n\nI am your **AI Operations Copilot**. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -140,7 +159,7 @@ export default function AdminCopilot() {
             const audioBlob = new Blob(audioChunksRef.current, {
               type: recorder.mimeType || "audio/webm",
             });
-            await sendAudioToWhisper(audioBlob);
+            await sendAudioToTranscribe(audioBlob);
           }
         };
 
@@ -169,7 +188,7 @@ export default function AdminCopilot() {
     }
   };
 
-  const sendAudioToWhisper = async (audioBlob: Blob) => {
+  const sendAudioToTranscribe = async (audioBlob: Blob) => {
     setIsTranscribing(true);
     try {
       const formData = new FormData();
@@ -186,7 +205,7 @@ export default function AdminCopilot() {
         setInput(data.text.trim());
       }
     } catch (err) {
-      console.warn("[AdminCopilot] Whisper transcription error:", err);
+      console.warn("[AdminCopilot] Voice transcription error:", err);
     } finally {
       setIsTranscribing(false);
     }
@@ -455,7 +474,7 @@ export default function AdminCopilot() {
           <div className="flex flex-col text-left">
             <span className="text-[11px] sm:text-xs font-black tracking-wide uppercase flex items-center gap-1 sm:gap-1.5">
               <span>Admin AI Copilot</span>
-              <span className="bg-white/20 text-[8px] sm:text-[9px] px-1 py-0.2 rounded font-extrabold uppercase">Groq</span>
+              <span className="bg-white/20 text-[8px] sm:text-[9px] px-1 py-0.2 rounded font-extrabold uppercase">AI</span>
             </span>
             <span className="text-[9px] sm:text-[10px] text-white/80 font-semibold hidden xs:inline">Live Data & Actions (Ctrl+J)</span>
           </div>
@@ -487,7 +506,7 @@ export default function AdminCopilot() {
                   </span>
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-slate-400 truncate">
-                  Groq AI • Real-time DB Queries & Actions
+                  AI Assistant • Real-time DB Queries & Actions
                 </p>
               </div>
             </div>
@@ -569,7 +588,7 @@ export default function AdminCopilot() {
                           className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-[9px] sm:text-[10px] font-bold text-emerald-300 break-all"
                         >
                           <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                          <span>Executed: {t.toolName}</span>
+                          <span>{formatToolName(t.toolName)}</span>
                         </span>
                       ))}
                     </div>
@@ -603,7 +622,7 @@ export default function AdminCopilot() {
             {loading && (
               <div className="flex gap-2 sm:gap-2.5 items-center text-slate-400 animate-pulse">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-gradient-to-br from-red-600 to-amber-500 text-white flex items-center justify-center shrink-0">
-                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin-slow" />
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin-slow" />
                 </div>
                 <div className="bg-slate-800/80 border border-slate-700 rounded-2xl px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs text-slate-300 flex items-center gap-1.5 sm:gap-2 max-w-[85%]">
                   <div className="flex gap-1 shrink-0">
@@ -611,7 +630,7 @@ export default function AdminCopilot() {
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce delay-100"></span>
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce delay-200"></span>
                   </div>
-                  <span className="font-semibold text-slate-300 text-[10px] sm:text-[11px] truncate">Executing DB query & actions...</span>
+                  <span className="font-semibold text-slate-300 text-[10px] sm:text-[11px] truncate">Processing query & actions...</span>
                 </div>
               </div>
             )}
@@ -645,7 +664,7 @@ export default function AdminCopilot() {
           {isTranscribing && (
             <div className="bg-amber-500/10 border-t border-amber-500/30 px-3 py-1.5 flex items-center gap-2 text-amber-300 text-[11px] animate-pulse">
               <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin-slow" />
-              <span className="font-semibold">Transcribing speech with Groq Whisper AI...</span>
+              <span className="font-semibold">Transcribing voice query...</span>
             </div>
           )}
 

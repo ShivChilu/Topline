@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ success: false, message: "Groq API key missing." }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Voice service unavailable." }, { status: 500 });
     }
 
     // 2. Parse Audio File from FormData
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     const groq = new Groq({ apiKey });
 
-    // 3. Transcribe Audio via Groq Whisper Models
+    // 3. Transcribe Audio via Whisper Models
     const WHISPER_MODELS = [
       "whisper-large-v3",
       "distil-whisper-large-v3-en",
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: false,
-        message: error?.message || "Audio transcription failed.",
+        message: "Audio transcription failed. Please try typing your query.",
       },
       { status: 500 }
     );

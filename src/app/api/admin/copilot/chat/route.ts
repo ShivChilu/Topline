@@ -79,7 +79,7 @@ SECURITY & ACCESS RULES:
     if (!apiKey || apiKey === "your-groq-api-key-here") {
       return NextResponse.json({
         success: true,
-        reply: `⚠️ **Groq API Key Required**\n\nTo enable the Super Admin AI Copilot, please set your Groq API key in the \`.env\` file:\n\`\`\`bash\nGROQ_API_KEY="gsk_..."\n\`\`\`\nYou can generate a free API key at [console.groq.com](https://console.groq.com/keys).`,
+        reply: `⚠️ **AI Service Unavailable**\n\nThe AI Copilot service is currently not configured. Please contact the administrator.`,
         toolExecutions: [],
       });
     }
@@ -187,9 +187,10 @@ SECURITY & ACCESS RULES:
         }
       }
 
-      throw new Error(
-        `AI model execution failed.\nAvailable models on your Groq key: [${availableModelIds.join(", ") || "none found"}].\nErrors: ${modelErrors.join(" | ")}`
+      console.error(
+        `[AdminCopilot] All models failed. Available: [${availableModelIds.join(", ")}]. Errors: ${modelErrors.join(" | ")}`
       );
+      throw new Error("Unable to complete request at this time.");
     };
 
     // 4. Construct Message Chain
@@ -263,7 +264,7 @@ SECURITY & ACCESS RULES:
             result: toolResult,
           });
 
-          // Feed tool execution output back to Groq
+          // Feed tool execution output back to LLM
           formattedMessages.push({
             role: "tool",
             tool_call_id: toolCall.id,
@@ -290,7 +291,7 @@ SECURITY & ACCESS RULES:
     return NextResponse.json(
       {
         success: false,
-        message: error?.message || "An error occurred while communicating with the AI Copilot.",
+        message: "An error occurred while processing your request. Please try again.",
       },
       { status: 500 }
     );
