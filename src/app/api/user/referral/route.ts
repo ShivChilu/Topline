@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { generateUniqueReferralCode, getUserReferralStats } from "@/lib/referral";
 import { isValidUPI } from "@/lib/validation";
+import { getStudentProfileCompletion } from "@/lib/profile-completion";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
     const baseUrl = `${protocol}://${host}`;
 
     const stats = await getUserReferralStats(user.id);
+    const completeness = await getStudentProfileCompletion(user.id);
     const inviteUrl = user.referralCode ? `${baseUrl}/register?ref=${user.referralCode}` : "";
 
     return NextResponse.json({
@@ -58,6 +60,7 @@ export async function GET(request: Request) {
         inviteUrl,
       },
       stats,
+      completeness,
     });
   } catch (error: any) {
     console.error("Student referral GET error:", error);
@@ -78,6 +81,20 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ success: false, message: "User account not found." }, { status: 404 });
+    }
+
+    // PROFILE COMPLETENESS GATE: Must have 100% completed profile to activate/create referral code
+    const completeness = await getStudentProfileCompletion(user.id);
+    if (!user.referralCode && !completeness.isComplete) {
+      const missingList = [...completeness.missingFields, ...completeness.missingPhotos];
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Only students with 100% completed profiles can create referral codes. Please complete your profile first (${completeness.percentage}% completed). Missing: ${missingList.join(", ")}`,
+          completeness,
+        },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => ({}));

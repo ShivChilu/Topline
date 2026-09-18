@@ -48,6 +48,7 @@ import {
   ChevronUp,
   Wallet,
   FileText,
+  Lock,
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
 import { compressImage } from "@/lib/image-compress";
@@ -1511,122 +1512,180 @@ export default function StudentProfilePage() {
                   </p>
                 </div>
 
-                <form onSubmit={handleSaveReferral} className="max-w-md mx-auto space-y-4 pt-2">
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                      Your Payout UPI ID *
-                    </label>
-                    <div className="relative">
+                {!completeness.isComplete ? (
+                  /* LOCKED STATE: Profile Not 100% Complete */
+                  <div className="max-w-md mx-auto bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-rose-500/10 border-2 border-dashed border-amber-300 rounded-3xl p-6 text-center space-y-4">
+                    <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                      <Lock className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
+                        100% Profile Completion Required
+                      </div>
+                      <h4 className="text-base font-black text-slate-900 pt-1">
+                        Complete Profile to Unlock Referral Code
+                      </h4>
+                      <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
+                        Referral codes and cash rewards are reserved for students with verified, 100% completed profiles.
+                      </p>
+                    </div>
+
+                    {/* Progress Bar & Missing Items */}
+                    <div className="space-y-2 text-left bg-white p-4 rounded-2xl border border-amber-200 shadow-2xs">
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="text-slate-600">Your Profile Progress</span>
+                        <span className="text-amber-700 font-mono">{completeness.percentage}%</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500"
+                          style={{ width: `${completeness.percentage}%` }}
+                        />
+                      </div>
+                      {allMissing.length > 0 && (
+                        <div className="text-[11px] text-slate-500 pt-1">
+                          <span className="font-semibold text-slate-700">Missing to unlock: </span>
+                          <span>{allMissing.slice(0, 3).join(", ")}{allMissing.length > 3 ? ` +${allMissing.length - 3} more` : ""}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("edit")}
+                      className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold py-3.5 px-6 rounded-2xl text-xs uppercase tracking-wider shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>Complete Profile to Unlock Code</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  /* ACTIVE FORM: Profile is 100% Complete */
+                  <form onSubmit={handleSaveReferral} className="max-w-md mx-auto space-y-4 pt-2">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                        Your Payout UPI ID *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={referralUpiInput}
+                          onChange={(e) => setReferralUpiInput(e.target.value)}
+                          placeholder="e.g. 9876543210@paytm or yourname@oksbi"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
+                        />
+                        <Wallet className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
+                      </div>
+                      <span className="text-[11px] text-slate-500 mt-1 block">
+                        Rewards will be deposited to this UPI handle upon qualification.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                        Custom Referral Code (Optional)
+                      </label>
                       <input
                         type="text"
-                        required
-                        value={referralUpiInput}
-                        onChange={(e) => setReferralUpiInput(e.target.value)}
-                        placeholder="e.g. 9876543210@paytm or yourname@oksbi"
-                        className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
+                        value={customCodeInput}
+                        onChange={(e) => setCustomCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                        placeholder="e.g. TOPLINE25, RAHUL99"
+                        maxLength={12}
+                        className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono uppercase focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
                       />
-                      <Wallet className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
+                      <span className="text-[11px] text-slate-500 mt-1 block">
+                        Leave blank to auto-generate a unique code.
+                      </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 mt-1 block">
-                      Rewards will be deposited to this UPI handle upon qualification.
-                    </span>
-                  </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                      Custom Referral Code (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={customCodeInput}
-                      onChange={(e) => setCustomCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                      placeholder="e.g. TOPLINE25, RAHUL99"
-                      maxLength={12}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm text-slate-900 font-mono uppercase focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
-                    />
-                    <span className="text-[11px] text-slate-500 mt-1 block">
-                      Leave blank to auto-generate a unique code.
-                    </span>
-                  </div>
+                    <button
+                      type="submit"
+                      disabled={savingReferral}
+                      className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 active:scale-98 text-white font-extrabold py-3.5 px-6 rounded-2xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {savingReferral ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Generating Code...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-amber-300" />
+                          <span>Activate & Get My Invite Link</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
 
+                {/* Collapsible Terms & Conditions (Only shown when pressed) */}
+                <div className="max-w-md mx-auto pt-2">
                   <button
-                    type="submit"
-                    disabled={savingReferral}
-                    className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 active:scale-98 text-white font-extrabold py-3.5 px-6 rounded-2xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    type="button"
+                    onClick={() => setTermsOpen(!termsOpen)}
+                    className="w-full py-2.5 px-3.5 flex items-center justify-between text-left text-xs font-semibold text-slate-600 hover:text-purple-700 bg-slate-50 hover:bg-purple-50/50 rounded-xl transition border border-slate-200 cursor-pointer select-none"
                   >
-                    {savingReferral ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Generating Code...</span>
-                      </>
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <span>Referral Program Terms & Conditions (T&C)</span>
+                    </span>
+                    {termsOpen ? (
+                      <ChevronUp className="w-4 h-4 text-purple-600 shrink-0" />
                     ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>Activate & Get My Invite Link</span>
-                      </>
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                     )}
                   </button>
 
-                  {/* Collapsible Terms & Conditions (Only shown when pressed) */}
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setTermsOpen(!termsOpen)}
-                      className="w-full py-2.5 px-3.5 flex items-center justify-between text-left text-xs font-semibold text-slate-600 hover:text-purple-700 bg-slate-50 hover:bg-purple-50/50 rounded-xl transition border border-slate-200 cursor-pointer select-none"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                        <span>Referral Program Terms & Conditions (T&C)</span>
-                      </span>
-                      {termsOpen ? (
-                        <ChevronUp className="w-4 h-4 text-purple-600 shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                      )}
-                    </button>
-
-                    {termsOpen && (
-                      <div className="mt-3 p-4 bg-purple-50/40 rounded-2xl border border-purple-200/80 text-xs text-slate-600 space-y-3 animate-in fade-in duration-200">
-                        <div className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                          <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                          <span>Terms & Program Rules</span>
-                        </div>
-                        <ul className="space-y-2 text-[11px] sm:text-xs leading-relaxed text-slate-600">
-                          <li className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
-                            <div>
-                              <strong className="text-slate-800">Reward Qualification:</strong> The ₹25 referral bonus is unlocked once your referred friend completes registration with your code, applies for an event, and completes their first event work with verified attendance.
-                            </div>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
-                            <div>
-                              <strong className="text-slate-800">Direct UPI Payouts:</strong> Qualified rewards are processed directly by Topline administrators to your registered UPI handle.
-                            </div>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
-                            <div>
-                              <strong className="text-slate-800">No Referral Limit:</strong> You can invite unlimited college friends and classmates.
-                            </div>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
-                            <div>
-                              <strong className="text-slate-800">Fair Play Policy:</strong> Self-referrals, duplicate accounts, or fraudulent registrations are strictly prohibited and will result in forfeiture of rewards.
-                            </div>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
-                            <div>
-                              <strong className="text-slate-800">Management Discretion:</strong> Topline reserves the right to review attendance logs and update program terms as needed.
-                            </div>
-                          </li>
-                        </ul>
+                  {termsOpen && (
+                    <div className="mt-3 p-4 bg-purple-50/40 rounded-2xl border border-purple-200/80 text-xs text-slate-600 space-y-3 animate-in fade-in duration-200">
+                      <div className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>Terms & Program Rules</span>
                       </div>
-                    )}
-                  </div>
-                </form>
+                      <ul className="space-y-2 text-[11px] sm:text-xs leading-relaxed text-slate-600">
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                          <div>
+                            <strong className="text-slate-800">Profile Eligibility:</strong> Only students who have completed 100% of their profile details and formal photo are eligible to activate referral codes.
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                          <div>
+                            <strong className="text-slate-800">Reward Qualification:</strong> The ₹25 referral bonus is unlocked once your referred friend completes registration with your code, applies for an event, and completes their first event work with verified attendance.
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                          <div>
+                            <strong className="text-slate-800">Direct UPI Payouts:</strong> Qualified rewards are processed directly by Topline administrators to your registered UPI handle.
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                          <div>
+                            <strong className="text-slate-800">No Referral Limit:</strong> You can invite unlimited college friends and classmates.
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                          <div>
+                            <strong className="text-slate-800">Fair Play Policy:</strong> Self-referrals, duplicate accounts, or fraudulent registrations are strictly prohibited and will result in forfeiture of rewards.
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                          <div>
+                            <strong className="text-slate-800">Management Discretion:</strong> Topline reserves the right to review attendance logs and update program terms as needed.
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               /* ACTIVE REFERRAL DASHBOARD (CODE + STATS + SHARE KIT) */
