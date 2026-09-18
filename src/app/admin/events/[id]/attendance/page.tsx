@@ -338,13 +338,28 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   return (
     <div className="space-y-6 text-slate-800">
       {/* Header */}
-      <div className="flex items-center space-x-3">
-        <Link href={`/admin/events/${eventId}`} className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-600">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 uppercase">Event Attendance Log</h1>
-          <p className="text-slate-500 text-sm">{event?.name || "Loading event details..."}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <Link href={`/admin/events/${eventId}`} className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-600">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 uppercase">Event Attendance Log</h1>
+            <p className="text-slate-500 text-sm">{event?.name || "Loading event details..."}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setIsRefreshing(true);
+              fetchAttendance().finally(() => setIsRefreshing(false));
+            }}
+            disabled={loading || isRefreshing}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-slate-300 flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
         </div>
       </div>
 

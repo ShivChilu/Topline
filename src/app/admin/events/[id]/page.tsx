@@ -52,6 +52,7 @@ import {
   Unlock,
   Lock,
   PhoneCall,
+  RefreshCw,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
@@ -1310,6 +1311,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
         {/* Quick Operations & Create Dropdown for All Admins */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Refresh Data Button */}
+          <button
+            type="button"
+            onClick={() => fetchEventData()}
+            disabled={loading}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs transition border border-slate-300 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+            title="Refresh event details and applicants data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
+
           {/* Close or Resume Form Quick Action Button */}
           {event.status === "CLOSED" ? (
             <button

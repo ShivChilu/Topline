@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Eye, Filter, Trash2, PhoneCall, Phone, Check, Clock, MessageSquare } from "lucide-react";
+import { Search, Eye, Filter, Trash2, PhoneCall, Phone, Check, Clock, MessageSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import CallLoggerModal from "@/components/admin/CallLoggerModal";
 
@@ -276,11 +276,26 @@ export default function AdminApplicationsPage() {
   return (
     <div className="space-y-6 text-slate-900">
       {/* Title */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
-          Review Applications
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">Audit student registrations across all active events</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-wider text-red-600 uppercase">
+            Review Applications
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">Audit student registrations across all active events</p>
+        </div>
+        <div>
+          <button
+            onClick={() => {
+              fetchEvents();
+              fetchApplications();
+            }}
+            disabled={loading}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2.5 rounded-lg text-xs transition border border-slate-300 flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Toolbar */}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, RefreshCw } from "lucide-react";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 
 export default function AdminEventsPage() {
@@ -168,8 +168,16 @@ export default function AdminEventsPage() {
               : "Create, duplicate, schedule, and monitor catering schedules"}
           </p>
         </div>
-        {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
-          <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={fetchEvents}
+            disabled={loading}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2.5 rounded-lg text-xs transition border border-slate-300 flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
+          {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
             <Link
               href="/admin/events/create"
               className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 w-full sm:w-auto shadow-sm"
@@ -177,8 +185,8 @@ export default function AdminEventsPage() {
               <Plus className="w-4 h-4" />
               <span>Create Event</span>
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Filter toolbar */}

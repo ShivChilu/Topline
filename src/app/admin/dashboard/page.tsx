@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
+import AdminRefreshButton from "@/components/admin/AdminRefreshButton";
 
 export const revalidate = 0; // Fresh stats on reload
 
@@ -125,7 +126,8 @@ export default async function AdminDashboardPage() {
           </h1>
           <p className="text-slate-500 text-sm mt-1">Real-time catering recruitment operations and financial performance</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <AdminRefreshButton />
           <Link
             href="/admin/events"
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center gap-2"

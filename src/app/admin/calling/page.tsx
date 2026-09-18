@@ -578,19 +578,36 @@ export default function CallingDashboard() {
           <p className="text-slate-500 text-xs mt-1">Manage event applicants and confirm status</p>
         </div>
 
-        <div className="w-full md:w-80 space-y-1">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select Assigned Event</label>
-          <select
-            value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-650"
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 w-full md:w-auto">
+          <button
+            onClick={() => {
+              if (selectedEventId) {
+                fetchApplications(selectedEventId);
+              } else {
+                fetchAssignedEvents();
+              }
+            }}
+            disabled={loadingApps || loadingEvents}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-300 flex items-center gap-2 cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
           >
-            {assignedEvents.map((ev) => (
-              <option key={ev._id} value={ev._id}>
-                {new Date(ev.date).toLocaleDateString("en-GB")} — {ev.name}
-              </option>
-            ))}
-          </select>
+            <RefreshCw className={`w-4 h-4 ${loadingApps || loadingEvents ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
+
+          <div className="w-full md:w-80 space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select Assigned Event</label>
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-650"
+            >
+              {assignedEvents.map((ev) => (
+                <option key={ev._id} value={ev._id}>
+                  {new Date(ev.date).toLocaleDateString("en-GB")} — {ev.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

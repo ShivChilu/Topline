@@ -285,11 +285,25 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto pb-16 text-slate-900">
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">System Settings & Role Management</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Manage landing page copy, configure administrator permissions, assign Event Admins, and send login credentials.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">System Settings & Role Management</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Manage landing page copy, configure administrator permissions, assign Event Admins, and send login credentials.
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            setLoading(true);
+            await Promise.all([fetchSettings(), fetchAdmins(), fetchAllEvents()]);
+            setLoading(false);
+          }}
+          disabled={loading}
+          className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-slate-300 flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          <span>Refresh Data</span>
+        </button>
       </div>
 
       {/* Website Homepage CMS Settings Form */}
