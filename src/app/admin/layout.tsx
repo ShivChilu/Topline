@@ -17,6 +17,7 @@ import {
   Gift,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import AdminCopilot from "@/components/admin/AdminCopilot";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -211,6 +212,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="flex-grow overflow-auto p-3.5 sm:p-5 md:p-8 lg:p-10 relative">
           {children}
         </main>
+
+        {/* Super Admin AI Copilot Chatbot */}
+        {(adminRole === "superadmin" || adminRole === "admin" || !adminRole) && (
+          <AdminCopilot />
+        )}
       </div>
     </div>
   );
