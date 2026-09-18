@@ -1462,3 +1462,127 @@ export async function sendReferralCompletedStudentAlert({
     return { success: false, message: error.message };
   }
 }
+
+/**
+ * Automated Admin Alert Email: Triggered when 5 or more candidates are pending for review / selection.
+ */
+export async function sendAdminPendingReviewAlertEmail({
+  totalPending,
+  masterPendingCount,
+  eventPendingCount,
+  sampleCandidates,
+}: {
+  totalPending: number;
+  masterPendingCount: number;
+  eventPendingCount: number;
+  sampleCandidates: Array<{
+    name: string;
+    registrationNumber: string;
+    university?: string | null;
+    phone?: string | null;
+    photoUrl?: string | null;
+    source: "Master Profile" | "Event Application";
+    eventName?: string | null;
+  }>;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    const adminEmail = "chiluverushivaprasad02@gmail.com";
+    const subject = `🔔 Topline Alert: ${totalPending} Candidates Pending for Review & Selection`;
+    const appUrl = getAppBaseUrl();
+    const studentsUrl = `${appUrl}/admin/students`;
+    const applicationsUrl = `${appUrl}/admin/applications`;
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 620px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { background: #ED0000; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 26px 22px; }
+        .badge { display: inline-block; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 5px 12px; border-radius: 9999px; font-weight: 800; font-size: 12px; margin-bottom: 14px; text-transform: uppercase; }
+        .stat-card { background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 28px; font-weight: 900; color: #facc15; margin: 4px 0; }
+        .stat-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
+        .candidate-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+        .btn-primary { display: inline-block; background: #ED0000; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 13px; margin: 6px 4px; text-align: center; }
+        .btn-secondary { display: inline-block; background: #1f2937; border: 1px solid #374151; color: #f3f4f6 !important; text-decoration: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 13px; margin: 6px 4px; text-align: center; }
+        .footer { padding: 18px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE CONTROL NOTIFICATION</h1>
+        </div>
+        <div class="content">
+          <div class="badge">⚠️ Action Required: Pending Candidates</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 19px;">${totalPending} Candidates Awaiting Review & Selection</h2>
+          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 16px 0;">
+            Hi Admin, you currently have <strong>${totalPending} candidates</strong> pending for review in your Topline dashboard. These students are ready for your evaluation and 1-click selection.
+          </p>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
+            <tr>
+              <td style="padding: 6px; width: 50%;">
+                <div class="stat-card">
+                  <div class="stat-num">${masterPendingCount}</div>
+                  <div class="stat-label">Master List Profiles</div>
+                </div>
+              </td>
+              <td style="padding: 6px; width: 50%;">
+                <div class="stat-card">
+                  <div class="stat-num">${eventPendingCount}</div>
+                  <div class="stat-label">Event Applications</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <h3 style="color: #ffffff; font-size: 14px; margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px;">Recent Pending Candidates</h3>
+          ${sampleCandidates.slice(0, 5).map(c => `
+            <div class="candidate-card">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <div style="font-weight: 800; color: #ffffff; font-size: 14px;">${c.name} <span style="font-size: 11px; color: #94a3b8; font-family: monospace;">(${c.registrationNumber})</span></div>
+                    <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">${c.university || "University Unspecified"} • ${c.phone || "No phone"}</div>
+                    ${c.eventName ? `<div style="font-size: 11px; color: #38bdf8; margin-top: 2px;">Applied for: <strong>${c.eventName}</strong></div>` : ''}
+                  </td>
+                  <td align="right" valign="top">
+                    <span style="font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); text-transform: uppercase; display: inline-block;">
+                      ${c.source}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          `).join("")}
+
+          <div style="text-align: center; margin: 26px 0 10px 0;">
+            <a href="${studentsUrl}" class="btn-primary" style="color: #ffffff;">Review Master Students (${masterPendingCount})</a>
+            <a href="${applicationsUrl}" class="btn-secondary" style="color: #ffffff;">Review Event Applications (${eventPendingCount})</a>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management Automation.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: adminEmail,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send admin pending review alert email:", error);
+    return { success: false, message: error.message };
+  }
+}
+

@@ -4,6 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
 import { isValidHeight, normalizeHeight, isValidUPI } from "@/lib/validation";
+import { checkAndNotifyAdminPendingReview } from "@/lib/pending-review-notifier";
 
 export const dynamic = "force-dynamic";
 
@@ -268,6 +269,11 @@ export async function PUT(request: Request) {
 
     // Recompute completeness after update
     const completeness = await getStudentProfileCompletion(updatedUser.id);
+
+    // Check if >= 5 candidates are pending review and alert admin
+    checkAndNotifyAdminPendingReview().catch((err) =>
+      console.error("[Pending Review Alert Error]", err)
+    );
 
     return NextResponse.json({
       success: true,

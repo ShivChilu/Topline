@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
 import { isEventPast } from "@/lib/event-utils";
 import { ApplicationStatus, EventStatus } from "@prisma/client";
+import { checkAndNotifyAdminPendingReview } from "@/lib/pending-review-notifier";
 
 export async function POST(
   request: Request,
@@ -201,6 +202,11 @@ export async function POST(
     const confirmationMessage =
       event.instructions ||
       "Application Submitted Successfully! Selection details will be communicated via WhatsApp.";
+
+    // Trigger background check to notify admin if >= 5 candidates are pending review
+    checkAndNotifyAdminPendingReview().catch((err) =>
+      console.error("[Pending Review Alert Error]", err)
+    );
 
     return NextResponse.json({
       success: true,
