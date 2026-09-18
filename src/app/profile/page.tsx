@@ -47,6 +47,7 @@ import {
   ChevronDown,
   ChevronUp,
   Wallet,
+  FileText,
 } from "lucide-react";
 import { isValidHeight, isValidUPI, STANDARD_HEIGHT_OPTIONS, normalizeHeight } from "@/lib/validation";
 import { compressImage } from "@/lib/image-compress";
@@ -98,6 +99,7 @@ export default function StudentProfilePage() {
   const [copiedRefLink, setCopiedRefLink] = useState(false);
   const [editingUpi, setEditingUpi] = useState(false);
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
+  const [termsOpen, setTermsOpen] = useState(false);
 
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
@@ -1564,6 +1566,66 @@ export default function StudentProfilePage() {
                       </>
                     )}
                   </button>
+
+                  {/* Collapsible Terms & Conditions (Only shown when pressed) */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setTermsOpen(!termsOpen)}
+                      className="w-full py-2.5 px-3.5 flex items-center justify-between text-left text-xs font-semibold text-slate-600 hover:text-purple-700 bg-slate-50 hover:bg-purple-50/50 rounded-xl transition border border-slate-200 cursor-pointer select-none"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>Referral Program Terms & Conditions (T&C)</span>
+                      </span>
+                      {termsOpen ? (
+                        <ChevronUp className="w-4 h-4 text-purple-600 shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                      )}
+                    </button>
+
+                    {termsOpen && (
+                      <div className="mt-3 p-4 bg-purple-50/40 rounded-2xl border border-purple-200/80 text-xs text-slate-600 space-y-3 animate-in fade-in duration-200">
+                        <div className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                          <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          <span>Terms & Program Rules</span>
+                        </div>
+                        <ul className="space-y-2 text-[11px] sm:text-xs leading-relaxed text-slate-600">
+                          <li className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                            <div>
+                              <strong className="text-slate-800">Reward Qualification:</strong> The ₹25 referral bonus is unlocked once your referred friend completes registration with your code, applies for an event, and completes their first event work with verified attendance.
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                            <div>
+                              <strong className="text-slate-800">Direct UPI Payouts:</strong> Qualified rewards are processed directly by Topline administrators to your registered UPI handle.
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                            <div>
+                              <strong className="text-slate-800">No Referral Limit:</strong> You can invite unlimited college friends and classmates.
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                            <div>
+                              <strong className="text-slate-800">Fair Play Policy:</strong> Self-referrals, duplicate accounts, or fraudulent registrations are strictly prohibited and will result in forfeiture of rewards.
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0"></span>
+                            <div>
+                              <strong className="text-slate-800">Management Discretion:</strong> Topline reserves the right to review attendance logs and update program terms as needed.
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </form>
               </div>
             ) : (
