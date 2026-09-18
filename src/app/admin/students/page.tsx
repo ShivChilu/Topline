@@ -860,7 +860,29 @@ export default function AdminStudentsPage() {
     const notSelected = students.filter((s) => s.selectionStatus === "NOT_SELECTED").length;
     const withPhotos = students.filter((s) => s.profilePhotoUrl || s.photos.length > 0).length;
     const pending100 = students.filter((s) => (s.completenessScore >= 100) && s.selectionStatus === "UNDER_REVIEW").length;
-    return { total, selected, underReview, notSelected, withPhotos, pending100 };
+
+    // Multi-event application frequencies
+    const applied3Plus = students.filter((s) => (s.applications || []).length >= 3).length;
+    const applied2 = students.filter((s) => (s.applications || []).length === 2).length;
+    const applied1 = students.filter((s) => (s.applications || []).length === 1).length;
+    const appliedZero = students.filter((s) => (s.applications || []).length === 0).length;
+    const appliedAtLeast1 = students.filter((s) => (s.applications || []).length >= 1).length;
+    const appliedAtLeast2 = students.filter((s) => (s.applications || []).length >= 2).length;
+
+    return {
+      total,
+      selected,
+      underReview,
+      notSelected,
+      withPhotos,
+      pending100,
+      applied3Plus,
+      applied2,
+      applied1,
+      appliedZero,
+      appliedAtLeast1,
+      appliedAtLeast2,
+    };
   }, [students]);
 
   // Aggregate Email Communication & Action Analytics
@@ -1232,14 +1254,30 @@ export default function AdminStudentsPage() {
         return false;
       }
 
-      // Event Application Filter (Not Applied / Applied)
+      // Event Application Filter (Multi-Event Frequency or Specific Event)
       if (eventFilterId !== "ALL") {
-        const hasApplied = (s.applications || []).some((app: any) => app.eventId === eventFilterId);
-        if (eventFilterMode === "NOT_APPLIED" && hasApplied) {
-          return false;
-        }
-        if (eventFilterMode === "APPLIED" && !hasApplied) {
-          return false;
+        const appCount = (s.applications || []).length;
+        if (eventFilterId === "APPLIED_3_PLUS") {
+          if (appCount < 3) return false;
+        } else if (eventFilterId === "APPLIED_2_EXACT") {
+          if (appCount !== 2) return false;
+        } else if (eventFilterId === "APPLIED_1_EXACT") {
+          if (appCount !== 1) return false;
+        } else if (eventFilterId === "APPLIED_2_OR_MORE") {
+          if (appCount < 2) return false;
+        } else if (eventFilterId === "APPLIED_1_OR_MORE") {
+          if (appCount < 1) return false;
+        } else if (eventFilterId === "APPLIED_ZERO") {
+          if (appCount !== 0) return false;
+        } else {
+          // Specific Event ID
+          const hasApplied = (s.applications || []).some((app: any) => app.eventId === eventFilterId);
+          if (eventFilterMode === "NOT_APPLIED" && hasApplied) {
+            return false;
+          }
+          if (eventFilterMode === "APPLIED" && !hasApplied) {
+            return false;
+          }
         }
       }
 
@@ -1789,7 +1827,106 @@ export default function AdminStudentsPage() {
 
       {/* FILTER BAR */}
       {activeTab !== "fields" && (
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
+          {/* MULTI-EVENT APPLICATION FREQUENCY QUICK PILLS */}
+          <div className="flex flex-wrap items-center gap-2 pt-0.5 pb-2 border-b border-slate-100">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-slate-500" />
+              Event Applications:
+            </span>
+
+            {/* All 3+ Events */}
+            <button
+              type="button"
+              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_3_PLUS" ? "ALL" : "APPLIED_3_PLUS"))}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
+                eventFilterId === "APPLIED_3_PLUS"
+                  ? "bg-orange-600 text-white shadow-md shadow-orange-500/20 ring-2 ring-orange-500/30"
+                  : "bg-orange-50/70 hover:bg-orange-100 text-orange-900 border border-orange-200/80"
+              }`}
+            >
+              <span>🔥 All 3+ Events</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  eventFilterId === "APPLIED_3_PLUS" ? "bg-white text-orange-700" : "bg-orange-200/80 text-orange-900"
+                }`}
+              >
+                {stats.applied3Plus}
+              </span>
+            </button>
+
+            {/* Any 2 Events */}
+            <button
+              type="button"
+              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_2_EXACT" ? "ALL" : "APPLIED_2_EXACT"))}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
+                eventFilterId === "APPLIED_2_EXACT"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-blue-500/30"
+                  : "bg-blue-50/70 hover:bg-blue-100 text-blue-900 border border-blue-200/80"
+              }`}
+            >
+              <span>⭐ Any 2 Events</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  eventFilterId === "APPLIED_2_EXACT" ? "bg-white text-blue-700" : "bg-blue-200/80 text-blue-900"
+                }`}
+              >
+                {stats.applied2}
+              </span>
+            </button>
+
+            {/* 1 Event */}
+            <button
+              type="button"
+              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_1_EXACT" ? "ALL" : "APPLIED_1_EXACT"))}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
+                eventFilterId === "APPLIED_1_EXACT"
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-500/20 ring-2 ring-purple-500/30"
+                  : "bg-purple-50/70 hover:bg-purple-100 text-purple-900 border border-purple-200/80"
+              }`}
+            >
+              <span>📌 1 Event</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  eventFilterId === "APPLIED_1_EXACT" ? "bg-white text-purple-700" : "bg-purple-200/80 text-purple-900"
+                }`}
+              >
+                {stats.applied1}
+              </span>
+            </button>
+
+            {/* Never Applied (0 Events) */}
+            <button
+              type="button"
+              onClick={() => setEventFilterId((prev) => (prev === "APPLIED_ZERO" ? "ALL" : "APPLIED_ZERO"))}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
+                eventFilterId === "APPLIED_ZERO"
+                  ? "bg-slate-800 text-white shadow-md shadow-slate-700/20 ring-2 ring-slate-600/30"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
+            >
+              <span>⭕ 0 Events (Never Applied)</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  eventFilterId === "APPLIED_ZERO" ? "bg-white text-slate-900" : "bg-slate-200 text-slate-800"
+                }`}
+              >
+                {stats.appliedZero}
+              </span>
+            </button>
+
+            {/* Clear Filter if active */}
+            {eventFilterId !== "ALL" && (
+              <button
+                type="button"
+                onClick={() => setEventFilterId("ALL")}
+                className="text-[11px] font-bold text-red-600 hover:text-red-800 hover:underline px-2 py-1 transition cursor-pointer"
+              >
+                Reset Event Filter ✕
+              </button>
+            )}
+          </div>
+
           <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
             {/* Search & Create Template Button */}
             <div className="flex items-center gap-2.5 w-full lg:w-auto flex-1 max-w-xl">
@@ -1837,27 +1974,41 @@ export default function AdminStudentsPage() {
                 <select
                   value={eventFilterId}
                   onChange={(e) => {
-                    setEventFilterId(e.target.value);
-                    if (e.target.value !== "ALL" && !eventFilterMode) {
+                    const val = e.target.value;
+                    setEventFilterId(val);
+                    if (val !== "ALL" && !val.startsWith("APPLIED_") && !eventFilterMode) {
                       setEventFilterMode("NOT_APPLIED");
                     }
                   }}
-                  className={`text-xs font-bold rounded-xl px-3 py-2 border transition max-w-[200px] truncate ${
+                  className={`text-xs font-bold rounded-xl px-3 py-2 border transition max-w-[220px] truncate ${
                     eventFilterId !== "ALL"
                       ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20"
                       : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
                   }`}
-                  title="Filter students by event application status"
+                  title="Filter students by event application count or specific event status"
                 >
-                  <option value="ALL">All Events</option>
-                  {eventsList.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.name} {ev.date ? `(${new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})` : ""}
-                    </option>
-                  ))}
+                  <option value="ALL">All Events / Candidates</option>
+
+                  <optgroup label="📊 Application Frequency">
+                    <option value="APPLIED_3_PLUS">🔥 All 3+ Events ({stats.applied3Plus})</option>
+                    <option value="APPLIED_2_EXACT">⭐ Any 2 Events ({stats.applied2})</option>
+                    <option value="APPLIED_1_EXACT">📌 1 Event ({stats.applied1})</option>
+                    <option value="APPLIED_2_OR_MORE">✨ 2 or More Events ({stats.appliedAtLeast2})</option>
+                    <option value="APPLIED_ZERO">⭕ 0 Events / Never Applied ({stats.appliedZero})</option>
+                  </optgroup>
+
+                  {eventsList.length > 0 && (
+                    <optgroup label="📅 Specific Events">
+                      {eventsList.map((ev) => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.name} {ev.date ? `(${new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
 
-                {eventFilterId !== "ALL" && (
+                {eventFilterId !== "ALL" && !eventFilterId.startsWith("APPLIED_") && (
                   <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs">
                     <button
                       type="button"
@@ -1894,6 +2045,17 @@ export default function AdminStudentsPage() {
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                )}
+
+                {eventFilterId !== "ALL" && eventFilterId.startsWith("APPLIED_") && (
+                  <button
+                    type="button"
+                    onClick={() => setEventFilterId("ALL")}
+                    className="p-1.5 text-slate-400 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition cursor-pointer border border-slate-200"
+                    title="Clear frequency filter"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
 
@@ -1964,7 +2126,12 @@ export default function AdminStudentsPage() {
             <div className="bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 border border-amber-300/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-amber-950 shadow-xs animate-in fade-in">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1">
-                  {eventFilterMode === "NOT_APPLIED" ? (
+                  {eventFilterId.startsWith("APPLIED_") ? (
+                    <>
+                      <Activity className="w-3 h-3 text-amber-900" />
+                      <span>Frequency Filter</span>
+                    </>
+                  ) : eventFilterMode === "NOT_APPLIED" ? (
                     <>
                       <XCircle className="w-3 h-3 text-amber-900" />
                       <span>Not Applied Filter</span>
@@ -1979,10 +2146,23 @@ export default function AdminStudentsPage() {
                 <span>
                   Showing <strong>{filteredStudents.length}</strong> candidate{filteredStudents.length === 1 ? "" : "s"}
                   {genderFilter !== "ALL" ? ` (${genderFilter === "MALE" ? "Male Only" : genderFilter === "FEMALE" ? "Female Only" : genderFilter})` : ""}
-                  {" "}{eventFilterMode === "NOT_APPLIED" ? "who have NOT applied for" : "who applied for"}{" "}
-                  <strong className="text-slate-900 underline underline-offset-2">
-                    {eventsList.find((e) => e.id === eventFilterId)?.name || "Selected Event"}
-                  </strong>.
+                  {" "}
+                  {eventFilterId === "APPLIED_3_PLUS"
+                    ? "who applied for All 3+ Events"
+                    : eventFilterId === "APPLIED_2_EXACT"
+                    ? "who applied for Any 2 Events"
+                    : eventFilterId === "APPLIED_1_EXACT"
+                    ? "who applied for 1 Event"
+                    : eventFilterId === "APPLIED_2_OR_MORE"
+                    ? "who applied for 2 or More Events"
+                    : eventFilterId === "APPLIED_ZERO"
+                    ? "who have NEVER applied for any event (0 events)"
+                    : `${eventFilterMode === "NOT_APPLIED" ? "who have NOT applied for" : "who applied for"} `}
+                  {!eventFilterId.startsWith("APPLIED_") && (
+                    <strong className="text-slate-900 underline underline-offset-2">
+                      {eventsList.find((e) => e.id === eventFilterId)?.name || "Selected Event"}
+                    </strong>
+                  )}.
                 </span>
               </div>
               <button
