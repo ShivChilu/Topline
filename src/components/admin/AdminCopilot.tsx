@@ -29,7 +29,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const QUICK_PROMPTS = [
+const SUPERADMIN_PROMPTS = [
   "🔥 Who attended both 17th Sept and 21st Sept events?",
   "📊 Show 100% complete candidates pending review",
   "✓ Mark Ram as present for 21st September event",
@@ -37,6 +37,22 @@ const QUICK_PROMPTS = [
   "💰 Referral bonus breakdown & pending payouts",
   "📈 Email open rate & WhatsApp join counts",
 ];
+
+const EVENT_ADMIN_PROMPTS = [
+  "📞 For how many students first call is done?",
+  "📵 Show candidates marked as switch off / not reachable",
+  "👥 Give me the list of students who applied for my event",
+  "✅ Which candidates are confirmed for the event?",
+  "💬 Who has NOT been added to WhatsApp group?",
+  "✓ Mark candidate Ram as called (Call 1 Done)",
+  "📍 Show checked-in / present candidates",
+];
+
+const SUPERADMIN_WELCOME =
+  "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot**. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*\n- *\"Show 100% complete candidates pending review\"*";
+
+const EVENT_ADMIN_WELCOME =
+  "👋 **Hello Event Admin!**\n\nI am your **Event AI Copilot**. I have real-time access to your assigned event to help you **manage candidates**, **check 2-round calling logs**, **record remarks**, **verify WhatsApp group status**, and **mark event attendance**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"For how many students first call is done?\"*\n- *\"Show me all candidates marked as switch off or not reachable\"*\n- *\"Give me the list of students who applied for 21st September\"*\n- *\"Mark student Ram as called with remarks confirmed\"*\n- *\"Who all are marked present today?\"*";
 
 const formatToolName = (name: string): string => {
   const map: Record<string, string> = {
@@ -60,12 +76,13 @@ const formatToolName = (name: string): string => {
 export default function AdminCopilot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [userRole, setUserRole] = useState<string>("superadmin");
+  const [adminName, setAdminName] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content:
-        "👋 **Hello!**\n\nI am your **AI Operations Copilot**. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*",
+      content: SUPERADMIN_WELCOME,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -80,6 +97,41 @@ export default function AdminCopilot() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // Fetch Admin session details on mount to tailor AI Copilot interface
+  useEffect(() => {
+    const fetchAdminRole = async () => {
+      try {
+        const res = await fetch("/api/admin/users/me");
+        const data = await res.json();
+        if (data.success && data.role) {
+          setUserRole(data.role);
+          if (data.name) setAdminName(data.name);
+
+          // Update initial welcome message to role-tailored prompt if chat has not started
+          if (data.role === "event_admin") {
+            setMessages((prev) => {
+              if (prev.length === 1 && prev[0].id === "welcome") {
+                return [
+                  {
+                    id: "welcome",
+                    role: "assistant",
+                    content: EVENT_ADMIN_WELCOME,
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  },
+                ];
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[AdminCopilot] Could not fetch current admin role:", err);
+      }
+    };
+
+    fetchAdminRole();
+  }, []);
 
   // Initialize Web Speech API for real-time live preview while recording
   useEffect(() => {
@@ -313,7 +365,7 @@ export default function AdminCopilot() {
         {
           id: "welcome",
           role: "assistant",
-          content: "✨ Conversation cleared. What would you like to inspect or update?",
+          content: userRole === "event_admin" ? EVENT_ADMIN_WELCOME : SUPERADMIN_WELCOME,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -454,6 +506,8 @@ export default function AdminCopilot() {
     });
   };
 
+  const quickPrompts = userRole === "event_admin" ? EVENT_ADMIN_PROMPTS : SUPERADMIN_PROMPTS;
+
   return (
     <>
       {/* FLOATING TRIGGER BUTTON (Bottom-Right) */}
@@ -462,7 +516,7 @@ export default function AdminCopilot() {
           type="button"
           onClick={() => setIsOpen(true)}
           className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-2.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-red-400/40 border border-white/20 group"
-          title="Open Super Admin AI Copilot (Ctrl+J)"
+          title={`Open ${userRole === "event_admin" ? "Event" : "Admin"} AI Copilot (Ctrl+J)`}
         >
           <div className="relative shrink-0">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-spin-slow" />
@@ -473,10 +527,12 @@ export default function AdminCopilot() {
           </div>
           <div className="flex flex-col text-left">
             <span className="text-[11px] sm:text-xs font-black tracking-wide uppercase flex items-center gap-1 sm:gap-1.5">
-              <span>Admin AI Copilot</span>
+              <span>{userRole === "event_admin" ? "Event AI Copilot" : "Admin AI Copilot"}</span>
               <span className="bg-white/20 text-[8px] sm:text-[9px] px-1 py-0.2 rounded font-extrabold uppercase">AI</span>
             </span>
-            <span className="text-[9px] sm:text-[10px] text-white/80 font-semibold hidden xs:inline">Live Data & Actions (Ctrl+J)</span>
+            <span className="text-[9px] sm:text-[10px] text-white/80 font-semibold hidden xs:inline">
+              {userRole === "event_admin" ? "Assigned Event DB & Calling" : "Live Data & Actions (Ctrl+J)"}
+            </span>
           </div>
         </button>
       )}
@@ -499,14 +555,16 @@ export default function AdminCopilot() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-[11px] sm:text-xs font-black text-white uppercase tracking-wider truncate">
-                    Admin AI Copilot
+                    {userRole === "event_admin" ? "Event AI Copilot" : "Admin AI Copilot"}
                   </h3>
                   <span className="px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
                     Live DB
                   </span>
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-slate-400 truncate">
-                  AI Assistant • Real-time DB Queries & Actions
+                  {userRole === "event_admin"
+                    ? "Assigned Events • Candidate Calling & Attendance"
+                    : "AI Assistant • Real-time DB Queries & Actions"}
                 </p>
               </div>
             </div>
@@ -546,7 +604,7 @@ export default function AdminCopilot() {
               <Activity className="w-3 h-3 text-amber-500" />
               Quick:
             </span>
-            {QUICK_PROMPTS.map((prompt, pIdx) => (
+            {quickPrompts.map((prompt, pIdx) => (
               <button
                 key={pIdx}
                 type="button"
