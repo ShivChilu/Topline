@@ -83,6 +83,29 @@ export default function EventApplicationForm({
     setTimeout(() => setCopiedRef(false), 2500);
   };
 
+  const handleShareNative = async () => {
+    const code = loggedInUser?.referralCode || "";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://toplineodc.co.in";
+    const refUrl = code ? `${baseUrl}/events/${eventId}?ref=${encodeURIComponent(code)}` : `${baseUrl}/events/${eventId}`;
+    const shareData = {
+      title: "Work Events with Topline ODC",
+      text: code
+        ? `Hey! I just applied for this catering event on Topline ODC. Come join me and let's work together! Sign up with my referral code ${code}:`
+        : "Check out this catering event opportunity on Topline ODC:",
+      url: refUrl,
+    };
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User dismissed share dialog
+      }
+    } else {
+      handleCopyReferralEventLink();
+    }
+  };
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
@@ -206,14 +229,25 @@ export default function EventApplicationForm({
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleShareEventWhatsApp}
-                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 fill-slate-950" />
-                <span>Invite Friends on WhatsApp</span>
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleShareEventWhatsApp}
+                  className="bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 fill-slate-950" />
+                  <span>Share on WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareNative}
+                  className="bg-white hover:bg-slate-100 text-slate-900 font-black py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer border border-slate-300"
+                >
+                  <Share2 className="w-4 h-4 text-purple-600" />
+                  <span>Share with Friends</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="pt-1">
@@ -551,14 +585,25 @@ export default function EventApplicationForm({
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleShareEventWhatsApp}
-                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 fill-slate-950" />
-                <span>Invite Friends on WhatsApp</span>
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleShareEventWhatsApp}
+                  className="bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 fill-slate-950" />
+                  <span>Share on WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareNative}
+                  className="bg-white hover:bg-slate-100 text-slate-900 font-black py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer border border-slate-300"
+                >
+                  <Share2 className="w-4 h-4 text-purple-600" />
+                  <span>Share with Friends</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="pt-1">
