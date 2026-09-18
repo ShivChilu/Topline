@@ -270,10 +270,12 @@ export async function PUT(request: Request) {
     // Recompute completeness after update
     const completeness = await getStudentProfileCompletion(updatedUser.id);
 
-    // Check if >= 5 candidates are pending review and alert admin
-    checkAndNotifyAdminPendingReview().catch((err) =>
-      console.error("[Pending Review Alert Error]", err)
-    );
+    // Only notify admin if candidate profile is 100% complete
+    if (completeness.isComplete) {
+      checkAndNotifyAdminPendingReview().catch((err) =>
+        console.error("[Pending Review Alert Error]", err)
+      );
+    }
 
     return NextResponse.json({
       success: true,

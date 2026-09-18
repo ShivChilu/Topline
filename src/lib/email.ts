@@ -1487,7 +1487,7 @@ export async function sendAdminPendingReviewAlertEmail({
 }): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     const adminEmail = "chiluverushivaprasad02@gmail.com";
-    const subject = `🔔 Topline Alert: ${totalPending} Candidates Pending for Review & Selection`;
+    const subject = `🔔 Topline Daily Digest: ${totalPending} 100% Complete Candidates Pending Review`;
     const appUrl = getAppBaseUrl();
     const studentsUrl = `${appUrl}/admin/students`;
     const applicationsUrl = `${appUrl}/admin/applications`;
@@ -1519,10 +1519,10 @@ export async function sendAdminPendingReviewAlertEmail({
           <h1>TOPLINE CONTROL NOTIFICATION</h1>
         </div>
         <div class="content">
-          <div class="badge">⚠️ Action Required: Pending Candidates</div>
-          <h2 style="color: #ffffff; margin-top: 0; font-size: 19px;">${totalPending} Candidates Awaiting Review & Selection</h2>
+          <div class="badge">⚠️ 100% Complete Profiles Pending Review</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 19px;">${totalPending} Candidates Ready for Selection</h2>
           <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 16px 0;">
-            Hi Admin, you currently have <strong>${totalPending} candidates</strong> pending for review in your Topline dashboard. These students are ready for your evaluation and 1-click selection.
+            Hi Admin, you have <strong>${totalPending} candidate(s)</strong> with <strong>100% complete profiles</strong> awaiting your review in the Topline dashboard.
           </p>
 
           <table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">

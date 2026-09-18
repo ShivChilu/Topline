@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signToken } from "@/lib/auth";
 import { getActiveReferralRewardAmount } from "@/lib/referral";
-import { checkAndNotifyAdminPendingReview } from "@/lib/pending-review-notifier";
 
 export const dynamic = "force-dynamic";
 
@@ -233,11 +232,6 @@ export async function POST(request: Request) {
       maxAge: 30 * 24 * 60 * 60, // 30-day persistent session
       path: "/",
     });
-
-    // Check if >= 5 candidates are pending review and alert admin
-    checkAndNotifyAdminPendingReview().catch((err) =>
-      console.error("[Pending Review Alert Error]", err)
-    );
 
     return response;
   } catch (error: any) {
