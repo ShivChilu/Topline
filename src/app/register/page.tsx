@@ -179,7 +179,7 @@ function RegisterForm() {
           Student Registration
         </h1>
         <p className="text-xs sm:text-sm text-slate-500">
-          Create your profile to apply for luxury catering and hospitality gigs in 1 click.
+          Create your profile to apply for premier catering and banquet events in 1 click.
         </p>
       </div>
 

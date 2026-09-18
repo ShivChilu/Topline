@@ -171,7 +171,7 @@ export default async function OpportunitiesPage(props: {
             Topline Catering Assignments
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 uppercase tracking-wider">
-            Available Gigs & Events
+            Available Events & Opportunities
           </h1>
           <p className="text-sm text-slate-500 max-w-2xl mx-auto">
             Explore verified five-star hotel catering, banquet steward shifts, and luxury hospitality opportunities across the region.

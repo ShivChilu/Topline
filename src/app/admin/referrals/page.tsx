@@ -164,7 +164,7 @@ export default function AdminReferralsPage() {
               Referrals & Offline Payouts
             </h1>
             <span className="bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider">
-              ₹25 / Qualified Gig
+              ₹25 / Qualified Event
             </span>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
@@ -225,7 +225,7 @@ export default function AdminReferralsPage() {
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Qualified (Done 1st Gig)</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Qualified (1st Event Done)</p>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
           <p className="text-2xl sm:text-3xl font-black text-emerald-600">{metrics.qualifiedCount}</p>

@@ -165,7 +165,7 @@ export default async function HomePage() {
             href="/opportunities"
             className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl text-[15px] sm:text-lg font-bold border border-slate-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center box-border"
           >
-            Browse All Gigs
+            Browse All Events
           </Link>
         </div>
       </HeroSlideshow>

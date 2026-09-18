@@ -285,7 +285,7 @@ export default function StudentProfilePage() {
   const handleShareWhatsApp = () => {
     const code = referralData?.user?.referralCode || "";
     const url = referralData?.user?.inviteUrl || window.location.origin;
-    const msg = `Hey! 👋 Join Topline to work flexible student event & catering gigs and earn quick daily payouts. Register using my invite code ${code} or click here: ${url}`;
+    const msg = `Hey! 👋 Join Topline to work flexible student catering events and earn quick daily payouts. Register using my invite code ${code} or click here: ${url}`;
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, "_blank");
   };
@@ -293,7 +293,7 @@ export default function StudentProfilePage() {
   const handleShareTelegram = () => {
     const code = referralData?.user?.referralCode || "";
     const url = referralData?.user?.inviteUrl || window.location.origin;
-    const msg = `Join Topline to work flexible student event & catering gigs and earn quick daily payouts! Use code: ${code}`;
+    const msg = `Join Topline to work flexible student catering events and earn quick daily payouts! Use code: ${code}`;
     const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(msg)}`;
     window.open(tgUrl, "_blank");
   };
@@ -303,7 +303,7 @@ export default function StudentProfilePage() {
     const url = referralData?.user?.inviteUrl || window.location.origin;
     const shareData = {
       title: "Join Topline & Earn with Me",
-      text: `Join Topline to work flexible student event & catering gigs! Use my referral code ${code}:`,
+      text: `Join Topline to work flexible student catering events! Use my referral code ${code}:`,
       url: url,
     };
 
@@ -1144,7 +1144,7 @@ export default function StudentProfilePage() {
                     Refer Friends & Earn ₹25 Direct to UPI
                   </h3>
                   <p className="text-xs text-purple-200/90 leading-relaxed">
-                    Invite your college classmates and friends. Earn ₹25 deposited directly into your UPI account for every friend who joins Topline and completes their first gig.
+                    Invite your college classmates and friends. Earn ₹25 deposited directly into your UPI account for every friend who joins Topline and completes their first event.
                   </p>
                 </div>
 
@@ -1472,7 +1472,7 @@ export default function StudentProfilePage() {
                     Refer College Friends & Earn ₹25 Direct to UPI
                   </h2>
                   <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
-                    Invite your friends to work flexible catering gigs with Topline. Earn ₹25 for every friend who registers with your code and completes their first gig.
+                    Invite your friends to work flexible catering events with Topline. Earn ₹25 for every friend who registers with your code and completes their first event work.
                   </p>
                 </div>
 
@@ -1774,7 +1774,7 @@ export default function StudentProfilePage() {
                       ₹{referralData.stats?.pendingPayout || 0}
                     </span>
                     <span className="text-[11px] text-amber-700 block">
-                      {referralData.stats?.qualifiedCount || 0} gigs in payout queue
+                      {referralData.stats?.qualifiedCount || 0} events in payout queue
                     </span>
                   </div>
 
@@ -1794,7 +1794,7 @@ export default function StudentProfilePage() {
                       {referralData.stats?.totalReferred || 0}
                     </span>
                     <span className="text-[11px] text-slate-500 block">
-                      {referralData.stats?.pendingCount || 0} awaiting 1st gig
+                      {referralData.stats?.pendingCount || 0} awaiting 1st event
                     </span>
                   </div>
                 </div>
@@ -1821,7 +1821,7 @@ export default function StudentProfilePage() {
                       <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 font-black text-sm flex items-center justify-center">
                         2
                       </div>
-                      <h4 className="font-extrabold text-slate-900 text-sm">Friend Joins & Works 1st Gig</h4>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Friend Joins & Works 1st Event</h4>
                       <p className="text-xs text-slate-500 leading-relaxed">
                         Your friend creates an account, gets selected for an event, and attends duty with attendance verified.
                       </p>
@@ -1911,7 +1911,7 @@ export default function StudentProfilePage() {
                                 ) : (
                                   <span className="bg-slate-100 text-slate-700 border border-slate-200 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
                                     <Clock className="w-3 h-3 text-slate-400" />
-                                    Pending 1st Gig
+                                    Pending 1st Event
                                   </span>
                                 )}
                               </td>
@@ -1959,7 +1959,7 @@ export default function StudentProfilePage() {
                       },
                       {
                         q: "Is there any limit to how much I can earn?",
-                        a: "There is no cap or limit! You can invite as many college friends as you like and earn ₹25 for every friend who joins and attends their first gig.",
+                        a: "There is no cap or limit! You can invite as many college friends as you like and earn ₹25 for every friend who joins and attends their first event shift.",
                       },
                       {
                         q: "What are the rules regarding fair referrals?",
