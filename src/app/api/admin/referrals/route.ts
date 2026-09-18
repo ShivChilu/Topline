@@ -316,3 +316,72 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: error.message || "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const rawAmount = Number(body.rewardAmount);
+
+    if (isNaN(rawAmount) || rawAmount < 20) {
+      return NextResponse.json(
+        { success: false, message: "Referral reward amount must be a minimum of ₹20." },
+        { status: 400 }
+      );
+    }
+
+    const cleanAmount = Math.max(20, Math.min(150, Math.round(rawAmount)));
+
+    const existingConfig = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
+
+    const currentValues =
+      existingConfig?.value && typeof existingConfig.value === "object"
+        ? (existingConfig.value as Record<string, any>)
+        : {};
+
+    const updatedConfig = await prisma.setting.upsert({
+      where: { key: "homepage_content" },
+      update: {
+        value: {
+          ...currentValues,
+          referralRewardAmount: cleanAmount,
+        },
+      },
+      create: {
+        key: "homepage_content",
+        value: {
+          referralRewardAmount: cleanAmount,
+        },
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        adminId: admin.id,
+        action: "UPDATE_REFERRAL_REWARD_RATE",
+        target: "SETTING_HOMEPAGE_CONTENT",
+        metadata: {
+          previousAmount: currentValues.referralRewardAmount ?? 25,
+          newRewardAmount: cleanAmount,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Referral reward payout rate successfully updated to ₹${cleanAmount} per completed 1st event.`,
+      rewardAmount: cleanAmount,
+      settings: updatedConfig.value,
+    });
+  } catch (error: any) {
+    console.error("Admin referrals PATCH error:", error);
+    return NextResponse.json({ success: false, message: error.message || "Internal server error" }, { status: 500 });
+  }
+}
+

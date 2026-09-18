@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
+import { getActiveReferralRewardAmount } from "@/lib/referral";
 import AdminRefreshButton from "@/components/admin/AdminRefreshButton";
 
 export const revalidate = 0; // Fresh stats on reload
@@ -51,6 +52,7 @@ export default async function AdminDashboardPage() {
     totalReferrals: 0,
     qualifiedReferrals: 0,
     pendingReferralPayout: 0,
+    activeReward: 50,
   };
 
   let recentEvents: any[] = [];
@@ -88,6 +90,7 @@ export default async function AdminDashboardPage() {
       _sum: { rewardAmount: true },
     });
     stats.pendingReferralPayout = pendingReferralSum._sum.rewardAmount || 0;
+    stats.activeReward = await getActiveReferralRewardAmount();
 
     // 2. Get recent & upcoming events with real registered application counts
     recentEvents = await prisma.event.findMany({
@@ -369,19 +372,27 @@ export default async function AdminDashboardPage() {
             </Link>
             <Link
               href="/admin/referrals"
-              className="bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 text-purple-950 font-bold p-3.5 rounded-xl text-center text-sm border border-purple-200 transition flex items-center justify-between shadow-2xs"
+              className="bg-gradient-to-br from-purple-50 via-pink-50 to-red-50 hover:from-purple-100 hover:to-pink-100 text-purple-950 font-bold p-3.5 rounded-xl border border-purple-200 transition shadow-2xs space-y-2 block"
             >
-              <div className="flex items-center gap-2">
-                <Gift className="w-4 h-4 text-purple-600" />
-                <span>Referrals & Payouts</span>
-              </div>
-              {stats.pendingReferralPayout > 0 ? (
-                <span className="bg-amber-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full">
-                  ₹{stats.pendingReferralPayout} Due
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-extrabold text-slate-900">Referrals & Payouts</span>
+                </div>
+                <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200 uppercase">
+                  Earn Up to ₹150
                 </span>
-              ) : (
-                <span className="text-xs text-purple-700 font-bold">{stats.totalReferrals} referred</span>
-              )}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-600 pt-0.5">
+                <span>Active Payout: <strong className="text-red-600 font-extrabold">₹{stats.activeReward}</strong>/shift</span>
+                {stats.pendingReferralPayout > 0 ? (
+                  <span className="bg-amber-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full">
+                    ₹{stats.pendingReferralPayout} Due
+                  </span>
+                ) : (
+                  <span className="text-slate-500 font-medium">{stats.totalReferrals} referred</span>
+                )}
+              </div>
             </Link>
             <Link
               href="/admin/applications"

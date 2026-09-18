@@ -218,15 +218,17 @@ export async function getUserReferralStats(userId: string) {
   const qualifiedCount = referrals.filter((r) => r.status === ReferralStatus.QUALIFIED).length;
   const paidCount = referrals.filter((r) => r.status === ReferralStatus.PAID).length;
 
+  const activeReward = await getActiveReferralRewardAmount();
+
   const totalEarned = referrals
     .filter((r) => r.status === ReferralStatus.QUALIFIED || r.status === ReferralStatus.PAID)
-    .reduce((sum, r) => sum + (r.rewardAmount || DEFAULT_REFERRAL_REWARD), 0);
+    .reduce((sum, r) => sum + (r.rewardAmount || activeReward), 0);
   const pendingPayout = referrals
     .filter((r) => r.status === ReferralStatus.QUALIFIED)
-    .reduce((sum, r) => sum + (r.rewardAmount || DEFAULT_REFERRAL_REWARD), 0);
+    .reduce((sum, r) => sum + (r.rewardAmount || activeReward), 0);
   const paidEarnings = referrals
     .filter((r) => r.status === ReferralStatus.PAID)
-    .reduce((sum, r) => sum + (r.rewardAmount || DEFAULT_REFERRAL_REWARD), 0);
+    .reduce((sum, r) => sum + (r.rewardAmount || activeReward), 0);
 
   return {
     totalInvited,
@@ -236,7 +238,7 @@ export async function getUserReferralStats(userId: string) {
     totalEarned,
     pendingPayout,
     paidEarnings,
-    rewardPerReferral: DEFAULT_REFERRAL_REWARD,
+    rewardPerReferral: activeReward,
     referrals: referrals.map((r) => {
       // Mask phone for privacy e.g. "98****1234"
       const rawPhone = r.referee.phone || "";
