@@ -2,14 +2,34 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { StudentSelectionStatus } from "@prisma/client";
 import { sendStudentSelectionEmail, sendStudentDeselectionEmail } from "@/lib/email";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
+
+async function getLoggedInAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+  });
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN"].includes(user.role)) return null;
+  return user;
+}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized. Admin permissions required." }, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { selectionStatus, notes, adminRemarks, sendEmail = true } = body;

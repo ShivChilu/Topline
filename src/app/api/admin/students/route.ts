@@ -2,11 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Role, StudentSelectionStatus } from "@prisma/client";
 import { sendStudentSelectionEmail, sendStudentDeselectionEmail } from "@/lib/email";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
+async function getLoggedInAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+  });
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN"].includes(user.role)) return null;
+  return user;
+}
+
 export async function GET(request: Request) {
   try {
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized. Master student data access restricted to full administrators." }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim();
     const status = searchParams.get("status"); // active | blocked
@@ -398,6 +418,11 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized. Admin permissions required." }, { status: 403 });
+    }
+
     const body = await request.json();
     const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes, adminRemarks } = body;
 
@@ -542,6 +567,11 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized. Admin permissions required." }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     let id = searchParams.get("id");
     let ids = searchParams.get("ids")?.split(",").filter(Boolean);

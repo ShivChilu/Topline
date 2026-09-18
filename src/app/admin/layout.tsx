@@ -46,9 +46,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           if (data.role !== "calling" && pathname.startsWith("/admin/calling")) {
             router.push("/admin/dashboard");
           }
-          // Block event admin from accessing non-event pages
-          if (data.role === "event_admin" && !pathname.startsWith("/admin/events")) {
-            router.push("/admin/events");
+          // Block event admin from accessing non-event pages, create page, and edit pages
+          if (data.role === "event_admin") {
+            if (
+              !pathname.startsWith("/admin/events") ||
+              pathname === "/admin/events/create" ||
+              pathname.includes("/edit")
+            ) {
+              router.push("/admin/events");
+            }
           }
         } else {
           router.push("/login");

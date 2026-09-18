@@ -283,14 +283,16 @@ export default function AdminEventsPage() {
                     >
                       <Eye className="w-4 h-4" />
                     </Link>
-                    <Link
-                      href={`/admin/events/create?cloneFrom=${event._id}`}
-                      className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded font-bold text-xs transition flex items-center gap-1"
-                      title="Duplicate & Edit as New Event"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span className="hidden sm:inline">Clone</span>
-                    </Link>
+                    {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                      <Link
+                        href={`/admin/events/create?cloneFrom=${event._id}`}
+                        className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded font-bold text-xs transition flex items-center gap-1"
+                        title="Duplicate & Edit as New Event"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="hidden sm:inline">Clone</span>
+                      </Link>
+                    )}
                     <Link
                       href={`/admin/events/${event._id}/attendance`}
                       className="p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-655 transition"
@@ -298,13 +300,15 @@ export default function AdminEventsPage() {
                     >
                       <QrCode className="w-4 h-4 text-red-600" />
                     </Link>
-                    <Link
-                      href={`/admin/events/${event._id}/edit`}
-                      className="p-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded transition"
-                      title="Edit Event Details"
-                    >
-                      <Edit2 className="w-4 h-4 text-indigo-600" />
-                    </Link>
+                    {currentAdminRole !== "event_admin" && currentAdminRole !== "calling" && (
+                      <Link
+                        href={`/admin/events/${event._id}/edit`}
+                        className="p-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded transition"
+                        title="Edit Event Details"
+                      >
+                        <Edit2 className="w-4 h-4 text-indigo-600" />
+                      </Link>
+                    )}
                     <Link
                       href={`/events/${event._id}`}
                       target="_blank"

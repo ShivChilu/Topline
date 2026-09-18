@@ -17,7 +17,7 @@ async function getLoggedInAdmin() {
     where: { id: decoded.id },
     include: { assignedEvents: { select: { eventId: true } } },
   });
-  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
+  if (!user || !user.isActive || !["ADMIN", "SUPERADMIN"].includes(user.role)) return null;
   return user;
 }
 
