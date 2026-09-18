@@ -1562,7 +1562,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-extrabold text-white tracking-wide uppercase">
+                <h3 className="text-sm font-extrabold text-white !text-white tracking-wide uppercase">
                   Event WhatsApp Group Link
                 </h3>
                 {event.whatsappGroupLink ? (
@@ -1794,7 +1794,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 <Activity className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white !text-white flex items-center gap-2">
                   <span>Event Email & Candidate Availability Tracker</span>
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Live Engagement</span>
                 </h3>

@@ -256,7 +256,7 @@ export default function AdminReferralsPage() {
               Promotion: Up to ₹150 / Friend
             </span>
           </div>
-          <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
+          <h2 className="text-base sm:text-lg font-black tracking-tight text-white !text-white">
             Marketing Campaign: "Earn Up to ₹150 by Inviting Friends"
           </h2>
           <p className="text-xs text-slate-300">
