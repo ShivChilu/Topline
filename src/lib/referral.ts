@@ -199,6 +199,41 @@ export async function getUserReferralStats(userId: string) {
           phone: true,
           createdAt: true,
           selectionStatus: true,
+          applications: {
+            select: {
+              id: true,
+              status: true,
+              createdAt: true,
+              event: {
+                select: {
+                  id: true,
+                  name: true,
+                  date: true,
+                  location: true,
+                  reportingTime: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "asc" },
+          },
+          attendanceRecords: {
+            select: {
+              id: true,
+              eventId: true,
+              attendanceStatus: true,
+              checkInTime: true,
+              event: {
+                select: {
+                  id: true,
+                  name: true,
+                  date: true,
+                  location: true,
+                },
+              },
+            },
+            orderBy: { checkInTime: "asc" },
+          },
         },
       },
       qualifyingEvent: {
@@ -256,6 +291,114 @@ export async function getUserReferralStats(userId: string) {
           ? `${nameParts[0]} ${nameParts[nameParts.length - 1].charAt(0)}.`
           : nameParts[0];
 
+      const rewardVal = r.rewardAmount || activeReward;
+      const refereeApps = r.referee.applications || [];
+      const refereeAttendances = r.referee.attendanceRecords || [];
+
+      const firstApp = refereeApps.length > 0 ? refereeApps[0] : null;
+      const validAttendance = refereeAttendances.find(
+        (att) => att.attendanceStatus === "PRESENT" || att.attendanceStatus === "LATE"
+      );
+      const absentAttendance = refereeAttendances.find(
+        (att) => att.attendanceStatus === "ABSENT"
+      );
+
+      const isPaid = r.status === ReferralStatus.PAID;
+      const isQualified = r.status === ReferralStatus.QUALIFIED;
+      const isAttended = isPaid || isQualified || Boolean(validAttendance);
+      const isApplied = isAttended || refereeApps.length > 0;
+
+      // Calculate milestone steps
+      const steps = [
+        {
+          stepNumber: 1,
+          id: "claimed",
+          title: "Referral Claimed",
+          subtitle: "Joined Topline with your code",
+          status: "completed", // Always completed if record exists
+          timestamp: r.createdAt,
+          badgeText: "Joined",
+        },
+        {
+          stepNumber: 2,
+          id: "applied",
+          title: isApplied
+            ? "Applied for Shift"
+            : "Apply for 1st Event",
+          subtitle: isApplied
+            ? firstApp?.event?.name
+              ? `${firstApp.event.name}${firstApp.event.date ? ` (${new Date(firstApp.event.date).toLocaleDateString("en-GB")})` : ""}`
+              : "Application submitted"
+            : "Waiting for friend to apply for their first event",
+          status: isApplied ? "completed" : "current",
+          timestamp: firstApp ? firstApp.createdAt : null,
+          eventName: firstApp?.event?.name || null,
+          eventDate: firstApp?.event?.date || null,
+          badgeText: isApplied ? "Applied" : "Waiting",
+        },
+        {
+          stepNumber: 3,
+          id: "attended",
+          title: isAttended
+            ? "Marked Present"
+            : absentAttendance
+            ? "Marked Absent"
+            : "Shift Attendance",
+          subtitle: isAttended
+            ? `Shift completed at ${r.qualifyingEvent?.name || validAttendance?.event?.name || "Event"}. ₹${rewardVal} reward unlocked!`
+            : absentAttendance
+            ? "Marked absent for previous shift. Will qualify upon attending next event."
+            : isApplied
+            ? `Duty on ${firstApp?.event?.date ? new Date(firstApp.event.date).toLocaleDateString("en-GB") : "Event Day"}. Must be marked Present by supervisor.`
+            : "Friend must attend event shift and be marked Present",
+          status: isAttended
+            ? "completed"
+            : isApplied
+            ? absentAttendance
+              ? "action_needed"
+              : "current"
+            : "upcoming",
+          timestamp: r.qualifiedAt || validAttendance?.checkInTime || null,
+          eventName: r.qualifyingEvent?.name || validAttendance?.event?.name || null,
+          badgeText: isAttended ? "Verified" : isApplied ? "Pending Duty" : "Upcoming",
+        },
+        {
+          stepNumber: 4,
+          id: "payout",
+          title: isPaid
+            ? `₹${rewardVal} Paid to UPI`
+            : isQualified
+            ? `₹${rewardVal} In Payout Queue`
+            : `₹${rewardVal} UPI Payout`,
+          subtitle: isPaid
+            ? `Transferred to UPI${r.paidReference ? ` • Ref: ${r.paidReference}` : ""}`
+            : isQualified
+            ? `₹${rewardVal} reward earned! Topline admin will transfer to your UPI ID shortly.`
+            : `₹${rewardVal} credited directly to your UPI once attendance is confirmed`,
+          status: isPaid ? "completed" : isQualified ? "current" : "upcoming",
+          timestamp: r.paidAt || null,
+          paidReference: r.paidReference || null,
+          badgeText: isPaid ? "Paid" : isQualified ? "Processing" : "Locked",
+        },
+      ];
+
+      let currentStepIndex = 0;
+      let progressPercent = 25;
+
+      if (isPaid) {
+        currentStepIndex = 3;
+        progressPercent = 100;
+      } else if (isQualified || isAttended) {
+        currentStepIndex = 2; // Step 3 completed, waiting for payout (step 4)
+        progressPercent = 75;
+      } else if (isApplied) {
+        currentStepIndex = 1; // Step 2 completed, waiting for attendance (step 3)
+        progressPercent = 50;
+      } else {
+        currentStepIndex = 0; // Step 1 completed, waiting for apply (step 2)
+        progressPercent = 25;
+      }
+
       return {
         id: r.id,
         referee: {
@@ -263,14 +406,27 @@ export async function getUserReferralStats(userId: string) {
           name: maskedName,
           fullName: r.referee.name,
           phone: maskedPhone,
+          selectionStatus: r.referee.selectionStatus,
+          hasApplied: isApplied,
+          hasAttended: isAttended,
+          firstApplication: firstApp
+            ? {
+                id: firstApp.id,
+                eventName: firstApp.event?.name,
+                eventDate: firstApp.event?.date,
+                status: firstApp.status,
+                appliedAt: firstApp.createdAt,
+              }
+            : null,
         },
         refereeName: maskedName,
+        refereeFullName: r.referee.name,
         refereePhone: maskedPhone,
         createdAt: r.createdAt,
         registeredAt: r.createdAt,
         status: r.status,
-        rewardAmount: r.rewardAmount,
-        qualifyingEventName: r.qualifyingEvent?.name || null,
+        rewardAmount: rewardVal,
+        qualifyingEventName: r.qualifyingEvent?.name || validAttendance?.event?.name || null,
         event: r.qualifyingEvent
           ? {
               id: r.qualifyingEvent.id,
@@ -283,6 +439,13 @@ export async function getUserReferralStats(userId: string) {
         paidAt: r.paidAt,
         paidReference: r.paidReference,
         notes: r.notes,
+        // Visual Tracker Data
+        steps,
+        currentStepIndex,
+        progressPercent,
+        isApplied,
+        isAttended,
+        isPaid,
       };
     }),
   };

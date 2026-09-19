@@ -1018,6 +1018,54 @@ export default function AdminReferralsPage() {
                         </div>
                       </div>
 
+                      {/* 4-Step Milestone Stepper Tracker */}
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                        <div className="flex items-center justify-between text-[11px]">
+                          {/* Step 1: Claimed */}
+                          <div className="flex items-center gap-1.5 font-bold text-emerald-700">
+                            <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                              ✓
+                            </span>
+                            <span>1. Claimed</span>
+                          </div>
+
+                          <div className={`h-0.5 flex-1 mx-2 rounded-full ${hasApplications ? "bg-emerald-400" : "bg-slate-200"}`} />
+
+                          {/* Step 2: Applied */}
+                          <div className={`flex items-center gap-1.5 font-bold ${hasApplications ? "text-emerald-700" : "text-slate-400"}`}>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${hasApplications ? "bg-emerald-500 text-white" : "bg-white border border-slate-300 text-slate-400"}`}>
+                              {hasApplications ? "✓" : "2"}
+                            </span>
+                            <span>2. Applied</span>
+                          </div>
+
+                          <div className={`h-0.5 flex-1 mx-2 rounded-full ${friend.referralStatus === "QUALIFIED" || friend.referralStatus === "PAID" || (friend.applications || []).some((a: any) => a.attendanceStatus === "PRESENT" || a.attendanceStatus === "LATE") ? "bg-emerald-400" : "bg-slate-200"}`} />
+
+                          {/* Step 3: Present */}
+                          {(() => {
+                            const isAttended = friend.referralStatus === "QUALIFIED" || friend.referralStatus === "PAID" || (friend.applications || []).some((a: any) => a.attendanceStatus === "PRESENT" || a.attendanceStatus === "LATE");
+                            return (
+                              <div className={`flex items-center gap-1.5 font-bold ${isAttended ? "text-emerald-700" : "text-slate-400"}`}>
+                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${isAttended ? "bg-emerald-500 text-white" : "bg-white border border-slate-300 text-slate-400"}`}>
+                                  {isAttended ? "✓" : "3"}
+                                </span>
+                                <span>3. Present</span>
+                              </div>
+                            );
+                          })()}
+
+                          <div className={`h-0.5 flex-1 mx-2 rounded-full ${isFriendPaid ? "bg-emerald-400" : "bg-slate-200"}`} />
+
+                          {/* Step 4: Paid */}
+                          <div className={`flex items-center gap-1.5 font-bold ${isFriendPaid ? "text-emerald-700" : "text-slate-400"}`}>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${isFriendPaid ? "bg-emerald-500 text-white" : "bg-white border border-slate-300 text-slate-400"}`}>
+                              {isFriendPaid ? "✓" : "4"}
+                            </span>
+                            <span>4. Paid</span>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Event Applications Section */}
                       <div>
                         <div className="flex items-center justify-between mb-2">

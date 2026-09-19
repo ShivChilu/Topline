@@ -101,6 +101,7 @@ export default function StudentProfilePage() {
   const [editingUpi, setEditingUpi] = useState(false);
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
   const [termsOpen, setTermsOpen] = useState(false);
+  const [referralViewMode, setReferralViewMode] = useState<"trackers" | "table">("trackers");
 
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
@@ -2029,45 +2030,354 @@ export default function StudentProfilePage() {
                   </div>
                 </div>
 
-                {/* 4. REFERRED FRIENDS HISTORY LEDGER */}
-                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                {/* 4. REFERRED FRIENDS HISTORY & STEP-BY-STEP PROGRESS TRACKER */}
+                <div className="space-y-4">
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
-                        <Users className="w-5 h-5 text-purple-600" />
-                        Invited Friends & Referral Status ({referralData.stats?.referrals?.length || 0})
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-purple-100 text-purple-800 font-black px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
+                          Live Milestones
+                        </span>
+                        <h3 className="font-black text-slate-900 text-base uppercase tracking-wider flex items-center gap-2">
+                          <Users className="w-5 h-5 text-purple-600" />
+                          Invited Friends Tracker ({referralData.stats?.referrals?.length || 0})
+                        </h3>
+                      </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Track the verification, shift completions, and payout progress of every friend you invited.
+                        Track every friend step-by-step: Referral Claimed → Event Applied → Shift Attended (Present) → Paid to UPI.
                       </p>
                     </div>
+
+                    {/* View Switcher: Card Tracker vs Compact Table */}
+                    {referralData.stats?.referrals && referralData.stats.referrals.length > 0 && (
+                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 shrink-0 self-start sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => setReferralViewMode("trackers")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            referralViewMode === "trackers"
+                              ? "bg-white text-purple-900 shadow-2xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Progress Map</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReferralViewMode("table")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                            referralViewMode === "table"
+                              ? "bg-white text-purple-900 shadow-2xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <FileText className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Ledger Table</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {(!referralData.stats?.referrals || referralData.stats.referrals.length === 0) ? (
-                    <div className="text-center py-10 space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                      <Users className="w-10 h-10 text-slate-300 mx-auto" />
-                      <p className="text-slate-700 font-bold text-sm">No referrals yet</p>
+                    <div className="text-center py-12 space-y-3 bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+                      <Users className="w-12 h-12 text-slate-300 mx-auto" />
+                      <p className="text-slate-800 font-extrabold text-sm">No referrals yet</p>
                       <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                        Share your referral code on WhatsApp or Instagram to invite friends and start earning cash rewards!
+                        Share your referral link on WhatsApp or Instagram to invite friends and track their milestone progress here!
                       </p>
                       <button
                         type="button"
                         onClick={handleShareWhatsApp}
-                        className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                        className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2 cursor-pointer active:scale-95"
                       >
                         <MessageCircle className="w-4 h-4 fill-white" />
                         <span>Share on WhatsApp</span>
                       </button>
                     </div>
+                  ) : referralViewMode === "trackers" ? (
+                    /* VISUAL PROGRESS MAP (GPAY / FLIPKART STYLE STEPPER CARDS) */
+                    <div className="space-y-4">
+                      {referralData.stats.referrals.map((item: any) => {
+                        const friendName = item.refereeName || item.referee?.name || "Friend";
+                        const friendPhone = item.refereePhone || item.referee?.phone || "";
+                        const joinedDate = item.registeredAt || item.createdAt;
+                        const isPaid = item.status === "PAID";
+                        const isQualified = item.status === "QUALIFIED";
+                        const steps = item.steps || [];
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition p-5 sm:p-6 space-y-5"
+                          >
+                            {/* Card Header: Referee & Status */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                              <div className="flex items-center gap-3.5">
+                                <div
+                                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-inner ${
+                                    isPaid
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : isQualified
+                                      ? "bg-purple-100 text-purple-700"
+                                      : "bg-slate-100 text-slate-700"
+                                  }`}
+                                >
+                                  {friendName.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-black text-slate-900 text-sm sm:text-base">
+                                      {friendName}
+                                    </span>
+                                    {friendPhone && (
+                                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                                        ({friendPhone})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span>
+                                      Joined {joinedDate ? new Date(joinedDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Recently"}
+                                    </span>
+                                    <span>•</span>
+                                    <span className="font-semibold text-purple-700">Code: {referralData.user.referralCode}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 self-start sm:self-center">
+                                <div className="text-right">
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Reward</span>
+                                  <span
+                                    className={`text-lg font-black ${
+                                      isPaid ? "text-emerald-600" : isQualified ? "text-purple-600" : "text-slate-700"
+                                    }`}
+                                  >
+                                    ₹{item.rewardAmount || 25}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`text-[10px] font-extrabold uppercase px-3 py-1.5 rounded-full border shadow-2xs ${
+                                    isPaid
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : isQualified
+                                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}
+                                >
+                                  {isPaid ? "Paid to UPI" : isQualified ? "Reward Earned" : "Pending 1st Shift"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Visual Connected Stepper (Flipkart / GPay Milestone Tracker) */}
+                            <div className="pt-2 pb-1">
+                              {/* Desktop / Tablet Stepper (Horizontal) */}
+                              <div className="hidden sm:block">
+                                <div className="relative flex items-start justify-between">
+                                  {/* Base Connecting Track */}
+                                  <div className="absolute left-[12.5%] right-[12.5%] top-4 h-1.5 bg-slate-100 -translate-y-1/2 z-0 rounded-full" />
+                                  {/* Active Filled Progress Bar */}
+                                  <div
+                                    className="absolute left-[12.5%] top-4 h-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 -translate-y-1/2 z-0 rounded-full transition-all duration-700"
+                                    style={{
+                                      width:
+                                        item.progressPercent === 100
+                                          ? "75%"
+                                          : item.progressPercent === 75
+                                          ? "50%"
+                                          : item.progressPercent === 50
+                                          ? "25%"
+                                          : "0%",
+                                    }}
+                                  />
+
+                                  {steps.map((step: any) => {
+                                    const isDone = step.status === "completed";
+                                    const isCurr = step.status === "current";
+                                    const isAction = step.status === "action_needed";
+
+                                    return (
+                                      <div key={step.id} className="flex flex-col items-center text-center relative z-10 w-1/4 px-1.5">
+                                        <div
+                                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm ${
+                                            isDone
+                                              ? "bg-emerald-500 text-white ring-4 ring-emerald-50"
+                                              : isCurr
+                                              ? "bg-purple-600 text-white ring-4 ring-purple-100 animate-pulse"
+                                              : isAction
+                                              ? "bg-amber-500 text-white ring-4 ring-amber-100"
+                                              : "bg-white text-slate-400 border-2 border-slate-200"
+                                          }`}
+                                        >
+                                          {isDone ? (
+                                            <Check className="w-4 h-4 stroke-3" />
+                                          ) : (
+                                            <span>{step.stepNumber}</span>
+                                          )}
+                                        </div>
+
+                                        <div className="mt-2.5 space-y-1 max-w-[150px]">
+                                          <span
+                                            className={`text-xs font-black block leading-tight ${
+                                              isDone
+                                                ? "text-slate-900"
+                                                : isCurr
+                                                ? "text-purple-700 font-extrabold"
+                                                : "text-slate-400"
+                                            }`}
+                                          >
+                                            {step.title}
+                                          </span>
+                                          <span className="text-[10.5px] text-slate-500 line-clamp-2 leading-snug block">
+                                            {step.subtitle}
+                                          </span>
+                                          {step.timestamp && (
+                                            <span className="text-[9.5px] text-slate-400 font-mono block pt-0.5">
+                                              {new Date(step.timestamp).toLocaleDateString("en-GB", {
+                                                day: "numeric",
+                                                month: "short",
+                                              })}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Mobile Stepper (Vertical Connected Track) */}
+                              <div className="sm:hidden space-y-4 relative pl-6 border-l-2 border-slate-200 ml-3">
+                                {steps.map((step: any) => {
+                                  const isDone = step.status === "completed";
+                                  const isCurr = step.status === "current";
+                                  const isAction = step.status === "action_needed";
+
+                                  return (
+                                    <div key={step.id} className="relative">
+                                      {/* Connected Stepper Dot */}
+                                      <div
+                                        className={`absolute -left-[31px] top-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs ${
+                                          isDone
+                                            ? "bg-emerald-500 text-white"
+                                            : isCurr
+                                            ? "bg-purple-600 text-white ring-2 ring-purple-200 animate-pulse"
+                                            : isAction
+                                            ? "bg-amber-500 text-white"
+                                            : "bg-white text-slate-400 border border-slate-300"
+                                        }`}
+                                      >
+                                        {isDone ? <Check className="w-3 h-3 stroke-3" /> : step.stepNumber}
+                                      </div>
+
+                                      <div className="space-y-0.5">
+                                        <div className="flex items-center justify-between">
+                                          <span
+                                            className={`text-xs font-black ${
+                                              isDone
+                                                ? "text-slate-900"
+                                                : isCurr
+                                                ? "text-purple-700 font-extrabold"
+                                                : "text-slate-400"
+                                            }`}
+                                          >
+                                            {step.title}
+                                          </span>
+                                          {step.timestamp && (
+                                            <span className="text-[9.5px] text-slate-400 font-mono">
+                                              {new Date(step.timestamp).toLocaleDateString("en-GB", {
+                                                day: "numeric",
+                                                month: "short",
+                                              })}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 leading-snug">
+                                          {step.subtitle}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Contextual Action / Status Banner */}
+                            {!item.isApplied && (
+                              <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div className="text-amber-900 text-[11px]">
+                                  <span className="font-bold">Next Step: </span>
+                                  <span>
+                                    {friendName} registered with your code but hasn't applied for a shift yet. Remind them to apply to unlock your ₹{item.rewardAmount || 25} reward!
+                                  </span>
+                                </div>
+                                <a
+                                  href={`https://wa.me/?text=${encodeURIComponent(
+                                    `Hey ${friendName}! Check out the open catering shifts on Topline and apply for an event so we both earn rewards: ${referralData.user.inviteUrl}`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-[#25D366] hover:bg-[#20bd5a] active:scale-95 text-white font-extrabold px-3.5 py-2 rounded-xl text-[11px] flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer transition"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                                  <span>Remind on WhatsApp</span>
+                                </a>
+                              </div>
+                            )}
+
+                            {item.isApplied && !item.isAttended && (
+                              <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-3 text-xs text-blue-900 flex items-center justify-between gap-2">
+                                <div className="text-[11px]">
+                                  <span className="font-bold">Shift Scheduled: </span>
+                                  <span>
+                                    {friendName} applied for <strong>{item.referee?.firstApplication?.eventName || "Event Shift"}</strong>. Once their duty attendance is recorded as Present, your ₹{item.rewardAmount || 25} reward will be credited!
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {isQualified && (
+                              <div className="bg-purple-50 border border-purple-200/80 rounded-2xl p-3 text-xs text-purple-900 flex items-center justify-between gap-2">
+                                <div className="text-[11px]">
+                                  <span className="font-bold">🎉 Reward Earned! </span>
+                                  <span>
+                                    {friendName} completed their first event duty. Topline administration will transfer ₹{item.rewardAmount || 25} directly to your registered UPI ID ({referralData.user.upiId}).
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {isPaid && (
+                              <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3 text-xs text-emerald-900 flex flex-wrap items-center justify-between gap-2">
+                                <div className="text-[11px] flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span>
+                                    <strong>₹{item.rewardAmount || 25} Paid Out: </strong> Transferred to your UPI ID ({referralData.user.upiId})
+                                  </span>
+                                </div>
+                                {item.paidReference && (
+                                  <span className="bg-white border border-emerald-200 px-2.5 py-0.5 rounded-lg font-mono text-[10px] text-emerald-800 font-bold">
+                                    Ref: {item.paidReference}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
-                    <div className="overflow-x-auto">
+                    /* COMPACT LEDGER TABLE VIEW */
+                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead>
                           <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50">
                             <th className="p-3 rounded-l-xl">Friend</th>
                             <th className="p-3">Joined On</th>
-                            <th className="p-3">Status</th>
-                            <th className="p-3">Event Attended</th>
+                            <th className="p-3">Current Step</th>
+                            <th className="p-3">Event / Shift</th>
                             <th className="p-3 rounded-r-xl text-right">Reward</th>
                           </tr>
                         </thead>
@@ -2104,7 +2414,7 @@ export default function StudentProfilePage() {
                                     <div className="space-y-0.5">
                                       <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1 shadow-2xs">
                                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                        <span>Paid to UPI</span>
+                                        <span>4. Paid to UPI</span>
                                       </span>
                                       {item.paidReference && (
                                         <div className="text-[9.5px] text-slate-400 font-mono truncate max-w-[140px]" title={item.paidReference}>
@@ -2115,24 +2425,27 @@ export default function StudentProfilePage() {
                                   ) : isQualified ? (
                                     <span className="bg-purple-100 text-purple-800 border border-purple-300 font-extrabold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1 shadow-2xs">
                                       <Sparkles className="w-3 h-3 text-purple-600" />
-                                      <span>Reward Earned (In Payout Queue)</span>
+                                      <span>3. Marked Present (In Payout Queue)</span>
                                     </span>
-                                  ) : item.status === "REJECTED" ? (
-                                    <span className="bg-rose-100 text-rose-800 border border-rose-300 font-bold px-2.5 py-1 rounded-full text-[10px]">
-                                      Disqualified
+                                  ) : item.isApplied ? (
+                                    <span className="bg-blue-100 text-blue-800 border border-blue-200 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
+                                      <Clock className="w-3 h-3 text-blue-500" />
+                                      <span>2. Applied (Awaiting Shift)</span>
                                     </span>
                                   ) : (
                                     <span className="bg-slate-100 text-slate-700 border border-slate-200 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
                                       <Clock className="w-3 h-3 text-slate-400" />
-                                      <span>Pending 1st Shift</span>
+                                      <span>1. Claimed (Not Applied)</span>
                                     </span>
                                   )}
                                 </td>
                                 <td className="p-3 text-slate-600">
                                   {evName ? (
                                     <span className="font-bold text-slate-800">{evName}</span>
+                                  ) : item.referee?.firstApplication?.eventName ? (
+                                    <span className="text-slate-700">{item.referee.firstApplication.eventName}</span>
                                   ) : (
-                                    <span className="text-slate-400 italic">Awaiting 1st event</span>
+                                    <span className="text-slate-400 italic">Not applied yet</span>
                                   )}
                                 </td>
                                 <td className="p-3 font-black text-right text-slate-900">
