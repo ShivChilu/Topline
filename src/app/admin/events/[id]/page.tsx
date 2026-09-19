@@ -3068,27 +3068,27 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       </div>
 
                       {/* Photo Overlays: Quick Direct Call / WhatsApp / View Full Profile (Bottom-Left) */}
-                      <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1">
+                      <div className="absolute bottom-2.5 left-2.5 sm:bottom-2 sm:left-2 z-10 flex items-center gap-1.5 sm:gap-1">
                         {(app.mobileNumber || student.phone) && (
                           <>
                             <a
                               href={`tel:${app.mobileNumber || student.phone}`}
-                              className="bg-black/60 hover:bg-emerald-600 backdrop-blur-md text-white font-bold text-[10.5px] px-2 py-1 rounded-md border border-white/20 transition flex items-center gap-1 shadow-sm"
+                              className="bg-black/75 hover:bg-emerald-600 active:bg-emerald-700 backdrop-blur-md text-white font-bold text-xs sm:text-[10.5px] px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center gap-1.5 sm:gap-1 shadow-md active:scale-95 touch-manipulation"
                               title={`Call ${app.mobileNumber || student.phone}`}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <Phone className="w-3 h-3 text-emerald-400 group-hover/btn:text-white" />
+                              <Phone className="w-4 h-4 sm:w-3 sm:h-3 text-emerald-400 group-hover/btn:text-white" />
                               <span>Call</span>
                             </a>
                             <a
                               href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="bg-black/60 hover:bg-[#25D366] backdrop-blur-md text-white p-1 rounded-md border border-white/20 transition flex items-center justify-center shadow-sm"
+                              className="bg-black/75 hover:bg-[#25D366] active:bg-emerald-600 backdrop-blur-md text-white p-2 sm:p-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center justify-center shadow-md active:scale-95 touch-manipulation"
                               title="Open WhatsApp Chat"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <MessageSquare className="w-3 h-3 text-[#25D366]" />
+                              <MessageSquare className="w-4 h-4 sm:w-3 sm:h-3 text-[#25D366]" />
                             </a>
                           </>
                         )}
@@ -3098,10 +3098,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             e.stopPropagation();
                             openInspectCandidate(app);
                           }}
-                          className="bg-black/60 hover:bg-blue-600 backdrop-blur-md text-white font-bold text-[10.5px] px-2 py-1 rounded-md border border-white/20 transition flex items-center gap-1 shadow-sm cursor-pointer"
+                          className="bg-black/75 hover:bg-blue-600 active:bg-blue-700 backdrop-blur-md text-white font-bold text-xs sm:text-[10.5px] px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center gap-1.5 sm:gap-1 shadow-md cursor-pointer active:scale-95 touch-manipulation"
                           title="Open Full Profile, Photos & Form Responses"
                         >
-                          <Eye className="w-3 h-3 text-blue-400" />
+                          <Eye className="w-4 h-4 sm:w-3 sm:h-3 text-blue-400" />
                           <span>Profile</span>
                         </button>
                       </div>
