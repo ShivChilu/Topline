@@ -35,6 +35,9 @@ import {
   ShieldAlert,
   ArrowUpDown,
   Sliders,
+  SlidersHorizontal,
+  ChevronDown,
+  Filter,
   AlertCircle,
   Info,
   Send,
@@ -2093,10 +2096,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       )}
 
       {/* FILTER & VIEW TOOLBAR */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
-        <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
           {/* Search bar & Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto flex-1 max-w-2xl">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 max-w-2xl">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
@@ -2117,7 +2120,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {can("students:add_from_master") && (
                 <button
                   type="button"
@@ -2143,201 +2146,72 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </div>
           </div>
 
-          {/* Filters & Queue Switch */}
-          <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
-            {/* Application & Attendance Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className={`text-xs font-bold rounded-xl px-3 py-2 border transition cursor-pointer ${
-                statusFilter !== "ALL"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20 font-extrabold"
-                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
-              }`}
-            >
-              <option value="ALL">All Application Statuses</option>
-              <option value="CONFIRMED_ATTENDED">Confirmed + Attended ({stats.confirmed + stats.attended})</option>
-              <option value="ATTENDED">PRESENT / Attended ({stats.attended})</option>
-              <option value="CONFIRMED">Confirmed (Attending) ({stats.confirmed})</option>
-              <option value="SELECTED">Selected ({stats.selected})</option>
-              <option value="UNDER_REVIEW">Under Review ({stats.underReview})</option>
-              <option value="APPLIED">Applied ({stats.applied})</option>
-              <option value="NOT_SELECTED">Not Selected ({stats.notSelected})</option>
-              <option value="CANCELLED">Cancelled ({stats.cancelled})</option>
-            </select>
-
-            {/* Quick Confirmed Pill Filter */}
-            <button
-              type="button"
-              onClick={() => setStatusFilter(statusFilter === "CONFIRMED" ? "ALL" : "CONFIRMED")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                statusFilter === "CONFIRMED"
-                  ? "bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-500/30 font-extrabold"
-                  : "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100"
-              }`}
-              title="Filter only candidates who confirmed they will attend"
-            >
-              <CheckCircle className="w-3.5 h-3.5" />
-              <span>Confirmed ({stats.confirmed})</span>
-            </button>
-
-            {/* Quick Confirmed + Attended Pill Filter */}
-            <button
-              type="button"
-              onClick={() => setStatusFilter(statusFilter === "CONFIRMED_ATTENDED" ? "ALL" : "CONFIRMED_ATTENDED")}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                statusFilter === "CONFIRMED_ATTENDED"
-                  ? "bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-500/30 font-extrabold"
-                  : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
-              }`}
-              title="Filter both Confirmed and Attended candidates"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Confirmed + Attended ({stats.confirmed + stats.attended})</span>
-            </button>
-
-            {/* Call Status Filter */}
-            <select
-              value={callFilter}
-              onChange={(e) => setCallFilter(e.target.value as any)}
-              className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
-                callFilter !== "ALL"
-                  ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500/20"
-                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
-              }`}
-            >
-              <option value="ALL">All Call Statuses</option>
-              <option value="0_CALLS">0 Calls (Pending)</option>
-              <option value="1_CALL">1st Call Done</option>
-              <option value="2_CALLS">2 Calls Done</option>
-            </select>
-
-            {/* Gender Filter (e.g. Girls Only) */}
-            <select
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-              className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
-                genderFilter !== "ALL"
-                  ? "bg-purple-50 text-purple-700 border-purple-300 ring-2 ring-purple-500/20"
-                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
-              }`}
-            >
-              <option value="ALL">All Genders</option>
-              <option value="FEMALE">Girls Only (Female)</option>
-              <option value="MALE">Boys Only (Male)</option>
-              <option value="OTHER">Other</option>
-            </select>
-
-            {/* Height Filter (e.g. > 5ft, > 5'4") */}
-            <select
-              value={heightFilter}
-              onChange={(e) => setHeightFilter(e.target.value)}
-              className={`text-xs font-bold rounded-xl px-3 py-2 border transition ${
-                heightFilter !== "ALL"
-                  ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500/20"
-                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
-              }`}
-            >
-              <option value="ALL">All Heights</option>
-              <option value="5_0">≥ 5&apos;0&quot; (152 cm+)</option>
-              <option value="5_2">≥ 5&apos;2&quot; (157 cm+)</option>
-              <option value="5_3">≥ 5&apos;3&quot; (160 cm+)</option>
-              <option value="5_4">≥ 5&apos;4&quot; (162 cm+)</option>
-              <option value="5_5">≥ 5&apos;5&quot; (165 cm+)</option>
-              <option value="5_6">≥ 5&apos;6&quot; (167 cm+)</option>
-              <option value="5_8">≥ 5&apos;8&quot; (172 cm+)</option>
-              <option value="5_10">≥ 5&apos;10&quot; (178 cm+)</option>
-              <option value="6_0">≥ 6&apos;0&quot; (183 cm+)</option>
-            </select>
-
-            {/* Who Filled First FCFS Quick Button */}
-            <button
-              type="button"
-              onClick={() => {
-                if (sortBy === "FIRST_FILLED") {
-                  setSortBy("PENDING_QUEUE");
-                } else {
-                  setSortBy("FIRST_FILLED");
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                sortBy === "FIRST_FILLED"
-                  ? "bg-amber-500 text-white border-amber-600 shadow-md ring-2 ring-amber-500/30"
-                  : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
-              }`}
-              title="First-Come-First-Serve: Sort applicants by exact date & time they filled the form (who applied first)"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>{sortBy === "FIRST_FILLED" ? "FCFS (Filled 1st)" : "Who Filled First"}</span>
-            </button>
-
-            {/* Sort Mode Dropdown */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className={`text-xs font-bold rounded-xl px-3 py-2 border transition cursor-pointer ${
-                sortBy === "FIRST_FILLED"
-                  ? "bg-amber-100 text-amber-900 border-amber-400 font-extrabold"
-                  : sortBy !== "PENDING_QUEUE"
-                  ? "bg-indigo-50 text-indigo-800 border-indigo-300"
-                  : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
-              }`}
-              title="Choose applicant sorting order"
-            >
-              <option value="PENDING_QUEUE">Review Queue (Action First)</option>
-              <option value="FIRST_FILLED">Who Filled First (FCFS)</option>
-              <option value="LATEST_FILLED">Latest Submissions First</option>
-              <option value="NAME_ASC">Candidate Name (A-Z)</option>
-            </select>
-
-            {/* Queue Mode Toggle (when in review queue) */}
-            {sortBy === "PENDING_QUEUE" && (
-              <button
-                type="button"
-                onClick={() => setPendingFirstQueue(!pendingFirstQueue)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                  pendingFirstQueue
-                    ? "bg-red-50 text-red-700 border-red-200"
-                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                }`}
-                title="When enabled, unreviewed candidates stay on top; selected/rejected candidates automatically move to bottom"
-              >
-                <ArrowUpDown className="w-3.5 h-3.5" />
-                <span>{pendingFirstQueue ? "Not Selected First" : "Default Order"}</span>
-              </button>
-            )}
-
-            {/* More Filters Toggle Button */}
+          {/* Unified Filters Trigger, Sort & View Switcher */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {/* Unified Filters Button */}
             <button
               type="button"
               onClick={() => setShowMoreFilters(!showMoreFilters)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
+              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
                 showMoreFilters || activeFilterCount > 0
                   ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
               }`}
             >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ""}</span>
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full min-w-[18px] text-center leading-tight">
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  showMoreFilters ? "rotate-180" : ""
+                }`}
+              />
             </button>
 
-            {/* Reset All Filters Button */}
+            {/* Quick Reset Button (Visible when filters are active) */}
             {activeFilterCount > 0 && (
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="px-2.5 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition"
+                className="flex items-center gap-1 px-2.5 py-2.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer"
                 title="Clear all active filters"
               >
-                Reset
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
               </button>
             )}
 
+            {/* Compact Sort Dropdown */}
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className={`text-xs font-bold rounded-xl px-3 py-2.5 border transition cursor-pointer ${
+                  sortBy === "FIRST_FILLED"
+                    ? "bg-amber-50 text-amber-900 border-amber-300 font-extrabold"
+                    : sortBy !== "PENDING_QUEUE"
+                    ? "bg-indigo-50 text-indigo-800 border-indigo-200"
+                    : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                }`}
+                title="Sort applicant order"
+              >
+                <option value="PENDING_QUEUE">Sort: Review Queue</option>
+                <option value="FIRST_FILLED">Sort: Who Filled First (FCFS)</option>
+                <option value="LATEST_FILLED">Sort: Latest Submissions</option>
+                <option value="NAME_ASC">Sort: Name (A-Z)</option>
+              </select>
+            </div>
+
             {/* View Switcher */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 ml-auto">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
+                type="button"
                 onClick={() => setActiveView("gallery")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                   activeView === "gallery" ? "bg-white text-red-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -2345,8 +2219,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 Photo Gallery
               </button>
               <button
+                type="button"
                 onClick={() => setActiveView("table")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                   activeView === "table" ? "bg-white text-red-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -2357,97 +2232,334 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* EXPANDABLE ADVANCED FILTERS PANEL */}
+        {/* EXPANDABLE INTERACTIVE FILTERS DRAWER */}
         {showMoreFilters && (
-          <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-in fade-in">
-            {/* City Filter */}
+          <div className="pt-3.5 mt-1 border-t border-slate-100 space-y-4 animate-in fade-in duration-150">
+            {/* 1. Status Filter Chips */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">City / Region</label>
-              <select
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All Cities</option>
-                {availableCities.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Application & Attendance Status
+                </span>
+                {statusFilter !== "ALL" && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("ALL")}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-red-600 cursor-pointer"
+                  >
+                    Clear Status
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "All Candidates", value: "ALL", count: applications.length },
+                  { label: "Confirmed (Attending)", value: "CONFIRMED", count: stats.confirmed },
+                  { label: "Confirmed + Attended", value: "CONFIRMED_ATTENDED", count: stats.confirmed + stats.attended },
+                  { label: "Present / Attended", value: "ATTENDED", count: stats.attended },
+                  { label: "Selected", value: "SELECTED", count: stats.selected },
+                  { label: "Under Review", value: "UNDER_REVIEW", count: stats.underReview },
+                  { label: "Applied", value: "APPLIED", count: stats.applied },
+                  { label: "Not Selected", value: "NOT_SELECTED", count: stats.notSelected },
+                  { label: "Cancelled", value: "CANCELLED", count: stats.cancelled },
+                ].map((item) => {
+                  const isActive = statusFilter === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setStatusFilter(item.value)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center gap-1.5 ${
+                        isActive
+                          ? "bg-red-600 text-white border-red-600 shadow-xs font-extrabold"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-md font-extrabold ${
+                          isActive ? "bg-white/20 text-white" : "bg-slate-200/80 text-slate-600"
+                        }`}
+                      >
+                        {item.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* University Filter */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">University / College</label>
-              <select
-                value={universityFilter}
-                onChange={(e) => setUniversityFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600 truncate"
-              >
-                <option value="ALL">All Universities</option>
-                {availableUniversities.map((u) => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
-              </select>
+            {/* 2. Detailed Demographics & Logistics Filter Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
+              {/* Call Status Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Call Logs
+                </label>
+                <select
+                  value={callFilter}
+                  onChange={(e) => setCallFilter(e.target.value as any)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    callFilter !== "ALL"
+                      ? "bg-blue-50 text-blue-700 border-blue-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Call Statuses</option>
+                  <option value="0_CALLS">0 Calls (Pending)</option>
+                  <option value="1_CALL">1st Call Done</option>
+                  <option value="2_CALLS">2 Calls Done</option>
+                </select>
+              </div>
+
+              {/* Gender Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Gender
+                </label>
+                <select
+                  value={genderFilter}
+                  onChange={(e) => setGenderFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    genderFilter !== "ALL"
+                      ? "bg-purple-50 text-purple-700 border-purple-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Genders</option>
+                  <option value="FEMALE">Girls Only (Female)</option>
+                  <option value="MALE">Boys Only (Male)</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              {/* Height Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Height
+                </label>
+                <select
+                  value={heightFilter}
+                  onChange={(e) => setHeightFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    heightFilter !== "ALL"
+                      ? "bg-blue-50 text-blue-700 border-blue-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Heights</option>
+                  <option value="5_0">≥ 5&apos;0&quot; (152 cm+)</option>
+                  <option value="5_2">≥ 5&apos;2&quot; (157 cm+)</option>
+                  <option value="5_3">≥ 5&apos;3&quot; (160 cm+)</option>
+                  <option value="5_4">≥ 5&apos;4&quot; (162 cm+)</option>
+                  <option value="5_5">≥ 5&apos;5&quot; (165 cm+)</option>
+                  <option value="5_6">≥ 5&apos;6&quot; (167 cm+)</option>
+                  <option value="5_8">≥ 5&apos;8&quot; (172 cm+)</option>
+                  <option value="5_10">≥ 5&apos;10&quot; (178 cm+)</option>
+                  <option value="6_0">≥ 6&apos;0&quot; (183 cm+)</option>
+                </select>
+              </div>
+
+              {/* City Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  City / Region
+                </label>
+                <select
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer truncate ${
+                    cityFilter !== "ALL"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Cities</option>
+                  {availableCities.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* University Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  University / College
+                </label>
+                <select
+                  value={universityFilter}
+                  onChange={(e) => setUniversityFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer truncate ${
+                    universityFilter !== "ALL"
+                      ? "bg-amber-50 text-amber-800 border-amber-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Universities</option>
+                  {availableUniversities.map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Age Range */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Age Range
+                </label>
+                <select
+                  value={ageFilter}
+                  onChange={(e) => setAgeFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    ageFilter !== "ALL"
+                      ? "bg-indigo-50 text-indigo-700 border-indigo-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Ages</option>
+                  <option value="18_20">18 - 20 years</option>
+                  <option value="21_23">21 - 23 years</option>
+                  <option value="24_26">24 - 26 years</option>
+                  <option value="27_PLUS">27+ years</option>
+                </select>
+              </div>
+
+              {/* WhatsApp Group Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  WhatsApp Group
+                </label>
+                <select
+                  value={whatsappFilter}
+                  onChange={(e) => setWhatsappFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    whatsappFilter !== "ALL"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All WhatsApp Status</option>
+                  <option value="ADDED">Added to WhatsApp</option>
+                  <option value="NOT_ADDED">Not Added Yet</option>
+                </select>
+              </div>
+
+              {/* Payment Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Payment Status
+                </label>
+                <select
+                  value={paymentFilter}
+                  onChange={(e) => setPaymentFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    paymentFilter !== "ALL"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Payouts</option>
+                  <option value="PAID">Paid</option>
+                  <option value="UNPAID">Unpaid</option>
+                </select>
+              </div>
+
+              {/* Photo Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Photo Status
+                </label>
+                <select
+                  value={photoFilter}
+                  onChange={(e) => setPhotoFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    photoFilter !== "ALL"
+                      ? "bg-purple-50 text-purple-700 border-purple-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Candidates</option>
+                  <option value="WITH_PHOTOS">With Photos Uploaded</option>
+                  <option value="WITHOUT_PHOTOS">Without Photos</option>
+                </select>
+              </div>
+
+              {/* Weight Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Weight Range
+                </label>
+                <select
+                  value={weightFilter}
+                  onChange={(e) => setWeightFilter(e.target.value)}
+                  className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border transition cursor-pointer ${
+                    weightFilter !== "ALL"
+                      ? "bg-blue-50 text-blue-700 border-blue-300 font-bold"
+                      : "bg-slate-50 text-slate-700 border-slate-200 focus:border-red-600"
+                  }`}
+                >
+                  <option value="ALL">All Weights</option>
+                  <option value="UNDER_50">&lt; 50 kg</option>
+                  <option value="50_60">50 - 60 kg</option>
+                  <option value="60_70">60 - 70 kg</option>
+                  <option value="70_PLUS">70+ kg</option>
+                </select>
+              </div>
+
+              {/* Queue Order Toggle */}
+              {sortBy === "PENDING_QUEUE" && (
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Queue Order
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setPendingFirstQueue(!pendingFirstQueue)}
+                    className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                      pendingFirstQueue
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <span>{pendingFirstQueue ? "Action First" : "Default"}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Age Range */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Age Range</label>
-              <select
-                value={ageFilter}
-                onChange={(e) => setAgeFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All Ages</option>
-                <option value="18_20">18 - 20 years</option>
-                <option value="21_23">21 - 23 years</option>
-                <option value="24_26">24 - 26 years</option>
-                <option value="27_PLUS">27+ years</option>
-              </select>
-            </div>
+            {/* 3. Filter Summary & Action Footer */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                <span>
+                  Showing <strong className="text-slate-900 font-bold">{filteredAndSortedApplications.length}</strong> of{" "}
+                  <strong className="text-slate-900 font-bold">{applications.length}</strong> candidates
+                </span>
+                {activeFilterCount > 0 && (
+                  <span className="text-slate-400 font-normal">
+                    ({activeFilterCount} active filter{activeFilterCount > 1 ? "s" : ""})
+                  </span>
+                )}
+              </div>
 
-            {/* Weight Range */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Weight Range</label>
-              <select
-                value={weightFilter}
-                onChange={(e) => setWeightFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All Weights</option>
-                <option value="UNDER_50">&lt; 50 kg</option>
-                <option value="50_60">50 - 60 kg</option>
-                <option value="60_70">60 - 70 kg</option>
-                <option value="70_PLUS">70+ kg</option>
-              </select>
-            </div>
-
-            {/* WhatsApp Group */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Group</label>
-              <select
-                value={whatsappFilter}
-                onChange={(e) => setWhatsappFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All WhatsApp Status</option>
-                <option value="ADDED">Added to WhatsApp</option>
-                <option value="NOT_ADDED">Not Added Yet</option>
-              </select>
-            </div>
-
-            {/* Payment Filter */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Payment Status</label>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-red-600"
-              >
-                <option value="ALL">All Payouts</option>
-                <option value="PAID">Paid</option>
-                <option value="UNPAID">Unpaid</option>
-              </select>
+              <div className="flex items-center gap-2">
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition cursor-pointer"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowMoreFilters(false)}
+                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
