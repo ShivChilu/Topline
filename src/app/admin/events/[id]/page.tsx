@@ -173,6 +173,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [universityFilter, setUniversityFilter] = useState("ALL");
   const [emailTrackingFilter, setEmailTrackingFilter] = useState<"ALL" | "SENT" | "OPENED" | "UNOPENED" | "ACTION_CLICKED" | "CONFIRMED" | "DECLINED" | "WHATSAPP">("ALL");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState<"candidates" | "overview" | "email_tracker" | "controls">("candidates");
 
   // Candidate Inspection Modal & Lightbox
   const [inspectCandidate, setInspectCandidate] = useState<any>(null);
@@ -1472,62 +1473,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             type="button"
             onClick={() => fetchEventData()}
             disabled={loading}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs transition border border-slate-300 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-xl text-xs transition border border-slate-300 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50"
             title="Refresh event details and applicants data"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            <span>Refresh Data</span>
+            <span>Refresh</span>
           </button>
-
-          {/* Close or Resume Form Quick Action Button */}
-          {can("events:close_resume") && (
-            event.status === "CLOSED" ? (
-              <button
-                type="button"
-                onClick={() => handleToggleEventFormStatus("OPEN")}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
-                title="Resume and open registration form for this event"
-              >
-                <Unlock className="w-3.5 h-3.5" />
-                <span>Resume Form (Open)</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleToggleEventFormStatus("CLOSED")}
-                className="bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
-                title="Close and pause application form for this event"
-              >
-                <Lock className="w-3.5 h-3.5 text-rose-600" />
-                <span>Close Form</span>
-              </button>
-            )
-          )}
-
-          {/* Reopen Event with Additional Slots Button */}
-          {can("events:reopen_slots") && (
-            <button
-              type="button"
-              onClick={() => setIsReopenModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
-              title="Reopen event or add additional candidate seats/slots"
-            >
-              <Unlock className="w-3.5 h-3.5" />
-              <span>Reopen (+Slots)</span>
-            </button>
-          )}
-
-          {/* Edit Event Details Button */}
-          {can("events:edit") && (
-            <Link
-              href={`/admin/events/${eventId}/edit`}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
-              title="Edit event specifications, payout rate, shift timings, guidelines, and custom questions"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>Edit Event</span>
-            </Link>
-          )}
 
           {/* Set / Edit WhatsApp Link Quick Action Button */}
           {event?.whatsappGroupLink ? (
@@ -1537,11 +1488,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 setWhatsappGroupLinkInput(event.whatsappGroupLink || "");
                 setIsWhatsappModalOpen(true);
               }}
-              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
-              title="Edit event WhatsApp group link and automation settings"
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+              title="Edit event WhatsApp group link"
             >
               <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Edit WhatsApp Link</span>
+              <span>WhatsApp Link</span>
             </button>
           ) : (
             <button
@@ -1550,57 +1501,35 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 setWhatsappGroupLinkInput("");
                 setIsWhatsappModalOpen(true);
               }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
-              title="Set WhatsApp group link for automated selection emails"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
+              title="Set WhatsApp group link"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Set WhatsApp Link</span>
             </button>
           )}
 
-          {/* Quick Contact Actions */}
+          {/* Live Attendance Hub Button */}
           <button
             type="button"
-            onClick={() => handleExportVcf()}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-2xs cursor-pointer active:scale-95"
-            title="Download .vcf contact file of all selected candidates"
+            onClick={() => setIsLiveAttendanceModalOpen(true)}
+            className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+            title="Open Live Attendance Scanner & Real-Time Stream"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Export Contacts</span>
+            <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+            <QrCode className="w-3.5 h-3.5 text-red-600" />
+            <span>Attendance Hub</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleCopyAllPhones()}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-2xs cursor-pointer active:scale-95"
-            title="Copy all candidate mobile numbers separated by comma"
-          >
-            {copiedPhoneNumbers ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
-            <span>{copiedPhoneNumbers ? "Copied!" : "Copy Numbers"}</span>
-          </button>
-
-          {/* Duplicate as New Button */}
-          {can("events:duplicate") && (
-            <Link
-              href={`/admin/events/create?cloneFrom=${eventId}`}
-              className="bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition"
-              title="Duplicate this event configuration and create as a new event"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Duplicate as New</span>
-            </Link>
-          )}
-
-          {/* + Create / Actions Dropdown */}
+          {/* + Actions Dropdown */}
           {currentAdminRole !== "calling" && (
             <div className="relative group">
               <button
                 type="button"
-                className="bg-red-600 hover:bg-red-700 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                className="bg-slate-900 hover:bg-black text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Create / Actions</span>
-                <ChevronRight className="w-3 h-3 rotate-90" />
+                <span>Actions</span>
+                <ChevronDown className="w-3.5 h-3.5" />
               </button>
 
               <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
@@ -1613,7 +1542,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
                       >
                         <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Resume Form (Open Applications)</span>
+                        <span>Resume Form (Open)</span>
                       </button>
                     ) : (
                       <button
@@ -1661,16 +1590,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Duplicate & Edit as New</span>
-                    </Link>
-                  )}
-                  {currentAdminRole !== "event_admin" && (
-                    <Link
-                      href="/admin/events/create"
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-red-600" />
-                      <span>Create Brand New Event</span>
+                      <span>Duplicate &amp; Edit as New</span>
                     </Link>
                   )}
                   {can("events:manage_templates") && (
@@ -1685,21 +1605,6 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   )}
                 </div>
                 <div className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsLiveAttendanceModalOpen(true)}
-                    className="w-full text-left px-4 py-2 text-xs font-semibold text-purple-900 bg-purple-50/70 hover:bg-purple-100 flex items-center gap-2 transition cursor-pointer"
-                  >
-                    <QrCode className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Live Attendance & QR Hub</span>
-                  </button>
-                  <Link
-                    href={`/admin/events/${eventId}/attendance`}
-                    className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
-                  >
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Legacy Attendance Logs</span>
-                  </Link>
                   {can("events:export_data") && (
                     <>
                       <button
@@ -1720,382 +1625,712 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       </button>
                     </>
                   )}
+                  <a
+                    href={`/events/${eventId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                    <span>View Public Page</span>
+                  </a>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Live Attendance Hub Button */}
-          <button
-            type="button"
-            onClick={() => setIsLiveAttendanceModalOpen(true)}
-            className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
-            title="Open Live Attendance Scanner, Scannable QR Code, and Real-Time Stream"
-          >
-            <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
-            <QrCode className="w-3.5 h-3.5 text-red-600" />
-            <span>Live Attendance Hub</span>
-          </button>
           <a
             href={`/events/${eventId}`}
             target="_blank"
             rel="noreferrer"
-            className="bg-slate-900 hover:bg-black text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition border border-slate-300 shadow-2xs"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            Public Page
+            <span>Public Page</span>
           </a>
         </div>
       </div>
 
-      {/* Closed Event Status Alert Banner */}
-      {event.status === "CLOSED" && (
-        <div className="bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black shrink-0 border border-rose-300 shadow-2xs">
-              <Lock className="w-5 h-5 text-rose-600" />
+      {/* DASHBOARD TABBED NAVIGATION */}
+      <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-2xl border border-slate-300/80 overflow-x-auto scrollbar-none shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setDashboardTab("candidates")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+            dashboardTab === "candidates"
+              ? "bg-white text-slate-950 shadow-sm font-extrabold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          }`}
+        >
+          <Users className="w-4 h-4 text-blue-600" />
+          <span>Candidates</span>
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${
+              dashboardTab === "candidates" ? "bg-blue-100 text-blue-800" : "bg-slate-300 text-slate-700"
+            }`}
+          >
+            {applications.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setDashboardTab("overview")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+            dashboardTab === "overview"
+              ? "bg-white text-slate-950 shadow-sm font-extrabold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-600" />
+          <span>Overview &amp; Budget</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setDashboardTab("email_tracker")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+            dashboardTab === "email_tracker"
+              ? "bg-white text-slate-950 shadow-sm font-extrabold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          }`}
+        >
+          <Mail className="w-4 h-4 text-purple-600" />
+          <span>Email Tracker</span>
+          {emailAnalytics.totalEmailsSent > 0 && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${
+                dashboardTab === "email_tracker" ? "bg-purple-100 text-purple-800" : "bg-slate-300 text-slate-700"
+              }`}
+            >
+              {emailAnalytics.totalEmailsSent}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setDashboardTab("controls")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+            dashboardTab === "controls"
+              ? "bg-white text-slate-950 shadow-sm font-extrabold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          }`}
+        >
+          <Sliders className="w-4 h-4 text-red-600" />
+          <span>Event Controls</span>
+          {event?.status === "CLOSED" && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold bg-rose-100 text-rose-800">
+              Closed
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* TAB 1: OVERVIEW & BUDGET */}
+      {dashboardTab === "overview" && (
+        <div className="space-y-3.5 animate-in fade-in duration-150">
+          {/* Staffing Quota & Student Payout Card */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Workers Required</span>
+              <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.workersRequired} Staff</span>
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-black text-rose-950 flex items-center gap-1.5">
-                <span>Application Form is Currently CLOSED</span>
-                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-rose-200 text-rose-800">
-                  Form Paused
-                </span>
-              </h4>
-              <p className="text-[11px] text-rose-800 mt-0.5">
-                Students visiting the public registration page are shown <em>"Applications Closed by Administrator"</em>. You can resume and open the form anytime or add extra slots.
-              </p>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Max Applications Cap</span>
+              <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.maxApplications} Slots</span>
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Student Payout / Candidate</span>
+              <span className="text-xl font-extrabold text-red-600 font-mono mt-0.5 block">₹{event.paymentPerStudent}</span>
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Student Payout Budget</span>
+              <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">
+                ₹{((event.workersRequired || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+
+          {/* Dynamic Statistics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
             <button
               type="button"
-              onClick={() => handleToggleEventFormStatus("OPEN")}
-              className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
+              onClick={() => {
+                setStatusFilter("ALL");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "ALL" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-800 border-slate-200 hover:border-slate-300"
+              }`}
             >
-              <Unlock className="w-3.5 h-3.5" />
-              <span>Resume Form (Open)</span>
+              <span className="text-[10px] font-bold uppercase opacity-70 block">Total</span>
+              <span className="text-lg font-extrabold mt-0.5 block">{stats.total}</span>
             </button>
+
             <button
               type="button"
-              onClick={() => setIsReopenModalOpen(true)}
-              className="flex-1 sm:flex-initial bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer"
+              onClick={() => {
+                setStatusFilter(statusFilter === "CONFIRMED_ATTENDED" ? "ALL" : "CONFIRMED_ATTENDED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "CONFIRMED_ATTENDED" ? "bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-500/30" : "bg-emerald-100/80 text-emerald-900 border-emerald-300 hover:bg-emerald-200/70"
+              }`}
+              title="Filter all candidates who confirmed attendance or have attended"
             >
-              <span>+ Add Slots & Reopen</span>
+              <span className="text-[10px] font-extrabold uppercase text-emerald-800 flex items-center gap-1">
+                <span>Confirmed + Attended</span>
+              </span>
+              <span className="text-lg font-black text-emerald-950 mt-0.5 block">{stats.confirmed + stats.attended}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "CONFIRMED" ? "ALL" : "CONFIRMED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "CONFIRMED" ? "bg-teal-600 text-white border-teal-600" : "bg-teal-50/60 text-teal-900 border-teal-200 hover:border-teal-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-teal-700 block">Confirmed</span>
+              <span className="text-lg font-extrabold text-teal-700 mt-0.5 block">{stats.confirmed}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "ATTENDED" ? "ALL" : "ATTENDED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "ATTENDED" ? "bg-blue-600 text-white border-blue-600" : "bg-blue-50/60 text-blue-900 border-blue-200 hover:border-blue-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-blue-700 block">Attended</span>
+              <span className="text-lg font-extrabold text-blue-700 mt-0.5 block">{stats.attended}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "SELECTED" ? "ALL" : "SELECTED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "SELECTED" ? "bg-emerald-600 text-white border-emerald-600" : "bg-emerald-50/60 text-emerald-900 border-emerald-200 hover:border-emerald-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-emerald-700 block">Selected</span>
+              <span className="text-lg font-extrabold text-emerald-700 mt-0.5 block">{stats.selected}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "UNDER_REVIEW" ? "ALL" : "UNDER_REVIEW");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "UNDER_REVIEW" ? "bg-amber-600 text-white border-amber-600" : "bg-amber-50/60 text-amber-900 border-amber-200 hover:border-amber-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-amber-700 block">Under Review</span>
+              <span className="text-lg font-extrabold text-amber-800 mt-0.5 block">{stats.underReview}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "APPLIED" ? "ALL" : "APPLIED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "APPLIED" ? "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-slate-500 block">Applied</span>
+              <span className="text-lg font-extrabold text-slate-900 mt-0.5 block">{stats.applied}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "NOT_SELECTED" ? "ALL" : "NOT_SELECTED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "NOT_SELECTED" ? "bg-rose-600 text-white border-rose-600" : "bg-rose-50/60 text-rose-900 border-rose-200 hover:border-rose-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-rose-700 block">Not Selected</span>
+              <span className="text-lg font-extrabold text-rose-700 mt-0.5 block">{stats.notSelected}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter(statusFilter === "CANCELLED" ? "ALL" : "CANCELLED");
+                setDashboardTab("candidates");
+              }}
+              className={`p-3 rounded-xl border text-left transition shadow-sm cursor-pointer ${
+                statusFilter === "CANCELLED" ? "bg-slate-600 text-white border-slate-600" : "bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase text-slate-500 block">Cancelled</span>
+              <span className="text-lg font-extrabold text-slate-600 mt-0.5 block">{stats.cancelled}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Staffing Quota & Student Payout Card */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div>
-          <span className="text-[11px] font-bold text-slate-400 uppercase block">Workers Required</span>
-          <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.workersRequired} Staff</span>
-        </div>
-        <div>
-          <span className="text-[11px] font-bold text-slate-400 uppercase block">Max Applications Cap</span>
-          <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.maxApplications} Slots</span>
-        </div>
-        <div>
-          <span className="text-[11px] font-bold text-slate-400 uppercase block">Student Payout / Candidate</span>
-          <span className="text-xl font-extrabold text-red-600 font-mono mt-0.5 block">₹{event.paymentPerStudent}</span>
-        </div>
-        <div>
-          <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Student Payout Budget</span>
-          <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">
-            ₹{((event.workersRequired || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
-          </span>
-        </div>
-      </div>
+      {/* TAB 2: EMAIL TRACKER */}
+      {dashboardTab === "email_tracker" && (
+        <div className="space-y-3.5 animate-in fade-in duration-150">
+          {emailAnalytics.totalEmailsSent > 0 ? (
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-4 sm:p-5 text-white shadow-md space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-700/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white !text-white flex items-center gap-2">
+                      <span>Event Email &amp; Candidate Availability Tracker</span>
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Live Engagement</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Real-time delivery, open rates, and attendance confirmations for selected candidates.</p>
+                  </div>
+                </div>
 
-      {/* Dynamic Statistics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
-        <button
-          onClick={() => setStatusFilter("ALL")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "ALL" ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-800 border-slate-200 hover:border-slate-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase opacity-70 block">Total</span>
-          <span className="text-lg font-extrabold mt-0.5 block">{stats.total}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "CONFIRMED_ATTENDED" ? "ALL" : "CONFIRMED_ATTENDED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "CONFIRMED_ATTENDED" ? "bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-500/30" : "bg-emerald-100/80 text-emerald-900 border-emerald-300 hover:bg-emerald-200/70"
-          }`}
-          title="Filter all candidates who confirmed attendance or have attended"
-        >
-          <span className="text-[10px] font-extrabold uppercase text-emerald-800 flex items-center gap-1">
-            <span>Confirmed + Attended</span>
-          </span>
-          <span className="text-lg font-black text-emerald-950 mt-0.5 block">{stats.confirmed + stats.attended}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "CONFIRMED" ? "ALL" : "CONFIRMED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "CONFIRMED" ? "bg-teal-600 text-white border-teal-600" : "bg-teal-50/60 text-teal-900 border-teal-200 hover:border-teal-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-teal-700 block">Confirmed</span>
-          <span className="text-lg font-extrabold text-teal-700 mt-0.5 block">{stats.confirmed}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "ATTENDED" ? "ALL" : "ATTENDED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "ATTENDED" ? "bg-blue-600 text-white border-blue-600" : "bg-blue-50/60 text-blue-900 border-blue-200 hover:border-blue-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-blue-700 block">Attended</span>
-          <span className="text-lg font-extrabold text-blue-700 mt-0.5 block">{stats.attended}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "SELECTED" ? "ALL" : "SELECTED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "SELECTED" ? "bg-emerald-600 text-white border-emerald-600" : "bg-emerald-50/60 text-emerald-900 border-emerald-200 hover:border-emerald-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-emerald-700 block">Selected</span>
-          <span className="text-lg font-extrabold text-emerald-700 mt-0.5 block">{stats.selected}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "UNDER_REVIEW" ? "ALL" : "UNDER_REVIEW")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "UNDER_REVIEW" ? "bg-amber-600 text-white border-amber-600" : "bg-amber-50/60 text-amber-900 border-amber-200 hover:border-amber-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-amber-700 block">Under Review</span>
-          <span className="text-lg font-extrabold text-amber-800 mt-0.5 block">{stats.underReview}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "APPLIED" ? "ALL" : "APPLIED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "APPLIED" ? "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-slate-500 block">Applied</span>
-          <span className="text-lg font-extrabold text-slate-900 mt-0.5 block">{stats.applied}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "NOT_SELECTED" ? "ALL" : "NOT_SELECTED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "NOT_SELECTED" ? "bg-rose-600 text-white border-rose-600" : "bg-rose-50/60 text-rose-900 border-rose-200 hover:border-rose-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-rose-700 block">Not Selected</span>
-          <span className="text-lg font-extrabold text-rose-700 mt-0.5 block">{stats.notSelected}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter(statusFilter === "CANCELLED" ? "ALL" : "CANCELLED")}
-          className={`p-3 rounded-xl border text-left transition shadow-sm ${
-            statusFilter === "CANCELLED" ? "bg-slate-600 text-white border-slate-600" : "bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300"
-          }`}
-        >
-          <span className="text-[10px] font-bold uppercase text-slate-500 block">Cancelled</span>
-          <span className="text-lg font-extrabold text-slate-600 mt-0.5 block">{stats.cancelled}</span>
-        </button>
-      </div>
-
-      {/* TOP EMAIL & ACTION ANALYTICS TRACKER */}
-      {emailAnalytics.totalEmailsSent > 0 && (
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-4 sm:p-5 text-white shadow-md space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                <Activity className="w-4 h-4" />
+                <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 font-sans">Open Rate:</span>
+                  <span className="font-extrabold text-emerald-400">{emailAnalytics.openRate}%</span>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-white !text-white flex items-center gap-2">
-                  <span>Event Email & Candidate Availability Tracker</span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Live Engagement</span>
-                </h3>
-                <p className="text-[11px] text-slate-400">Real-time delivery, open rates, and attendance confirmations for selected candidates.</p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-              <span className="text-slate-400 font-sans">Open Rate:</span>
-              <span className="font-extrabold text-emerald-400">{emailAnalytics.openRate}%</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            {/* 1. Emails Sent */}
-            <button
-              type="button"
-              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "SENT" ? "ALL" : "SENT")}
-              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
-                emailTrackingFilter === "SENT"
-                  ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400 shadow-md"
-                  : "bg-slate-950/50 border-slate-800 hover:border-slate-700 hover:bg-slate-950/80"
-              }`}
-              title="Click to filter all candidates emailed for this event"
-            >
-              <div className="flex items-center justify-between text-slate-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Emails Sent</span>
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
-              </div>
-              <div className="text-xl font-black text-white">{emailAnalytics.totalEmailsSent}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">To {emailAnalytics.candidatesEmailedCount} candidates</div>
-              {emailTrackingFilter === "SENT" && (
-                <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-blue-500 text-white">Active</span>
-              )}
-            </button>
-
-            {/* 2. Opened */}
-            <button
-              type="button"
-              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "OPENED" ? "ALL" : "OPENED")}
-              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
-                emailTrackingFilter === "OPENED"
-                  ? "bg-emerald-900/60 border-emerald-400 ring-2 ring-emerald-400 shadow-md"
-                  : "bg-emerald-950/30 border-emerald-900/50 hover:border-emerald-700/70 hover:bg-emerald-950/50"
-              }`}
-              title="Click to filter candidates who opened/read their email for this event"
-            >
-              <div className="flex items-center justify-between text-emerald-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Opened / Read</span>
-                <Eye className="w-3.5 h-3.5 text-emerald-400" />
-              </div>
-              <div className="text-xl font-black text-emerald-300">{emailAnalytics.openedEmailsCount}</div>
-              <div className="text-[10px] text-emerald-400/80 mt-0.5">{emailAnalytics.openRate}% candidate open rate</div>
-              {emailTrackingFilter === "OPENED" && (
-                <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-emerald-500 text-white">Active</span>
-              )}
-            </button>
-
-            {/* 3. Pending / Unopened */}
-            <button
-              type="button"
-              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "UNOPENED" ? "ALL" : "UNOPENED")}
-              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
-                emailTrackingFilter === "UNOPENED"
-                  ? "bg-amber-900/60 border-amber-400 ring-2 ring-amber-400 shadow-md"
-                  : "bg-amber-950/30 border-amber-900/50 hover:border-amber-700/70 hover:bg-amber-950/50"
-              }`}
-              title="Click to filter candidates whose email is unopened/pending"
-            >
-              <div className="flex items-center justify-between text-amber-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Pending / Unopened</span>
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <div className="text-xl font-black text-amber-300">{emailAnalytics.unopenedEmailsCount}</div>
-              <div className="text-[10px] text-amber-400/80 mt-0.5">Awaiting candidate open</div>
-              {emailTrackingFilter === "UNOPENED" && (
-                <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-amber-500 text-white">Active</span>
-              )}
-            </button>
-
-            {/* 4. Button Actions Clicked */}
-            <div
-              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "ACTION_CLICKED" ? "ALL" : "ACTION_CLICKED")}
-              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
-                ["ACTION_CLICKED", "CONFIRMED", "DECLINED", "WHATSAPP"].includes(emailTrackingFilter)
-                  ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400 shadow-md"
-                  : "bg-blue-950/30 border-blue-900/50 hover:border-blue-700/70 hover:bg-blue-950/50"
-              }`}
-              title="Click to filter candidates who clicked action buttons"
-            >
-              <div className="flex items-center justify-between text-blue-400 mb-1">
-                <span className="font-semibold uppercase text-[10px]">Button Actions</span>
-                <MousePointerClick className="w-3.5 h-3.5 text-blue-400" />
-              </div>
-              <div className="text-xl font-black text-blue-300">{emailAnalytics.clickedCount} <span className="text-xs font-normal text-slate-400">clicks</span></div>
-              <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-1 flex-wrap">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                {/* 1. Emails Sent */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEmailTrackingFilter(emailTrackingFilter === "CONFIRMED" ? "ALL" : "CONFIRMED");
+                  onClick={() => {
+                    setEmailTrackingFilter(emailTrackingFilter === "SENT" ? "ALL" : "SENT");
+                    setDashboardTab("candidates");
                   }}
-                  className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
-                    emailTrackingFilter === "CONFIRMED"
-                      ? "bg-emerald-500 text-white font-black ring-1 ring-white"
-                      : "text-emerald-400 font-bold hover:bg-emerald-900/40"
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                    emailTrackingFilter === "SENT"
+                      ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400 shadow-md"
+                      : "bg-slate-950/50 border-slate-800 hover:border-slate-700 hover:bg-slate-950/80"
                   }`}
-                  title="Click to filter confirmed candidates"
+                  title="Click to filter all candidates emailed for this event"
                 >
-                  <Check className="w-3 h-3 inline mr-0.5 text-emerald-400" /> {emailAnalytics.confirmedCount} Confirmed
+                  <div className="flex items-center justify-between text-slate-400 mb-1">
+                    <span className="font-semibold uppercase text-[10px]">Emails Sent</span>
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="text-xl font-black text-white">{emailAnalytics.totalEmailsSent}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">To {emailAnalytics.candidatesEmailedCount} candidates</div>
+                  {emailTrackingFilter === "SENT" && (
+                    <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-blue-500 text-white">Active</span>
+                  )}
                 </button>
-                {emailAnalytics.declinedCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEmailTrackingFilter(emailTrackingFilter === "DECLINED" ? "ALL" : "DECLINED");
-                    }}
-                    className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
-                      emailTrackingFilter === "DECLINED"
-                        ? "bg-rose-500 text-white font-black ring-1 ring-white"
-                        : "text-rose-400 font-bold hover:bg-rose-900/40"
-                    }`}
-                    title="Click to filter declined candidates"
-                  >
-                    <X className="w-3 h-3 inline mr-0.5 text-rose-400" /> {emailAnalytics.declinedCount} Declined
-                  </button>
-                )}
-                {emailAnalytics.whatsappJoinedCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEmailTrackingFilter(emailTrackingFilter === "WHATSAPP" ? "ALL" : "WHATSAPP");
-                    }}
-                    className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
-                      emailTrackingFilter === "WHATSAPP"
-                        ? "bg-[#25D366] text-slate-950 font-black ring-1 ring-white"
-                        : "text-[#25D366] font-bold hover:bg-emerald-900/40"
-                    }`}
-                    title="Click to filter candidates who joined WhatsApp"
-                  >
-                    {emailAnalytics.whatsappJoinedCount} WhatsApp
-                  </button>
-                )}
+
+                {/* 2. Opened */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailTrackingFilter(emailTrackingFilter === "OPENED" ? "ALL" : "OPENED");
+                    setDashboardTab("candidates");
+                  }}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                    emailTrackingFilter === "OPENED"
+                      ? "bg-emerald-900/60 border-emerald-400 ring-2 ring-emerald-400 shadow-md"
+                      : "bg-emerald-950/30 border-emerald-900/50 hover:border-emerald-700/70 hover:bg-emerald-950/50"
+                  }`}
+                  title="Click to filter candidates who opened/read their email for this event"
+                >
+                  <div className="flex items-center justify-between text-emerald-400 mb-1">
+                    <span className="font-semibold uppercase text-[10px]">Opened / Read</span>
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="text-xl font-black text-emerald-300">{emailAnalytics.openedEmailsCount}</div>
+                  <div className="text-[10px] text-emerald-400/80 mt-0.5">{emailAnalytics.openRate}% candidate open rate</div>
+                  {emailTrackingFilter === "OPENED" && (
+                    <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-emerald-500 text-white">Active</span>
+                  )}
+                </button>
+
+                {/* 3. Pending / Unopened */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailTrackingFilter(emailTrackingFilter === "UNOPENED" ? "ALL" : "UNOPENED");
+                    setDashboardTab("candidates");
+                  }}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                    emailTrackingFilter === "UNOPENED"
+                      ? "bg-amber-900/60 border-amber-400 ring-2 ring-amber-400 shadow-md"
+                      : "bg-amber-950/30 border-amber-900/50 hover:border-amber-700/70 hover:bg-amber-950/50"
+                  }`}
+                  title="Click to filter candidates whose email is unopened/pending"
+                >
+                  <div className="flex items-center justify-between text-amber-400 mb-1">
+                    <span className="font-semibold uppercase text-[10px]">Pending / Unopened</span>
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <div className="text-xl font-black text-amber-300">{emailAnalytics.unopenedEmailsCount}</div>
+                  <div className="text-[10px] text-amber-400/80 mt-0.5">Awaiting candidate open</div>
+                  {emailTrackingFilter === "UNOPENED" && (
+                    <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-amber-500 text-white">Active</span>
+                  )}
+                </button>
+
+                {/* 4. Button Actions Clicked */}
+                <div
+                  onClick={() => {
+                    setEmailTrackingFilter(emailTrackingFilter === "ACTION_CLICKED" ? "ALL" : "ACTION_CLICKED");
+                    setDashboardTab("candidates");
+                  }}
+                  className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                    ["ACTION_CLICKED", "CONFIRMED", "DECLINED", "WHATSAPP"].includes(emailTrackingFilter)
+                      ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400 shadow-md"
+                      : "bg-blue-950/30 border-blue-900/50 hover:border-blue-700/70 hover:bg-blue-950/50"
+                  }`}
+                  title="Click to filter candidates who clicked action buttons"
+                >
+                  <div className="flex items-center justify-between text-blue-400 mb-1">
+                    <span className="font-semibold uppercase text-[10px]">Button Actions</span>
+                    <MousePointerClick className="w-3.5 h-3.5 text-blue-400" />
+                  </div>
+                  <div className="text-xl font-black text-blue-300">{emailAnalytics.clickedCount} <span className="text-xs font-normal text-slate-400">clicks</span></div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEmailTrackingFilter(emailTrackingFilter === "CONFIRMED" ? "ALL" : "CONFIRMED");
+                        setDashboardTab("candidates");
+                      }}
+                      className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
+                        emailTrackingFilter === "CONFIRMED"
+                          ? "bg-emerald-500 text-white font-black ring-1 ring-white"
+                          : "text-emerald-400 font-bold hover:bg-emerald-900/40"
+                      }`}
+                      title="Click to filter confirmed candidates"
+                    >
+                      <Check className="w-3 h-3 inline mr-0.5 text-emerald-400" /> {emailAnalytics.confirmedCount} Confirmed
+                    </button>
+                    {emailAnalytics.declinedCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEmailTrackingFilter(emailTrackingFilter === "DECLINED" ? "ALL" : "DECLINED");
+                          setDashboardTab("candidates");
+                        }}
+                        className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
+                          emailTrackingFilter === "DECLINED"
+                            ? "bg-rose-500 text-white font-black ring-1 ring-white"
+                            : "text-rose-400 font-bold hover:bg-rose-900/40"
+                        }`}
+                        title="Click to filter declined candidates"
+                      >
+                        <X className="w-3 h-3 inline mr-0.5 text-rose-400" /> {emailAnalytics.declinedCount} Declined
+                      </button>
+                    )}
+                    {emailAnalytics.whatsappJoinedCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEmailTrackingFilter(emailTrackingFilter === "WHATSAPP" ? "ALL" : "WHATSAPP");
+                          setDashboardTab("candidates");
+                        }}
+                        className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
+                          emailTrackingFilter === "WHATSAPP"
+                            ? "bg-[#25D366] text-slate-950 font-black ring-1 ring-white"
+                            : "text-[#25D366] font-bold hover:bg-emerald-900/40"
+                        }`}
+                        title="Click to filter candidates who joined WhatsApp"
+                      >
+                        {emailAnalytics.whatsappJoinedCount} WhatsApp
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Active Email Filter Banner */}
-          {emailTrackingFilter !== "ALL" && (
-            <div className="flex items-center justify-between bg-slate-950/90 px-3.5 py-2 rounded-xl border border-slate-700/80 text-xs">
-              <div className="flex items-center gap-2 flex-wrap text-slate-300">
-                <span className="font-bold text-white">Filtering by:</span>
-                <span className="px-2 py-0.5 rounded-md font-extrabold uppercase text-[11px] bg-blue-500/30 text-blue-300 border border-blue-400/40">
-                  {emailTrackingFilter === "SENT" && "All Emailed Candidates"}
-                  {emailTrackingFilter === "OPENED" && "Opened / Read Email (Event)"}
-                  {emailTrackingFilter === "UNOPENED" && "Pending / Unopened Email"}
-                  {emailTrackingFilter === "ACTION_CLICKED" && "Clicked Any Action Button"}
-                  {emailTrackingFilter === "CONFIRMED" && "Confirmed Attendance (Yes)"}
-                  {emailTrackingFilter === "DECLINED" && "Declined Availability (No)"}
-                  {emailTrackingFilter === "WHATSAPP" && "Joined WhatsApp Group"}
-                </span>
-                <span className="text-slate-400">
-                  ({filteredAndSortedApplications.length} candidate{filteredAndSortedApplications.length !== 1 ? "s" : ""} matching)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEmailTrackingFilter("ALL")}
-                className="text-xs font-bold text-rose-300 hover:text-rose-200 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-700/60 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Clear Filter</span>
-              </button>
+          ) : (
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-2">
+              <Mail className="w-8 h-8 text-slate-400 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-800">No Emails Sent Yet for This Event</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Once selection emails or instructions are dispatched to candidates, real-time open rates, click actions, and attendance confirmations will be tracked here.
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* FILTER & VIEW TOOLBAR */}
+      {/* TAB 3: EVENT CONTROLS & MANAGEMENT */}
+      {dashboardTab === "controls" && (
+        <div className="space-y-3.5 animate-in fade-in duration-150">
+          {/* Closed Event Status Alert Banner */}
+          {event.status === "CLOSED" && (
+            <div className="bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black shrink-0 border border-rose-300 shadow-2xs">
+                  <Lock className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-rose-950 flex items-center gap-1.5">
+                    <span>Application Form is Currently CLOSED</span>
+                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-rose-200 text-rose-800">
+                      Form Paused
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-rose-800 mt-0.5">
+                    Students visiting the public registration page are shown <em>"Applications Closed by Administrator"</em>. You can resume and open the form anytime or add extra slots.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleToggleEventFormStatus("OPEN")}
+                  className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 animate-pulse"
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Resume Form (Open)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsReopenModalOpen(true)}
+                  className="flex-1 sm:flex-initial bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer"
+                >
+                  <span>+ Add Slots &amp; Reopen</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Controls Grid */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Event Management Operations</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Form Status Toggle */}
+              {can("events:close_resume") && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-slate-800 block">Registration Form Status</span>
+                  <p className="text-[11px] text-slate-500">
+                    {event.status === "CLOSED" ? "Applications are currently stopped." : "Form is accepting student applications."}
+                  </p>
+                  {event.status === "CLOSED" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleEventFormStatus("OPEN")}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Unlock className="w-3.5 h-3.5" />
+                      <span>Resume Form (Open)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleEventFormStatus("CLOSED")}
+                      className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Close Form</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Edit Event */}
+              {can("events:edit") && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-slate-800 block">Event Specifications</span>
+                  <p className="text-[11px] text-slate-500">Edit payout rates, shift timings, guidelines, and custom questions.</p>
+                  <Link
+                    href={`/admin/events/${eventId}/edit`}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 text-center"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>Edit Event</span>
+                  </Link>
+                </div>
+              )}
+
+              {/* Duplicate Event */}
+              {can("events:duplicate") && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-slate-800 block">Clone / Duplicate</span>
+                  <p className="text-[11px] text-slate-500">Use this event's specifications and form fields to create a new event.</p>
+                  <Link
+                    href={`/admin/events/create?cloneFrom=${eventId}`}
+                    className="w-full bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 text-center"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Duplicate as New</span>
+                  </Link>
+                </div>
+              )}
+
+              {/* WhatsApp Link Management */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <span className="text-xs font-bold text-slate-800 block">WhatsApp Group Link</span>
+                <p className="text-[11px] text-slate-500 truncate">
+                  {event.whatsappGroupLink ? event.whatsappGroupLink : "No link configured yet."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWhatsappGroupLinkInput(event.whatsappGroupLink || "");
+                    setIsWhatsappModalOpen(true);
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>{event.whatsappGroupLink ? "Edit WhatsApp Link" : "Set WhatsApp Link"}</span>
+                </button>
+              </div>
+
+              {/* Automated Selection Emails Toggle */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <span className="text-xs font-bold text-slate-800 block">Automated Selection Emails</span>
+                <p className="text-[11px] text-slate-500">
+                  {event.autoSendSelectionEmail !== false ? "Enabled: Immediately emails applicants upon selection." : "Disabled: Automated selection emails are turned off."}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleToggleAutoSelection}
+                  disabled={togglingAutoSelection}
+                  className={`w-full font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    event.autoSendSelectionEmail !== false
+                      ? "bg-slate-200 hover:bg-slate-300 text-slate-800"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                  }`}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{event.autoSendSelectionEmail !== false ? "Disable Auto-Emails" : "Enable Auto-Emails"}</span>
+                </button>
+              </div>
+
+              {/* Contact Export Actions */}
+              {can("events:export_data") && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <span className="text-xs font-bold text-slate-800 block">Export Candidate Contacts</span>
+                  <p className="text-[11px] text-slate-500">Download .vcf address book or copy all mobile numbers.</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleExportVcf()}
+                      className="flex-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Download className="w-3 h-3 text-emerald-600" />
+                      <span>.VCF File</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyAllPhones()}
+                      className="flex-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3 text-teal-600" />
+                      <span>{copiedPhoneNumbers ? "Copied!" : "Copy All"}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: CANDIDATES (DEFAULT & PRIMARY) */}
+      {dashboardTab === "candidates" && (
+        <div className="space-y-3 animate-in fade-in duration-150">
+          {/* Compact Closed Banner if Form is Closed */}
+          {event.status === "CLOSED" && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 text-rose-900 font-bold truncate">
+                <Lock className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="truncate">Application Form is CLOSED (Paused)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleEventFormStatus("OPEN")}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-1 rounded-lg text-xs transition cursor-pointer shrink-0"
+              >
+                Resume Form
+              </button>
+            </div>
+          )}
+
+          {/* Compact Single-Row Scrollable Metric Strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {[
+              { label: "All", value: "ALL", count: stats.total },
+              { label: "Confirmed + Attended", value: "CONFIRMED_ATTENDED", count: stats.confirmed + stats.attended },
+              { label: "Confirmed", value: "CONFIRMED", count: stats.confirmed },
+              { label: "Attended", value: "ATTENDED", count: stats.attended },
+              { label: "Selected", value: "SELECTED", count: stats.selected },
+              { label: "Under Review", value: "UNDER_REVIEW", count: stats.underReview },
+              { label: "Applied", value: "APPLIED", count: stats.applied },
+              { label: "Not Selected", value: "NOT_SELECTED", count: stats.notSelected },
+              { label: "Cancelled", value: "CANCELLED", count: stats.cancelled },
+            ].map((pill) => {
+              const isActive = statusFilter === pill.value;
+              return (
+                <button
+                  key={pill.value}
+                  type="button"
+                  onClick={() => setStatusFilter(pill.value)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    isActive
+                      ? "bg-slate-900 text-white border-slate-900 shadow-2xs font-extrabold"
+                      : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
+                  }`}
+                >
+                  <span>{pill.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {pill.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Email Tracking Filter Banner (if applied) */}
+          {emailTrackingFilter !== "ALL" && (
+            <div className="flex items-center justify-between bg-slate-900 px-3.5 py-2 rounded-xl text-xs text-white border border-slate-800">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold">Email Filter:</span>
+                <span className="px-2 py-0.5 rounded font-extrabold uppercase text-[10px] bg-blue-500/30 text-blue-300 border border-blue-400/40">
+                  {emailTrackingFilter}
+                </span>
+                <span className="text-slate-400">
+                  ({filteredAndSortedApplications.length} matching)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailTrackingFilter("ALL")}
+                className="text-xs font-bold text-rose-300 hover:text-rose-200 bg-rose-950/60 hover:bg-rose-900/80 px-2 py-1 rounded transition flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                <span>Clear Filter</span>
+              </button>
+            </div>
+          )}
+
+          {/* FILTER & VIEW TOOLBAR */}
       <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
           {/* Search bar & Action Buttons */}
@@ -3363,6 +3598,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </tbody>
             </table>
           </div>
+        </div>
+      )}
         </div>
       )}
 
