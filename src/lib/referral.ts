@@ -12,12 +12,13 @@ export const MIN_REFERRAL_REWARD = 20.0;
 
 /**
  * Standard referral reward fallback amount in INR (₹)
+ * Dynamic up to ₹150 (configured by Admin in Settings)
  */
-export const DEFAULT_REFERRAL_REWARD = 25.0;
+export const DEFAULT_REFERRAL_REWARD = 150.0;
 
 /**
  * Dynamically fetches the active referral reward amount configured by the Admin in Settings.
- * Enforces a minimum of ₹20. Falls back to DEFAULT_REFERRAL_REWARD if not configured.
+ * Enforces a minimum of ₹20 and maximum of ₹150. Falls back to DEFAULT_REFERRAL_REWARD (₹150) if not configured.
  */
 export async function getActiveReferralRewardAmount(): Promise<number> {
   try {
@@ -26,8 +27,8 @@ export async function getActiveReferralRewardAmount(): Promise<number> {
     });
     if (config?.value && typeof config.value === "object" && "referralRewardAmount" in (config.value as any)) {
       const val = Number((config.value as any).referralRewardAmount);
-      if (!isNaN(val) && val >= MIN_REFERRAL_REWARD) return val;
-      if (!isNaN(val) && val > 0) return Math.max(MIN_REFERRAL_REWARD, val);
+      if (!isNaN(val) && val >= MIN_REFERRAL_REWARD) return Math.min(150, val);
+      if (!isNaN(val) && val > 0) return Math.max(MIN_REFERRAL_REWARD, Math.min(150, val));
     }
   } catch (err) {
     console.error("Error fetching dynamic referral reward amount:", err);
@@ -108,10 +109,10 @@ export async function processReferralQualification(refereeUserId: string, eventI
       return null;
     }
 
-    // 4. Determine final reward amount (snapshotted reward or current active reward)
+    // 4. Determine final reward amount (use current dynamic active reward amount configured by admin)
     const activeReward = await getActiveReferralRewardAmount();
     const finalRewardAmount =
-      pendingReferral.rewardAmount && pendingReferral.rewardAmount >= MIN_REFERRAL_REWARD
+      pendingReferral.rewardAmount && pendingReferral.rewardAmount > activeReward
         ? pendingReferral.rewardAmount
         : activeReward;
 
@@ -291,7 +292,13 @@ export async function getUserReferralStats(userId: string) {
           ? `${nameParts[0]} ${nameParts[nameParts.length - 1].charAt(0)}.`
           : nameParts[0];
 
-      const rewardVal = r.rewardAmount || activeReward;
+      // Use active dynamic reward amount for pending referrals or snapshot for qualified/paid
+      const rewardVal =
+        r.status === ReferralStatus.PENDING
+          ? activeReward
+          : r.rewardAmount && r.rewardAmount >= MIN_REFERRAL_REWARD
+          ? r.rewardAmount
+          : activeReward;
       const refereeApps = r.referee.applications || [];
       const refereeAttendances = r.referee.attendanceRecords || [];
 

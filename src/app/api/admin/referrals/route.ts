@@ -112,6 +112,7 @@ export async function GET(request: Request) {
     });
 
     // 3. Referrers aggregation map
+    const activeReward = await getActiveReferralRewardAmount();
     const referrersMap = new Map<string, any>();
 
     // Fetch all users who have generated a referral code
@@ -176,16 +177,23 @@ export async function GET(request: Request) {
         referrersMap.set(ref.referrerId, entry);
       }
 
+      const effectiveReward =
+        ref.status === ReferralStatus.PENDING
+          ? activeReward
+          : ref.rewardAmount && ref.rewardAmount >= 20
+          ? ref.rewardAmount
+          : activeReward;
+
       entry.totalInvited += 1;
       if (ref.status === ReferralStatus.PENDING) {
         entry.pendingCount += 1;
       } else if (ref.status === ReferralStatus.QUALIFIED) {
         entry.qualifiedCount += 1;
-        entry.unpaidBalance += ref.rewardAmount;
+        entry.unpaidBalance += effectiveReward;
         entry.qualifiedReferralIds.push(ref.id);
       } else if (ref.status === ReferralStatus.PAID) {
         entry.paidCount += 1;
-        entry.paidBalance += ref.rewardAmount;
+        entry.paidBalance += effectiveReward;
       }
 
       if (new Date(ref.createdAt).getTime() > new Date(entry.latestActivityAt).getTime()) {
@@ -220,7 +228,7 @@ export async function GET(request: Request) {
         selectionStatus: ref.referee.selectionStatus,
         registeredAt: ref.createdAt,
         referralStatus: ref.status,
-        rewardAmount: ref.rewardAmount,
+        rewardAmount: effectiveReward,
         qualifyingEvent: ref.qualifyingEvent,
         applicationsCount: refereeApps.length,
         applications: refereeApps,
@@ -246,7 +254,7 @@ export async function GET(request: Request) {
         pendingPayoutAmount,
         settledPayoutAmount,
         totalEarningsGenerated,
-        rewardPerReferral: await getActiveReferralRewardAmount(),
+        rewardPerReferral: activeReward,
       },
       referrers: referrersList,
       ledger: allReferrals.map((r) => {
@@ -267,11 +275,18 @@ export async function GET(request: Request) {
             : null,
         }));
 
+        const effectiveReward =
+          r.status === ReferralStatus.PENDING
+            ? activeReward
+            : r.rewardAmount && r.rewardAmount >= 20
+            ? r.rewardAmount
+            : activeReward;
+
         return {
           id: r.id,
           codeUsed: r.codeUsed,
           status: r.status,
-          rewardAmount: r.rewardAmount,
+          rewardAmount: effectiveReward,
           registeredAt: r.createdAt,
           qualifiedAt: r.qualifiedAt,
           paidAt: r.paidAt,

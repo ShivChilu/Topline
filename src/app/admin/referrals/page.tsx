@@ -126,7 +126,8 @@ export default function AdminReferralsPage() {
   const openSettleReferrerModal = (ref: any) => {
     setSettlingReferralItem(null);
     setSettlingReferrer(ref);
-    setCustomPayoutAmount(String(ref.unpaidBalance || ref.rewardAmount || 25));
+    const activeRate = data?.metrics?.rewardPerReferral || 150;
+    setCustomPayoutAmount(String(ref.unpaidBalance || ref.rewardAmount || activeRate));
     setPaidReference("");
     setPayoutNotes("");
     setSendEmailOnSettle(true);
@@ -135,7 +136,8 @@ export default function AdminReferralsPage() {
   const openSettleReferralItemModal = (item: any) => {
     setSettlingReferrer(null);
     setSettlingReferralItem(item);
-    setCustomPayoutAmount(String(item.rewardAmount || 25));
+    const activeRate = data?.metrics?.rewardPerReferral || 150;
+    setCustomPayoutAmount(String(item.rewardAmount || activeRate));
     setPaidReference("");
     setPayoutNotes("");
     setSendEmailOnSettle(true);
@@ -853,7 +855,7 @@ export default function AdminReferralsPage() {
                               className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer text-xs ml-auto"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
-                              <span>Settle ₹{row.rewardAmount || 25}</span>
+                              <span>Settle ₹{row.rewardAmount || metrics?.rewardPerReferral || 150}</span>
                             </button>
                           ) : (
                             <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
@@ -972,7 +974,7 @@ export default function AdminReferralsPage() {
                           {isFriendPaid ? (
                             <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
-                              <span>Paid ₹{friend.rewardAmount || 25}</span>
+                              <span>Paid ₹{friend.rewardAmount || metrics?.rewardPerReferral || 150}</span>
                             </span>
                           ) : (
                             <button
@@ -982,14 +984,14 @@ export default function AdminReferralsPage() {
                                   referralId: friend.referralId,
                                   id: friend.referralId,
                                   name: friend.name,
-                                  rewardAmount: friend.rewardAmount || metrics.rewardPerReferral || 25,
+                                  rewardAmount: friend.rewardAmount || metrics?.rewardPerReferral || 150,
                                   referrer: selectedReferrerDetail,
                                 })
                               }
                               className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1 rounded-xl text-xs flex items-center gap-1 shadow-2xs transition cursor-pointer"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
-                              <span>Mark Paid (₹{friend.rewardAmount || metrics.rewardPerReferral || 25})</span>
+                              <span>Mark Paid (₹{friend.rewardAmount || metrics?.rewardPerReferral || 150})</span>
                             </button>
                           )}
 

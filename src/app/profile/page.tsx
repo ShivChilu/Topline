@@ -2154,7 +2154,7 @@ export default function StudentProfilePage() {
                                       isPaid ? "text-emerald-600" : isQualified ? "text-purple-600" : "text-slate-700"
                                     }`}
                                   >
-                                    ₹{item.rewardAmount || 25}
+                                    ₹{item.rewardAmount || referralData?.stats?.rewardPerReferral || 150}
                                   </span>
                                 </div>
                                 <span
@@ -2310,7 +2310,7 @@ export default function StudentProfilePage() {
                                 <div className="text-amber-900 text-[11px]">
                                   <span className="font-bold">Next Step: </span>
                                   <span>
-                                    {friendName} registered with your code but hasn't applied for a shift yet. Remind them to apply to unlock your ₹{item.rewardAmount || 25} reward!
+                                    {friendName} registered with your code but hasn't applied for a shift yet. Remind them to apply to unlock your ₹{item.rewardAmount || referralData?.stats?.rewardPerReferral || 150} reward!
                                   </span>
                                 </div>
                                 <a
@@ -2332,7 +2332,7 @@ export default function StudentProfilePage() {
                                 <div className="text-[11px]">
                                   <span className="font-bold">Shift Scheduled: </span>
                                   <span>
-                                    {friendName} applied for <strong>{item.referee?.firstApplication?.eventName || "Event Shift"}</strong>. Once their duty attendance is recorded as Present, your ₹{item.rewardAmount || 25} reward will be credited!
+                                    {friendName} applied for <strong>{item.referee?.firstApplication?.eventName || "Event Shift"}</strong>. Once their duty attendance is recorded as Present, your ₹{item.rewardAmount || referralData?.stats?.rewardPerReferral || 150} reward will be credited!
                                   </span>
                                 </div>
                               </div>
@@ -2343,7 +2343,7 @@ export default function StudentProfilePage() {
                                 <div className="text-[11px]">
                                   <span className="font-bold">🎉 Reward Earned! </span>
                                   <span>
-                                    {friendName} completed their first event duty. Topline administration will transfer ₹{item.rewardAmount || 25} directly to your registered UPI ID ({referralData.user.upiId}).
+                                    {friendName} completed their first event duty. Topline administration will transfer ₹{item.rewardAmount || referralData?.stats?.rewardPerReferral || 150} directly to your registered UPI ID ({referralData.user.upiId}).
                                   </span>
                                 </div>
                               </div>
@@ -2354,7 +2354,7 @@ export default function StudentProfilePage() {
                                 <div className="text-[11px] flex items-center gap-1.5">
                                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                                   <span>
-                                    <strong>₹{item.rewardAmount || 25} Paid Out: </strong> Transferred to your UPI ID ({referralData.user.upiId})
+                                    <strong>₹{item.rewardAmount || referralData?.stats?.rewardPerReferral || 150} Paid Out: </strong> Transferred to your UPI ID ({referralData.user.upiId})
                                   </span>
                                 </div>
                                 {item.paidReference && (
@@ -2449,8 +2449,8 @@ export default function StudentProfilePage() {
                                   )}
                                 </td>
                                 <td className="p-3 font-black text-right text-slate-900">
-                                  <span className={isPaid ? "text-emerald-600 text-sm font-black" : isQualified ? "text-purple-600 text-sm font-black" : "text-slate-400"}>
-                                    ₹{item.rewardAmount || 25}
+                                  <span className={isPaid ? "text-emerald-600 text-sm font-black" : isQualified ? "text-purple-600 text-sm font-black" : "text-slate-700 font-bold"}>
+                                    ₹{item.rewardAmount || referralData?.stats?.rewardPerReferral || 150}
                                   </span>
                                 </td>
                               </tr>
