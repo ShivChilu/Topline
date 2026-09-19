@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useMemo, useRef } from "react";
+import { useEffect, useState, use, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -79,6 +79,8 @@ export interface EventEmailLog {
   clickCount: number;
   clickedAction?: string | null;
   clickedUrl?: string | null;
+  eventId?: string | null;
+  applicationId?: string | null;
 }
 
 const EVENT_PLACEHOLDER_TAGS = [
@@ -166,6 +168,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [weightFilter, setWeightFilter] = useState("ALL");
   const [cityFilter, setCityFilter] = useState("ALL");
   const [universityFilter, setUniversityFilter] = useState("ALL");
+  const [emailTrackingFilter, setEmailTrackingFilter] = useState<"ALL" | "SENT" | "OPENED" | "UNOPENED" | "ACTION_CLICKED" | "CONFIRMED" | "DECLINED" | "WHATSAPP">("ALL");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Candidate Inspection Modal & Lightbox
@@ -916,6 +919,28 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     return result;
   };
 
+  // Helper to strictly extract event-specific email logs (excluding unrelated emails from /students)
+  const getEventEmailLogs = useCallback((app: any): EventEmailLog[] => {
+    if (!app) return [];
+    const currentEventId = eventId || event?._id || event?.id;
+    const rawLogs: EventEmailLog[] = (app.emailLogs && app.emailLogs.length > 0)
+      ? app.emailLogs
+      : (app.user?.emailLogs || []);
+
+    return rawLogs.filter((log: EventEmailLog) => {
+      // If the log is tied to a specific application, it MUST match this app
+      if (log.applicationId) {
+        return log.applicationId === app.id || log.applicationId === app._id;
+      }
+      // If no applicationId on log, it must match this event specifically
+      if (log.eventId) {
+        return log.eventId === currentEventId;
+      }
+      // Otherwise it's a global/unrelated email from /students or elsewhere -> exclude
+      return false;
+    });
+  }, [eventId, event]);
+
   // Filter & Queue Sorting
   const filteredAndSortedApplications = useMemo(() => {
     let list = [...applications];
@@ -1002,6 +1027,41 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       } else {
         list = list.filter((a) => (a.status || "").toUpperCase() === sf);
       }
+    }
+
+    // Email Tracking Filter
+    if (emailTrackingFilter === "SENT") {
+      list = list.filter((a) => getEventEmailLogs(a).length > 0);
+    } else if (emailTrackingFilter === "OPENED") {
+      list = list.filter((a) => {
+        const logs: EventEmailLog[] = getEventEmailLogs(a);
+        return logs.some((l: EventEmailLog) => l.openedAt || (l.openCount && l.openCount > 0));
+      });
+    } else if (emailTrackingFilter === "UNOPENED") {
+      list = list.filter((a) => {
+        const logs: EventEmailLog[] = getEventEmailLogs(a);
+        return logs.length > 0 && logs.every((l: EventEmailLog) => !l.openedAt && (!l.openCount || l.openCount === 0));
+      });
+    } else if (emailTrackingFilter === "ACTION_CLICKED") {
+      list = list.filter((a) => {
+        const logs: EventEmailLog[] = getEventEmailLogs(a);
+        return logs.some((l: EventEmailLog) => l.clickedAt || (l.clickCount && l.clickCount > 0));
+      });
+    } else if (emailTrackingFilter === "CONFIRMED") {
+      list = list.filter((a) => {
+        const logs: EventEmailLog[] = getEventEmailLogs(a);
+        return logs.some((l: EventEmailLog) => l.clickedAction === "CONFIRM_YES");
+      });
+    } else if (emailTrackingFilter === "DECLINED") {
+      list = list.filter((a) => {
+        const logs: EventEmailLog[] = getEventEmailLogs(a);
+        return logs.some((l: EventEmailLog) => l.clickedAction === "DECLINE_NO");
+      });
+    } else if (emailTrackingFilter === "WHATSAPP") {
+      list = list.filter((a) => {
+        const logs: EventEmailLog[] = getEventEmailLogs(a);
+        return logs.some((l: EventEmailLog) => l.clickedAction === "JOIN_WHATSAPP");
+      });
     }
 
     // Photo filter
@@ -1122,7 +1182,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     });
 
     return list;
-  }, [applications, search, statusFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
+  }, [applications, search, statusFilter, emailTrackingFilter, getEventEmailLogs, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
 
   const availableCities = useMemo(() => {
     const set = new Set<string>();
@@ -1146,6 +1206,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     let count = 0;
     if (search.trim()) count++;
     if (statusFilter !== "ALL") count++;
+    if (emailTrackingFilter !== "ALL") count++;
     if (callFilter !== "ALL") count++;
     if (photoFilter !== "ALL") count++;
     if (profileFilter !== "ALL") count++;
@@ -1158,11 +1219,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     if (cityFilter !== "ALL") count++;
     if (universityFilter !== "ALL") count++;
     return count;
-  }, [search, statusFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [search, statusFilter, emailTrackingFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 
   const handleResetFilters = () => {
     setSearch("");
     setStatusFilter("ALL");
+    setEmailTrackingFilter("ALL");
     setCallFilter("ALL");
     setPhotoFilter("ALL");
     setProfileFilter("ALL");
@@ -1209,7 +1271,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
 
 
-  // Email Engagement & Click Tracking Analytics
+  // Email Engagement & Click Tracking Analytics (Scoped to this Event only)
   const emailAnalytics = useMemo(() => {
     let totalEmailsSent = 0;
     let openedEmailsCount = 0;
@@ -1221,18 +1283,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     let candidatesEmailedCount = 0;
 
     applications.forEach((app) => {
-      const logs: EventEmailLog[] = app.emailLogs || app.user?.emailLogs || [];
+      const logs: EventEmailLog[] = getEventEmailLogs(app);
       if (logs.length > 0) {
         candidatesEmailedCount++;
         totalEmailsSent += logs.length;
-        logs.forEach((log) => {
-          if (log.openedAt || log.openCount > 0) {
+        logs.forEach((log: EventEmailLog) => {
+          if (log.openedAt || (log.openCount && log.openCount > 0)) {
             openedEmailsCount++;
           } else {
             unopenedEmailsCount++;
           }
 
-          if (log.clickedAt || log.clickCount > 0) {
+          if (log.clickedAt || (log.clickCount && log.clickCount > 0)) {
             clickedCount++;
             if (log.clickedAction === "CONFIRM_YES") confirmedCount++;
             else if (log.clickedAction === "DECLINE_NO") declinedCount++;
@@ -1257,7 +1319,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       openRate,
       clickRate,
     };
-  }, [applications]);
+  }, [applications, getEventEmailLogs]);
 
   // Next candidate in queue helper for Drawer
   const handleNextCandidate = () => {
@@ -1894,49 +1956,168 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             {/* 1. Emails Sent */}
-            <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "SENT" ? "ALL" : "SENT")}
+              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                emailTrackingFilter === "SENT"
+                  ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400 shadow-md"
+                  : "bg-slate-950/50 border-slate-800 hover:border-slate-700 hover:bg-slate-950/80"
+              }`}
+              title="Click to filter all candidates emailed for this event"
+            >
               <div className="flex items-center justify-between text-slate-400 mb-1">
                 <span className="font-semibold uppercase text-[10px]">Emails Sent</span>
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
               </div>
               <div className="text-xl font-black text-white">{emailAnalytics.totalEmailsSent}</div>
               <div className="text-[10px] text-slate-400 mt-0.5">To {emailAnalytics.candidatesEmailedCount} candidates</div>
-            </div>
+              {emailTrackingFilter === "SENT" && (
+                <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-blue-500 text-white">Active</span>
+              )}
+            </button>
 
             {/* 2. Opened */}
-            <div className="bg-emerald-950/30 p-3 rounded-xl border border-emerald-900/50">
+            <button
+              type="button"
+              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "OPENED" ? "ALL" : "OPENED")}
+              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                emailTrackingFilter === "OPENED"
+                  ? "bg-emerald-900/60 border-emerald-400 ring-2 ring-emerald-400 shadow-md"
+                  : "bg-emerald-950/30 border-emerald-900/50 hover:border-emerald-700/70 hover:bg-emerald-950/50"
+              }`}
+              title="Click to filter candidates who opened/read their email for this event"
+            >
               <div className="flex items-center justify-between text-emerald-400 mb-1">
                 <span className="font-semibold uppercase text-[10px]">Opened / Read</span>
                 <Eye className="w-3.5 h-3.5 text-emerald-400" />
               </div>
               <div className="text-xl font-black text-emerald-300">{emailAnalytics.openedEmailsCount}</div>
               <div className="text-[10px] text-emerald-400/80 mt-0.5">{emailAnalytics.openRate}% candidate open rate</div>
-            </div>
+              {emailTrackingFilter === "OPENED" && (
+                <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-emerald-500 text-white">Active</span>
+              )}
+            </button>
 
             {/* 3. Pending / Unopened */}
-            <div className="bg-amber-950/30 p-3 rounded-xl border border-amber-900/50">
+            <button
+              type="button"
+              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "UNOPENED" ? "ALL" : "UNOPENED")}
+              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                emailTrackingFilter === "UNOPENED"
+                  ? "bg-amber-900/60 border-amber-400 ring-2 ring-amber-400 shadow-md"
+                  : "bg-amber-950/30 border-amber-900/50 hover:border-amber-700/70 hover:bg-amber-950/50"
+              }`}
+              title="Click to filter candidates whose email is unopened/pending"
+            >
               <div className="flex items-center justify-between text-amber-400 mb-1">
                 <span className="font-semibold uppercase text-[10px]">Pending / Unopened</span>
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
               </div>
               <div className="text-xl font-black text-amber-300">{emailAnalytics.unopenedEmailsCount}</div>
               <div className="text-[10px] text-amber-400/80 mt-0.5">Awaiting candidate open</div>
-            </div>
+              {emailTrackingFilter === "UNOPENED" && (
+                <span className="absolute top-2 right-2 px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-amber-500 text-white">Active</span>
+              )}
+            </button>
 
             {/* 4. Button Actions Clicked */}
-            <div className="bg-blue-950/30 p-3 rounded-xl border border-blue-900/50">
+            <div
+              onClick={() => setEmailTrackingFilter(emailTrackingFilter === "ACTION_CLICKED" ? "ALL" : "ACTION_CLICKED")}
+              className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                ["ACTION_CLICKED", "CONFIRMED", "DECLINED", "WHATSAPP"].includes(emailTrackingFilter)
+                  ? "bg-blue-900/60 border-blue-400 ring-2 ring-blue-400 shadow-md"
+                  : "bg-blue-950/30 border-blue-900/50 hover:border-blue-700/70 hover:bg-blue-950/50"
+              }`}
+              title="Click to filter candidates who clicked action buttons"
+            >
               <div className="flex items-center justify-between text-blue-400 mb-1">
                 <span className="font-semibold uppercase text-[10px]">Button Actions</span>
                 <MousePointerClick className="w-3.5 h-3.5 text-blue-400" />
               </div>
               <div className="text-xl font-black text-blue-300">{emailAnalytics.clickedCount} <span className="text-xs font-normal text-slate-400">clicks</span></div>
-              <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-0.5 flex-wrap">
-                <span className="text-emerald-400 font-bold">✓ {emailAnalytics.confirmedCount} Confirmed</span>
-                {emailAnalytics.declinedCount > 0 && <span className="text-rose-400 font-bold">✗ {emailAnalytics.declinedCount} Declined</span>}
-                {emailAnalytics.whatsappJoinedCount > 0 && <span className="text-[#25D366] font-bold">{emailAnalytics.whatsappJoinedCount} WhatsApp</span>}
+              <div className="flex items-center gap-1.5 text-[10px] text-blue-300 mt-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEmailTrackingFilter(emailTrackingFilter === "CONFIRMED" ? "ALL" : "CONFIRMED");
+                  }}
+                  className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
+                    emailTrackingFilter === "CONFIRMED"
+                      ? "bg-emerald-500 text-white font-black ring-1 ring-white"
+                      : "text-emerald-400 font-bold hover:bg-emerald-900/40"
+                  }`}
+                  title="Click to filter RSVP confirmed candidates"
+                >
+                  ✓ {emailAnalytics.confirmedCount} Confirmed
+                </button>
+                {emailAnalytics.declinedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEmailTrackingFilter(emailTrackingFilter === "DECLINED" ? "ALL" : "DECLINED");
+                    }}
+                    className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
+                      emailTrackingFilter === "DECLINED"
+                        ? "bg-rose-500 text-white font-black ring-1 ring-white"
+                        : "text-rose-400 font-bold hover:bg-rose-900/40"
+                    }`}
+                    title="Click to filter RSVP declined candidates"
+                  >
+                    ✗ {emailAnalytics.declinedCount} Declined
+                  </button>
+                )}
+                {emailAnalytics.whatsappJoinedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEmailTrackingFilter(emailTrackingFilter === "WHATSAPP" ? "ALL" : "WHATSAPP");
+                    }}
+                    className={`px-1.5 py-0.2 rounded transition cursor-pointer ${
+                      emailTrackingFilter === "WHATSAPP"
+                        ? "bg-[#25D366] text-slate-950 font-black ring-1 ring-white"
+                        : "text-[#25D366] font-bold hover:bg-emerald-900/40"
+                    }`}
+                    title="Click to filter candidates who joined WhatsApp"
+                  >
+                    {emailAnalytics.whatsappJoinedCount} WhatsApp
+                  </button>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Active Email Filter Banner */}
+          {emailTrackingFilter !== "ALL" && (
+            <div className="flex items-center justify-between bg-slate-950/90 px-3.5 py-2 rounded-xl border border-slate-700/80 text-xs">
+              <div className="flex items-center gap-2 flex-wrap text-slate-300">
+                <span className="font-bold text-white">Filtering by:</span>
+                <span className="px-2 py-0.5 rounded-md font-extrabold uppercase text-[11px] bg-blue-500/30 text-blue-300 border border-blue-400/40">
+                  {emailTrackingFilter === "SENT" && "All Emailed Candidates"}
+                  {emailTrackingFilter === "OPENED" && "Opened / Read Email (Event)"}
+                  {emailTrackingFilter === "UNOPENED" && "Pending / Unopened Email"}
+                  {emailTrackingFilter === "ACTION_CLICKED" && "Clicked Any Action Button"}
+                  {emailTrackingFilter === "CONFIRMED" && "Confirmed Attendance (RSVP YES)"}
+                  {emailTrackingFilter === "DECLINED" && "Declined Availability (RSVP NO)"}
+                  {emailTrackingFilter === "WHATSAPP" && "Joined WhatsApp Group"}
+                </span>
+                <span className="text-slate-400">
+                  ({filteredAndSortedApplications.length} candidate{filteredAndSortedApplications.length !== 1 ? "s" : ""} matching)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailTrackingFilter("ALL")}
+                className="text-xs font-bold text-rose-300 hover:text-rose-200 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-700/60 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Clear Filter</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -2773,11 +2954,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <Mail className="w-3 h-3 text-slate-400" />
                             <span>Emails:</span>
                           </div>
-                          {((app.emailLogs && app.emailLogs.length > 0) || (app.user?.emailLogs && app.user.emailLogs.length > 0)) ? (
+                          {getEventEmailLogs(app).length > 0 ? (
                             <div className="flex items-center gap-1.5 flex-wrap justify-end">
                               {(() => {
-                                const logs: EventEmailLog[] = app.emailLogs || app.user?.emailLogs || [];
-                                const hasOpened = logs.some((l) => l.openedAt || l.openCount > 0);
+                                const logs: EventEmailLog[] = getEventEmailLogs(app);
+                                const hasOpened = logs.some((l) => l.openedAt || (l.openCount && l.openCount > 0));
                                 const hasConfirmed = logs.some((l) => l.clickedAction === "CONFIRM_YES");
                                 const hasDeclined = logs.some((l) => l.clickedAction === "DECLINE_NO");
                                 const hasJoinedWA = logs.some((l) => l.clickedAction === "JOIN_WHATSAPP");
@@ -2997,11 +3178,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                                 {app.callingRemarks || app.user?.adminRemarks || student.adminRemarks}
                               </div>
                             )}
-                            {((app.emailLogs && app.emailLogs.length > 0) || (app.user?.emailLogs && app.user.emailLogs.length > 0)) && (
+                            {getEventEmailLogs(app).length > 0 && (
                               <div className="mt-1 flex items-center gap-1.5 text-[10px]">
                                 {(() => {
-                                  const logs: EventEmailLog[] = app.emailLogs || app.user?.emailLogs || [];
-                                  const hasOpened = logs.some((l) => l.openedAt || l.openCount > 0);
+                                  const logs: EventEmailLog[] = getEventEmailLogs(app);
+                                  const hasOpened = logs.some((l) => l.openedAt || (l.openCount && l.openCount > 0));
                                   const hasConfirmed = logs.some((l) => l.clickedAction === "CONFIRM_YES");
                                   const hasDeclined = logs.some((l) => l.clickedAction === "DECLINE_NO");
                                   return (
@@ -3377,16 +3558,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     <Mail className="w-4 h-4 text-blue-600" />
                     Email Communication & Delivery History
                   </h4>
-                  {((inspectCandidate.emailLogs && inspectCandidate.emailLogs.length > 0) || (inspectCandidate.user?.emailLogs && inspectCandidate.user.emailLogs.length > 0)) && (
+                  {getEventEmailLogs(inspectCandidate).length > 0 && (
                     <span className="text-[11px] font-bold text-slate-500">
-                      {(inspectCandidate.emailLogs || inspectCandidate.user?.emailLogs || []).length} Sent
+                      {getEventEmailLogs(inspectCandidate).length} Sent
                     </span>
                   )}
                 </div>
 
-                {((inspectCandidate.emailLogs && inspectCandidate.emailLogs.length > 0) || (inspectCandidate.user?.emailLogs && inspectCandidate.user.emailLogs.length > 0)) ? (
+                {getEventEmailLogs(inspectCandidate).length > 0 ? (
                   <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                    {(inspectCandidate.emailLogs || inspectCandidate.user?.emailLogs || []).map((log: EventEmailLog) => {
+                    {getEventEmailLogs(inspectCandidate).map((log: EventEmailLog) => {
                       const isOpened = log.openedAt || log.openCount > 0;
                       const isClicked = log.clickedAt || log.clickCount > 0;
 

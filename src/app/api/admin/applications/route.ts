@@ -100,7 +100,7 @@ export async function GET(request: Request) {
               },
             },
             emailLogs: {
-              where: eventId ? { eventId } : undefined,
+              where: eventId ? { eventId, applicationId: { not: null } } : undefined,
               select: {
                 id: true,
                 templateName: true,
@@ -167,6 +167,7 @@ export async function GET(request: Request) {
           take: 5,
         },
         emailLogs: {
+          where: eventId ? { eventId } : undefined,
           select: {
             id: true,
             templateName: true,
