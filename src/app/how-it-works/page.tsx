@@ -16,18 +16,18 @@ export default function HowItWorksPage() {
     },
     {
       icon: <CalendarCheck className="w-10 h-10 text-red-600" />,
-      title: "3. Selection & Confirmation",
-      desc: "TOPLINE captains will review applications and confirm selected students via WhatsApp/SMS notifications."
+      title: "3. Email Selection & 1-Click RSVP",
+      desc: "Once selected, you'll receive an official selection email. Click 'Confirm RSVP' to lock your duty spot and join the event group."
     },
     {
       icon: <Clock className="w-10 h-10 text-red-600" />,
-      title: "4. Report & Work",
-      desc: "Arrive on time, wear the designated uniform, and execute your hospitality role under supervisor instructions."
+      title: "4. Report & QR Check-In",
+      desc: "Arrive on time in designated uniform, scan the live QR code for digital attendance, and execute your hospitality role."
     },
     {
       icon: <Award className="w-10 h-10 text-red-600" />,
-      title: "5. Fast Payment",
-      desc: "Once attendance is validated at checkout, receive payments directly based on the event's standard rate."
+      title: "5. Direct Payout",
+      desc: "Once attendance is validated at checkout, receive payments directly to your bank account or UPI ID."
     }
   ];
 

@@ -372,8 +372,8 @@ export default async function HomePage() {
             {[
               { step: "01", title: "Browse Slots", desc: "Find open catering & hospitality shifts matching your schedule." },
               { step: "02", title: "Submit Form", desc: "Fill basic details & college ID to register your application." },
-              { step: "03", title: "Attend & Check-In", desc: "Confirm selection, wear uniform, scan QR attendance." },
-              { step: "04", title: "Direct Payout", desc: "Complete event duty and get paid straight to your bank/UPI." },
+              { step: "03", title: "Confirm via Email", desc: "Open selection email & click 1-Click RSVP (Confirm) to secure your spot." },
+              { step: "04", title: "Attend & Get Paid", desc: "Arrive in uniform, scan QR attendance, and get paid directly to bank/UPI." },
             ].map((item, idx) => (
               <div key={idx} className="bg-slate-50/60 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/80 flex flex-col items-center text-center">
                 <span className="w-7 h-7 sm:w-8 sm:h-8 bg-red-600 text-white rounded-full flex items-center justify-center font-mono font-black text-xs sm:text-sm mb-2 sm:mb-3 shadow-xs">
