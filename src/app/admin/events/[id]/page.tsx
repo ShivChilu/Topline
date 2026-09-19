@@ -176,6 +176,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [callingNote, setCallingNote] = useState("");
   const [drawerStep, setDrawerStep] = useState<1 | 2 | 3>(1);
+  const [inspectTab, setInspectTab] = useState<"details" | "emails" | "decision">("details");
 
   // Delete Confirmation Modal
   const [deleteCandidate, setDeleteCandidate] = useState<any>(null);
@@ -452,6 +453,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   const openInspectCandidate = (candidate: any) => {
     setInspectCandidate(candidate);
+    setInspectTab("details");
     setDrawerStep(1);
     const initialRemarks = candidate.callingRemarks || candidate.user?.adminRemarks || candidate.studentId?.adminRemarks || "";
     setCallingNote(initialRemarks);
@@ -3437,553 +3439,303 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-6">
-              {/* Form Submission Timestamp Banner */}
-              <div className="p-3.5 bg-amber-50/85 border border-amber-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-700">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-extrabold text-amber-950">Form Submitted Date & Time</div>
-                    <div className="text-[11px] text-amber-700 font-medium">Exact date and time this candidate applied for this event</div>
-                  </div>
-                </div>
-                <div className="text-xs font-extrabold text-amber-950 font-mono bg-white px-3.5 py-1.5 rounded-xl border border-amber-300 shadow-2xs">
-                  {formatAppliedDateTime(inspectCandidate.createdAt)}
-                </div>
-              </div>
-
-              {/* Photo Showcase Carousel / Grid */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-red-600" />
-                  Permanent Student Photos ({inspectCandidate.studentId?.studentPhotos?.length || (inspectCandidate.photoUrl ? 1 : 0)})
-                </h4>
-
-                {inspectCandidate.studentId?.studentPhotos && inspectCandidate.studentId.studentPhotos.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {inspectCandidate.studentId.studentPhotos.map((photo: any) => (
-                      <div
-                        key={photo.id}
-                        onClick={() => setLightboxPhoto(photo.url)}
-                        className="relative aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 cursor-pointer shadow-sm"
-                      >
-                        <img src={photo.url} alt="Grooming" className="w-full h-full object-cover transition duration-300 group-hover:scale-105" />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600 px-1.5 py-0.5 rounded">
-                            {photo.photoType}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : inspectCandidate.photoUrl ? (
-                  <div
-                    onClick={() => setLightboxPhoto(inspectCandidate.photoUrl)}
-                    className="w-48 aspect-3/4 rounded-xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm"
-                  >
-                    <img src={inspectCandidate.photoUrl} alt="Photo" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
-                    No grooming photos uploaded by student yet.
-                  </div>
-                )}
-              </div>
-
-              {/* Authoritative Student Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
-                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block font-mono">{inspectCandidate.mobileNumber}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Email</span>
-                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block truncate">{inspectCandidate.studentId?.email || "N/A"}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase block">City / Gender</span>
-                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
-                    {inspectCandidate.studentId?.city || "-"} / {inspectCandidate.studentId?.gender || "-"}
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase block">Height / Age</span>
-                  <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
-                    {inspectCandidate.studentId?.height || "-"} / {inspectCandidate.studentId?.age ? `${inspectCandidate.studentId.age} yrs` : "-"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dynamic Permanent Profile Attributes */}
-              {inspectCandidate.studentId?.dynamicProfileFields && inspectCandidate.studentId.dynamicProfileFields.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Sliders className="w-4 h-4 text-red-600" />
-                    Permanent Profile Attributes
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {inspectCandidate.studentId.dynamicProfileFields.map((df: any, idx: number) => (
-                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                        <span className="font-bold text-slate-500 block">{df.label}</span>
-                        <span className="font-semibold text-slate-900 mt-1 block">{df.value || "Not provided"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Event-Specific Custom Form Responses */}
-              {inspectCandidate.dynamicEventResponses && inspectCandidate.dynamicEventResponses.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Briefcase className="w-4 h-4 text-red-600" />
-                    Event Application Form Responses
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {inspectCandidate.dynamicEventResponses.map((ef: any, idx: number) => (
-                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                        <span className="font-bold text-slate-500 block">{ef.label}</span>
-                        <span className="font-semibold text-slate-900 mt-1 block">{ef.value || "Not answered"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Email Communication & Delivery History */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Mail className="w-4 h-4 text-blue-600" />
-                    Email Communication & Delivery History
-                  </h4>
+            {/* Top 3 Navigation Switch Buttons */}
+            <div className="px-6 pt-5 pb-0">
+              <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setInspectTab("details")}
+                  className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition text-center shadow-xs ${
+                    inspectTab === "details"
+                      ? "bg-white text-slate-900 shadow-md border border-slate-200 font-extrabold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                  }`}
+                >
+                  <Users className="w-4 h-4 text-red-600 shrink-0" />
+                  <span className="truncate">Personal / All Details</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectTab("emails")}
+                  className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition text-center shadow-xs ${
+                    inspectTab === "emails"
+                      ? "bg-white text-slate-900 shadow-md border border-slate-200 font-extrabold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                  }`}
+                >
+                  <Mail className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="truncate">Email History</span>
                   {getEventEmailLogs(inspectCandidate).length > 0 && (
-                    <span className="text-[11px] font-bold text-slate-500">
-                      {getEventEmailLogs(inspectCandidate).length} Sent
+                    <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                      {getEventEmailLogs(inspectCandidate).length}
                     </span>
                   )}
-                </div>
-
-                {getEventEmailLogs(inspectCandidate).length > 0 ? (
-                  <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                    {getEventEmailLogs(inspectCandidate).map((log: EventEmailLog) => {
-                      const isOpened = log.openedAt || log.openCount > 0;
-                      const isClicked = log.clickedAt || log.clickCount > 0;
-
-                      return (
-                        <div key={log.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <div className="font-bold text-slate-900 truncate">
-                              {log.subject}
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-mono shrink-0">
-                              {new Date(log.sentAt).toLocaleString("en-GB", {
-                                day: "numeric",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          </div>
-
-                          {log.templateName && (
-                            <div className="text-[11px] text-slate-500">
-                              Template: <span className="font-semibold text-slate-700">{log.templateName}</span>
-                            </div>
-                          )}
-
-                          {log.bodyPreview && (
-                            <p className="text-[11px] text-slate-500 line-clamp-2 italic bg-white p-2 rounded border border-slate-100">
-                              &ldquo;{log.bodyPreview}&rdquo;
-                            </p>
-                          )}
-
-                          {/* Open & Click Tracking Indicators */}
-                          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
-                            {/* Open Status */}
-                            <div className="flex items-center gap-1">
-                              {isOpened ? (
-                                <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <Eye className="w-3 h-3 text-emerald-600" />
-                                  Opened ({log.openCount}x){log.openedAt ? ` • ${new Date(log.openedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
-                                </span>
-                              ) : (
-                                <span className="text-amber-700 font-medium bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <Clock className="w-3 h-3 text-amber-600" />
-                                  Pending candidate opening
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Button Click Action */}
-                            <div className="flex items-center gap-1">
-                              {isClicked ? (
-                                <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <MousePointerClick className="w-3 h-3 text-blue-600" />
-                                  Clicked: {log.clickedAction === "CONFIRM_YES" ? "YES, I AM AVAILABLE" : log.clickedAction === "DECLINE_NO" ? "NO, Decline" : log.clickedAction === "JOIN_WHATSAPP" ? "Joined WhatsApp Group" : log.clickedAction || "Button Link"}
-                                  {log.clickedAt ? ` at ${new Date(log.clickedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400 font-medium">
-                                  No button actions clicked
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-xs text-slate-400 italic bg-white rounded-xl border border-dashed border-slate-200">
-                    No recorded emails sent to this candidate yet.
-                  </div>
-                )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectTab("decision")}
+                  className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition text-center shadow-xs ${
+                    inspectTab === "decision"
+                      ? "bg-white text-slate-900 shadow-md border border-slate-200 font-extrabold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                  }`}
+                >
+                  <Sliders className="w-4 h-4 text-purple-600 shrink-0" />
+                  <span className="truncate">Calling & Decision</span>
+                </button>
               </div>
+            </div>
 
-              {/* Event Selection & Calling Workflow Guided Stepper Box */}
-              <div className="p-4 sm:p-5 bg-slate-900 text-white rounded-2xl space-y-4 border border-slate-800 shadow-xl">
-                {/* Stepper Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* TAB 1: ALL / PERSONAL DETAILS */}
+              {inspectTab === "details" && (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* Form Submission Timestamp Banner (Clean without extra subtext) */}
+                  <div className="p-3 bg-amber-50/85 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-700 shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <div className="text-xs font-extrabold text-amber-950">
+                        Form Submitted Date & Time
+                      </div>
+                    </div>
+                    <div className="text-xs font-extrabold text-amber-950 font-mono bg-white px-3.5 py-1.5 rounded-xl border border-amber-300 shadow-2xs">
+                      {formatAppliedDateTime(inspectCandidate.createdAt)}
+                    </div>
+                  </div>
+
+                  {/* Photo Showcase Carousel / Grid */}
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-red-950/80 text-red-400 border border-red-800/60">
-                        Guided Evaluation
-                      </span>
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                        Current: <strong className="text-white">{inspectCandidate.status}</strong>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-red-600" />
+                      Permanent Student Photos ({inspectCandidate.studentId?.studentPhotos?.length || (inspectCandidate.photoUrl ? 1 : 0)})
+                    </h4>
+
+                    {inspectCandidate.studentId?.studentPhotos && inspectCandidate.studentId.studentPhotos.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {inspectCandidate.studentId.studentPhotos.map((photo: any) => (
+                          <div
+                            key={photo.id}
+                            onClick={() => setLightboxPhoto(photo.url)}
+                            className="relative aspect-3/4 rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 cursor-pointer shadow-sm"
+                          >
+                            <img src={photo.url} alt="Grooming" className="w-full h-full object-cover transition duration-300 group-hover:scale-105" />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white">
+                              <span className="text-[10px] font-bold uppercase tracking-wider bg-red-600 px-1.5 py-0.5 rounded">
+                                {photo.photoType}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : inspectCandidate.photoUrl ? (
+                      <div
+                        onClick={() => setLightboxPhoto(inspectCandidate.photoUrl)}
+                        className="w-48 aspect-3/4 rounded-xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm"
+                      >
+                        <img src={inspectCandidate.photoUrl} alt="Photo" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
+                        No grooming photos uploaded by student yet.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Authoritative Student Info (with fully visible email) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
+                      <span className="text-sm font-semibold text-slate-900 mt-0.5 block font-mono">
+                        {inspectCandidate.mobileNumber || inspectCandidate.phone || inspectCandidate.studentId?.phone || "N/A"}
                       </span>
                     </div>
-                    <h4 className="font-extrabold text-base text-white mt-1">Calling & Decision Workflow</h4>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block">Email</span>
+                      <span className="text-xs sm:text-sm font-semibold text-slate-900 mt-0.5 block break-all font-mono">
+                        {inspectCandidate.studentId?.email || inspectCandidate.email || "N/A"}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block">City / Gender</span>
+                      <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
+                        {inspectCandidate.studentId?.city || "-"} / {inspectCandidate.studentId?.gender || "-"}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block">Height / Age</span>
+                      <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
+                        {inspectCandidate.studentId?.height || "-"} / {inspectCandidate.studentId?.age ? `${inspectCandidate.studentId.age} yrs` : "-"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
+
+                  {/* Dynamic Permanent Profile Attributes */}
+                  {inspectCandidate.studentId?.dynamicProfileFields && inspectCandidate.studentId.dynamicProfileFields.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Sliders className="w-4 h-4 text-red-600" />
+                        Permanent Profile Attributes
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {inspectCandidate.studentId.dynamicProfileFields.map((df: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                            <span className="font-bold text-slate-500 block">{df.label}</span>
+                            <span className="font-semibold text-slate-900 mt-1 block">{df.value || "Not provided"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Event-Specific Custom Form Responses */}
+                  {inspectCandidate.dynamicEventResponses && inspectCandidate.dynamicEventResponses.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Briefcase className="w-4 h-4 text-red-600" />
+                        Event Application Form Responses
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {inspectCandidate.dynamicEventResponses.map((ef: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                            <span className="font-bold text-slate-500 block">{ef.label}</span>
+                            <span className="font-semibold text-slate-900 mt-1 block">{ef.value || "Not answered"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Switch to Decision Workflow */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200">
                     <button
                       type="button"
-                      onClick={handleNextCandidate}
-                      className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow"
-                      title="Move to next candidate"
+                      onClick={() => setInspectTab("emails")}
+                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5"
                     >
-                      <span>Next Candidate</span>
+                      <Mail className="w-4 h-4" />
+                      <span>View Email History ({getEventEmailLogs(inspectCandidate).length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspectTab("decision")}
+                      className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                    >
+                      <span>Proceed to Calling & Decision</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
+              )}
 
-                {/* 3-Step Navigation Tabs */}
-                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setDrawerStep(1)}
-                    className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
-                      drawerStep === 1
-                        ? "bg-blue-600 text-white shadow"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
-                    <span className="truncate">Calling & Notes</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDrawerStep(2)}
-                    className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
-                      drawerStep === 2
-                        ? "bg-emerald-600 text-white shadow"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span>
-                    <span className="truncate">Selection Decision</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDrawerStep(3)}
-                    className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
-                      drawerStep === 3
-                        ? "bg-purple-600 text-white shadow"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">3</span>
-                    <span className="truncate">Message & Contact</span>
-                  </button>
-                </div>
-
-                {/* STEP 1: Calling Verification & Notes */}
-                {drawerStep === 1 && (
-                  <div className="space-y-3.5 animate-fadeIn">
-                    {/* 2-Call Verification Box */}
-                    <div className="bg-slate-800/90 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                          <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
-                          <span>2-Call Verification Protocol</span>
-                        </span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                          inspectCandidate.call2Done
-                            ? "bg-purple-900/60 text-purple-200 border border-purple-500/40"
-                            : inspectCandidate.call1Done
-                            ? "bg-blue-900/60 text-blue-200 border border-blue-500/40"
-                            : "bg-amber-900/60 text-amber-200 border border-amber-500/40"
-                        }`}>
-                          {inspectCandidate.call2Done
-                            ? "2 Calls Done"
-                            : inspectCandidate.call1Done
-                            ? "1st Call Done"
-                            : "0/2 Calls (Pending)"}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {/* Call 1 Card */}
-                        <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-blue-400 flex items-center gap-1">
-                              {inspectCandidate.call1Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
-                              Call 1
-                            </span>
-                            {inspectCandidate.call1At && (
-                              <span className="text-[10px] text-slate-400 font-mono">
-                                {formatAppliedDateTime(inspectCandidate.call1At)}
-                              </span>
-                            )}
-                          </div>
-                          {inspectCandidate.call1Remarks ? (
-                            <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
-                              &ldquo;{inspectCandidate.call1Remarks}&rdquo;
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openCallLogModal(inspectCandidate, 1)}
-                            className="w-full py-1.5 px-2 text-[11px] font-bold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition flex items-center justify-center gap-1"
-                          >
-                            <Phone className="w-3 h-3" />
-                            <span>{inspectCandidate.call1Done ? "Edit Call 1 Log" : "Log Call 1"}</span>
-                          </button>
-                        </div>
-
-                        {/* Call 2 Card */}
-                        <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
-                              {inspectCandidate.call2Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
-                              Call 2
-                            </span>
-                            {inspectCandidate.call2At && (
-                              <span className="text-[10px] text-slate-400 font-mono">
-                                {formatAppliedDateTime(inspectCandidate.call2At)}
-                              </span>
-                            )}
-                          </div>
-                          {inspectCandidate.call2Remarks ? (
-                            <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
-                              &ldquo;{inspectCandidate.call2Remarks}&rdquo;
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openCallLogModal(inspectCandidate, 2)}
-                            className="w-full py-1.5 px-2 text-[11px] font-bold rounded-md bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center gap-1"
-                          >
-                            <PhoneCall className="w-3 h-3" />
-                            <span>{inspectCandidate.call2Done ? "Edit Call 2 Log" : "Log Call 2"}</span>
-                          </button>
-                        </div>
-                      </div>
+              {/* TAB 2: EMAIL HISTORY */}
+              {inspectTab === "emails" && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-blue-600" />
+                        Candidate Email Communication & Delivery Logs
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Complete history of system selection invites, updates, and custom messages dispatched to this candidate.
+                      </p>
                     </div>
-
-                    {/* Dedicated Remarks Text Box with Fixed Responsive Layout */}
-                    <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Candidate Remarks / Internal Notes</span>
-                        </label>
-                        {savingCandidateRemarks && (
-                          <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
-                        )}
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2 w-full">
-                        <input
-                          type="text"
-                          value={callingNote}
-                          onChange={(e) => setCallingNote(e.target.value)}
-                          placeholder="e.g. Confirmed attendance for evening shift, lead steward, on hold..."
-                          className="w-full min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                        />
-                        <button
-                          type="button"
-                          disabled={savingCandidateRemarks}
-                          onClick={() => handleSaveRemarks(inspectCandidate._id || inspectCandidate.id, callingNote)}
-                          className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs px-4 py-2 rounded-xl transition shrink-0 shadow whitespace-nowrap"
-                        >
-                          {savingCandidateRemarks ? "Saving..." : "Save Remarks"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Navigation to Step 2 */}
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setDrawerStep(2)}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
-                      >
-                        <span>Proceed to Selection Decision</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {getEventEmailLogs(inspectCandidate).length > 0 && (
+                      <span className="text-xs font-extrabold bg-blue-100 text-blue-800 px-3 py-1 rounded-full shrink-0">
+                        {getEventEmailLogs(inspectCandidate).length} Email{getEventEmailLogs(inspectCandidate).length > 1 ? "s" : ""} Sent
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {/* STEP 2: Selection Decision & Status */}
-                {drawerStep === 2 && (
-                  <div className="space-y-3.5 animate-fadeIn">
-                    {/* Automated Notification Email Toggle */}
-                    <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 flex items-center justify-between gap-2">
+                  {getEventEmailLogs(inspectCandidate).length > 0 ? (
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                      {getEventEmailLogs(inspectCandidate).map((log: EventEmailLog) => {
+                        const isOpened = log.openedAt || log.openCount > 0;
+                        const isClicked = log.clickedAt || log.clickCount > 0;
+
+                        return (
+                          <div key={log.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 shadow-xs">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-slate-200/80">
+                              <div className="font-extrabold text-slate-900 text-sm break-words">
+                                {log.subject}
+                              </div>
+                              <div className="text-[11px] text-slate-500 font-mono shrink-0 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                                📅 {new Date(log.sentAt).toLocaleString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                            </div>
+
+                            {log.templateName && (
+                              <div className="text-xs text-slate-500">
+                                Template: <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">{log.templateName}</span>
+                              </div>
+                            )}
+
+                            {/* Full Email Body Content (Completely visible without truncation) */}
+                            {log.bodyPreview && (
+                              <div className="space-y-1">
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Sent Email Content:</span>
+                                <div className="whitespace-pre-wrap break-words text-slate-800 bg-white p-3.5 rounded-xl border border-slate-200 font-sans leading-relaxed text-xs shadow-2xs">
+                                  {log.bodyPreview}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Open & Click Tracking Indicators */}
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200 text-xs">
+                              {/* Open Status */}
+                              <div className="flex items-center gap-1">
+                                {isOpened ? (
+                                  <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                    <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                                    Opened ({log.openCount}x){log.openedAt ? ` • ${new Date(log.openedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-700 font-medium bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                    Pending candidate opening
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Button Click Action */}
+                              <div className="flex items-center gap-1">
+                                {isClicked ? (
+                                  <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                    <MousePointerClick className="w-3.5 h-3.5 text-blue-600" />
+                                    Clicked: {log.clickedAction === "CONFIRM_YES" ? "YES, I AM AVAILABLE" : log.clickedAction === "DECLINE_NO" ? "NO, Decline" : log.clickedAction === "JOIN_WHATSAPP" ? "Joined WhatsApp Group" : log.clickedAction || "Button Link"}
+                                    {log.clickedAt ? ` at ${new Date(log.clickedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 font-medium bg-white border border-slate-200 px-2.5 py-1 rounded-lg">
+                                    No button actions clicked
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                        <Mail className="w-6 h-6" />
+                      </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-200">Email Automation</div>
-                        <div className="text-[11px] text-slate-400">Send automatic selection or status update email to candidate</div>
+                        <h5 className="font-bold text-slate-800 text-sm">No Emails Sent Yet</h5>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                          No selection invitations, status updates, or custom messages have been recorded for this candidate for this event.
+                        </p>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={sendEmailToggle}
-                          onChange={(e) => setSendEmailToggle(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                      </label>
-                    </div>
-
-                    {/* Decision Action Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {/* Approve & Select */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (sendEmailToggle) {
-                            const target = inspectCandidate;
-                            setInspectCandidate(null);
-                            openSelectionModal([target]);
-                          } else {
-                            handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED");
-                          }
-                        }}
-                        className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
-                            <UserCheck className="w-4 h-4 text-emerald-400" />
-                            Approve & Select
-                          </span>
-                          <span className="text-[10px] bg-emerald-900/80 text-emerald-200 px-1.5 py-0.5 rounded font-mono">SELECTED</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1 m-0">Confirm candidate for duty & trigger selection workflow</p>
-                      </button>
-
-                      {/* Mark as Hold */}
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "ON_HOLD")}
-                        className="p-3 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-600/60 hover:border-amber-500 text-left rounded-xl transition group shadow-sm"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
-                            <Clock className="w-4 h-4 text-amber-400" />
-                            Mark as Hold / Waitlist
-                          </span>
-                          <span className="text-[10px] bg-amber-900/80 text-amber-200 px-1.5 py-0.5 rounded font-mono">ON_HOLD</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1 m-0">Keep on backup standby list in case slots open</p>
-                      </button>
-
-                      {/* Reject / Not Selected */}
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
-                        className="p-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/60 hover:border-rose-500 text-left rounded-xl transition group shadow-sm"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
-                            <UserX className="w-4 h-4 text-rose-400" />
-                            Reject / Not Selected
-                          </span>
-                          <span className="text-[10px] bg-rose-900/80 text-rose-200 px-1.5 py-0.5 rounded font-mono">NOT_SELECTED</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1 m-0">Does not meet criteria or missing profile documents</p>
-                      </button>
-
-                      {/* Confirmed Attending */}
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
-                        className="p-3 bg-teal-950/40 hover:bg-teal-900/60 border border-teal-600/60 hover:border-teal-500 text-left rounded-xl transition group shadow-sm"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-teal-300 flex items-center gap-1.5">
-                            <Check className="w-4 h-4 text-teal-400" />
-                            Confirmed (Attending)
-                          </span>
-                          <span className="text-[10px] bg-teal-900/80 text-teal-200 px-1.5 py-0.5 rounded font-mono">CONFIRMED</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1 m-0">Candidate has verbally or digitally confirmed slot</p>
-                      </button>
-                    </div>
-
-                    {/* Additional Status Dropdown */}
-                    <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700 flex items-center justify-between gap-3">
-                      <span className="text-xs font-bold text-slate-300">Other Status Options:</span>
-                      <select
-                        value={inspectCandidate.status}
-                        onChange={(e) => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, e.target.value)}
-                        className="bg-slate-900 border border-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg focus:outline-none focus:border-red-500"
-                      >
-                        <option value="SELECTED">Selected (Approved)</option>
-                        <option value="UNDER_REVIEW">Under Review</option>
-                        <option value="ON_HOLD">Mark as Hold / Waitlist</option>
-                        <option value="NOT_SELECTED">Rejected / Not Selected</option>
-                        <option value="CONFIRMED">Confirmed (Attending)</option>
-                        <option value="CANCELLED">Cancelled / Declined</option>
-                        <option value="ATTENDED">Attended</option>
-                      </select>
-                    </div>
-
-                    {/* Step 2 Navigation */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setDrawerStep(1)}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>Back to Notes</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDrawerStep(3)}
-                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
-                      >
-                        <span>Proceed to Message & Contact</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 3: Message & Communication */}
-                {drawerStep === 3 && (
-                  <div className="space-y-3.5 animate-fadeIn">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {/* Send Custom Email Message */}
                       <button
                         type="button"
                         onClick={() => {
@@ -3991,58 +3743,439 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           setInspectCandidate(null);
                           openCustomEmailModal([target]);
                         }}
-                        className="p-3 bg-blue-950/40 hover:bg-blue-900/60 border border-blue-600/60 hover:border-blue-500 text-left rounded-xl transition group shadow-sm"
+                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-blue-300 flex items-center gap-1.5">
-                            <Mail className="w-4 h-4 text-blue-400" />
-                            Send Custom Email
-                          </span>
-                          <span className="text-[10px] bg-blue-900/80 text-blue-200 px-1.5 py-0.5 rounded font-mono">EMAIL</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1 m-0">Open email composer with templates and placeholder tags</p>
+                        Send First Email Message
                       </button>
+                    </div>
+                  )}
 
-                      {/* Direct WhatsApp Chat */}
-                      <a
-                        href={`https://wa.me/91${(inspectCandidate.phone || inspectCandidate.user?.phone || inspectCandidate.studentId?.phone || "").replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm block"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
-                            <MessageSquare className="w-4 h-4 text-emerald-400" />
-                            Direct WhatsApp Chat
+                  {/* Navigation footer */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setInspectTab("details")}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Back to Candidate Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspectTab("decision")}
+                      className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                    >
+                      <span>Proceed to Calling & Decision</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: CALLING & DECISION WORKFLOW */}
+              {inspectTab === "decision" && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Event Selection & Calling Workflow Guided Stepper Box */}
+                  <div className="p-4 sm:p-5 bg-slate-900 text-white rounded-2xl space-y-4 border border-slate-800 shadow-xl">
+                    {/* Stepper Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-red-950/80 text-red-400 border border-red-800/60">
+                            Guided Evaluation
                           </span>
-                          <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                            Current: <strong className="text-white">{inspectCandidate.status}</strong>
+                          </span>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1 m-0">Open WhatsApp chat directly with candidate's phone number</p>
-                      </a>
+                        <h4 className="font-extrabold text-base text-white mt-1">Calling & Decision Workflow</h4>
+                      </div>
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={handleNextCandidate}
+                          className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow"
+                          title="Move to next candidate"
+                        >
+                          <span>Next Candidate</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Step 3 Navigation */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                    {/* 3-Step Navigation Tabs */}
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setDrawerStep(1)}
+                        className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
+                          drawerStep === 1
+                            ? "bg-blue-600 text-white shadow"
+                            : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                        }`}
+                      >
+                        <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
+                        <span className="truncate">Calling & Notes</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => setDrawerStep(2)}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1"
+                        className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
+                          drawerStep === 2
+                            ? "bg-emerald-600 text-white shadow"
+                            : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                        }`}
                       >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>Back to Decision</span>
+                        <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span>
+                        <span className="truncate">Selection Decision</span>
                       </button>
                       <button
                         type="button"
-                        onClick={handleNextCandidate}
-                        className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                        onClick={() => setDrawerStep(3)}
+                        className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
+                          drawerStep === 3
+                            ? "bg-purple-600 text-white shadow"
+                            : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                        }`}
                       >
-                        <span>Done • Next Candidate</span>
-                        <ChevronRight className="w-4 h-4" />
+                        <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">3</span>
+                        <span className="truncate">Message & Contact</span>
                       </button>
                     </div>
+
+                    {/* STEP 1: Calling Verification & Notes */}
+                    {drawerStep === 1 && (
+                      <div className="space-y-3.5 animate-fadeIn">
+                        {/* 2-Call Verification Box */}
+                        <div className="bg-slate-800/90 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                              <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
+                              <span>2-Call Verification Protocol</span>
+                            </span>
+                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                              inspectCandidate.call2Done
+                                ? "bg-purple-900/60 text-purple-200 border border-purple-500/40"
+                                : inspectCandidate.call1Done
+                                ? "bg-blue-900/60 text-blue-200 border border-blue-500/40"
+                                : "bg-amber-900/60 text-amber-200 border border-amber-500/40"
+                            }`}>
+                              {inspectCandidate.call2Done
+                                ? "2 Calls Done"
+                                : inspectCandidate.call1Done
+                                ? "1st Call Done"
+                                : "0/2 Calls (Pending)"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {/* Call 1 Card */}
+                            <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-blue-400 flex items-center gap-1">
+                                  {inspectCandidate.call1Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
+                                  Call 1
+                                </span>
+                                {inspectCandidate.call1At && (
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {formatAppliedDateTime(inspectCandidate.call1At)}
+                                  </span>
+                                )}
+                              </div>
+                              {inspectCandidate.call1Remarks ? (
+                                <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
+                                  &ldquo;{inspectCandidate.call1Remarks}&rdquo;
+                                </p>
+                              ) : (
+                                <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openCallLogModal(inspectCandidate, 1)}
+                                className="w-full py-1.5 px-2 text-[11px] font-bold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition flex items-center justify-center gap-1"
+                              >
+                                <Phone className="w-3 h-3" />
+                                <span>{inspectCandidate.call1Done ? "Edit Call 1 Log" : "Log Call 1"}</span>
+                              </button>
+                            </div>
+
+                            {/* Call 2 Card */}
+                            <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
+                                  {inspectCandidate.call2Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
+                                  Call 2
+                                </span>
+                                {inspectCandidate.call2At && (
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {formatAppliedDateTime(inspectCandidate.call2At)}
+                                  </span>
+                                )}
+                              </div>
+                              {inspectCandidate.call2Remarks ? (
+                                <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
+                                  &ldquo;{inspectCandidate.call2Remarks}&rdquo;
+                                </p>
+                              ) : (
+                                <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openCallLogModal(inspectCandidate, 2)}
+                                className="w-full py-1.5 px-2 text-[11px] font-bold rounded-md bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center gap-1"
+                              >
+                                <PhoneCall className="w-3 h-3" />
+                                <span>{inspectCandidate.call2Done ? "Edit Call 2 Log" : "Log Call 2"}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dedicated Remarks Text Box with Fixed Responsive Layout */}
+                        <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                              <FileText className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Candidate Remarks / Internal Notes</span>
+                            </label>
+                            {savingCandidateRemarks && (
+                              <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 w-full">
+                            <input
+                              type="text"
+                              value={callingNote}
+                              onChange={(e) => setCallingNote(e.target.value)}
+                              placeholder="e.g. Confirmed attendance for evening shift, lead steward, on hold..."
+                              className="w-full min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                            />
+                            <button
+                              type="button"
+                              disabled={savingCandidateRemarks}
+                              onClick={() => handleSaveRemarks(inspectCandidate._id || inspectCandidate.id, callingNote)}
+                              className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs px-4 py-2 rounded-xl transition shrink-0 shadow whitespace-nowrap"
+                            >
+                              {savingCandidateRemarks ? "Saving..." : "Save Remarks"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Navigation to Step 2 */}
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setDrawerStep(2)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                          >
+                            <span>Proceed to Selection Decision</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 2: Selection Decision & Status */}
+                    {drawerStep === 2 && (
+                      <div className="space-y-3.5 animate-fadeIn">
+                        {/* Automated Notification Email Toggle */}
+                        <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 flex items-center justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-bold text-slate-200">Email Automation</div>
+                            <div className="text-[11px] text-slate-400">Send automatic selection or status update email to candidate</div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={sendEmailToggle}
+                              onChange={(e) => setSendEmailToggle(e.target.checked)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Decision Action Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {/* Approve & Select */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (sendEmailToggle) {
+                                const target = inspectCandidate;
+                                setInspectCandidate(null);
+                                openSelectionModal([target]);
+                              } else {
+                                handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED");
+                              }
+                            }}
+                            className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                                <UserCheck className="w-4 h-4 text-emerald-400" />
+                                Approve & Select
+                              </span>
+                              <span className="text-[10px] bg-emerald-900/80 text-emerald-200 px-1.5 py-0.5 rounded font-mono">SELECTED</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1 m-0">Confirm candidate for duty & trigger selection workflow</p>
+                          </button>
+
+                          {/* Mark as Hold */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "ON_HOLD")}
+                            className="p-3 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-600/60 hover:border-amber-500 text-left rounded-xl transition group shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-amber-400" />
+                                Mark as Hold / Waitlist
+                              </span>
+                              <span className="text-[10px] bg-amber-900/80 text-amber-200 px-1.5 py-0.5 rounded font-mono">ON_HOLD</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1 m-0">Keep on backup standby list in case slots open</p>
+                          </button>
+
+                          {/* Reject / Not Selected */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
+                            className="p-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/60 hover:border-rose-500 text-left rounded-xl transition group shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                                <UserX className="w-4 h-4 text-rose-400" />
+                                Reject / Not Selected
+                              </span>
+                              <span className="text-[10px] bg-rose-900/80 text-rose-200 px-1.5 py-0.5 rounded font-mono">NOT_SELECTED</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1 m-0">Does not meet criteria or missing profile documents</p>
+                          </button>
+
+                          {/* Confirmed Attending */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
+                            className="p-3 bg-teal-950/40 hover:bg-teal-900/60 border border-teal-600/60 hover:border-teal-500 text-left rounded-xl transition group shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-teal-300 flex items-center gap-1.5">
+                                <Check className="w-4 h-4 text-teal-400" />
+                                Confirmed (Attending)
+                              </span>
+                              <span className="text-[10px] bg-teal-900/80 text-teal-200 px-1.5 py-0.5 rounded font-mono">CONFIRMED</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1 m-0">Candidate has verbally or digitally confirmed slot</p>
+                          </button>
+                        </div>
+
+                        {/* Additional Status Dropdown */}
+                        <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700 flex items-center justify-between gap-3">
+                          <span className="text-xs font-bold text-slate-300">Other Status Options:</span>
+                          <select
+                            value={inspectCandidate.status}
+                            onChange={(e) => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, e.target.value)}
+                            className="bg-slate-900 border border-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg focus:outline-none focus:border-red-500"
+                          >
+                            <option value="SELECTED">Selected (Approved)</option>
+                            <option value="UNDER_REVIEW">Under Review</option>
+                            <option value="ON_HOLD">Mark as Hold / Waitlist</option>
+                            <option value="NOT_SELECTED">Rejected / Not Selected</option>
+                            <option value="CONFIRMED">Confirmed (Attending)</option>
+                            <option value="CANCELLED">Cancelled / Declined</option>
+                            <option value="ATTENDED">Attended</option>
+                          </select>
+                        </div>
+
+                        {/* Step 2 Navigation */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setDrawerStep(1)}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>Back to Notes</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDrawerStep(3)}
+                            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                          >
+                            <span>Proceed to Message & Contact</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 3: Message & Communication */}
+                    {drawerStep === 3 && (
+                      <div className="space-y-3.5 animate-fadeIn">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {/* Send Custom Email Message */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const target = inspectCandidate;
+                              setInspectCandidate(null);
+                              openCustomEmailModal([target]);
+                            }}
+                            className="p-3 bg-blue-950/40 hover:bg-blue-900/60 border border-blue-600/60 hover:border-blue-500 text-left rounded-xl transition group shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-blue-300 flex items-center gap-1.5">
+                                <Mail className="w-4 h-4 text-blue-400" />
+                                Send Custom Email
+                              </span>
+                              <span className="text-[10px] bg-blue-900/80 text-blue-200 px-1.5 py-0.5 rounded font-mono">EMAIL</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1 m-0">Open email composer with templates and placeholder tags</p>
+                          </button>
+
+                          {/* Direct WhatsApp Chat */}
+                          <a
+                            href={`https://wa.me/91${(inspectCandidate.phone || inspectCandidate.user?.phone || inspectCandidate.studentId?.phone || "").replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm block"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                                <MessageSquare className="w-4 h-4 text-emerald-400" />
+                                Direct WhatsApp Chat
+                              </span>
+                              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1 m-0">Open WhatsApp chat directly with candidate's phone number</p>
+                          </a>
+                        </div>
+
+                        {/* Step 3 Navigation */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setDrawerStep(2)}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>Back to Decision</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleNextCandidate}
+                            className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                          >
+                            <span>Done • Next Candidate</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
