@@ -63,6 +63,7 @@ export default function AdminReferralsPage() {
 
   // Referral Reminder Email States
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [sendingProgressNudgeId, setSendingProgressNudgeId] = useState<string | null>(null);
   const [showBroadcastModal, setShowBroadcastModal] = useState<boolean>(false);
   const [broadcasting, setBroadcasting] = useState<boolean>(false);
 
@@ -255,6 +256,42 @@ export default function AdminReferralsPage() {
       setFeedback({ type: "error", message: "Network error sending broadcast emails." });
     } finally {
       setBroadcasting(false);
+    }
+  };
+
+  // Handler for sending progress milestone notification email to the student referrer
+  const handleSendProgressNudge = async (friend: any, nudgeType: "ASK_FRIEND_APPLY" | "FRIEND_APPLIED") => {
+    if (!selectedReferrerDetail) return;
+    const nudgeKey = `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_${nudgeType}`;
+    setSendingProgressNudgeId(nudgeKey);
+    try {
+      const res = await fetch("/api/admin/referrals/notify-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referrerId: selectedReferrerDetail.id,
+          refereeId: friend.id,
+          referralId: friend.referralId,
+          nudgeType,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFeedback({
+          type: "success",
+          message: `🚀 ${json.message}`,
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: json.message || "Failed to send progress notification email.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Progress notification error:", err);
+      setFeedback({ type: "error", message: "Network error sending notification." });
+    } finally {
+      setSendingProgressNudgeId(null);
     }
   };
 
@@ -1088,6 +1125,23 @@ export default function AdminReferralsPage() {
 
                         {/* Status Badge & Contact & Settle Buttons */}
                         <div className="flex items-center gap-2 flex-wrap">
+                          {hasApplications && !isFriendPaid && (
+                            <button
+                              type="button"
+                              disabled={sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED`}
+                              onClick={() => handleSendProgressNudge(friend, "FRIEND_APPLIED")}
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
+                              title={`Send update email to ${selectedReferrerDetail.name} that ${friend.name} has applied for an event`}
+                            >
+                              {sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED` ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                              ) : (
+                                <Send className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                              <span>Notify {selectedReferrerDetail.name.split(" ")[0]}: Applied</span>
+                            </button>
+                          )}
+
                           {isFriendPaid ? (
                             <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
@@ -1288,19 +1342,36 @@ export default function AdminReferralsPage() {
                               </div>
                             </div>
 
-                            {cleanFriendPhone && (
-                              <a
-                                href={`https://wa.me/91${cleanFriendPhone}?text=${encodeURIComponent(
-                                  `Hi ${friend.name || "there"}, we noticed you registered on Topline ODC! Check out our upcoming events and apply to start earning: https://toplineodc.co.in/events`
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center gap-1.5 transition shrink-0 shadow-xs"
+                            <div className="flex items-center gap-2 flex-wrap shrink-0">
+                              <button
+                                type="button"
+                                disabled={sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_ASK_FRIEND_APPLY`}
+                                onClick={() => handleSendProgressNudge(friend, "ASK_FRIEND_APPLY")}
+                                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 disabled:opacity-50 text-white font-extrabold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                                title={`Send email to ${selectedReferrerDetail.name} asking them to push ${friend.name} to apply for an event`}
                               >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                <span>Invite to Apply</span>
-                              </a>
-                            )}
+                                {sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_ASK_FRIEND_APPLY` ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                                ) : (
+                                  <Mail className="w-3.5 h-3.5 text-white" />
+                                )}
+                                <span>Email {selectedReferrerDetail.name.split(" ")[0]}: Push Friend</span>
+                              </button>
+
+                              {cleanFriendPhone && (
+                                <a
+                                  href={`https://wa.me/91${cleanFriendPhone}?text=${encodeURIComponent(
+                                    `Hi ${friend.name || "there"}, we noticed you registered on Topline ODC! Check out our upcoming events and apply to start earning: https://toplineodc.co.in/events`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center gap-1.5 transition shrink-0 shadow-xs"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  <span>Invite to Apply</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

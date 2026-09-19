@@ -1883,3 +1883,208 @@ export async function sendReferralReminderEmail({
   }
 }
 
+/**
+ * Sends a progress nudge email to the student referrer regarding their referred friend:
+ * - Case 1 ("ASK_FRIEND_APPLY"): Friend signed up with their code, but hasn't applied for any event. Referrer is asked to push their friend to apply so they can earn up to ₹150.
+ * - Case 2 ("FRIEND_APPLIED"): Friend applied for an event. Referrer is notified that reward (up to ₹150) will unlock once their friend attends and marks attendance.
+ */
+export async function sendReferralProgressNudgeEmail({
+  referrerName,
+  referrerEmail,
+  referrerPhone,
+  referrerUpi,
+  referrerCode,
+  refereeName,
+  refereePhone,
+  nudgeType,
+  eventName,
+  eventDate,
+  rewardAmount = 150,
+  userId,
+}: {
+  referrerName: string;
+  referrerEmail: string;
+  referrerPhone?: string | null;
+  referrerUpi?: string | null;
+  referrerCode?: string | null;
+  refereeName: string;
+  refereePhone?: string | null;
+  nudgeType: "ASK_FRIEND_APPLY" | "FRIEND_APPLIED";
+  eventName?: string | null;
+  eventDate?: string | Date | null;
+  rewardAmount?: number;
+  userId?: string | null;
+}) {
+  try {
+    if (!referrerEmail || !referrerEmail.includes("@")) {
+      return { success: false, message: "Invalid referrer email address." };
+    }
+
+    const baseUrl = getAppBaseUrl();
+    const cleanRefereePhone = (refereePhone || "").replace(/\D/g, "");
+    const profileUrl = `${baseUrl}/profile`;
+    const eventsUrl = `${baseUrl}/events`;
+
+    const isAskApply = nudgeType === "ASK_FRIEND_APPLY";
+
+    const subject = isAskApply
+      ? `📢 ${refereeName} joined with your code "${referrerCode || "Topline"}"! Ask them to apply for an event`
+      : `🎉 Great news! ${refereeName} applied for ${eventName || "an event"} with your referral code`;
+
+    const formattedEventDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : null;
+
+    const whatsappFriendText = encodeURIComponent(
+      `Hi ${refereeName}! I saw you joined Topline with my referral code. Check out the upcoming events here and apply so we can work together: ${eventsUrl}`
+    );
+    const whatsappFriendUrl = cleanRefereePhone
+      ? `https://wa.me/91${cleanRefereePhone}?text=${whatsappFriendText}`
+      : `https://wa.me/?text=${whatsappFriendText}`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 20px; color: #e2e8f0; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border-radius: 24px; overflow: hidden; border: 1px solid #1f2937; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: ${isAskApply ? "linear-gradient(135deg, #b45309 0%, #78350f 50%, #0f172a 100%)" : "linear-gradient(135deg, #047857 0%, #065f46 50%, #0f172a 100%)"}; padding: 36px 28px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .badge { display: inline-block; background: ${isAskApply ? "#f59e0b" : "#10b981"}; color: #020617; font-weight: 900; font-size: 11px; padding: 5px 14px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .title { font-size: 22px; font-weight: 900; color: #ffffff; margin: 0 0 8px 0; line-height: 1.3; }
+        .subtitle { font-size: 14px; color: ${isAskApply ? "#fde68a" : "#a7f3d0"}; margin: 0; }
+        .content { padding: 32px 28px; background: #111827; }
+        .greeting { font-size: 16px; color: #f8fafc; font-weight: 700; margin-bottom: 16px; }
+        .p-text { font-size: 14px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0; }
+        
+        .status-box { background: #0f172a; border: 2px solid ${isAskApply ? "#f59e0b" : "#10b981"}; border-radius: 20px; padding: 22px; margin: 24px 0; }
+        .status-label { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .status-hero { font-size: 18px; font-weight: 900; color: #ffffff; margin-bottom: 6px; }
+        .status-detail { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+        
+        .reward-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.4); color: #fde047; font-weight: 900; font-size: 13px; padding: 6px 14px; border-radius: 12px; margin-top: 10px; }
+        
+        .btn-action { display: block; background: ${isAskApply ? "#25D366" : "#2563eb"}; color: #ffffff !important; text-decoration: none; font-weight: 900; font-size: 15px; padding: 15px 24px; border-radius: 16px; text-align: center; margin: 20px 0 10px 0; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
+        .btn-portal { display: block; background: #374151; color: #f8fafc !important; text-decoration: none; font-weight: 800; font-size: 13px; padding: 12px 20px; border-radius: 14px; text-align: center; margin-top: 8px; }
+        
+        .upi-badge { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 12px; padding: 10px 14px; border-radius: 12px; margin-top: 20px; text-align: center; }
+        
+        .footer { padding: 24px 28px; background: #0f172a; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #1f2937; line-height: 1.5; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="badge">${isAskApply ? "📢 Referral Milestone Update" : "🎉 Referral Milestone Update"}</div>
+          <h1 class="title">${isAskApply ? `Remind ${refereeName} to Apply for an Event` : `${refereeName} Applied for an Event!`}</h1>
+          <p class="subtitle">Topline Student Referral Program</p>
+        </div>
+
+        <div class="content">
+          <div class="greeting">Hey ${referrerName || "Student Partner"},</div>
+
+          ${isAskApply ? `
+            <p class="p-text">
+              Great job sharing your referral code! Your friend <strong>${refereeName}</strong> registered on Topline using your code <strong>"${referrerCode || "Topline"}"</strong>, but has not applied for any event gig yet.
+            </p>
+
+            <div class="status-box">
+              <div class="status-label">Referral Status</div>
+              <div class="status-hero">👥 ${refereeName} has Registered</div>
+              <div class="status-detail">
+                To unlock your referral reward of <strong>up to ₹${rewardAmount}</strong>, your friend must apply for an upcoming catering gig and complete their duty attendance.
+              </div>
+              <div class="reward-pill">
+                💰 Potential Reward: Up to ₹${rewardAmount} Cash
+              </div>
+            </div>
+
+            <p class="p-text">
+              👉 Give <strong>${refereeName}</strong> a quick nudge on WhatsApp to explore the live events catalog and apply today!
+            </p>
+
+            <a href="${whatsappFriendUrl}" target="_blank" class="btn-action">
+              💬 Text ${refereeName} on WhatsApp
+            </a>
+          ` : `
+            <p class="p-text">
+              Exciting progress! Your friend <strong>${refereeName}</strong> has applied for <strong>${eventName || "an upcoming event"}</strong>${formattedEventDate ? ` on <strong>${formattedEventDate}</strong>` : ""} using your referral code <strong>"${referrerCode || "Topline"}"</strong>!
+            </p>
+
+            <div class="status-box">
+              <div class="status-label">Referral Status</div>
+              <div class="status-hero">🎟️ ${refereeName} Applied for ${eventName || "Event"}</div>
+              <div class="status-detail">
+                Once <strong>${refereeName}</strong> attends duty and is marked present by the event coordinator, your referral reward of <strong>up to ₹${rewardAmount}</strong> will be unlocked and credited to your UPI!
+              </div>
+              <div class="reward-pill">
+                ✨ Reward Unlocks After Event Attendance
+              </div>
+            </div>
+
+            <p class="p-text">
+              Stay in touch with <strong>${refereeName}</strong> so they report on time for their scheduled duty shift!
+            </p>
+
+            <a href="${profileUrl}" target="_blank" class="btn-action">
+              📊 View Your Referral Rewards Hub
+            </a>
+          `}
+
+          <a href="${eventsUrl}" target="_blank" class="btn-portal">
+            🎪 Browse Upcoming Events Directory
+          </a>
+
+          ${referrerUpi ? `
+            <div class="upi-badge">
+              💳 Unlocked referral rewards will be credited directly to your UPI: <strong>${referrerUpi}</strong>
+            </div>
+          ` : `
+            <div class="upi-badge" style="color: #fbbf24; border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.1);">
+              ⚠️ Don&apos;t forget to save your UPI ID in your <a href="${profileUrl}" style="color: #60a5fa; font-weight: bold; text-decoration: underline;">Topline Profile</a> so you can receive your cash payout promptly!
+            </div>
+          `}
+        </div>
+
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Hospitality Operations.<br>
+          For questions or assistance, contact student support at <strong>7986955634</strong>.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const res = await sendEmail({ to: referrerEmail, subject, html });
+
+    // Track in EmailLog
+    if (res.success && userId) {
+      await prisma.emailLog.create({
+        data: {
+          userId,
+          recipientEmail: referrerEmail,
+          recipientName: referrerName,
+          templateName: isAskApply ? "Referral Progress Nudge (Ask to Apply)" : "Referral Progress Notice (Friend Applied)",
+          subject,
+          bodyPreview: isAskApply
+            ? `${refereeName} registered with code ${referrerCode}. Ask them to apply for an event to earn up to ₹${rewardAmount}.`
+            : `${refereeName} applied for ${eventName || "event"}. Reward unlocks after attendance.`,
+          sentAt: new Date(),
+        },
+      }).catch((err) => console.error("Error logging referral progress email:", err));
+    }
+
+    return res;
+  } catch (error: any) {
+    console.error("sendReferralProgressNudgeEmail error:", error);
+    return { success: false, message: error.message };
+  }
+}
+
