@@ -48,8 +48,11 @@ export default function AdminReferralsPage() {
 
   // Payout Settlement Modal
   const [settlingReferrer, setSettlingReferrer] = useState<any>(null);
+  const [settlingReferralItem, setSettlingReferralItem] = useState<any>(null);
+  const [customPayoutAmount, setCustomPayoutAmount] = useState<string>("");
   const [paidReference, setPaidReference] = useState("");
   const [payoutNotes, setPayoutNotes] = useState("");
+  const [sendEmailOnSettle, setSendEmailOnSettle] = useState<boolean>(true);
   const [settlingLoading, setSettlingLoading] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
@@ -120,29 +123,70 @@ export default function AdminReferralsPage() {
     setTimeout(() => setCopiedPhone(null), 2500);
   };
 
+  const openSettleReferrerModal = (ref: any) => {
+    setSettlingReferralItem(null);
+    setSettlingReferrer(ref);
+    setCustomPayoutAmount(String(ref.unpaidBalance || ref.rewardAmount || 25));
+    setPaidReference("");
+    setPayoutNotes("");
+    setSendEmailOnSettle(true);
+  };
+
+  const openSettleReferralItemModal = (item: any) => {
+    setSettlingReferrer(null);
+    setSettlingReferralItem(item);
+    setCustomPayoutAmount(String(item.rewardAmount || 25));
+    setPaidReference("");
+    setPayoutNotes("");
+    setSendEmailOnSettle(true);
+  };
+
+  const closeSettleModal = () => {
+    setSettlingReferrer(null);
+    setSettlingReferralItem(null);
+    setPaidReference("");
+    setPayoutNotes("");
+  };
+
   const handleSettlePayout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!settlingReferrer) return;
+    if (!settlingReferrer && !settlingReferralItem) return;
+
+    const parsedAmount = Number(customPayoutAmount);
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
+      setFeedback({ type: "error", message: "Please enter a valid payout amount in ₹." });
+      return;
+    }
 
     setSettlingLoading(true);
     try {
+      const payload: any = {
+        customRewardAmount: parsedAmount,
+        paidReference: paidReference.trim() || "Offline UPI Settlement",
+        notes: payoutNotes.trim() || undefined,
+        sendEmail: sendEmailOnSettle,
+      };
+
+      if (settlingReferralItem) {
+        payload.referralId = settlingReferralItem.referralId || settlingReferralItem.id;
+      } else if (settlingReferrer) {
+        payload.referrerId = settlingReferrer.id;
+      }
+
       const res = await fetch("/api/admin/referrals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          referrerId: settlingReferrer.id,
-          paidReference: paidReference.trim() || "Offline UPI Settlement",
-          notes: payoutNotes.trim() || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json();
       if (res.ok && json.success) {
-        setFeedback({ type: "success", message: json.message || "Payout settled successfully!" });
-        setSettlingReferrer(null);
-        setPaidReference("");
-        setPayoutNotes("");
+        setFeedback({ type: "success", message: json.message || "Payout settled successfully and email sent!" });
+        closeSettleModal();
         fetchReferrals();
+        if (selectedReferrerDetail) {
+          setSelectedReferrerDetail(null);
+        }
       } else {
         setFeedback({ type: "error", message: json.message || "Failed to settle payout." });
       }
@@ -609,7 +653,7 @@ export default function AdminReferralsPage() {
                             {hasUnpaid ? (
                               <button
                                 type="button"
-                                onClick={() => setSettlingReferrer(ref)}
+                                onClick={() => openSettleReferrerModal(ref)}
                                 className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
@@ -648,56 +692,62 @@ export default function AdminReferralsPage() {
           ) : filteredLedger.length === 0 ? (
             <div className="p-12 text-center text-slate-400 space-y-1 text-sm">
               <p className="font-bold">No ledger records found.</p>
+              <p className="text-xs">Try clearing search filters.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs whitespace-nowrap">
+              <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50/80 text-slate-500 uppercase tracking-wider text-[11px] border-b border-slate-200">
-                    <th className="p-3.5">Referrer (Inviter)</th>
-                    <th className="p-3.5">Referred Student (Friend)</th>
+                  <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
+                    <th className="p-3.5">Referrer (Partner)</th>
+                    <th className="p-3.5">Referee (Friend)</th>
                     <th className="p-3.5">Event Applications</th>
                     <th className="p-3.5">Code Used</th>
                     <th className="p-3.5">Status</th>
-                    <th className="p-3.5">Reward Amount</th>
+                    <th className="p-3.5">Reward</th>
                     <th className="p-3.5">Qualifying Event</th>
-                    <th className="p-3.5">Signup Date</th>
+                    <th className="p-3.5">Joined Date</th>
                     <th className="p-3.5">Settlement Info</th>
+                    <th className="p-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredLedger.map((row: any) => {
-                    const isPending = row.status === "PENDING";
-                    const isQualified = row.status === "QUALIFIED";
                     const isPaid = row.status === "PAID";
+                    const isQualified = row.status === "QUALIFIED";
+                    const isPending = row.status === "PENDING";
                     const refereeApps = row.referee?.applications || [];
 
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50/60 transition">
-                        <td className="p-3.5 font-bold text-slate-900">
-                          <div>{row.referrer?.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{row.referrer?.phone} • {row.referrer?.upiId || "No UPI"}</div>
+                      <tr key={row.id} className="hover:bg-slate-50/70 transition">
+                        <td className="p-3.5">
+                          <div className="font-bold text-slate-900">{row.referrer?.name}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">{row.referrer?.phone}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">UPI: {row.referrer?.upiId || "N/A"}</div>
                         </td>
-                        <td className="p-3.5 font-medium text-slate-800">
+                        <td className="p-3.5">
                           <div className="font-bold text-slate-900">{row.referee?.name}</div>
-                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                          <div className="text-[11px] text-slate-500 font-mono">
                             <span>{row.referee?.phone}</span>
-                            {row.referee?.phone && row.referee?.phone !== "N/A" && (
-                              <a
-                                href={`https://wa.me/91${row.referee.phone.replace(/\D/g, "")}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-emerald-600 hover:text-emerald-700"
-                                title="Open WhatsApp chat with student"
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                              </a>
-                            )}
-                            <span>• {row.referee?.registrationNumber}</span>
+                            <span> • {row.referee?.registrationNumber}</span>
                           </div>
                           {row.referee?.university && (
                             <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
                               {row.referee.university}
+                            </div>
+                          )}
+                          {row.referee?.phone && row.referee?.phone !== "N/A" && (
+                            <div className="mt-0.5">
+                              <a
+                                href={`https://wa.me/91${row.referee.phone.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1 text-[10px]"
+                                title="Open WhatsApp chat with student"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </a>
                             </div>
                           )}
                         </td>
@@ -749,7 +799,7 @@ export default function AdminReferralsPage() {
                         <td className="p-3.5">
                           {isPending && (
                             <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit">
-                              <Clock className="w-3 h-3 text-amber-600" /> PENDING (Awaiting 1st Event)
+                              <Clock className="w-3 h-3 text-amber-600" /> PENDING
                             </span>
                           )}
                           {isQualified && (
@@ -795,6 +845,22 @@ export default function AdminReferralsPage() {
                             <span className="text-slate-400 italic text-[11px]">-</span>
                           )}
                         </td>
+                        <td className="p-3.5 text-right">
+                          {!isPaid ? (
+                            <button
+                              type="button"
+                              onClick={() => openSettleReferralItemModal(row)}
+                              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer text-xs ml-auto"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Settle ₹{row.rewardAmount || 25}</span>
+                            </button>
+                          ) : (
+                            <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                              ✓ Paid
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -814,29 +880,26 @@ export default function AdminReferralsPage() {
             {/* Modal Header */}
             <div className="shrink-0 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shadow-inner shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 font-black">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base sm:text-lg font-extrabold text-white">
-                      Referred Friends of {selectedReferrerDetail.name}
-                    </h3>
-                    <span className="bg-red-500/20 text-red-300 border border-red-400/30 px-2 py-0.5 rounded font-mono text-xs font-bold">
-                      Code: {selectedReferrerDetail.referralCode}
-                    </span>
+                  <h3 className="font-extrabold text-base sm:text-lg text-white">
+                    Referred Candidates of {selectedReferrerDetail.name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 font-mono mt-0.5">
+                    <span>Code: {selectedReferrerDetail.referralCode}</span>
+                    <span>•</span>
+                    <span>UPI: {selectedReferrerDetail.upiId}</span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Phone: {selectedReferrerDetail.phone} • UPI: {selectedReferrerDetail.upiId}
-                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedReferrerDetail(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -878,6 +941,7 @@ export default function AdminReferralsPage() {
                 selectedReferrerDetail.referredFriends.map((friend: any, index: number) => {
                   const cleanFriendPhone = (friend.phone || "").replace(/\D/g, "");
                   const hasApplications = friend.applications && friend.applications.length > 0;
+                  const isFriendPaid = friend.referralStatus === "PAID";
 
                   return (
                     <div
@@ -903,23 +967,30 @@ export default function AdminReferralsPage() {
                           </p>
                         </div>
 
-                        {/* Status Badge & Contact Buttons */}
+                        {/* Status Badge & Contact & Settle Buttons */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          {friend.referralStatus === "QUALIFIED" ? (
-                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>1st Event Done (₹{friend.rewardAmount} Due)</span>
-                            </span>
-                          ) : friend.referralStatus === "PAID" ? (
+                          {isFriendPaid ? (
                             <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
-                              <span>Reward Paid</span>
+                              <span>Paid ₹{friend.rewardAmount || 25}</span>
                             </span>
                           ) : (
-                            <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Pending 1st Shift</span>
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openSettleReferralItemModal({
+                                  referralId: friend.referralId,
+                                  id: friend.referralId,
+                                  name: friend.name,
+                                  rewardAmount: friend.rewardAmount || metrics.rewardPerReferral || 25,
+                                  referrer: selectedReferrerDetail,
+                                })
+                              }
+                              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1 rounded-xl text-xs flex items-center gap-1 shadow-2xs transition cursor-pointer"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Mark Paid (₹{friend.rewardAmount || metrics.rewardPerReferral || 25})</span>
+                            </button>
                           )}
 
                           {friend.phone && friend.phone !== "N/A" && (
@@ -1092,7 +1163,7 @@ export default function AdminReferralsPage() {
       {/* ---------------------------------------------------- */}
       {/* SETTLE OFFLINE PAYOUT MODAL */}
       {/* ---------------------------------------------------- */}
-      {settlingReferrer && (
+      {(settlingReferrer || settlingReferralItem) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 shadow-2xl space-y-5 relative">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1101,12 +1172,16 @@ export default function AdminReferralsPage() {
                   <Banknote className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Settle Referral Payout</h3>
-                  <p className="text-xs text-slate-500">Record offline UPI payout to student</p>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {settlingReferralItem
+                      ? `Settle Referral: ${settlingReferralItem.name || settlingReferralItem.referee?.name || "Friend"}`
+                      : "Settle Referral Payout"}
+                  </h3>
+                  <p className="text-xs text-slate-500">Record offline UPI payout and notify student</p>
                 </div>
               </div>
               <button
-                onClick={() => setSettlingReferrer(null)}
+                onClick={closeSettleModal}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1114,58 +1189,103 @@ export default function AdminReferralsPage() {
             </div>
 
             {/* Referrer Details Card */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-slate-400 font-bold uppercase">Beneficiary Student</span>
-                  <p className="font-extrabold text-sm text-slate-900">{settlingReferrer.name}</p>
-                  <p className="text-xs text-slate-500 font-mono">{settlingReferrer.phone}</p>
-                </div>
+            {(() => {
+              const bName =
+                settlingReferrer?.name ||
+                settlingReferralItem?.referrer?.name ||
+                selectedReferrerDetail?.name ||
+                "Student Partner";
+              const bPhone =
+                settlingReferrer?.phone ||
+                settlingReferralItem?.referrer?.phone ||
+                selectedReferrerDetail?.phone ||
+                "N/A";
+              const bUpi =
+                settlingReferrer?.upiId ||
+                settlingReferralItem?.referrer?.upiId ||
+                selectedReferrerDetail?.upiId ||
+                "Not Provided";
+              const hasUpi = bUpi && bUpi !== "Not Provided" && bUpi !== "N/A";
 
-                <div className="text-right">
-                  <span className="text-xs text-slate-400 font-bold uppercase">Payable Amount</span>
-                  <p className="text-2xl font-black text-emerald-600">₹{settlingReferrer.unpaidBalance}</p>
-                  <p className="text-[10px] text-emerald-700 font-bold">
-                    {settlingReferrer.qualifiedCount} eligible referral reward(s)
-                  </p>
-                </div>
-              </div>
+              return (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-400 font-bold uppercase">Beneficiary Student</span>
+                      <p className="font-extrabold text-sm text-slate-900">{bName}</p>
+                      <p className="text-xs text-slate-500 font-mono">{bPhone}</p>
+                    </div>
 
-              {/* UPI ID Strip */}
-              <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Target UPI ID</span>
-                  <p className="font-mono font-bold text-xs text-slate-900 truncate">
-                    {settlingReferrer.upiId}
-                  </p>
-                </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 font-bold uppercase">Settlement Amount</span>
+                      <p className="text-2xl font-black text-emerald-600">₹{customPayoutAmount || "0"}</p>
+                      <p className="text-[10px] text-emerald-700 font-bold">
+                        {settlingReferralItem
+                          ? "Individual referral reward"
+                          : `${settlingReferrer?.qualifiedCount || 1} eligible reward(s)`}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleCopyUpi(settlingReferrer.upiId)}
-                    className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 cursor-pointer transition active:scale-95"
-                  >
-                    {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedUpi ? "Copied!" : "Copy UPI"}</span>
-                  </button>
+                  {/* UPI ID Strip */}
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Target UPI ID</span>
+                      <p className="font-mono font-bold text-xs text-slate-900 truncate">{bUpi}</p>
+                    </div>
 
-                  <a
-                    href={`upi://pay?pa=${settlingReferrer.upiId}&pn=${encodeURIComponent(
-                      settlingReferrer.name
-                    )}&am=${settlingReferrer.unpaidBalance}&cu=INR&tn=Topline%20Referral%20Payout`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 transition active:scale-95"
-                  >
-                    <span>Pay in App</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                    {hasUpi && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyUpi(bUpi)}
+                          className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 cursor-pointer transition active:scale-95"
+                        >
+                          {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedUpi ? "Copied!" : "Copy UPI"}</span>
+                        </button>
+
+                        <a
+                          href={`upi://pay?pa=${bUpi}&pn=${encodeURIComponent(
+                            bName
+                          )}&am=${customPayoutAmount || 25}&cu=INR&tn=Topline%20Referral%20Payout`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 transition active:scale-95"
+                        >
+                          <span>Pay in App</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             <form onSubmit={handleSettlePayout} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Custom Payout Amount (₹) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 font-bold text-slate-400 text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={customPayoutAmount}
+                    onChange={(e) => setCustomPayoutAmount(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-3.5 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                    placeholder="Enter reward amount (e.g. 25, 50, 100)"
+                  />
+                </div>
+                <span className="text-[11px] text-slate-500 block">
+                  You can customize the exact payout reward amount for this settlement.
+                </span>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                   Payment Reference / UTR Number (Optional)
@@ -1175,7 +1295,7 @@ export default function AdminReferralsPage() {
                   value={paidReference}
                   onChange={(e) => setPaidReference(e.target.value)}
                   placeholder="e.g. GPay UTR 429103948192 or Cash / Paytm"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition"
                 />
               </div>
 
@@ -1188,14 +1308,24 @@ export default function AdminReferralsPage() {
                   value={payoutNotes}
                   onChange={(e) => setPayoutNotes(e.target.value)}
                   placeholder="e.g. Paid via PhonePe by Shiva"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition"
                 />
               </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none bg-emerald-50/70 border border-emerald-200 p-3 rounded-xl">
+                <input
+                  type="checkbox"
+                  checked={sendEmailOnSettle}
+                  onChange={(e) => setSendEmailOnSettle(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span>Send automated payment confirmation email to student referrer</span>
+              </label>
 
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setSettlingReferrer(null)}
+                  onClick={closeSettleModal}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
                 >
                   Cancel
@@ -1205,7 +1335,7 @@ export default function AdminReferralsPage() {
                   disabled={settlingLoading}
                   className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>{settlingLoading ? "Recording..." : `Confirm Paid (₹${settlingReferrer.unpaidBalance})`}</span>
+                  <span>{settlingLoading ? "Recording..." : `Confirm Paid (₹${customPayoutAmount || "0"})`}</span>
                   <CheckCircle2 className="w-4 h-4" />
                 </button>
               </div>

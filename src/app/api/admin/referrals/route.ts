@@ -4,6 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { ReferralStatus } from "@prisma/client";
 import { getActiveReferralRewardAmount } from "@/lib/referral";
+import { sendReferralPayoutPaidEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -320,17 +321,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { referralIds, referrerId, paidReference, notes } = body;
+    const { referralIds, referralId, referrerId, customRewardAmount, paidReference, notes, sendEmail: shouldSendEmail } = body;
 
     let targetIds: string[] = [];
 
-    if (Array.isArray(referralIds) && referralIds.length > 0) {
+    if (referralId && typeof referralId === "string") {
+      targetIds = [referralId];
+    } else if (Array.isArray(referralIds) && referralIds.length > 0) {
       targetIds = referralIds;
     } else if (referrerId && typeof referrerId === "string") {
       const eligible = await prisma.referral.findMany({
         where: {
           referrerId,
-          status: ReferralStatus.QUALIFIED,
+          status: { in: [ReferralStatus.QUALIFIED, ReferralStatus.PENDING] },
         },
         select: { id: true, rewardAmount: true },
       });
@@ -339,35 +342,62 @@ export async function POST(request: Request) {
 
     if (targetIds.length === 0) {
       return NextResponse.json(
-        { success: false, message: "No eligible (QUALIFIED) referrals found to settle payout." },
+        { success: false, message: "No eligible referrals found to settle payout." },
         { status: 400 }
       );
     }
 
-    const settledAgg = await prisma.referral.aggregate({
-      where: {
-        id: { in: targetIds },
-        status: ReferralStatus.QUALIFIED,
-      },
-      _sum: { rewardAmount: true },
-    });
-    const totalSettledAmount = settledAgg._sum.rewardAmount || 0;
-
     const now = new Date();
-    const cleanRef = paidReference && typeof paidReference === "string" ? paidReference.trim() : "Offline UPI Transfer Completed";
+    const cleanRef =
+      paidReference && typeof paidReference === "string" && paidReference.trim()
+        ? paidReference.trim()
+        : "Offline UPI Settlement Completed";
 
-    const updateResult = await prisma.referral.updateMany({
-      where: {
-        id: { in: targetIds },
-        status: ReferralStatus.QUALIFIED,
-      },
-      data: {
-        status: ReferralStatus.PAID,
-        paidAt: now,
-        paidReference: cleanRef,
-        notes: notes ? String(notes).trim() : undefined,
+    const customAmtNum =
+      customRewardAmount !== undefined && customRewardAmount !== null && !isNaN(Number(customRewardAmount))
+        ? Math.max(0, Number(customRewardAmount))
+        : null;
+
+    if (customAmtNum !== null && customAmtNum > 0) {
+      await prisma.referral.updateMany({
+        where: { id: { in: targetIds } },
+        data: {
+          status: ReferralStatus.PAID,
+          rewardAmount: customAmtNum,
+          paidAt: now,
+          paidReference: cleanRef,
+          notes: notes ? String(notes).trim() : undefined,
+        },
+      });
+    } else {
+      await prisma.referral.updateMany({
+        where: { id: { in: targetIds } },
+        data: {
+          status: ReferralStatus.PAID,
+          paidAt: now,
+          paidReference: cleanRef,
+          notes: notes ? String(notes).trim() : undefined,
+        },
+      });
+    }
+
+    // Fetch settled referrals with relations for audit & email notification
+    const settledReferrals: any[] = await prisma.referral.findMany({
+      where: { id: { in: targetIds } },
+      include: {
+        referrer: {
+          select: { id: true, name: true, email: true, phone: true, upiId: true },
+        },
+        referee: {
+          select: { id: true, name: true, phone: true },
+        },
+        qualifyingEvent: {
+          select: { id: true, name: true },
+        },
       },
     });
+
+    const totalSettledAmount = settledReferrals.reduce((sum, r) => sum + (r.rewardAmount || 0), 0);
 
     // Record audit trail
     await prisma.auditLog.create({
@@ -376,18 +406,53 @@ export async function POST(request: Request) {
         action: "SETTLE_REFERRAL_PAYOUT",
         target: referrerId || targetIds.join(","),
         metadata: {
-          settledCount: updateResult.count,
+          settledCount: settledReferrals.length,
           totalAmount: totalSettledAmount,
+          customRewardAmount: customAmtNum,
           paidReference: cleanRef,
           referralIds: targetIds,
         },
       },
     });
 
+    // Dispatch automated email notifications to student referrers (Non-blocking)
+    if (shouldSendEmail !== false) {
+      for (const item of settledReferrals) {
+        if (item.referrer?.email) {
+          // Compute updated lifetime earnings for this referrer
+          prisma.referral
+            .aggregate({
+              where: {
+                referrerId: item.referrerId,
+                status: { in: [ReferralStatus.QUALIFIED, ReferralStatus.PAID] },
+              },
+              _sum: { rewardAmount: true },
+            })
+            .then((lifetimeAgg) => {
+              const lifetimeTotal = lifetimeAgg._sum.rewardAmount || item.rewardAmount || 0;
+              return sendReferralPayoutPaidEmail({
+                referrerName: item.referrer.name || "Student Partner",
+                referrerEmail: item.referrer.email,
+                referrerUpi: item.referrer.upiId,
+                refereeName: item.referee?.name || "Friend",
+                eventName: item.qualifyingEvent?.name || null,
+                paidAmount: item.rewardAmount,
+                paidReference: cleanRef,
+                totalLifetimeEarned: lifetimeTotal,
+                userId: item.referrerId,
+              });
+            })
+            .catch((err) => {
+              console.error("[Referral Settlement Email Dispatch Error]:", err);
+            });
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Successfully marked ${updateResult.count} referral(s) as PAID (Total: ₹${totalSettledAmount}).`,
-      settledCount: updateResult.count,
+      message: `Successfully marked ${settledReferrals.length} referral(s) as PAID (Total: ₹${totalSettledAmount}).`,
+      settledCount: settledReferrals.length,
       settledAmount: totalSettledAmount,
     });
   } catch (error: any) {

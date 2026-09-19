@@ -232,12 +232,14 @@ export async function getUserReferralStats(userId: string) {
 
   return {
     totalInvited,
+    totalReferred: totalInvited,
     pendingCount,
     qualifiedCount,
     paidCount,
     totalEarned,
     pendingPayout,
     paidEarnings,
+    paidPayout: paidEarnings,
     rewardPerReferral: activeReward,
     referrals: referrals.map((r) => {
       // Mask phone for privacy e.g. "98****1234"
@@ -256,15 +258,31 @@ export async function getUserReferralStats(userId: string) {
 
       return {
         id: r.id,
+        referee: {
+          id: r.referee.id,
+          name: maskedName,
+          fullName: r.referee.name,
+          phone: maskedPhone,
+        },
         refereeName: maskedName,
         refereePhone: maskedPhone,
+        createdAt: r.createdAt,
         registeredAt: r.createdAt,
         status: r.status,
         rewardAmount: r.rewardAmount,
         qualifyingEventName: r.qualifyingEvent?.name || null,
+        event: r.qualifyingEvent
+          ? {
+              id: r.qualifyingEvent.id,
+              name: r.qualifyingEvent.name,
+              date: r.qualifyingEvent.date,
+              location: r.qualifyingEvent.location,
+            }
+          : null,
         qualifiedAt: r.qualifiedAt,
         paidAt: r.paidAt,
         paidReference: r.paidReference,
+        notes: r.notes,
       };
     }),
   };

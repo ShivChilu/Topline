@@ -1464,6 +1464,146 @@ export async function sendReferralCompletedStudentAlert({
 }
 
 /**
+ * Student Referrer Email: Triggered when Admin marks referral reward as PAID (Settled)
+ */
+export async function sendReferralPayoutPaidEmail({
+  referrerName,
+  referrerEmail,
+  referrerUpi,
+  refereeName,
+  eventName,
+  paidAmount,
+  paidReference,
+  totalLifetimeEarned,
+  userId,
+}: {
+  referrerName: string;
+  referrerEmail: string;
+  referrerUpi?: string | null;
+  refereeName: string;
+  eventName?: string | null;
+  paidAmount: number;
+  paidReference?: string | null;
+  totalLifetimeEarned?: number | null;
+  userId?: string | null;
+}): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!referrerEmail) {
+      return { success: false, message: "No email address provided for student referrer." };
+    }
+
+    const subject = `💰 Payout Processed: ₹${paidAmount} Referral Reward Credited to Your UPI!`;
+    const profileUrl = `${getAppBaseUrl()}/profile`;
+    const utrSnippet = paidReference && paidReference.trim() ? paidReference.trim() : "Direct UPI Transfer Completed";
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: referrerEmail,
+      recipientName: referrerName,
+      userId,
+      templateName: "Referral Reward Payout Settled",
+      subject,
+      bodyPreview: `Referral reward of ₹${paidAmount} for inviting ${refereeName} has been paid to your UPI (${referrerUpi || "UPI"}). UTR: ${utrSnippet}`,
+    });
+
+    const trackedProfileUrl = getTrackedUrl("VIEW_REWARDS_DASHBOARD", profileUrl);
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { background: linear-gradient(135deg, #059669, #0d9488); padding: 26px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 30px 24px; text-align: center; }
+        .badge { display: inline-block; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 16px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 18px; }
+        .paid-card { background: #064e3b/30; border: 2px solid #10b981; border-radius: 14px; padding: 22px; margin: 20px 0; }
+        .paid-amt { font-size: 40px; font-weight: 900; color: #34d399; margin: 8px 0; }
+        .details-box { background: #1f2937; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 13px; text-align: left; }
+        .details-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151; }
+        .details-row:last-child { border-bottom: none; }
+        .label { color: #9ca3af; font-weight: 600; }
+        .val { color: #ffffff; font-weight: 700; }
+        .btn { display: inline-block; background: #059669; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 14px; margin: 16px 0; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4); text-align: center; }
+        .footer { padding: 18px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE REWARDS SETTLEMENT</h1>
+        </div>
+        <div class="content">
+          <div class="badge">✅ PAYMENT TRANSFERRED SUCCESSFULLY</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 20px;">Hi ${referrerName || "Topline Partner"}, Your Referral Payout is Completed!</h2>
+          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 16px 0;">
+            Great news! Our administrative team has processed your referral cash reward for inviting <strong style="color: #ffffff;">${refereeName}</strong>.
+          </p>
+
+          <div class="paid-card">
+            <div style="font-size: 12px; font-weight: 700; color: #a7f3d0; text-transform: uppercase;">Amount Deposited</div>
+            <div class="paid-amt">₹${paidAmount}</div>
+            <div style="font-size: 12px; color: #6ee7b7; font-weight: 600;">Status: Paid to UPI</div>
+          </div>
+
+          <div class="details-box">
+            <div class="details-row">
+              <span class="label">Destination UPI:</span>
+              <span class="val" style="color: #6ee7b7; font-family: monospace;">${referrerUpi || "Registered UPI Handle"}</span>
+            </div>
+            <div class="details-row">
+              <span class="label">Payment Reference / UTR:</span>
+              <span class="val" style="font-family: monospace; color: #facc15;">${utrSnippet}</span>
+            </div>
+            <div class="details-row">
+              <span class="label">Referred Friend:</span>
+              <span class="val">${refereeName}</span>
+            </div>
+            ${eventName ? `
+            <div class="details-row">
+              <span class="label">Completed Event:</span>
+              <span class="val">${eventName}</span>
+            </div>
+            ` : ""}
+            ${totalLifetimeEarned !== undefined && totalLifetimeEarned !== null ? `
+            <div class="details-row">
+              <span class="label">Total Lifetime Referral Earnings:</span>
+              <span class="val" style="color: #facc15; font-size: 14px;">₹${totalLifetimeEarned}</span>
+            </div>
+            ` : ""}
+          </div>
+
+          <div>
+            <a href="${trackedProfileUrl}" class="btn" style="color: #ffffff;">View My Rewards Dashboard</a>
+          </div>
+
+          <p style="color: #9ca3af; font-size: 12px; line-height: 1.6; margin-top: 20px;">
+            Thank you for being an active Topline student affiliate. Keep sharing your invite link to continue earning up to ₹150 for every friend who joins!
+          </p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management.
+        </div>
+      </div>
+      ${getTrackingPixelHtml()}
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: referrerEmail,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send referral payout paid email:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
  * Automated Admin Alert Email: Triggered when 5 or more candidates are pending for review / selection.
  */
 export async function sendAdminPendingReviewAlertEmail({

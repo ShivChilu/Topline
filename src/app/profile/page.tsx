@@ -1040,9 +1040,9 @@ export default function StudentProfilePage() {
         {activeTab === "overview" && (
           <div className="space-y-5 animate-in fade-in duration-200">
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Events Applied</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Events Applied</span>
                 <span className="text-xl font-black text-slate-900 mt-1 block">{user.recentApplications?.length || 0}</span>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">Lifetime applications</span>
               </div>
@@ -1055,13 +1055,30 @@ export default function StudentProfilePage() {
                 <span className="text-[11px] text-emerald-700 mt-0.5 block">Verified duty slots</span>
               </div>
 
+              <button
+                type="button"
+                onClick={() => setActiveTab("referral")}
+                className="bg-gradient-to-br from-purple-50 to-indigo-50/70 p-4 rounded-2xl border border-purple-200 shadow-2xs text-left hover:border-purple-300 transition cursor-pointer group"
+              >
+                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider flex items-center justify-between">
+                  <span>Referral Rewards</span>
+                  <Gift className="w-3.5 h-3.5 text-amber-500 group-hover:scale-110 transition" />
+                </span>
+                <span className="text-xl font-black text-purple-950 mt-1 block">
+                  ₹{referralData?.stats?.totalEarned || 0}
+                </span>
+                <span className="text-[11px] text-purple-700 mt-0.5 block font-medium">
+                  {referralData?.stats?.paidEarnings ? `₹${referralData.stats.paidEarnings} paid to UPI` : `${referralData?.stats?.totalInvited || 0} friends invited`}
+                </span>
+              </button>
+
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attire Photos</span>
                 <span className="text-xl font-black text-purple-600 mt-1 block">{photos.length}</span>
                 <span className="text-[11px] text-purple-700 mt-0.5 block">{photos.length >= 2 ? "✓ Verified photos" : "Upload formal & full"}</span>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Payout UPI Handle</span>
                 <span className="text-xs font-mono font-bold text-slate-900 mt-1.5 block truncate">
                   {formData.upiId || "Not set yet"}
@@ -1931,43 +1948,43 @@ export default function StudentProfilePage() {
 
                 {/* 2. LIVE REFERRAL METRICS & EARNINGS */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Earned</span>
-                    <span className="text-2xl font-black text-purple-700 block">
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-4 sm:p-5 rounded-2xl border border-purple-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Total Rewards Generated</span>
+                    <span className="text-2xl font-black text-purple-900 block">
                       ₹{referralData.stats?.totalEarned || 0}
                     </span>
-                    <span className="text-[11px] text-slate-500 block">
-                      {referralData.stats?.qualifiedCount + referralData.stats?.paidCount || 0} verified rewards
+                    <span className="text-[11px] text-purple-700 block font-medium">
+                      Lifetime referral earnings
                     </span>
                   </div>
 
-                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending Payout</span>
-                    <span className="text-2xl font-black text-amber-600 block">
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 p-4 sm:p-5 rounded-2xl border border-emerald-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Paid Out to UPI</span>
+                    <span className="text-2xl font-black text-emerald-700 block">
+                      ₹{referralData.stats?.paidEarnings || referralData.stats?.paidPayout || 0}
+                    </span>
+                    <span className="text-[11px] text-emerald-800 block font-medium">
+                      {referralData.stats?.paidCount || 0} transfer(s) settled
+                    </span>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50/50 p-4 sm:p-5 rounded-2xl border border-amber-200 shadow-2xs space-y-1">
+                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Pending Payout</span>
+                    <span className="text-2xl font-black text-amber-700 block">
                       ₹{referralData.stats?.pendingPayout || 0}
                     </span>
-                    <span className="text-[11px] text-amber-700 block">
-                      {referralData.stats?.qualifiedCount || 0} events in payout queue
+                    <span className="text-[11px] text-amber-800 block font-medium">
+                      {referralData.stats?.qualifiedCount || 0} shift(s) queued for transfer
                     </span>
                   </div>
 
                   <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Paid to UPI</span>
-                    <span className="text-2xl font-black text-emerald-600 block">
-                      ₹{referralData.stats?.paidPayout || 0}
-                    </span>
-                    <span className="text-[11px] text-emerald-700 block">
-                      {referralData.stats?.paidCount || 0} transferred
-                    </span>
-                  </div>
-
-                  <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Friends Registered</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Friends Invited</span>
                     <span className="text-2xl font-black text-slate-900 block">
-                      {referralData.stats?.totalReferred || 0}
+                      {referralData.stats?.totalInvited || referralData.stats?.totalReferred || 0}
                     </span>
                     <span className="text-[11px] text-slate-500 block">
-                      {referralData.stats?.pendingCount || 0} awaiting 1st event
+                      {referralData.stats?.pendingCount || 0} awaiting 1st shift
                     </span>
                   </div>
                 </div>
@@ -1994,7 +2011,7 @@ export default function StudentProfilePage() {
                       <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 font-black text-sm flex items-center justify-center">
                         2
                       </div>
-                      <h4 className="font-extrabold text-slate-900 text-sm">Friend Joins & Works 1st Event</h4>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Friend Works 1st Event</h4>
                       <p className="text-xs text-slate-500 leading-relaxed">
                         Your friend creates an account, gets selected for an event, and attends duty with attendance verified.
                       </p>
@@ -2006,7 +2023,7 @@ export default function StudentProfilePage() {
                       </div>
                       <h4 className="font-extrabold text-slate-900 text-sm">Receive Cash to UPI</h4>
                       <p className="text-xs text-slate-500 leading-relaxed">
-                        Cash reward (up to ₹150) is credited to your dashboard and settled by the admin team directly to your registered UPI ID.
+                        Cash reward is credited to your dashboard and settled by the admin team directly to your registered UPI ID with instant email notification.
                       </p>
                     </div>
                   </div>
@@ -2021,7 +2038,7 @@ export default function StudentProfilePage() {
                         Invited Friends & Referral Status ({referralData.stats?.referrals?.length || 0})
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Track the verification and payout progress of every friend you invited.
+                        Track the verification, shift completions, and payout progress of every friend you invited.
                       </p>
                     </div>
                   </div>
@@ -2031,7 +2048,7 @@ export default function StudentProfilePage() {
                       <Users className="w-10 h-10 text-slate-300 mx-auto" />
                       <p className="text-slate-700 font-bold text-sm">No referrals yet</p>
                       <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                        Share your referral code on WhatsApp or Instagram to invite friends and start earning up to ₹150 per friend!
+                        Share your referral code on WhatsApp or Instagram to invite friends and start earning cash rewards!
                       </p>
                       <button
                         type="button"
@@ -2055,53 +2072,77 @@ export default function StudentProfilePage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {referralData.stats.referrals.map((item: any) => (
-                            <tr key={item.id} className="hover:bg-slate-50 transition">
-                              <td className="p-3 font-extrabold text-slate-900">
-                                <div>{item.referee?.name || "Student"}</div>
-                                <div className="text-[10px] font-mono text-slate-400 font-normal">
-                                  {item.referee?.phone ? item.referee.phone.replace(/(\d{3})\d{4}(\d{3})/, "$1****$2") : ""}
-                                </div>
-                              </td>
-                              <td className="p-3 text-slate-500">
-                                {new Date(item.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                              </td>
-                              <td className="p-3">
-                                {item.status === "PAID" ? (
-                                  <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                    Paid to UPI
+                          {referralData.stats.referrals.map((item: any) => {
+                            const friendName = item.refereeName || item.referee?.name || "Friend";
+                            const friendPhone = item.refereePhone || item.referee?.phone || "";
+                            const joinedDate = item.registeredAt || item.createdAt;
+                            const evName = item.qualifyingEventName || item.event?.name || null;
+                            const isPaid = item.status === "PAID";
+                            const isQualified = item.status === "QUALIFIED";
+
+                            return (
+                              <tr key={item.id} className="hover:bg-slate-50 transition">
+                                <td className="p-3 font-extrabold text-slate-900">
+                                  <div>{friendName}</div>
+                                  {friendPhone && (
+                                    <div className="text-[10px] font-mono text-slate-400 font-normal">
+                                      {friendPhone}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-3 text-slate-500">
+                                  {joinedDate
+                                    ? new Date(joinedDate).toLocaleDateString("en-GB", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                      })
+                                    : "Recent"}
+                                </td>
+                                <td className="p-3">
+                                  {isPaid ? (
+                                    <div className="space-y-0.5">
+                                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1 shadow-2xs">
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                        <span>Paid to UPI</span>
+                                      </span>
+                                      {item.paidReference && (
+                                        <div className="text-[9.5px] text-slate-400 font-mono truncate max-w-[140px]" title={item.paidReference}>
+                                          Ref: {item.paidReference}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : isQualified ? (
+                                    <span className="bg-purple-100 text-purple-800 border border-purple-300 font-extrabold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1 shadow-2xs">
+                                      <Sparkles className="w-3 h-3 text-purple-600" />
+                                      <span>Reward Earned (In Payout Queue)</span>
+                                    </span>
+                                  ) : item.status === "REJECTED" ? (
+                                    <span className="bg-rose-100 text-rose-800 border border-rose-300 font-bold px-2.5 py-1 rounded-full text-[10px]">
+                                      Disqualified
+                                    </span>
+                                  ) : (
+                                    <span className="bg-slate-100 text-slate-700 border border-slate-200 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
+                                      <Clock className="w-3 h-3 text-slate-400" />
+                                      <span>Pending 1st Shift</span>
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-slate-600">
+                                  {evName ? (
+                                    <span className="font-bold text-slate-800">{evName}</span>
+                                  ) : (
+                                    <span className="text-slate-400 italic">Awaiting 1st event</span>
+                                  )}
+                                </td>
+                                <td className="p-3 font-black text-right text-slate-900">
+                                  <span className={isPaid ? "text-emerald-600 text-sm font-black" : isQualified ? "text-purple-600 text-sm font-black" : "text-slate-400"}>
+                                    ₹{item.rewardAmount || 25}
                                   </span>
-                                ) : item.status === "QUALIFIED" ? (
-                                  <span className="bg-purple-100 text-purple-800 border border-purple-300 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-purple-600" />
-                                    Earned (Pending Payout)
-                                  </span>
-                                ) : item.status === "REJECTED" ? (
-                                  <span className="bg-rose-100 text-rose-800 border border-rose-300 font-bold px-2.5 py-1 rounded-full text-[10px]">
-                                    Disqualified
-                                  </span>
-                                ) : (
-                                  <span className="bg-slate-100 text-slate-700 border border-slate-200 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-slate-400" />
-                                    Pending 1st Event
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-3 text-slate-600">
-                                {item.event ? (
-                                  <span className="font-semibold text-slate-800">{item.event.name}</span>
-                                ) : (
-                                  <span className="text-slate-400 italic">Not completed yet</span>
-                                )}
-                              </td>
-                              <td className="p-3 font-black text-right text-slate-900">
-                                <span className={item.status === "PAID" ? "text-emerald-600" : item.status === "QUALIFIED" ? "text-purple-600" : "text-slate-400"}>
-                                  ₹{item.rewardAmount || 25}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
