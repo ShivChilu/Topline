@@ -2823,37 +2823,59 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         )}
                       </div>
 
-                      {/* Photo Overlays: Quick Direct Call / WhatsApp (Bottom-Left) */}
-                      {(app.mobileNumber || student.phone) && (
-                        <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1">
-                          <a
-                            href={`tel:${app.mobileNumber || student.phone}`}
-                            className="bg-black/60 hover:bg-emerald-600 backdrop-blur-md text-white font-bold text-[10.5px] px-2 py-1 rounded-md border border-white/20 transition flex items-center gap-1 shadow-sm"
-                            title={`Call ${app.mobileNumber || student.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Phone className="w-3 h-3 text-emerald-400 group-hover/btn:text-white" />
-                            <span>Call</span>
-                          </a>
-                          <a
-                            href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-black/60 hover:bg-[#25D366] backdrop-blur-md text-white p-1 rounded-md border border-white/20 transition flex items-center justify-center shadow-sm"
-                            title="Open WhatsApp Chat"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MessageSquare className="w-3 h-3 text-[#25D366]" />
-                          </a>
-                        </div>
-                      )}
+                      {/* Photo Overlays: Quick Direct Call / WhatsApp / View Full Profile (Bottom-Left) */}
+                      <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1">
+                        {(app.mobileNumber || student.phone) && (
+                          <>
+                            <a
+                              href={`tel:${app.mobileNumber || student.phone}`}
+                              className="bg-black/60 hover:bg-emerald-600 backdrop-blur-md text-white font-bold text-[10.5px] px-2 py-1 rounded-md border border-white/20 transition flex items-center gap-1 shadow-sm"
+                              title={`Call ${app.mobileNumber || student.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="w-3 h-3 text-emerald-400 group-hover/btn:text-white" />
+                              <span>Call</span>
+                            </a>
+                            <a
+                              href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-black/60 hover:bg-[#25D366] backdrop-blur-md text-white p-1 rounded-md border border-white/20 transition flex items-center justify-center shadow-sm"
+                              title="Open WhatsApp Chat"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageSquare className="w-3 h-3 text-[#25D366]" />
+                            </a>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInspectCandidate(app);
+                          }}
+                          className="bg-black/60 hover:bg-blue-600 backdrop-blur-md text-white font-bold text-[10.5px] px-2 py-1 rounded-md border border-white/20 transition flex items-center gap-1 shadow-sm cursor-pointer"
+                          title="Open Full Profile, Photos & Form Responses"
+                        >
+                          <Eye className="w-3 h-3 text-blue-400" />
+                          <span>Profile</span>
+                        </button>
+                      </div>
 
-                      {/* Permanent Photos Count Pill (Bottom-Right) */}
+                      {/* Permanent Photos Count Pill (Bottom-Right) - Clickable to open full profile & photos */}
                       {photosList.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-white/20">
-                          <Camera className="w-2.5 h-2.5" />
-                          +{photosList.length}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInspectCandidate(app);
+                          }}
+                          className="absolute bottom-2 right-2 bg-black/60 hover:bg-slate-900 backdrop-blur-md text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-white/20 cursor-pointer transition shadow-sm"
+                          title="Click to view all photos in candidate profile"
+                        >
+                          <Camera className="w-2.5 h-2.5 text-amber-300" />
+                          <span>+{photosList.length} Photos</span>
+                        </button>
                       )}
                     </div>
 
@@ -2869,6 +2891,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           >
                             {app.name || student.name}
                           </h3>
+                          <button
+                            type="button"
+                            onClick={() => openInspectCandidate(app)}
+                            className="text-[10px] font-extrabold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shrink-0 transition cursor-pointer"
+                            title="Open candidate full profile drawer"
+                          >
+                            <Eye className="w-2.5 h-2.5" />
+                            <span>Profile</span>
+                          </button>
                         </div>
 
                         {/* Dense Single-Line Metadata Subtitle */}
