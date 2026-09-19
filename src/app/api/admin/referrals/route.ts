@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     const totalEarningsGenerated = pendingPayoutAmount + settledPayoutAmount;
 
     // 2. Full Ledger with relations
-    const allReferrals = await prisma.referral.findMany({
+    const allReferrals: any[] = await prisma.referral.findMany({
       include: {
         referrer: {
           select: {
@@ -74,6 +74,28 @@ export async function GET(request: Request) {
             university: true,
             selectionStatus: true,
             createdAt: true,
+            applications: {
+              select: {
+                id: true,
+                status: true,
+                paymentStatus: true,
+                attendance: {
+                  select: {
+                    attendanceStatus: true,
+                  },
+                },
+                createdAt: true,
+                event: {
+                  select: {
+                    id: true,
+                    name: true,
+                    date: true,
+                    location: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: "desc" },
+            },
           },
         },
         qualifyingEvent: {
@@ -123,6 +145,7 @@ export async function GET(request: Request) {
         unpaidBalance: 0,
         paidBalance: 0,
         qualifiedReferralIds: [] as string[],
+        referredFriends: [] as any[],
         latestActivityAt: u.createdAt,
       });
     });
@@ -146,6 +169,7 @@ export async function GET(request: Request) {
           unpaidBalance: 0,
           paidBalance: 0,
           qualifiedReferralIds: [] as string[],
+          referredFriends: [] as any[],
           latestActivityAt: ref.createdAt,
         };
         referrersMap.set(ref.referrerId, entry);
@@ -166,6 +190,40 @@ export async function GET(request: Request) {
       if (new Date(ref.createdAt).getTime() > new Date(entry.latestActivityAt).getTime()) {
         entry.latestActivityAt = ref.createdAt;
       }
+
+      const refereeApps = (ref.referee?.applications || []).map((app: any) => ({
+        id: app.id,
+        status: app.status,
+        paymentStatus: app.paymentStatus,
+        attendanceStatus: app.attendance?.attendanceStatus || "NOT_MARKED",
+        isAttended: app.attendance?.attendanceStatus === "PRESENT",
+        appliedAt: app.createdAt,
+        event: app.event
+          ? {
+              id: app.event.id,
+              name: app.event.name,
+              date: app.event.date,
+              location: app.event.location,
+            }
+          : null,
+      }));
+
+      entry.referredFriends.push({
+        referralId: ref.id,
+        id: ref.referee.id,
+        name: ref.referee.name,
+        phone: ref.referee.phone || "N/A",
+        email: ref.referee.email || "N/A",
+        registrationNumber: ref.referee.registrationNumber || "N/A",
+        university: ref.referee.university || "N/A",
+        selectionStatus: ref.referee.selectionStatus,
+        registeredAt: ref.createdAt,
+        referralStatus: ref.status,
+        rewardAmount: ref.rewardAmount,
+        qualifyingEvent: ref.qualifyingEvent,
+        applicationsCount: refereeApps.length,
+        applications: refereeApps,
+      });
     });
 
     const referrersList = Array.from(referrersMap.values()).sort((a, b) => {
@@ -190,42 +248,63 @@ export async function GET(request: Request) {
         rewardPerReferral: await getActiveReferralRewardAmount(),
       },
       referrers: referrersList,
-      ledger: allReferrals.map((r) => ({
-        id: r.id,
-        codeUsed: r.codeUsed,
-        status: r.status,
-        rewardAmount: r.rewardAmount,
-        registeredAt: r.createdAt,
-        qualifiedAt: r.qualifiedAt,
-        paidAt: r.paidAt,
-        paidReference: r.paidReference,
-        notes: r.notes,
-        referrer: {
-          id: r.referrer.id,
-          name: r.referrer.name,
-          phone: r.referrer.phone || "N/A",
-          email: r.referrer.email || "N/A",
-          upiId: r.referrer.upiId || "N/A",
-          referralCode: r.referrer.referralCode,
-        },
-        referee: {
-          id: r.referee.id,
-          name: r.referee.name,
-          phone: r.referee.phone || "N/A",
-          email: r.referee.email || "N/A",
-          registrationNumber: r.referee.registrationNumber || "N/A",
-          university: r.referee.university || "N/A",
-          selectionStatus: r.referee.selectionStatus,
-        },
-        qualifyingEvent: r.qualifyingEvent
-          ? {
-              id: r.qualifyingEvent.id,
-              name: r.qualifyingEvent.name,
-              date: r.qualifyingEvent.date,
-              location: r.qualifyingEvent.location,
-            }
-          : null,
-      })),
+      ledger: allReferrals.map((r) => {
+        const refereeApps = (r.referee?.applications || []).map((app: any) => ({
+          id: app.id,
+          status: app.status,
+          paymentStatus: app.paymentStatus,
+          attendanceStatus: app.attendance?.attendanceStatus || "NOT_MARKED",
+          isAttended: app.attendance?.attendanceStatus === "PRESENT",
+          appliedAt: app.createdAt,
+          event: app.event
+            ? {
+                id: app.event.id,
+                name: app.event.name,
+                date: app.event.date,
+                location: app.event.location,
+              }
+            : null,
+        }));
+
+        return {
+          id: r.id,
+          codeUsed: r.codeUsed,
+          status: r.status,
+          rewardAmount: r.rewardAmount,
+          registeredAt: r.createdAt,
+          qualifiedAt: r.qualifiedAt,
+          paidAt: r.paidAt,
+          paidReference: r.paidReference,
+          notes: r.notes,
+          referrer: {
+            id: r.referrer.id,
+            name: r.referrer.name,
+            phone: r.referrer.phone || "N/A",
+            email: r.referrer.email || "N/A",
+            upiId: r.referrer.upiId || "N/A",
+            referralCode: r.referrer.referralCode,
+          },
+          referee: {
+            id: r.referee.id,
+            name: r.referee.name,
+            phone: r.referee.phone || "N/A",
+            email: r.referee.email || "N/A",
+            registrationNumber: r.referee.registrationNumber || "N/A",
+            university: r.referee.university || "N/A",
+            selectionStatus: r.referee.selectionStatus,
+            applicationsCount: refereeApps.length,
+            applications: refereeApps,
+          },
+          qualifyingEvent: r.qualifyingEvent
+            ? {
+                id: r.qualifyingEvent.id,
+                name: r.qualifyingEvent.name,
+                date: r.qualifyingEvent.date,
+                location: r.qualifyingEvent.location,
+              }
+            : null,
+        };
+      }),
     });
   } catch (error: any) {
     console.error("Admin referrals GET error:", error);

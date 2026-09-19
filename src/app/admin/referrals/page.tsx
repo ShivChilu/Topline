@@ -22,6 +22,13 @@ import {
   RefreshCw,
   Award,
   Settings,
+  Eye,
+  Phone,
+  MessageSquare,
+  Calendar,
+  MapPin,
+  Briefcase,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AdminReferralsPage() {
@@ -30,6 +37,9 @@ export default function AdminReferralsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [activeView, setActiveView] = useState<"referrers" | "ledger">("referrers");
+
+  // Referred Friends Detail Modal State
+  const [selectedReferrerDetail, setSelectedReferrerDetail] = useState<any>(null);
 
   // Reward Tuner Modal State
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -42,6 +52,7 @@ export default function AdminReferralsPage() {
   const [payoutNotes, setPayoutNotes] = useState("");
   const [settlingLoading, setSettlingLoading] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const fetchReferrals = async () => {
@@ -102,6 +113,13 @@ export default function AdminReferralsPage() {
     setTimeout(() => setCopiedUpi(false), 2500);
   };
 
+  const handleCopyPhone = (phone: string) => {
+    if (!phone || phone === "N/A") return;
+    navigator.clipboard.writeText(phone);
+    setCopiedPhone(phone);
+    setTimeout(() => setCopiedPhone(null), 2500);
+  };
+
   const handleSettlePayout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settlingReferrer) return;
@@ -141,18 +159,33 @@ export default function AdminReferralsPage() {
     if (!data?.referrers) return [];
     return data.referrers.filter((r: any) => {
       const q = searchTerm.toLowerCase();
+      const referredMatch = (r.referredFriends || []).some(
+        (f: any) =>
+          f.name?.toLowerCase().includes(q) ||
+          f.phone?.toLowerCase().includes(q) ||
+          f.registrationNumber?.toLowerCase().includes(q) ||
+          f.applications?.some((a: any) => a.event?.name?.toLowerCase().includes(q))
+      );
+
       const matchesSearch =
         r.name?.toLowerCase().includes(q) ||
         r.phone?.toLowerCase().includes(q) ||
         r.upiId?.toLowerCase().includes(q) ||
         r.referralCode?.toLowerCase().includes(q) ||
-        r.registrationNumber?.toLowerCase().includes(q);
+        r.registrationNumber?.toLowerCase().includes(q) ||
+        referredMatch;
 
       if (!matchesSearch) return false;
 
       if (statusFilter === "UNPAID") return r.unpaidBalance > 0;
       if (statusFilter === "PAID") return r.paidCount > 0;
       if (statusFilter === "ACTIVE") return r.totalInvited > 0;
+      if (statusFilter === "WITH_APPS") {
+        return (r.referredFriends || []).some((f: any) => f.applicationsCount > 0);
+      }
+      if (statusFilter === "NO_APPS") {
+        return r.totalInvited > 0 && (r.referredFriends || []).every((f: any) => f.applicationsCount === 0);
+      }
 
       return true;
     });
@@ -163,17 +196,24 @@ export default function AdminReferralsPage() {
     if (!data?.ledger) return [];
     return data.ledger.filter((item: any) => {
       const q = searchTerm.toLowerCase();
+      const appMatch = (item.referee?.applications || []).some(
+        (a: any) => a.event?.name?.toLowerCase().includes(q) || a.status?.toLowerCase().includes(q)
+      );
+
       const matchesSearch =
         item.referrer?.name?.toLowerCase().includes(q) ||
         item.referrer?.phone?.toLowerCase().includes(q) ||
         item.referee?.name?.toLowerCase().includes(q) ||
         item.referee?.phone?.toLowerCase().includes(q) ||
         item.codeUsed?.toLowerCase().includes(q) ||
-        item.paidReference?.toLowerCase().includes(q);
+        item.paidReference?.toLowerCase().includes(q) ||
+        appMatch;
 
       if (!matchesSearch) return false;
 
       if (statusFilter === "ALL") return true;
+      if (statusFilter === "WITH_APPS") return (item.referee?.applicationsCount || 0) > 0;
+      if (statusFilter === "NO_APPS") return (item.referee?.applicationsCount || 0) === 0;
       return item.status === statusFilter;
     });
   }, [data, searchTerm, statusFilter]);
@@ -212,7 +252,7 @@ export default function AdminReferralsPage() {
             </button>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
-            Track student invitation codes, verify first-event completions, and record offline UPI payout settlements.
+            Track student invitation codes, verify referred student event applications, and record offline UPI payout settlements.
           </p>
         </div>
 
@@ -282,7 +322,6 @@ export default function AdminReferralsPage() {
           ))}
         </div>
       </div>
-
 
       {/* Feedback Toast */}
       {feedback && (
@@ -389,7 +428,7 @@ export default function AdminReferralsPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by student, phone, UPI, or code..."
+              placeholder="Search by student, friend, event, phone, code..."
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 transition"
             />
           </div>
@@ -397,7 +436,7 @@ export default function AdminReferralsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:border-red-600 transition"
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:border-red-600 transition cursor-pointer"
           >
             {activeView === "referrers" ? (
               <>
@@ -405,6 +444,8 @@ export default function AdminReferralsPage() {
                 <option value="UNPAID">Has Unpaid (Pending ₹)</option>
                 <option value="PAID">Has Settled Payouts</option>
                 <option value="ACTIVE">Active (1+ Invited)</option>
+                <option value="WITH_APPS">Has Event Applications</option>
+                <option value="NO_APPS">No Applications Yet</option>
               </>
             ) : (
               <>
@@ -412,6 +453,8 @@ export default function AdminReferralsPage() {
                 <option value="PENDING">PENDING (Awaiting 1st Event)</option>
                 <option value="QUALIFIED">QUALIFIED (Reward Unlocked)</option>
                 <option value="PAID">PAID (Settled)</option>
+                <option value="WITH_APPS">Has Event Applications</option>
+                <option value="NO_APPS">No Applications Yet</option>
               </>
             )}
           </select>
@@ -426,7 +469,7 @@ export default function AdminReferralsPage() {
               Referrer Leaderboard & Payout Targets
             </h3>
             <span className="text-xs text-slate-500 font-medium">
-              Showing {filteredReferrers.length} student referrers
+              Showing {filteredReferrers.length} student referrers (Click on any referrer to see referred friends)
             </span>
           </div>
 
@@ -449,25 +492,50 @@ export default function AdminReferralsPage() {
                     <th className="p-3.5">Phone & Reg No.</th>
                     <th className="p-3.5">Referral Code</th>
                     <th className="p-3.5">Student UPI ID</th>
-                    <th className="p-3.5 text-center">Invited</th>
+                    <th className="p-3.5 text-center">Invited Friends</th>
                     <th className="p-3.5 text-center">Qualified (Completed)</th>
                     <th className="p-3.5 text-center">Settled (Paid)</th>
                     <th className="p-3.5 text-right font-black">Unpaid Due (₹)</th>
-                    <th className="p-3.5 text-right">Action</th>
+                    <th className="p-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredReferrers.map((ref: any) => {
                     const hasUnpaid = ref.unpaidBalance > 0;
                     const hasUpi = ref.upiId && ref.upiId !== "Not Provided" && ref.upiId !== "N/A";
+                    const totalInvited = ref.totalInvited || 0;
 
                     return (
-                      <tr key={ref.id} className="hover:bg-slate-50/60 transition group">
+                      <tr key={ref.id} className="hover:bg-slate-50/70 transition group">
                         <td className="p-3.5 font-bold text-slate-900">
-                          <span>{ref.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReferrerDetail(ref)}
+                            className="text-left font-bold text-slate-900 hover:text-red-600 transition flex items-center gap-1.5 cursor-pointer"
+                            title="Click to view all friends referred by this student"
+                          >
+                            <span>{ref.name}</span>
+                            <Eye className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition" />
+                          </button>
                         </td>
                         <td className="p-3.5 text-slate-600">
-                          <div className="font-mono text-[11px] font-bold text-slate-800">{ref.phone}</div>
+                          <div className="font-mono text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                            <span>{ref.phone}</span>
+                            {ref.phone !== "N/A" && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPhone(ref.phone)}
+                                className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
+                                title="Copy phone number"
+                              >
+                                {copiedPhone === ref.phone ? (
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            )}
+                          </div>
                           <div className="text-[10px] text-slate-400 font-mono">{ref.registrationNumber}</div>
                         </td>
                         <td className="p-3.5 font-mono font-bold text-red-600">
@@ -495,7 +563,22 @@ export default function AdminReferralsPage() {
                             </span>
                           )}
                         </td>
-                        <td className="p-3.5 text-center font-bold text-slate-700">{ref.totalInvited}</td>
+                        <td className="p-3.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReferrerDetail(ref)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-extrabold text-xs transition cursor-pointer shadow-2xs active:scale-95 ${
+                              totalInvited > 0
+                                ? "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
+                            }`}
+                            title="Click to inspect all referred students and event applications"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            <span>{totalInvited} Invited</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                          </button>
+                        </td>
                         <td className="p-3.5 text-center">
                           <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
                             {ref.qualifiedCount}
@@ -512,18 +595,28 @@ export default function AdminReferralsPage() {
                           )}
                         </td>
                         <td className="p-3.5 text-right">
-                          {hasUnpaid ? (
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => setSettlingReferrer(ref)}
-                              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3.5 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 ml-auto cursor-pointer"
+                              onClick={() => setSelectedReferrerDetail(ref)}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 text-xs cursor-pointer"
+                              title="View referred students and event status"
                             >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              <span>Settle ₹{ref.unpaidBalance}</span>
+                              <Eye className="w-3.5 h-3.5 text-blue-600" />
+                              <span>View Friends</span>
                             </button>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">All Settled</span>
-                          )}
+
+                            {hasUnpaid ? (
+                              <button
+                                type="button"
+                                onClick={() => setSettlingReferrer(ref)}
+                                className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>Settle ₹{ref.unpaidBalance}</span>
+                              </button>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -543,7 +636,7 @@ export default function AdminReferralsPage() {
               Individual Referral Attributions Ledger
             </h3>
             <span className="text-xs text-slate-500 font-medium">
-              Showing {filteredLedger.length} referral events
+              Showing {filteredLedger.length} referral records
             </span>
           </div>
 
@@ -563,6 +656,7 @@ export default function AdminReferralsPage() {
                   <tr className="bg-slate-50/80 text-slate-500 uppercase tracking-wider text-[11px] border-b border-slate-200">
                     <th className="p-3.5">Referrer (Inviter)</th>
                     <th className="p-3.5">Referred Student (Friend)</th>
+                    <th className="p-3.5">Event Applications</th>
                     <th className="p-3.5">Code Used</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5">Reward Amount</th>
@@ -576,6 +670,7 @@ export default function AdminReferralsPage() {
                     const isPending = row.status === "PENDING";
                     const isQualified = row.status === "QUALIFIED";
                     const isPaid = row.status === "PAID";
+                    const refereeApps = row.referee?.applications || [];
 
                     return (
                       <tr key={row.id} className="hover:bg-slate-50/60 transition">
@@ -584,8 +679,69 @@ export default function AdminReferralsPage() {
                           <div className="text-[10px] text-slate-400 font-mono">{row.referrer?.phone} • {row.referrer?.upiId || "No UPI"}</div>
                         </td>
                         <td className="p-3.5 font-medium text-slate-800">
-                          <div>{row.referee?.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{row.referee?.phone} • {row.referee?.registrationNumber}</div>
+                          <div className="font-bold text-slate-900">{row.referee?.name}</div>
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                            <span>{row.referee?.phone}</span>
+                            {row.referee?.phone && row.referee?.phone !== "N/A" && (
+                              <a
+                                href={`https://wa.me/91${row.referee.phone.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-600 hover:text-emerald-700"
+                                title="Open WhatsApp chat with student"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                              </a>
+                            )}
+                            <span>• {row.referee?.registrationNumber}</span>
+                          </div>
+                          {row.referee?.university && (
+                            <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
+                              {row.referee.university}
+                            </div>
+                          )}
+                        </td>
+                        {/* Event Applications Column */}
+                        <td className="p-3.5">
+                          {refereeApps.length > 0 ? (
+                            <div className="space-y-1 max-w-xs">
+                              <span className="font-extrabold text-[10.5px] text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md inline-block">
+                                {refereeApps.length} Event{refereeApps.length > 1 ? "s" : ""} Applied
+                              </span>
+                              <div className="text-[10.5px] text-slate-600 space-y-0.5">
+                                {refereeApps.slice(0, 2).map((app: any, idx: number) => (
+                                  <div key={app.id || idx} className="truncate flex items-center gap-1">
+                                    <span className="font-medium text-slate-800 truncate max-w-[130px]" title={app.event?.name}>
+                                      • {app.event?.name || "Event"}:
+                                    </span>
+                                    <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-extrabold ${
+                                      app.status === "SELECTED" || app.status === "CONFIRMED"
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : app.status === "ATTENDED"
+                                        ? "bg-purple-100 text-purple-800"
+                                        : app.status === "CANCELLED"
+                                        ? "bg-rose-100 text-rose-800"
+                                        : "bg-slate-100 text-slate-700"
+                                    }`}>
+                                      {app.status}
+                                    </span>
+                                  </div>
+                                ))}
+                                {refereeApps.length > 2 && (
+                                  <span className="text-[10px] text-slate-400 block font-medium">
+                                    +{refereeApps.length - 2} more application(s)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-0.5">
+                              <span className="text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md text-[10.5px] font-bold inline-block">
+                                No Applications Yet
+                              </span>
+                              <div className="text-[10px] text-slate-400">Registered via code only</div>
+                            </div>
+                          )}
                         </td>
                         <td className="p-3.5 font-mono font-bold text-red-600">
                           <span className="bg-red-50 px-2 py-0.5 rounded border border-red-200">{row.codeUsed}</span>
@@ -646,6 +802,290 @@ export default function AdminReferralsPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* REFERRED FRIENDS INSPECTION MODAL */}
+      {/* ---------------------------------------------------- */}
+      {selectedReferrerDetail && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[88vh] shadow-2xl border border-slate-200 animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 duration-200">
+            {/* Modal Header */}
+            <div className="shrink-0 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shadow-inner shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-extrabold text-white">
+                      Referred Friends of {selectedReferrerDetail.name}
+                    </h3>
+                    <span className="bg-red-500/20 text-red-300 border border-red-400/30 px-2 py-0.5 rounded font-mono text-xs font-bold">
+                      Code: {selectedReferrerDetail.referralCode}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Phone: {selectedReferrerDetail.phone} • UPI: {selectedReferrerDetail.upiId}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedReferrerDetail(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Referrer Metric Summary Strip */}
+            <div className="shrink-0 bg-slate-100 p-3 sm:p-4 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                <span className="text-[10.5px] font-bold text-slate-500 uppercase block">Total Invited</span>
+                <span className="text-lg font-black text-slate-900">{selectedReferrerDetail.totalInvited || 0} Friends</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                <span className="text-[10.5px] font-bold text-slate-500 uppercase block">Applied to Events</span>
+                <span className="text-lg font-black text-blue-700">
+                  {(selectedReferrerDetail.referredFriends || []).filter((f: any) => f.applicationsCount > 0).length} Students
+                </span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                <span className="text-[10.5px] font-bold text-slate-500 uppercase block">Completed 1st Event</span>
+                <span className="text-lg font-black text-emerald-600">
+                  {selectedReferrerDetail.qualifiedCount + selectedReferrerDetail.paidCount} Qualified
+                </span>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                <span className="text-[10.5px] font-bold text-slate-500 uppercase block">Unpaid Reward Due</span>
+                <span className="text-lg font-black text-amber-700">₹{selectedReferrerDetail.unpaidBalance || 0}</span>
+              </div>
+            </div>
+
+            {/* Referred Students List Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3.5 bg-slate-50">
+              {(!selectedReferrerDetail.referredFriends || selectedReferrerDetail.referredFriends.length === 0) ? (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-2">
+                  <Users className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="font-bold text-slate-700 text-sm">No friends have registered with this code yet.</p>
+                  <p className="text-xs text-slate-400">
+                    Once friends enter code <code className="font-bold text-red-600">{selectedReferrerDetail.referralCode}</code> during signup, their details and event applications will appear here.
+                  </p>
+                </div>
+              ) : (
+                selectedReferrerDetail.referredFriends.map((friend: any, index: number) => {
+                  const cleanFriendPhone = (friend.phone || "").replace(/\D/g, "");
+                  const hasApplications = friend.applications && friend.applications.length > 0;
+
+                  return (
+                    <div
+                      key={friend.referralId || friend.id || index}
+                      className="bg-white rounded-2xl p-4 sm:p-4.5 border border-slate-200 shadow-2xs space-y-3 hover:border-slate-300 transition"
+                    >
+                      {/* Friend Identity & Contact Bar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm sm:text-base font-extrabold text-slate-900">{friend.name}</h4>
+                            <span className="text-[10.5px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                              {friend.registrationNumber || "NO REG"}
+                            </span>
+                            {friend.university && (
+                              <span className="text-xs text-slate-500 font-medium truncate max-w-[200px]">
+                                • {friend.university}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Signed up: {new Date(friend.registeredAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                          </p>
+                        </div>
+
+                        {/* Status Badge & Contact Buttons */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {friend.referralStatus === "QUALIFIED" ? (
+                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>1st Event Done (₹{friend.rewardAmount} Due)</span>
+                            </span>
+                          ) : friend.referralStatus === "PAID" ? (
+                            <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                              <span>Reward Paid</span>
+                            </span>
+                          ) : (
+                            <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Pending 1st Shift</span>
+                            </span>
+                          )}
+
+                          {friend.phone && friend.phone !== "N/A" && (
+                            <div className="flex items-center gap-1">
+                              <a
+                                href={`tel:${friend.phone}`}
+                                className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 transition"
+                                title={`Call ${friend.phone}`}
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+                              {cleanFriendPhone && (
+                                <a
+                                  href={`https://wa.me/91${cleanFriendPhone}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg bg-emerald-50 hover:bg-[#25D366] text-emerald-700 hover:text-white border border-emerald-200 transition"
+                                  title="Open WhatsApp Chat"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Event Applications Section */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Event Applications ({friend.applications?.length || 0})</span>
+                          </span>
+                          {hasApplications ? (
+                            <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              Active Candidate
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                              Registered Only
+                            </span>
+                          )}
+                        </div>
+
+                        {hasApplications ? (
+                          <div className="space-y-2">
+                            {friend.applications.map((app: any) => (
+                              <div
+                                key={app.id}
+                                className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs"
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                                    <span>{app.event?.name || "Topline Event"}</span>
+                                    {app.event?.id && (
+                                      <Link
+                                        href={`/admin/events/${app.event.id}`}
+                                        target="_blank"
+                                        className="text-blue-600 hover:underline inline-flex items-center gap-0.5 text-[11px] font-bold ml-1"
+                                      >
+                                        <span>Roster</span>
+                                        <ExternalLink className="w-3 h-3" />
+                                      </Link>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                                    {app.event?.date && (
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="w-3 h-3 text-slate-400" />
+                                        {new Date(app.event.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                                      </span>
+                                    )}
+                                    {app.event?.location && (
+                                      <span className="flex items-center gap-1 truncate max-w-[150px]">
+                                        <MapPin className="w-3 h-3 text-slate-400" />
+                                        {app.event.location}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {/* Application Status Badge */}
+                                  <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-2xs ${
+                                    app.status === "SELECTED"
+                                      ? "bg-emerald-600 text-white"
+                                      : app.status === "CONFIRMED"
+                                      ? "bg-teal-600 text-white"
+                                      : app.status === "ATTENDED"
+                                      ? "bg-purple-600 text-white"
+                                      : app.status === "CANCELLED"
+                                      ? "bg-rose-600 text-white"
+                                      : app.status === "ON_HOLD"
+                                      ? "bg-amber-600 text-white"
+                                      : "bg-slate-800 text-white"
+                                  }`}>
+                                    {app.status}
+                                  </span>
+
+                                  {/* Attendance Badge if recorded */}
+                                  {app.attendanceStatus && (
+                                    <span className={`px-2 py-0.5 rounded text-[10.5px] font-bold border ${
+                                      app.attendanceStatus === "PRESENT"
+                                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                        : app.attendanceStatus === "LATE"
+                                        ? "bg-amber-50 text-amber-800 border-amber-200"
+                                        : app.attendanceStatus === "ABSENT"
+                                        ? "bg-rose-50 text-rose-800 border-rose-200"
+                                        : "bg-slate-100 text-slate-600 border-slate-200"
+                                    }`}>
+                                      Attendance: {app.attendanceStatus}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div className="flex items-start gap-2 text-amber-900">
+                              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-extrabold block">Has not applied for any event yet</span>
+                                <p className="text-[11px] text-amber-800 mt-0.5">
+                                  This student registered using {selectedReferrerDetail.name}&apos;s link but hasn&apos;t filled out an event application yet.
+                                </p>
+                              </div>
+                            </div>
+
+                            {cleanFriendPhone && (
+                              <a
+                                href={`https://wa.me/91${cleanFriendPhone}?text=${encodeURIComponent(
+                                  `Hi ${friend.name || "there"}, we noticed you registered on Topline ODC! Check out our upcoming events and apply to start earning: https://toplineodc.co.in/events`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold flex items-center gap-1.5 transition shrink-0 shadow-xs"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                <span>Invite to Apply</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="shrink-0 bg-slate-100 p-3 sm:p-4 border-t border-slate-200 flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-500 font-medium">
+                Referral reward (₹{selectedReferrerDetail.unpaidBalance || metrics.rewardPerReferral}) unlocks automatically once any referred friend completes their 1st event.
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedReferrerDetail(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-200 bg-white border border-slate-300 transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -875,4 +1315,5 @@ export default function AdminReferralsPage() {
     </div>
   );
 }
+
 
