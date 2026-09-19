@@ -2669,7 +2669,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 return (
                   <div
                     key={app._id || app.id}
-                    className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md ${
+                    className={`bg-white rounded-xl border transition-all duration-200 overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md ${
                       isSelectedCheckbox
                         ? "border-red-500 ring-2 ring-red-500/20"
                         : isMarkedPresent
@@ -2677,8 +2677,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
-                    {/* Top Photo Section */}
-                    <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden group">
+                    {/* Top Compact Photo Section */}
+                    <div className="relative aspect-[16/10] w-full bg-slate-100 overflow-hidden group">
                       {app.photoUrl ? (
                         <img
                           src={app.photoUrl}
@@ -2688,13 +2688,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
-                          <Camera className="w-10 h-10 stroke-1 mb-1" />
-                          <span className="text-xs font-semibold">No Photo Uploaded</span>
+                          <Camera className="w-8 h-8 stroke-1 mb-1" />
+                          <span className="text-[11px] font-semibold">No Photo</span>
                         </div>
                       )}
 
                       {/* Multi-Select Checkbox & Rank Badge */}
-                      <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+                      <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
                         <button
                           onClick={() => toggleSelectOne(app._id || app.id)}
                           className="w-6 h-6 rounded-md bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:bg-black/70 transition cursor-pointer"
@@ -2702,389 +2702,265 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           {isSelectedCheckbox && <Check className="w-4 h-4 text-red-400 stroke-3" />}
                         </button>
                         {sortBy === "FIRST_FILLED" && (
-                          <span className="bg-amber-500 text-white text-[11px] font-extrabold px-2 py-0.5 rounded-md shadow-md flex items-center gap-0.5">
+                          <span className="bg-amber-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-0.5">
                             <span>#{index + 1}</span>
-                            <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90">to apply</span>
                           </span>
                         )}
                       </div>
 
                       {/* Event Application & Attendance Status Badge */}
-                      <div className="absolute top-3 right-3 z-10">
+                      <div className="absolute top-2 right-2 z-10">
                         {isMarkedPresent ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-md flex items-center gap-1 ring-2 ring-emerald-400/40 animate-in fade-in">
-                            <CheckCircle className="w-3.5 h-3.5" /> PRESENT
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-emerald-600 text-white shadow-md flex items-center gap-1 ring-1 ring-emerald-400/40">
+                            <CheckCircle className="w-3 h-3" /> PRESENT
                           </span>
                         ) : isMarkedLate ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-600 text-white shadow-md flex items-center gap-1 ring-2 ring-amber-400/40 animate-in fade-in">
-                            <Clock className="w-3.5 h-3.5" /> LATE
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-amber-600 text-white shadow-md flex items-center gap-1 ring-1 ring-amber-400/40">
+                            <Clock className="w-3 h-3" /> LATE
                           </span>
                         ) : isMarkedAbsent ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-600 text-white shadow-md flex items-center gap-1 ring-2 ring-rose-400/40 animate-in fade-in">
-                            <X className="w-3.5 h-3.5 stroke-3" /> ABSENT
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-rose-600 text-white shadow-md flex items-center gap-1 ring-1 ring-rose-400/40">
+                            <X className="w-3 h-3 stroke-3" /> ABSENT
                           </span>
                         ) : sStatus === "CONFIRMED" ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-teal-600 text-white shadow-md flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Confirmed (Attending)
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-extrabold bg-teal-600 text-white shadow-md flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Confirmed
                           </span>
                         ) : sStatus === "SELECTED" ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-white shadow-md flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-extrabold bg-emerald-500 text-white shadow-md flex items-center gap-1">
                             <Check className="w-3 h-3 stroke-3" /> Selected
                           </span>
                         ) : sStatus === "ON_HOLD" ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> On Hold / Waitlist
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Hold
                           </span>
                         ) : sStatus === "CANCELLED" ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-600 text-white shadow-md flex items-center gap-1">
-                            <X className="w-3 h-3 stroke-3" /> Declined / Cancelled
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-extrabold bg-rose-600 text-white shadow-md flex items-center gap-1">
+                            <X className="w-3 h-3 stroke-3" /> Declined
                           </span>
                         ) : sStatus === "UNDER_REVIEW" ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-md flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Under Review
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500 text-white shadow-md">
+                            Review
                           </span>
                         ) : sStatus === "NOT_SELECTED" || sStatus === "REJECTED" ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 text-white shadow-md flex items-center gap-1">
-                            <X className="w-3 h-3 stroke-3" /> Not Selected
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-500 text-white shadow-md flex items-center gap-1">
+                            <X className="w-3 h-3 stroke-3" /> Rejected
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-white shadow-md">
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-slate-800 text-white shadow-md">
                             {sStatus || "Applied"}
                           </span>
                         )}
                       </div>
 
-                      {/* Permanent Photos Count Pill */}
+                      {/* Photo Overlays: Quick Direct Call / WhatsApp (Bottom-Left) */}
+                      {(app.mobileNumber || student.phone) && (
+                        <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1">
+                          <a
+                            href={`tel:${app.mobileNumber || student.phone}`}
+                            className="bg-black/60 hover:bg-emerald-600 backdrop-blur-md text-white font-bold text-[10.5px] px-2 py-1 rounded-md border border-white/20 transition flex items-center gap-1 shadow-sm"
+                            title={`Call ${app.mobileNumber || student.phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Phone className="w-3 h-3 text-emerald-400 group-hover/btn:text-white" />
+                            <span>Call</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-black/60 hover:bg-[#25D366] backdrop-blur-md text-white p-1 rounded-md border border-white/20 transition flex items-center justify-center shadow-sm"
+                            title="Open WhatsApp Chat"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MessageSquare className="w-3 h-3 text-[#25D366]" />
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Permanent Photos Count Pill (Bottom-Right) */}
                       {photosList.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1">
-                          <Camera className="w-3 h-3" />
-                          +{photosList.length} Photos
+                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-white/20">
+                          <Camera className="w-2.5 h-2.5" />
+                          +{photosList.length}
                         </div>
                       )}
                     </div>
 
-                    {/* Body Information */}
-                    <div className="p-4 flex-1 flex flex-col justify-between">
+                    {/* Compact Body Information */}
+                    <div className="p-3 flex-1 flex flex-col justify-between gap-2">
                       <div>
-                        <div className="flex items-start justify-between gap-2">
+                        {/* Name & Quick Inspect */}
+                        <div className="flex items-center justify-between gap-1">
                           <h3
                             onClick={() => openInspectCandidate(app)}
-                            className="font-bold text-slate-900 text-base leading-tight hover:text-red-600 transition cursor-pointer"
+                            className="font-bold text-slate-900 text-sm leading-tight hover:text-red-600 transition cursor-pointer truncate"
+                            title={app.name || student.name}
                           >
                             {app.name || student.name}
                           </h3>
                         </div>
 
-                        {/* Identification numbers & authoritiative details */}
-                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 font-medium">
-                          <span className="font-bold text-slate-700 uppercase font-mono">
+                        {/* Dense Single-Line Metadata Subtitle */}
+                        <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500 font-medium truncate">
+                          <span className="font-bold text-slate-700 font-mono">
                             {app.registrationNumber || student.registrationNumber || "NO REG"}
                           </span>
                           {student.gender && <span>• {student.gender}</span>}
                           {student.height && <span>• {student.height}</span>}
-                        </div>
-
-                        <div className="mt-2 space-y-1 text-xs text-slate-600">
                           {student.university && (
-                            <div className="flex items-center gap-1.5 truncate">
-                              <GraduationCap className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              <span className="truncate">{student.university}</span>
-                            </div>
-                          )}
-                          {app.mobileNumber || student.phone ? (
-                            <div className="mt-2 flex items-center gap-1.5 min-w-0">
-                              <a
-                                href={`tel:${app.mobileNumber || student.phone}`}
-                                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs py-1.5 px-2.5 rounded-xl shadow-xs transition"
-                                title="Click to call student directly"
-                              >
-                                <Phone className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate">Call: {app.mobileNumber || student.phone}</span>
-                              </a>
-                              <a
-                                href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold p-1.5 rounded-xl border border-[#25D366]/30 transition shrink-0"
-                                title="Open WhatsApp Chat"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
-                              </a>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-slate-400 text-xs mt-1">
-                              <Phone className="w-3.5 h-3.5 shrink-0" />
-                              <span>No Phone Number</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Form Application Date & Time */}
-                        <div className="mt-2 flex items-center justify-between text-[11px] bg-slate-50 border border-slate-200/80 px-2 py-1 rounded-lg">
-                          <span className="text-slate-400 font-medium flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>Filled:</span>
-                          </span>
-                          <span className="font-bold text-slate-700 font-mono text-[10.5px]">
-                            {formatAppliedDateTime(app.createdAt)}
-                          </span>
-                        </div>
-
-                        {/* 2-Call Verification & Status Box */}
-                        <div className="mt-2.5 bg-slate-50/90 border border-slate-200 rounded-xl p-2.5 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5 font-extrabold text-slate-800">
-                              <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
-                              <span>Calling Status:</span>
-                            </div>
-                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-extrabold border flex items-center gap-1 shadow-2xs ${
-                              app.call2Done
-                                ? "bg-purple-100 text-purple-900 border-purple-300"
-                                : app.call1Done
-                                ? "bg-blue-100 text-blue-900 border-blue-300"
-                                : "bg-amber-100 text-amber-900 border-amber-300"
-                            }`}>
-                              {app.call2Done ? "2 Calls Done" : app.call1Done ? "1st Call Done" : "0/2 Calls"}
+                            <span className="truncate" title={student.university}>
+                              • {student.university}
                             </span>
-                          </div>
-
-                          {/* Call 1 Done Remark */}
-                          {app.call1Done && (
-                            <div className="text-[11px] bg-white border border-blue-100 rounded-lg p-1.5 text-slate-700 space-y-0.5">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-blue-700 flex items-center gap-1">
-                                  <Check className="w-3 h-3 text-blue-600 stroke-3" /> Call 1 Done
-                                </span>
-                                {app.call1At && (
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {formatAppliedDateTime(app.call1At)}
-                                  </span>
-                                )}
-                              </div>
-                              {app.call1Remarks && (
-                                <p className="text-slate-600 italic line-clamp-2 m-0 text-[10.5px]">
-                                  &ldquo;{app.call1Remarks}&rdquo;
-                                </p>
-                              )}
-                            </div>
                           )}
-
-                          {/* Call 2 Done Remark */}
-                          {app.call2Done && (
-                            <div className="text-[11px] bg-white border border-purple-100 rounded-lg p-1.5 text-slate-700 space-y-0.5">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-purple-700 flex items-center gap-1">
-                                  <Check className="w-3 h-3 text-purple-600 stroke-3" /> Call 2 Done
-                                </span>
-                                {app.call2At && (
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {formatAppliedDateTime(app.call2At)}
-                                  </span>
-                                )}
-                              </div>
-                              {app.call2Remarks && (
-                                <p className="text-slate-600 italic line-clamp-2 m-0 text-[10.5px]">
-                                  &ldquo;{app.call2Remarks}&rdquo;
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Call 1 / Call 2 Action Buttons */}
-                          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => openCallLogModal(app, 1)}
-                              className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                                app.call1Done
-                                  ? "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
-                                  : "bg-blue-600 hover:bg-blue-700 text-white"
-                              }`}
-                              title="Log outcome of 1st call"
-                            >
-                              <Phone className="w-3 h-3" />
-                              <span>{app.call1Done ? "Edit Call 1" : "Log Call 1"}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => openCallLogModal(app, 2)}
-                              className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                                app.call2Done
-                                  ? "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
-                                  : "bg-purple-600 hover:bg-purple-700 text-white"
-                              }`}
-                              title="Log outcome of 2nd call"
-                            >
-                              <PhoneCall className="w-3 h-3" />
-                              <span>{app.call2Done ? "Edit Call 2" : "Log Call 2"}</span>
-                            </button>
-                          </div>
                         </div>
 
-                        {/* Candidate Remarks Note Preview Snippet (if custom remark exists and differs) */}
-                        {app.callingRemarks && !app.call1Done && !app.call2Done && (
+                        {/* Interactive Calling Status Pill & Filled Timestamp */}
+                        <div className="mt-2 flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => openCallLogModal(app, app.call1Done ? 2 : 1)}
+                            className={`px-2 py-0.5 rounded-md text-[10.5px] font-extrabold border flex items-center gap-1 transition cursor-pointer hover:shadow-xs ${
+                              app.call2Done
+                                ? "bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100"
+                                : app.call1Done
+                                ? "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100"
+                                : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
+                            }`}
+                            title="Click to log or update calling notes"
+                          >
+                            <PhoneCall className="w-2.5 h-2.5 text-blue-600" />
+                            <span>{app.call2Done ? "2 Calls Done" : app.call1Done ? "1st Call Done" : "0/2 Calls"}</span>
+                          </button>
+
+                          <span className="text-[10px] text-slate-400 font-mono font-medium flex items-center gap-0.5 truncate" title={`Filled: ${formatAppliedDateTime(app.createdAt)}`}>
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span className="truncate">{formatAppliedDateTime(app.createdAt)}</span>
+                          </span>
+                        </div>
+
+                        {/* Calling Note Snippet if logged */}
+                        {(app.call1Remarks || app.call2Remarks || app.callingRemarks) && (
                           <div
                             onClick={() => openInspectCandidate(app)}
-                            className="mt-2 text-[11px] bg-amber-50/90 border border-amber-200 text-amber-900 px-2 py-1 rounded-lg flex items-start gap-1 cursor-pointer hover:bg-amber-100 transition"
-                            title="Click to view or edit remarks"
+                            className="mt-1.5 text-[10px] bg-slate-50 border border-slate-200/80 text-slate-600 px-2 py-1 rounded-md flex items-center gap-1 cursor-pointer hover:bg-slate-100 transition truncate"
+                            title={app.call2Remarks || app.call1Remarks || app.callingRemarks}
                           >
-                            <span className="font-bold shrink-0">Note:</span>
-                            <span className="truncate">{app.callingRemarks}</span>
+                            <span className="font-bold text-slate-700 shrink-0">Note:</span>
+                            <span className="truncate italic">
+                              &ldquo;{app.call2Remarks || app.call1Remarks || app.callingRemarks}&rdquo;
+                            </span>
                           </div>
                         )}
 
-                        {/* Permanent profile status indicator */}
-                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400 font-medium">Student Profile:</span>
-                          <span className="font-bold text-slate-700">
-                            {student.selectionStatus === "SELECTED"
-                              ? "Verified Selected"
-                              : student.selectionStatus === "ON_HOLD"
-                              ? "On Hold"
-                              : student.selectionStatus === "NOT_SELECTED"
-                              ? "Profile Not Selected"
-                              : "Under Review"}
-                          </span>
-                        </div>
-
-                        {/* Email Communication & Delivery Summary */}
+                        {/* Email Tracking & Profile Status Tag Row */}
                         <div
                           onClick={() => openInspectCandidate(app)}
-                          className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg transition"
-                          title="Click to view full email communication, open tracking, and button clicks"
+                          className="mt-1.5 flex items-center justify-between text-[10px] cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded transition"
+                          title="Click to view complete details & email logs"
                         >
-                          <div className="flex items-center gap-1 text-slate-500 font-semibold">
-                            <Mail className="w-3 h-3 text-slate-400" />
-                            <span>Emails:</span>
+                          <div className="flex items-center gap-1 text-slate-500 font-medium">
+                            <Mail className="w-2.5 h-2.5 text-slate-400" />
+                            {getEventEmailLogs(app).length > 0 ? (
+                              <div className="flex items-center gap-1">
+                                <span className="font-bold text-slate-700 bg-slate-100 px-1 rounded">
+                                  {getEventEmailLogs(app).length} Sent
+                                </span>
+                                {getEventEmailLogs(app).some((l) => l.openedAt || (l.openCount && l.openCount > 0)) && (
+                                  <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded">
+                                    Opened
+                                  </span>
+                                )}
+                                {getEventEmailLogs(app).some((l) => l.clickedAction === "CONFIRM_YES") && (
+                                  <span className="font-bold text-teal-700 bg-teal-50 border border-teal-200 px-1 rounded">
+                                    YES
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">No email</span>
+                            )}
                           </div>
-                          {getEventEmailLogs(app).length > 0 ? (
-                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                              {(() => {
-                                const logs: EventEmailLog[] = getEventEmailLogs(app);
-                                const hasOpened = logs.some((l) => l.openedAt || (l.openCount && l.openCount > 0));
-                                const hasConfirmed = logs.some((l) => l.clickedAction === "CONFIRM_YES");
-                                const hasDeclined = logs.some((l) => l.clickedAction === "DECLINE_NO");
-                                const hasJoinedWA = logs.some((l) => l.clickedAction === "JOIN_WHATSAPP");
 
-                                return (
-                                  <>
-                                    <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
-                                      {logs.length} Sent
-                                    </span>
-                                    {hasOpened ? (
-                                      <span className="font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
-                                        <Eye className="w-2.5 h-2.5" /> Opened
-                                      </span>
-                                    ) : (
-                                      <span className="font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
-                                        Unopened
-                                      </span>
-                                    )}
-                                    {hasConfirmed && (
-                                      <span className="font-extrabold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
-                                        <Check className="w-2.5 h-2.5" /> YES
-                                      </span>
-                                    )}
-                                    {hasDeclined && (
-                                      <span className="font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
-                                        <X className="w-2.5 h-2.5" /> NO
-                                      </span>
-                                    )}
-                                    {hasJoinedWA && (
-                                      <span className="font-extrabold text-[#25D366] bg-emerald-50 border border-[#25D366]/40 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5">
-                                        WA
-                                      </span>
-                                    )}
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 font-medium italic">No emails sent</span>
-                          )}
+                          <span className="font-semibold text-slate-500 text-[10px]">
+                            {student.selectionStatus === "SELECTED"
+                              ? "✓ Verified"
+                              : student.selectionStatus === "ON_HOLD"
+                              ? "Hold"
+                              : "Review"}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
-                      <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                        {/* 1-Click Event Selection / Hold / Reject */}
-                        <div className="grid grid-cols-3 gap-1.5">
-                          <button
-                            disabled={actionLoadingId === (app._id || app.id)}
-                            onClick={() => {
-                              if (sendEmailToggle && sStatus !== "SELECTED") {
-                                openSelectionModal([app]);
-                              } else {
-                                handleUpdateStatus(app._id || app.id, "SELECTED");
-                              }
-                            }}
-                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
-                              sStatus === "SELECTED"
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                            }`}
-                            title="Approve & Select Candidate"
-                          >
-                            <Check className="w-3 h-3" />
-                            {sStatus === "SELECTED" ? "Selected" : "Select"}
-                          </button>
+                      {/* Action Footer: Clean 1-Row Grid & Action Buttons */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center gap-1">
+                        {/* 1-Click Event Selection */}
+                        <button
+                          disabled={actionLoadingId === (app._id || app.id)}
+                          onClick={() => {
+                            if (sendEmailToggle && sStatus !== "SELECTED") {
+                              openSelectionModal([app]);
+                            } else {
+                              handleUpdateStatus(app._id || app.id, "SELECTED");
+                            }
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                            sStatus === "SELECTED"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
+                          }`}
+                          title="Select Candidate"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>{sStatus === "SELECTED" ? "Selected" : "Select"}</span>
+                        </button>
 
-                          <button
-                            disabled={actionLoadingId === (app._id || app.id)}
-                            onClick={() => handleUpdateStatus(app._id || app.id, "ON_HOLD")}
-                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
-                              sStatus === "ON_HOLD"
-                                ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                : "bg-slate-100 hover:bg-amber-600 hover:text-white text-slate-700"
-                            }`}
-                            title="Mark Candidate On Hold / Waitlist"
-                          >
-                            <Clock className="w-3 h-3" />
-                            {sStatus === "ON_HOLD" ? "On Hold" : "Hold"}
-                          </button>
+                        {/* Hold */}
+                        <button
+                          disabled={actionLoadingId === (app._id || app.id)}
+                          onClick={() => handleUpdateStatus(app._id || app.id, "ON_HOLD")}
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                            sStatus === "ON_HOLD"
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : "bg-slate-100 hover:bg-amber-600 hover:text-white text-slate-700"
+                          }`}
+                          title="Hold"
+                        >
+                          <Clock className="w-3 h-3" />
+                          <span>Hold</span>
+                        </button>
 
-                          <button
-                            disabled={actionLoadingId === (app._id || app.id)}
-                            onClick={() => handleUpdateStatus(app._id || app.id, "NOT_SELECTED")}
-                            className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
-                              sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
-                                ? "bg-rose-100 text-rose-800 border border-rose-300"
-                                : "bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-700"
-                            }`}
-                            title="Reject Candidate"
-                          >
-                            <X className="w-3 h-3" />
-                            {sStatus === "NOT_SELECTED" || sStatus === "REJECTED" ? "Rejected" : "Reject"}
-                          </button>
-                        </div>
+                        {/* Reject */}
+                        <button
+                          disabled={actionLoadingId === (app._id || app.id)}
+                          onClick={() => handleUpdateStatus(app._id || app.id, "NOT_SELECTED")}
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                            sStatus === "NOT_SELECTED" || sStatus === "REJECTED"
+                              ? "bg-rose-100 text-rose-800 border border-rose-300"
+                              : "bg-slate-100 hover:bg-rose-600 hover:text-white text-slate-700"
+                          }`}
+                          title="Reject"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
 
-                        {/* View Full Profile, Send Custom Message, & Safe Delete */}
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => openCustomEmailModal([app])}
-                            className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 text-blue-700 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-sm"
-                            title="Send Custom Message / Email"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            <span>Message</span>
-                          </button>
+                        {/* Message / Email */}
+                        <button
+                          onClick={() => openCustomEmailModal([app])}
+                          className="p-1.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 text-blue-700 hover:text-white rounded-lg transition flex items-center justify-center shrink-0 shadow-2xs"
+                          title="Send Custom Message / Email"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                        </button>
 
-                          <button
-                            onClick={() => openInspectCandidate(app)}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-center truncate"
-                          >
-                            Full Profile
-                          </button>
-
-                          <button
-                            onClick={() => setDeleteCandidate(app)}
-                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition shrink-0"
-                            title="Remove Application from Event"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {/* Delete Candidate */}
+                        <button
+                          onClick={() => setDeleteCandidate(app)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition shrink-0"
+                          title="Remove Candidate from Event"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
