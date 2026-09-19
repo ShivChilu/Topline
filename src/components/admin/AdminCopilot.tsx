@@ -515,25 +515,20 @@ export default function AdminCopilot() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl shadow-2xl flex items-center gap-2 sm:gap-2.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-red-400/40 border border-white/20 group"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-full shadow-2xl flex items-center gap-2 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-red-400/40 border border-white/20 group"
           title={`Open ${userRole === "event_admin" ? "Event" : "Admin"} AI Copilot (Ctrl+J)`}
         >
           <div className="relative shrink-0">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-spin-slow" />
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <Sparkles className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white animate-spin-slow" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
             </span>
           </div>
-          <div className="flex flex-col text-left">
-            <span className="text-[11px] sm:text-xs font-black tracking-wide uppercase flex items-center gap-1 sm:gap-1.5">
-              <span>{userRole === "event_admin" ? "Event AI Copilot" : "Admin AI Copilot"}</span>
-              <span className="bg-white/20 text-[8px] sm:text-[9px] px-1 py-0.2 rounded font-extrabold uppercase">AI</span>
-            </span>
-            <span className="text-[9px] sm:text-[10px] text-white/80 font-semibold hidden xs:inline">
-              {userRole === "event_admin" ? "Assigned Event DB & Calling" : "Live Data & Actions (Ctrl+J)"}
-            </span>
-          </div>
+          <span className="text-[11px] sm:text-xs font-black tracking-wide uppercase flex items-center gap-1.5 pr-0.5">
+            <span>{userRole === "event_admin" ? "Copilot" : "AI Copilot"}</span>
+            <span className="bg-white/20 text-[8px] sm:text-[9px] px-1 py-0.2 rounded font-extrabold uppercase">AI</span>
+          </span>
         </button>
       )}
 

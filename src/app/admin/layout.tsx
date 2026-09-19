@@ -215,7 +215,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
 
         {/* Page Inner Container */}
-        <main className="flex-grow overflow-auto p-3.5 sm:p-5 md:p-8 lg:p-10 relative">
+        <main className="flex-grow overflow-auto p-3.5 sm:p-5 md:p-8 lg:p-10 pb-28 sm:pb-24 relative">
           {children}
         </main>
 

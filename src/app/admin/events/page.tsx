@@ -379,7 +379,7 @@ export default function AdminEventsPage() {
                         </button>
                       )}
 
-                      {(event.status === "DRAFT" || isScheduled) && (
+                      {(event.status === "DRAFT" || isScheduled) && canForEvent(event._id, "events:create") && (
                         <button
                           onClick={() => handleUpdateStatus(event._id, "OPEN")}
                           className="bg-emerald-600/10 text-emerald-700 border border-emerald-500/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-emerald-600 hover:text-white"
@@ -391,23 +391,27 @@ export default function AdminEventsPage() {
 
                       {event.status === "OPEN" && (
                         <>
-                          <button
-                            onClick={() => setReopenModalEvent(event)}
-                            className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-300 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1"
-                            title="Add extra capacity / slots to this open event"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>+Slots</span>
-                          </button>
-                          <button
-                            onClick={() => handleUpdateStatus(event._id, "CLOSED")}
-                            className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
-                          >
-                            Close Form
-                          </button>
+                          {canForEvent(event._id, "events:reopen_slots") && (
+                            <button
+                              onClick={() => setReopenModalEvent(event)}
+                              className="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-300 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1"
+                              title="Add extra capacity / slots to this open event"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>+Slots</span>
+                            </button>
+                          )}
+                          {canForEvent(event._id, "events:close_resume") && (
+                            <button
+                              onClick={() => handleUpdateStatus(event._id, "CLOSED")}
+                              className="bg-red-500/10 text-red-655 border border-red-550/20 px-3 py-1 rounded text-xs font-bold transition hover:bg-red-655 hover:text-white"
+                            >
+                              Close Form
+                            </button>
+                          )}
                         </>
                       )}
-                      {event.status !== "ARCHIVED" && (
+                      {event.status !== "ARCHIVED" && canForEvent(event._id, "events:archive") && (
                         <button
                           onClick={() => handleArchive(event._id)}
                           className="p-2 bg-amber-50 hover:bg-amber-600 border border-amber-200 text-amber-700 hover:text-white rounded transition"
@@ -416,13 +420,15 @@ export default function AdminEventsPage() {
                           <Archive className="w-4 h-4" />
                         </button>
                       )}
-                      <button
-                        onClick={() => openDeleteModal(event)}
-                        className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
-                        title="Delete Event"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canForEvent(event._id, "events:delete") && (
+                        <button
+                          onClick={() => openDeleteModal(event)}
+                          className="p-2 bg-rose-50 hover:bg-red-600 border border-rose-200 text-red-655 hover:text-white rounded transition"
+                          title="Delete Event"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
