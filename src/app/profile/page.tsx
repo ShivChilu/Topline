@@ -725,18 +725,37 @@ export default function StudentProfilePage() {
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          completeness.percentage === 100 ? "bg-emerald-500" : "bg-red-600"
-                        }`}
-                        style={{ width: `${completeness.percentage}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-600">
-                      {completeness.percentage}% Profile Complete
-                    </span>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("edit")}
+                      className="group flex items-center gap-2 cursor-pointer transition hover:opacity-90 active:scale-98 text-left"
+                      title="Click to complete 100% of your profile"
+                    >
+                      <div className="w-24 bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200/80">
+                        <div
+                          className={`h-2.5 rounded-full transition-all duration-500 ${
+                            completeness.percentage === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-red-600 to-amber-500"
+                          }`}
+                          style={{ width: `${completeness.percentage}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-[11px] font-extrabold text-slate-700 group-hover:text-red-600 transition">
+                        {completeness.percentage}% Profile Complete
+                      </span>
+                    </button>
+
+                    {completeness.percentage < 100 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("edit")}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer transition active:scale-95 shadow-2xs"
+                        title="Click to complete 100% of your profile details"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-600" />
+                        <span>Complete 100% →</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -758,7 +777,7 @@ export default function StudentProfilePage() {
                   className="flex-1 sm:flex-initial bg-red-600 hover:bg-red-700 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-1.5 active:scale-95"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Browse Events</span>
+                  <span>Apply for an Event</span>
                 </Link>
               )}
 
