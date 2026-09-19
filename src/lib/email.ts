@@ -1726,3 +1726,160 @@ export async function sendAdminPendingReviewAlertEmail({
   }
 }
 
+/**
+ * Sends a high-conversion referral reminder/nudge email to students who created a referral code
+ * but have not yet invited any friends.
+ */
+export async function sendReferralReminderEmail({
+  studentName,
+  email,
+  referralCode,
+  upiId,
+  rewardAmount = 150,
+  userId,
+}: {
+  studentName: string;
+  email: string;
+  referralCode: string;
+  upiId?: string | null;
+  rewardAmount?: number;
+  userId?: string | null;
+}) {
+  try {
+    if (!email || !email.includes("@")) {
+      return { success: false, message: "Invalid recipient email" };
+    }
+
+    const baseUrl = getAppBaseUrl();
+    const inviteUrl = `${baseUrl}/register?ref=${encodeURIComponent(referralCode)}`;
+    const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+      `Hey! Join Topline with my referral code "${referralCode}" to work premium catering and hospitality gigs: ${inviteUrl}`
+    )}`;
+    const profileUrl = `${baseUrl}/profile`;
+
+    const subject = `🚀 Share your Topline Code "${referralCode}" & Earn up to ₹${rewardAmount} per Friend!`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 20px; color: #e2e8f0; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border-radius: 24px; overflow: hidden; border: 1px solid #1f2937; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: linear-gradient(135deg, #4c1d95 0%, #312e81 50%, #0f172a 100%); padding: 36px 28px; text-align: center; border-bottom: 1px solid rgba(147, 51, 234, 0.2); }
+        .badge { display: inline-block; background: #f59e0b; color: #020617; font-weight: 900; font-size: 11px; padding: 5px 14px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .title { font-size: 24px; font-weight: 900; color: #ffffff; margin: 0 0 8px 0; line-height: 1.3; }
+        .subtitle { font-size: 14px; color: #c4b5fd; margin: 0; }
+        .content { padding: 32px 28px; background: #111827; }
+        .greeting { font-size: 16px; color: #f8fafc; font-weight: 700; margin-bottom: 16px; }
+        .p-text { font-size: 14px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0; }
+        
+        .code-box { background: #0f172a; border: 2px dashed #9333ea; border-radius: 20px; padding: 22px; text-align: center; margin: 24px 0; }
+        .code-label { font-size: 11px; font-weight: 800; color: #a855f7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .code-val { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 32px; font-weight: 900; color: #fbbf24; letter-spacing: 4px; margin: 4px 0 10px 0; }
+        .link-text { font-size: 11px; color: #94a3b8; word-break: break-all; font-family: monospace; background: rgba(255, 255, 255, 0.05); padding: 8px 12px; border-radius: 10px; display: inline-block; margin-top: 4px; }
+        
+        .steps-card { background: rgba(255, 255, 255, 0.03); border: 1px solid #1f2937; border-radius: 18px; padding: 20px; margin: 24px 0; }
+        .step-item { display: flex; align-items: flex-start; margin-bottom: 14px; }
+        .step-num { width: 26px; height: 26px; border-radius: 8px; background: #9333ea; color: #ffffff; font-weight: 900; font-size: 12px; display: inline-block; text-align: center; line-height: 26px; margin-right: 12px; flex-shrink: 0; }
+        .step-text { font-size: 13px; color: #e2e8f0; line-height: 1.4; }
+        
+        .btn-whatsapp { display: block; background: #25D366; color: #ffffff !important; text-decoration: none; font-weight: 900; font-size: 15px; padding: 15px 24px; border-radius: 16px; text-align: center; margin: 16px 0 10px 0; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3); }
+        .btn-portal { display: block; background: #374151; color: #f8fafc !important; text-decoration: none; font-weight: 800; font-size: 13px; padding: 12px 20px; border-radius: 14px; text-align: center; margin-top: 8px; }
+        
+        .upi-badge { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 12px; padding: 10px 14px; border-radius: 12px; margin-top: 20px; text-align: center; }
+        
+        .footer { padding: 24px 28px; background: #0f172a; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #1f2937; line-height: 1.5; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="badge">🎁 Earn Unlimited Cash</div>
+          <h1 class="title">Share Your Code & Start Earning</h1>
+          <p class="subtitle">Topline Student Referral Program</p>
+        </div>
+
+        <div class="content">
+          <div class="greeting">Hey ${studentName || "Student Partner"},</div>
+          <p class="p-text">
+            You have already activated your Topline referral code, but haven't invited anyone yet! 
+            Invite your college batchmates and friends to earn up to <strong>₹${rewardAmount} in cash</strong> for every friend who joins and works their first event shift.
+          </p>
+
+          <div class="code-box">
+            <div class="code-label">Your Unique Referral Code</div>
+            <div class="code-val">${referralCode}</div>
+            <div class="link-text">${inviteUrl}</div>
+          </div>
+
+          <div class="steps-card">
+            <div style="font-weight: 800; color: #f8fafc; font-size: 13px; text-transform: uppercase; margin-bottom: 12px;">How to earn in 3 easy steps:</div>
+            
+            <div class="step-item">
+              <span class="step-num">1</span>
+              <div class="step-text"><strong>Share your link or code</strong> with your college classmates on WhatsApp, Instagram, or Telegram.</div>
+            </div>
+            
+            <div class="step-item">
+              <span class="step-num">2</span>
+              <div class="step-text"><strong>Friend completes 1st shift:</strong> Your friend signs up, applies for a catering gig, and attends duty.</div>
+            </div>
+            
+            <div class="step-item" style="margin-bottom: 0;">
+              <span class="step-num">3</span>
+              <div class="step-text"><strong>Receive up to ₹${rewardAmount} Cash:</strong> Reward is deposited directly to your registered UPI ID!</div>
+            </div>
+          </div>
+
+          <a href="${whatsappShareUrl}" target="_blank" class="btn-whatsapp">
+            📲 Share Code on WhatsApp Now
+          </a>
+
+          <a href="${profileUrl}" target="_blank" class="btn-portal">
+            📊 View Your Rewards Hub
+          </a>
+
+          ${upiId ? `
+            <div class="upi-badge">
+              💳 Payouts are deposited directly to your UPI: <strong>${upiId}</strong>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Hospitality Operations.<br>
+          For questions or assistance, contact student support at <strong>7986955634</strong>.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const res = await sendEmail({ to: email, subject, html });
+
+    // Track in EmailLog
+    if (res.success && userId) {
+      await prisma.emailLog.create({
+        data: {
+          userId,
+          recipientEmail: email,
+          recipientName: studentName,
+          templateName: "Referral Activation & Boost Reminder",
+          subject,
+          bodyPreview: `Referral code: ${referralCode}. Earn up to ₹${rewardAmount} per friend.`,
+          sentAt: new Date(),
+        },
+      }).catch((err) => console.error("Error logging referral reminder email:", err));
+    }
+
+    return res;
+  } catch (error: any) {
+    console.error("sendReferralReminderEmail error:", error);
+    return { success: false, message: error.message };
+  }
+}
+

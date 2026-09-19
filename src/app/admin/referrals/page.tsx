@@ -29,6 +29,9 @@ import {
   MapPin,
   Briefcase,
   AlertTriangle,
+  Mail,
+  Send,
+  Share2,
 } from "lucide-react";
 
 export default function AdminReferralsPage() {
@@ -57,6 +60,11 @@ export default function AdminReferralsPage() {
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Referral Reminder Email States
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [showBroadcastModal, setShowBroadcastModal] = useState<boolean>(false);
+  const [broadcasting, setBroadcasting] = useState<boolean>(false);
 
   const fetchReferrals = async () => {
     try {
@@ -200,6 +208,62 @@ export default function AdminReferralsPage() {
     }
   };
 
+  // Handler for sending individual referral reminder email
+  const handleSendIndividualReminder = async (referrer: any) => {
+    try {
+      setSendingReminderId(referrer.id);
+      const res = await fetch("/api/admin/referrals/remind", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referrerId: referrer.id }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFeedback({
+          type: "success",
+          message: `🚀 Referral reminder email sent to ${referrer.name} (${referrer.email || "email"}) with code ${referrer.referralCode}!`,
+        });
+      } else {
+        setFeedback({ type: "error", message: json.message || "Failed to send reminder email." });
+      }
+    } catch (err: any) {
+      console.error("Reminder email error:", err);
+      setFeedback({ type: "error", message: "Network error sending reminder email." });
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
+  // Handler for sending bulk broadcast reminder email to all inactive referrers
+  const handleSendBulkReminder = async () => {
+    try {
+      setBroadcasting(true);
+      const res = await fetch("/api/admin/referrals/remind", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "ALL_INACTIVE" }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFeedback({ type: "success", message: `🚀 Success! ${json.message}` });
+        setShowBroadcastModal(false);
+      } else {
+        setFeedback({ type: "error", message: json.message || "Failed to send broadcast emails." });
+      }
+    } catch (err: any) {
+      console.error("Broadcast error:", err);
+      setFeedback({ type: "error", message: "Network error sending broadcast emails." });
+    } finally {
+      setBroadcasting(false);
+    }
+  };
+
+  // Inactive Referrers (0 invited friends)
+  const inactiveReferrers = useMemo(() => {
+    if (!data?.referrers) return [];
+    return data.referrers.filter((r: any) => (r.totalInvited || 0) === 0);
+  }, [data]);
+
   // Filtered referrers list
   const filteredReferrers = useMemo(() => {
     if (!data?.referrers) return [];
@@ -223,6 +287,7 @@ export default function AdminReferralsPage() {
 
       if (!matchesSearch) return false;
 
+      if (statusFilter === "ZERO_INVITED") return (r.totalInvited || 0) === 0;
       if (statusFilter === "UNPAID") return r.unpaidBalance > 0;
       if (statusFilter === "PAID") return r.paidCount > 0;
       if (statusFilter === "ACTIVE") return r.totalInvited > 0;
@@ -487,6 +552,7 @@ export default function AdminReferralsPage() {
             {activeView === "referrers" ? (
               <>
                 <option value="ALL">All Referrers</option>
+                <option value="ZERO_INVITED">0 Referrals (Inactive - Needs Boost)</option>
                 <option value="UNPAID">Has Unpaid (Pending ₹)</option>
                 <option value="PAID">Has Settled Payouts</option>
                 <option value="ACTIVE">Active (1+ Invited)</option>
@@ -506,6 +572,40 @@ export default function AdminReferralsPage() {
           </select>
         </div>
       </div>
+
+      {/* INACTIVE REFERRERS BOOST CAMPAIGN BANNER */}
+      {inactiveReferrers.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-extrabold text-amber-950">
+                  {inactiveReferrers.length} Student{inactiveReferrers.length > 1 ? "s" : ""} Created Referral Codes with 0 Referrals
+                </h3>
+                <span className="bg-amber-200/80 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Needs Boost
+                </span>
+              </div>
+              <p className="text-xs text-amber-800/90 mt-0.5">
+                Send an engaging referral activation nudge email with their unique code, signup link, and ₹150 earnings reminder.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowBroadcastModal(true)}
+              className="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-xs cursor-pointer transition"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Email All Inactive ({inactiveReferrers.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* VIEW 1: REFERRER SUMMARY & PAYOUT MANAGEMENT TABLE */}
       {activeView === "referrers" && (
@@ -642,6 +742,23 @@ export default function AdminReferralsPage() {
                         </td>
                         <td className="p-3.5 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {totalInvited === 0 && (
+                              <button
+                                type="button"
+                                disabled={sendingReminderId === ref.id}
+                                onClick={() => handleSendIndividualReminder(ref)}
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                                title={`Send referral activation reminder email to ${ref.name}`}
+                              >
+                                {sendingReminderId === ref.id ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                                ) : (
+                                  <Mail className="w-3.5 h-3.5 text-amber-600" />
+                                )}
+                                <span>{sendingReminderId === ref.id ? "Sending..." : "Nudge Code"}</span>
+                              </button>
+                            )}
+
                             <button
                               type="button"
                               onClick={() => setSelectedReferrerDetail(ref)}
@@ -1487,6 +1604,122 @@ export default function AdminReferralsPage() {
               >
                 <span>{updatingReward ? "Saving..." : `Set Payout to ₹${selectedReward}`}</span>
                 <CheckCircle2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* BROADCAST REFERRAL REMINDER EMAIL MODAL */}
+      {/* ---------------------------------------------------- */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 border border-slate-200 shadow-2xl space-y-5 relative">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-700 font-bold">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Send Referral Activation Nudge
+                  </h3>
+                  <p className="text-xs text-slate-500">Remind students to share their referral codes</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Campaign Summary */}
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  Target Audience: Inactive Referrers
+                </span>
+                <span className="bg-amber-200 text-amber-900 font-extrabold text-xs px-2.5 py-0.5 rounded-full">
+                  {inactiveReferrers.length} Student{inactiveReferrers.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                These students generated a personal referral code on Topline ODC, but haven&apos;t referred any candidates yet.
+              </p>
+            </div>
+
+            {/* Preview Email Template Box */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Email Content Preview
+              </label>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2 text-slate-700">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="font-bold text-slate-900">Subject:</span>
+                  <span className="text-slate-600">💸 Earn up to ₹150 cash! Your Topline referral code is ready</span>
+                </div>
+                <div className="space-y-1.5 text-slate-600 text-[11.5px] leading-relaxed pt-1">
+                  <p><strong>Hi [Student Name],</strong></p>
+                  <p>You created your Topline referral code, but haven&apos;t invited anyone yet!</p>
+                  <div className="bg-white border border-slate-200 rounded-xl p-2.5 my-2 flex items-center justify-between">
+                    <span className="font-mono font-black text-red-600 text-sm">[STUDENT_CODE]</span>
+                    <span className="text-[10.5px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
+                      Earn up to ₹150 / Friend
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-500">
+                    Includes direct registration link + 1-click WhatsApp share button + verified UPI handle.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Inactive List Preview */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                Recipients List ({inactiveReferrers.length}):
+              </span>
+              <div className="max-h-28 overflow-y-auto bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-1 text-xs">
+                {inactiveReferrers.map((r: any) => (
+                  <div key={r.id} className="flex items-center justify-between text-[11px] text-slate-700 py-0.5 border-b border-slate-100 last:border-0">
+                    <span className="font-bold truncate max-w-[180px]">{r.name}</span>
+                    <span className="font-mono text-red-600 font-bold bg-red-50 px-1.5 py-0.2 rounded border border-red-200 text-[10px]">{r.referralCode}</span>
+                    <span className="text-slate-400 font-mono text-[10px]">{r.phone}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowBroadcastModal(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={broadcasting || inactiveReferrers.length === 0}
+                onClick={handleSendBulkReminder}
+                className="bg-amber-600 hover:bg-amber-700 active:scale-95 disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                {broadcasting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Broadcasting Emails...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Send to All {inactiveReferrers.length} Students</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
