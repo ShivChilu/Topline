@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { prisma } from "@/lib/prisma";
 import EventApplicationForm from "@/components/EventApplicationForm";
+import EventAssistantChatbot from "@/components/events/EventAssistantChatbot";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle, Gift, ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -278,6 +279,12 @@ export default async function EventDetailsPage(props: {
         </div>
 
       </main>
+      <EventAssistantChatbot
+        eventId={event.id}
+        eventName={event.name}
+        eventDate={event.date ? String(event.date) : undefined}
+        eventLocation={event.location || undefined}
+      />
       <Footer />
     </div>
   );

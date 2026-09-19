@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
+import EventAssistantChatbot from "@/components/events/EventAssistantChatbot";
 import {
   Calendar,
   MapPin,
@@ -577,6 +578,7 @@ export default async function OpportunitiesPage(props: {
           </div>
         )}
       </main>
+      <EventAssistantChatbot eventName="Upcoming Topline Events" />
       <Footer />
     </div>
   );
