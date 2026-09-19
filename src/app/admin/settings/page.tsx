@@ -18,6 +18,8 @@ export default function AdminSettingsPage() {
   const [dosText, setDosText] = useState("");
   const [dontsText, setDontsText] = useState("");
   const [referralRewardAmount, setReferralRewardAmount] = useState<number | string>(25);
+  const [autoSelectionEmailsEnabled, setAutoSelectionEmailsEnabled] = useState(true);
+  const [defaultAutoSelectionDelayHours, setDefaultAutoSelectionDelayHours] = useState<number | string>(2);
 
   // Admin users state
   const [admins, setAdmins] = useState<any[]>([]);
@@ -73,6 +75,8 @@ export default function AdminSettingsPage() {
         setDosText(Array.isArray(val.dos) ? val.dos.join("\n") : "");
         setDontsText(Array.isArray(val.donts) ? val.donts.join("\n") : "");
         setReferralRewardAmount(val.referralRewardAmount !== undefined ? val.referralRewardAmount : 25);
+        setAutoSelectionEmailsEnabled(val.autoSelectionEmailsEnabled !== undefined ? Boolean(val.autoSelectionEmailsEnabled) : true);
+        setDefaultAutoSelectionDelayHours(val.defaultAutoSelectionDelayHours !== undefined ? val.defaultAutoSelectionDelayHours : 2);
       }
     } catch (err) {
       console.error(err);
@@ -128,6 +132,8 @@ export default function AdminSettingsPage() {
       dos,
       donts,
       referralRewardAmount: Number(referralRewardAmount) >= 20 ? Number(referralRewardAmount) : 25,
+      autoSelectionEmailsEnabled,
+      defaultAutoSelectionDelayHours: Math.max(0, Number(defaultAutoSelectionDelayHours) || 0),
     };
 
     try {
@@ -446,6 +452,70 @@ export default function AdminSettingsPage() {
                   ₹{amt}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Automated Candidate Selection & Email Settings (Super Admin) */}
+        <div className="bg-gradient-to-br from-emerald-50 via-teal-50/50 to-slate-50 p-5 rounded-2xl border border-emerald-200/80 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              <div>
+                <h3 className="font-extrabold text-sm text-emerald-950 uppercase tracking-wider">
+                  Automated Candidate Selection & WhatsApp Mails
+                </h3>
+                <p className="text-[11px] text-emerald-800/80">
+                  Automatically approves and dispatches selection emails with 1-click WhatsApp unlock after students apply.
+                </p>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-emerald-300 shadow-2xs">
+              <input
+                type="checkbox"
+                checked={autoSelectionEmailsEnabled}
+                onChange={(e) => setAutoSelectionEmailsEnabled(e.target.checked)}
+                className="accent-emerald-600 rounded w-4 h-4 cursor-pointer"
+              />
+              <span className={`text-xs font-black ${autoSelectionEmailsEnabled ? "text-emerald-700" : "text-slate-400"}`}>
+                {autoSelectionEmailsEnabled ? "GLOBAL AUTO-SEND: ACTIVE" : "GLOBAL AUTO-SEND: DISABLED"}
+              </span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Default Delay Timer (Hours after applying)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="72"
+                  step="0.5"
+                  value={defaultAutoSelectionDelayHours}
+                  onChange={(e) => setDefaultAutoSelectionDelayHours(e.target.value)}
+                  placeholder="2"
+                  className="w-28 bg-white border border-emerald-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                />
+                <span className="text-xs text-slate-600 font-semibold">Hours (Default: 2 Hours)</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Set to 0 for immediate dispatch. Default is 2 hours.
+              </p>
+            </div>
+
+            <div className="bg-white/90 p-3 rounded-xl border border-emerald-200/80 text-[11.5px] text-slate-700 space-y-1">
+              <div className="font-extrabold text-emerald-900 flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Strict Safety Guards:</span>
+              </div>
+              <ul className="list-disc list-inside text-slate-600 space-y-0.5 text-[11px]">
+                <li><strong>WhatsApp Guard:</strong> Only sends if the event has a valid WhatsApp group link saved.</li>
+                <li><strong>Idempotency:</strong> Guaranteed to send strictly <strong>only once</strong> per candidate.</li>
+                <li><strong>Granular Control:</strong> Can also be turned off per event in the event dashboard or edit page.</li>
+              </ul>
             </div>
           </div>
         </div>

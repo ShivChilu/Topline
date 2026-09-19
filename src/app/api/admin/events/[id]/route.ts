@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { Role, PaymentStatus } from "@prisma/client";
 
 import { hasEventPermission } from "@/lib/permissions";
+import { processPendingAutoSelectionEmails } from "@/lib/auto-selection-processor";
 
 async function getLoggedInAdmin() {
   const cookieStore = await cookies();
@@ -122,7 +123,7 @@ export async function PATCH(
       }
 
       const onlyUpdatingStatus = Object.keys(body).length === 1 && body.status !== undefined;
-      const onlyUpdatingWhatsapp = Object.keys(body).every((k) => ["whatsappGroupLink"].includes(k));
+      const onlyUpdatingWhatsapp = Object.keys(body).every((k) => ["whatsappGroupLink", "autoSendSelectionEmail", "autoSendSelectionDelayHours"].includes(k));
 
       if (onlyUpdatingStatus) {
         if (!hasEventPermission(admin, "events:close_resume", eventId)) {
@@ -144,6 +145,12 @@ export async function PATCH(
     const allowedData: any = {};
     if (body.whatsappGroupLink !== undefined) {
       allowedData.whatsappGroupLink = body.whatsappGroupLink && body.whatsappGroupLink.trim() ? body.whatsappGroupLink.trim() : null;
+    }
+    if (body.autoSendSelectionEmail !== undefined) {
+      allowedData.autoSendSelectionEmail = Boolean(body.autoSendSelectionEmail);
+    }
+    if (body.autoSendSelectionDelayHours !== undefined) {
+      allowedData.autoSendSelectionDelayHours = Number(body.autoSendSelectionDelayHours);
     }
     if (body.name !== undefined) allowedData.name = body.name;
     if (body.date !== undefined) allowedData.date = new Date(body.date);
@@ -179,6 +186,13 @@ export async function PATCH(
       where: { id: eventId },
       data: allowedData,
     });
+
+    // If WhatsApp link or auto-send toggle was updated, trigger non-blocking sweep for this event
+    if (body.whatsappGroupLink !== undefined || body.autoSendSelectionEmail !== undefined) {
+      processPendingAutoSelectionEmails(eventId).catch((err) =>
+        console.error("[AutoSelection Sweep on Event Update Error]", err)
+      );
+    }
 
     if (Array.isArray(body.customFormFields)) {
       // Clear existing form field relations for this event

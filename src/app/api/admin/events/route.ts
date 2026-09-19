@@ -100,6 +100,8 @@ export async function POST(request: Request) {
         visibility: visibility === "HIDDEN" ? EventVisibility.HIDDEN : EventVisibility.VISIBLE,
         allowedGender: body.allowedGender === "FEMALE_ONLY" ? "FEMALE_ONLY" : body.allowedGender === "MALE_ONLY" ? "MALE_ONLY" : "ALL",
         whatsappGroupLink: body.whatsappGroupLink && body.whatsappGroupLink.trim() ? body.whatsappGroupLink.trim() : null,
+        autoSendSelectionEmail: body.autoSendSelectionEmail !== undefined ? Boolean(body.autoSendSelectionEmail) : true,
+        autoSendSelectionDelayHours: body.autoSendSelectionDelayHours !== undefined ? Number(body.autoSendSelectionDelayHours) : 2,
         clientId: clientId || null,
       },
     });

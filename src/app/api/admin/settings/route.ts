@@ -22,6 +22,22 @@ export async function POST(request: Request) {
       create: { key: "homepage_content", value: body },
     });
 
+    if (body.autoSelectionEmailsEnabled !== undefined) {
+      await prisma.setting.upsert({
+        where: { key: "auto_selection_emails_enabled" },
+        update: { value: Boolean(body.autoSelectionEmailsEnabled) },
+        create: { key: "auto_selection_emails_enabled", value: Boolean(body.autoSelectionEmailsEnabled) },
+      });
+    }
+
+    if (body.defaultAutoSelectionDelayHours !== undefined) {
+      await prisma.setting.upsert({
+        where: { key: "default_auto_selection_delay_hours" },
+        update: { value: Number(body.defaultAutoSelectionDelayHours) || 2 },
+        create: { key: "default_auto_selection_delay_hours", value: Number(body.defaultAutoSelectionDelayHours) || 2 },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: "Settings updated successfully!",

@@ -531,6 +531,33 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     }
   };
 
+  // Toggle Auto-Send Selection Emails for this event
+  const [togglingAutoSelection, setTogglingAutoSelection] = useState(false);
+  const handleToggleAutoSelection = async () => {
+    if (!event) return;
+    const nextState = event.autoSendSelectionEmail !== undefined ? !event.autoSendSelectionEmail : false;
+    try {
+      setTogglingAutoSelection(true);
+      const res = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoSendSelectionEmail: nextState }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEvent((prev: any) => ({ ...prev, autoSendSelectionEmail: nextState }));
+        showToast(`Auto-selection emails ${nextState ? "Enabled (Active)" : "Disabled (Off)"} for this event.`);
+      } else {
+        showToast(data.message || "Failed to update auto-selection setting.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating auto-selection setting.");
+    } finally {
+      setTogglingAutoSelection(false);
+    }
+  };
+
   // Export .vcf contacts for fast import into phone / WhatsApp
   const handleExportVcf = (targetApps?: any[]) => {
     const list = targetApps || (statusFilter === "ALL" ? applications.filter(a => a.status === "SELECTED" || a.status === "CONFIRMED") : filteredAndSortedApplications);
@@ -632,6 +659,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     fetchEventData();
     fetchEmailTemplates();
     fetchUserRole();
+
+    // Trigger non-blocking sweep for eligible pending auto-selections on dashboard visit
+    fetch(`/api/admin/events/auto-selection-cron?eventId=${eventId}`).catch(() => {});
   }, [eventId]);
 
   // Handle single candidate status update with optimistic UI
@@ -1814,6 +1844,46 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </>
             )}
           </div>
+        </div>
+
+        {/* Auto-Selection Email Status Bar & Quick Toggle */}
+        <div className="pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-slate-400 font-medium">⚡ Auto-Selection Mails:</span>
+            {event.autoSendSelectionEmail !== false ? (
+              event.whatsappGroupLink ? (
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold text-[11px] flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-emerald-400" />
+                  <span>ACTIVE ({event.autoSendSelectionDelayHours ?? 2}h delay after candidate applies)</span>
+                </span>
+              ) : (
+                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold text-[11px] flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-amber-400" />
+                  <span>PAUSED (Enter WhatsApp link above to activate auto-send)</span>
+                </span>
+              )
+            ) : (
+              <span className="bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md font-bold text-[11px]">
+                DISABLED (Manual Selection Only)
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleToggleAutoSelection}
+            disabled={togglingAutoSelection}
+            className={`px-2.5 py-1 rounded-lg font-bold text-[11px] border transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+              event.autoSendSelectionEmail !== false
+                ? "bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/30"
+                : "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30"
+            }`}
+          >
+            {togglingAutoSelection ? (
+              <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+            ) : null}
+            <span>{event.autoSendSelectionEmail !== false ? "Turn Off Auto-Mails" : "Turn On Auto-Mails"}</span>
+          </button>
         </div>
       </div>
 

@@ -257,6 +257,8 @@ model Event {
   visibility                  EventVisibility      @default(VISIBLE)
   allowedGender               AllowedGender        @default(ALL)
   whatsappGroupLink           String?
+  autoSendSelectionEmail      Boolean              @default(true)
+  autoSendSelectionDelayHours Int                  @default(2)
   
   clientId                    String?
   client                      Client?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
@@ -365,6 +367,7 @@ model Application {
   confirmedAt          DateTime?
   eventSelectionEmailSentAt DateTime?
   eventDeselectionEmailSentAt DateTime?
+  autoSelectionEmailSentAt DateTime?
 
   // Calling Admin and manual sorting metrics
   lastActionAt         DateTime                 @default(now())
@@ -402,6 +405,7 @@ model Application {
   @@unique([eventId, userId])
   @@unique([eventId, registrationNumber])
   @@index([eventId, status])
+  @@index([eventId, autoSelectionEmailSentAt])
   @@index([mobileNumber])
   @@index([registrationNumber])
   @@index([lastActionAt])

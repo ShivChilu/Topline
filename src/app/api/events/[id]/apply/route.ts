@@ -6,6 +6,7 @@ import { getStudentProfileCompletion } from "@/lib/profile-completion";
 import { isEventPast } from "@/lib/event-utils";
 import { ApplicationStatus, EventStatus } from "@prisma/client";
 import { checkAndNotifyAdminPendingReview } from "@/lib/pending-review-notifier";
+import { processPendingAutoSelectionEmails } from "@/lib/auto-selection-processor";
 
 export async function POST(
   request: Request,
@@ -206,6 +207,11 @@ export async function POST(
     // Trigger background check to notify admin if >= 5 candidates are pending review
     checkAndNotifyAdminPendingReview().catch((err) =>
       console.error("[Pending Review Alert Error]", err)
+    );
+
+    // Trigger non-blocking auto-selection email processor sweep
+    processPendingAutoSelectionEmails(eventId).catch((err) =>
+      console.error("[Auto Selection Trigger Error]", err)
     );
 
     return NextResponse.json({

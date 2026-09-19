@@ -55,6 +55,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [endTime, setEndTime] = useState("");
   const [workType, setWorkType] = useState("Catering Staff");
   const [whatsappGroupLink, setWhatsappGroupLink] = useState("");
+  const [autoSendSelectionEmail, setAutoSendSelectionEmail] = useState(true);
+  const [autoSendSelectionDelayHours, setAutoSendSelectionDelayHours] = useState<number | string>(2);
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
   const [dressCode, setDressCode] = useState("");
@@ -126,6 +128,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           setEndTime(ev.endTime || "");
           setWorkType(ev.workType || "Catering Staff");
           setWhatsappGroupLink(ev.whatsappGroupLink || "");
+          setAutoSendSelectionEmail(ev.autoSendSelectionEmail !== undefined ? Boolean(ev.autoSendSelectionEmail) : true);
+          setAutoSendSelectionDelayHours(ev.autoSendSelectionDelayHours !== undefined ? ev.autoSendSelectionDelayHours : 2);
           setDescription(ev.description || "");
           setInstructions(ev.instructions || "");
           setDressCode(ev.dressCode || "");
@@ -271,6 +275,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       visibility,
       allowedGender,
       whatsappGroupLink: whatsappGroupLink.trim() || null,
+      autoSendSelectionEmail,
+      autoSendSelectionDelayHours: Math.max(0, Number(autoSendSelectionDelayHours) || 0),
       status,
       scheduledPublishAt,
       customFormFields: customFields,
@@ -461,6 +467,84 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   placeholder="https://maps.app.goo.gl/..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-red-600 text-sm font-medium"
                 />
+              </div>
+            </div>
+
+            {/* WhatsApp Group Link & Auto-Selection System */}
+            <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Event WhatsApp Group Link (Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={whatsappGroupLink}
+                  onChange={(e) => setWhatsappGroupLink(e.target.value)}
+                  placeholder="https://chat.whatsapp.com/ABCxyz123..."
+                  className="w-full bg-emerald-50/40 border border-emerald-300 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-emerald-600 text-sm font-medium"
+                />
+                <span className="text-[11px] text-slate-500 block mt-1">
+                  Used for automated selection emails and candidate confirmation passes.
+                </span>
+              </div>
+
+              {/* Auto-Send Selection Emails Feature Box */}
+              <div className="bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 border border-emerald-200 rounded-xl p-3.5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <span className="text-xs font-black text-emerald-950 uppercase tracking-wider block">
+                        Auto-Send Selection Email with WhatsApp Link
+                      </span>
+                      <span className="text-[11px] text-emerald-800">
+                        Automatically approves candidates and sends selection email with WhatsApp invite.
+                      </span>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={autoSendSelectionEmail}
+                      onChange={(e) => setAutoSendSelectionEmail(e.target.checked)}
+                      className="accent-emerald-600 rounded w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span className={`text-[11px] font-bold ${autoSendSelectionEmail ? "text-emerald-700" : "text-slate-400"}`}>
+                      {autoSendSelectionEmail ? "AUTO-SEND: ON" : "AUTO-SEND: OFF"}
+                    </span>
+                  </label>
+                </div>
+
+                {autoSendSelectionEmail && (
+                  <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <label className="font-bold text-slate-700 whitespace-nowrap">
+                        ⏱ Delay Timer:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="72"
+                        step="0.5"
+                        value={autoSendSelectionDelayHours}
+                        onChange={(e) => setAutoSendSelectionDelayHours(e.target.value)}
+                        className="w-20 bg-white border border-emerald-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
+                      />
+                      <span className="text-slate-600 font-semibold">Hours after candidate applies (Default: 2h)</span>
+                    </div>
+
+                    {!whatsappGroupLink.trim() ? (
+                      <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        ⚠️ Paused until WhatsApp link is entered
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        ✓ Ready to auto-send with WhatsApp link
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
