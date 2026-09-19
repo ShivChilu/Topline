@@ -270,77 +270,6 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     setCallLogModalOpen(true);
   };
 
-  const handleSaveCallLog = async (data: {
-    round: 1 | 2;
-    remarks: string;
-    updateStatus?: string;
-  }) => {
-    if (!callLogApp) return;
-    const appId = callLogApp._id || callLogApp.id;
-
-    try {
-      setSavingCallLog(true);
-      const payload: any = {
-        ids: [appId],
-      };
-
-      if (data.round === 1) {
-        payload.call1Done = true;
-        payload.call1Remarks = data.remarks;
-      } else {
-        payload.call2Done = true;
-        payload.call2Remarks = data.remarks;
-      }
-
-      if (data.updateStatus) {
-        payload.status = data.updateStatus;
-      }
-
-      const res = await fetch("/api/admin/applications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const resData = await res.json();
-      if (res.ok && resData.success) {
-        setApplications((prev) =>
-          prev.map((a) => {
-            if ((a._id || a.id) === appId) {
-              return {
-                ...a,
-                ...(data.round === 1
-                  ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
-                  : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
-                ...(data.updateStatus ? { status: data.updateStatus } : {}),
-              };
-            }
-            return a;
-          })
-        );
-        if (inspectCandidate && (inspectCandidate._id || inspectCandidate.id) === appId) {
-          setInspectCandidate((prev: any) => ({
-            ...prev,
-            ...(data.round === 1
-              ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
-              : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
-            ...(data.updateStatus ? { status: data.updateStatus } : {}),
-          }));
-        }
-        showToast(`Call ${data.round} logged successfully!`);
-        setCallLogModalOpen(false);
-        setCallLogApp(null);
-      } else {
-        alert(resData.message || "Failed to log call outcome.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Network error. Failed to save call record.");
-    } finally {
-      setSavingCallLog(false);
-    }
-  };
-
   const openSelectionModal = (targetList: any[]) => {
     if (!targetList || targetList.length === 0) return;
     setSelectionTargetApps(targetList);
@@ -1275,6 +1204,128 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     setWeightFilter("ALL");
     setCityFilter("ALL");
     setUniversityFilter("ALL");
+  };
+
+  const currentCallAppIndex = useMemo(() => {
+    if (!callLogApp) return -1;
+    return filteredAndSortedApplications.findIndex(
+      (a) => (a._id || a.id) === (callLogApp._id || callLogApp.id)
+    );
+  }, [callLogApp, filteredAndSortedApplications]);
+
+  const handleNextCallCandidate = () => {
+    if (!callLogApp) return;
+    const currentIndex = filteredAndSortedApplications.findIndex(
+      (a) => (a._id || a.id) === (callLogApp._id || callLogApp.id)
+    );
+    if (currentIndex >= 0 && currentIndex < filteredAndSortedApplications.length - 1) {
+      const nextApp = filteredAndSortedApplications[currentIndex + 1];
+      setCallLogApp(nextApp);
+      setCallLogRound(nextApp.call1Done ? 2 : 1);
+    } else {
+      showToast("Reached end of candidate queue!");
+    }
+  };
+
+  const handlePrevCallCandidate = () => {
+    if (!callLogApp) return;
+    const currentIndex = filteredAndSortedApplications.findIndex(
+      (a) => (a._id || a.id) === (callLogApp._id || callLogApp.id)
+    );
+    if (currentIndex > 0) {
+      const prevApp = filteredAndSortedApplications[currentIndex - 1];
+      setCallLogApp(prevApp);
+      setCallLogRound(prevApp.call1Done ? 2 : 1);
+    }
+  };
+
+  const handleSaveCallLog = async (data: {
+    round: 1 | 2;
+    remarks: string;
+    updateStatus?: string;
+    advanceToNext?: boolean;
+  }) => {
+    if (!callLogApp) return;
+    const appId = callLogApp._id || callLogApp.id;
+
+    try {
+      setSavingCallLog(true);
+      const payload: any = {
+        ids: [appId],
+      };
+
+      if (data.round === 1) {
+        payload.call1Done = true;
+        payload.call1Remarks = data.remarks;
+      } else {
+        payload.call2Done = true;
+        payload.call2Remarks = data.remarks;
+      }
+
+      if (data.updateStatus) {
+        payload.status = data.updateStatus;
+      }
+
+      const res = await fetch("/api/admin/applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        const updatedStatus = data.updateStatus ? data.updateStatus.toUpperCase() : undefined;
+        setApplications((prev) =>
+          prev.map((a) => {
+            if ((a._id || a.id) === appId) {
+              return {
+                ...a,
+                ...(data.round === 1
+                  ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
+                  : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
+                ...(updatedStatus ? { status: updatedStatus } : {}),
+              };
+            }
+            return a;
+          })
+        );
+        if (inspectCandidate && (inspectCandidate._id || inspectCandidate.id) === appId) {
+          setInspectCandidate((prev: any) => ({
+            ...prev,
+            ...(data.round === 1
+              ? { call1Done: true, call1Remarks: data.remarks, call1At: new Date().toISOString() }
+              : { call2Done: true, call2Remarks: data.remarks, call2At: new Date().toISOString() }),
+            ...(updatedStatus ? { status: updatedStatus } : {}),
+          }));
+        }
+        showToast(`Call ${data.round} logged for ${callLogApp.name || "candidate"}!`);
+
+        if (data.advanceToNext) {
+          const currentIndex = filteredAndSortedApplications.findIndex(
+            (a) => (a._id || a.id) === appId
+          );
+          if (currentIndex >= 0 && currentIndex < filteredAndSortedApplications.length - 1) {
+            const nextApp = filteredAndSortedApplications[currentIndex + 1];
+            setCallLogApp(nextApp);
+            setCallLogRound(nextApp.call1Done ? 2 : 1);
+          } else {
+            showToast("Queue complete! All candidate calls logged.");
+            setCallLogModalOpen(false);
+            setCallLogApp(null);
+          }
+        } else {
+          setCallLogModalOpen(false);
+          setCallLogApp(null);
+        }
+      } else {
+        showToast(resData.message || "Failed to log call outcome.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Network error. Failed to save call record.");
+    } finally {
+      setSavingCallLog(false);
+    }
   };
 
   // Statistics
@@ -3073,9 +3124,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           <>
                             <a
                               href={`tel:${app.mobileNumber || student.phone}`}
-                              className="bg-black/75 hover:bg-emerald-600 active:bg-emerald-700 backdrop-blur-md text-white font-bold text-xs sm:text-[10.5px] px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center gap-1.5 sm:gap-1 shadow-md active:scale-95 touch-manipulation"
-                              title={`Call ${app.mobileNumber || student.phone}`}
-                              onClick={(e) => e.stopPropagation()}
+                              className="bg-black/75 hover:bg-emerald-600 active:bg-emerald-700 backdrop-blur-md text-white font-bold text-xs sm:text-[10.5px] px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center gap-1.5 sm:gap-1 shadow-md active:scale-95 touch-manipulation cursor-pointer"
+                              title={`Call ${app.mobileNumber || student.phone} & log outcome`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCallLogModal(app, app.call1Done ? 2 : 1);
+                              }}
                             >
                               <Phone className="w-4 h-4 sm:w-3 sm:h-3 text-emerald-400 group-hover/btn:text-white" />
                               <span>Call</span>
@@ -3165,17 +3219,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           <button
                             type="button"
                             onClick={() => openCallLogModal(app, app.call1Done ? 2 : 1)}
-                            className={`px-2 py-0.5 rounded-md text-[10.5px] font-extrabold border flex items-center gap-1 transition cursor-pointer hover:shadow-xs ${
+                            className={`px-2 py-0.5 rounded-md text-[10.5px] font-extrabold border flex items-center gap-1 transition cursor-pointer hover:shadow-xs active:scale-95 ${
                               app.call2Done
                                 ? "bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100"
                                 : app.call1Done
                                 ? "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100"
                                 : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
                             }`}
-                            title="Click to log or update calling notes"
+                            title="Click to open Calling Assistant & log remarks"
                           >
                             <PhoneCall className="w-2.5 h-2.5 text-blue-600" />
-                            <span>{app.call2Done ? "2 Calls Done" : app.call1Done ? "1st Call Done" : "0/2 Calls"}</span>
+                            <span>{app.call2Done ? "2 Calls Done" : app.call1Done ? "1st Call Done" : "0/2 Calls (Log)"}</span>
                           </button>
 
                           <span className="text-[10px] text-slate-400 font-mono font-medium flex items-center gap-0.5 truncate" title={`Filled: ${formatAppliedDateTime(app.createdAt)}`}>
@@ -4974,6 +5028,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           application={callLogApp}
           initialRound={callLogRound}
           isSaving={savingCallLog}
+          currentIndex={currentCallAppIndex >= 0 ? currentCallAppIndex : undefined}
+          totalCount={filteredAndSortedApplications.length}
+          onNext={handleNextCallCandidate}
+          onPrev={handlePrevCallCandidate}
           onClose={() => {
             setCallLogModalOpen(false);
             setCallLogApp(null);
