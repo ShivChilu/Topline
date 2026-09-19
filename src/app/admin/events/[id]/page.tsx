@@ -1849,7 +1849,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         {/* Auto-Selection Email Status Bar & Quick Toggle */}
         <div className="pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-slate-400 font-medium">⚡ Auto-Selection Mails:</span>
+            <span className="text-slate-400 font-medium flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Auto-Selection Mails:</span>
+            </span>
             {event.autoSendSelectionEmail !== false ? (
               event.whatsappGroupLink ? (
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold text-[11px] flex items-center gap-1">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Trash, Eye, Shield, Trash2, ArrowLeft, Copy, Sparkles, CalendarClock, Clock, Check, RefreshCw, X } from "lucide-react";
+import { Plus, Trash, Eye, Shield, Trash2, ArrowLeft, Copy, Sparkles, CalendarClock, Clock, Check, RefreshCw, X, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import TimePicker12Hour from "@/components/TimePicker12Hour";
 
@@ -371,7 +371,7 @@ function CreateEventForm() {
               disabled={isCloningLoading}
               className="w-full bg-white border border-amber-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
             >
-              <option value="">⚡ Select an existing event to clone...</option>
+              <option value="">Select an existing event to clone...</option>
               {existingEvents.map((ev) => (
                 <option key={ev._id || ev.id} value={ev._id || ev.id}>
                   {ev.name} — ({new Date(ev.date).toLocaleDateString("en-GB")}) • {ev.location}
@@ -523,7 +523,8 @@ function CreateEventForm() {
 
             <div>
               <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center gap-1.5">
-                <span>📲 Event WhatsApp Group Link (Optional)</span>
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Event WhatsApp Group Link (Optional)</span>
               </label>
               <input
                 type="url"
@@ -567,8 +568,9 @@ function CreateEventForm() {
               {autoSendSelectionEmail && (
                 <div className="pt-2 border-t border-emerald-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2">
-                    <label className="font-bold text-slate-700 whitespace-nowrap">
-                      ⏱ Delay Timer:
+                    <label className="font-bold text-slate-700 whitespace-nowrap flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Delay Timer:</span>
                     </label>
                     <input
                       type="number"
@@ -584,11 +586,13 @@ function CreateEventForm() {
 
                   {!whatsappGroupLink.trim() ? (
                     <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                      ⚠️ Paused until WhatsApp link is entered
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Paused until WhatsApp link is entered</span>
                     </span>
                   ) : (
                     <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                      ✓ Ready to auto-send with WhatsApp link
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Ready to auto-send with WhatsApp link</span>
                     </span>
                   )}
                 </div>

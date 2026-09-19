@@ -665,8 +665,9 @@ export default function AdminSettingsPage() {
 
                 {/* Quick Add Event Dropdown & Button */}
                 <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-2">
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase">
-                    ➕ Add Event (Present in system at this time)
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                    <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Add Event (Present in system at this time)</span>
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <select
@@ -1066,7 +1067,10 @@ export default function AdminSettingsPage() {
                             ))}
                           </div>
                         ) : (
-                          <span className="text-rose-500 font-bold text-[11px] block mb-1">⚠️ No events assigned</span>
+                          <span className="text-rose-500 font-bold text-[11px] inline-flex items-center gap-1 mb-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            No events assigned
+                          </span>
                         )}
                         {adm.role === "event_admin" && (
                           <div className="flex items-center gap-1 flex-wrap">
@@ -1281,8 +1285,8 @@ export default function AdminSettingsPage() {
 
                   {/* Quick Add Event Dropdown & Button */}
                   <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-2">
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase">
-                      ➕ Add Event (Present in system at this time)
+                    <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5 text-emerald-600" /> Add Event (Present in system at this time)
                     </label>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <select
@@ -1340,7 +1344,9 @@ export default function AdminSettingsPage() {
 
                     {editingAssignedEvents.length === 0 ? (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                        <p className="text-xs font-bold text-amber-800">⚠️ No events currently assigned</p>
+                        <p className="text-xs font-bold text-amber-800 flex items-center justify-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> No events currently assigned
+                        </p>
                         <p className="text-[11px] text-amber-600 mt-0.5">
                           Select an event above and click &quot;+ Add Event&quot;, or click &quot;+ Add All&quot; to assign events.
                         </p>
