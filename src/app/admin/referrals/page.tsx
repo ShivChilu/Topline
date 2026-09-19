@@ -67,6 +67,44 @@ export default function AdminReferralsPage() {
   const [showBroadcastModal, setShowBroadcastModal] = useState<boolean>(false);
   const [broadcasting, setBroadcasting] = useState<boolean>(false);
 
+  // Email History & Audit Inspection Modal State
+  const [emailHistoryModalData, setEmailHistoryModalData] = useState<{
+    title: string;
+    subtitle: string;
+    recipientName?: string;
+    recipientEmail?: string;
+    logs: any[];
+  } | null>(null);
+
+  // Helper for human-readable relative/formatted timestamp
+  const formatSentTime = (dateStr?: string | null) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24 && now.getDate() === d.getDate()) {
+      return `Today at ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+    }
+    if (diffDays === 1) {
+      return `Yesterday at ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+    }
+    return d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const fetchReferrals = async () => {
     try {
       setLoading(true);
@@ -118,35 +156,19 @@ export default function AdminReferralsPage() {
     }
   };
 
-  const handleCopyUpi = (upi: string) => {
-    if (!upi || upi === "Not Provided" || upi === "N/A") return;
-    navigator.clipboard.writeText(upi);
-    setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2500);
-  };
-
-  const handleCopyPhone = (phone: string) => {
-    if (!phone || phone === "N/A") return;
-    navigator.clipboard.writeText(phone);
-    setCopiedPhone(phone);
-    setTimeout(() => setCopiedPhone(null), 2500);
-  };
-
-  const openSettleReferrerModal = (ref: any) => {
+  const openSettleReferrerModal = (referrer: any) => {
+    setSettlingReferrer(referrer);
     setSettlingReferralItem(null);
-    setSettlingReferrer(ref);
-    const activeRate = data?.metrics?.rewardPerReferral || 150;
-    setCustomPayoutAmount(String(ref.unpaidBalance || ref.rewardAmount || activeRate));
+    setCustomPayoutAmount(referrer.unpaidBalance ? String(referrer.unpaidBalance) : "0");
     setPaidReference("");
     setPayoutNotes("");
     setSendEmailOnSettle(true);
   };
 
   const openSettleReferralItemModal = (item: any) => {
-    setSettlingReferrer(null);
     setSettlingReferralItem(item);
-    const activeRate = data?.metrics?.rewardPerReferral || 150;
-    setCustomPayoutAmount(String(item.rewardAmount || activeRate));
+    setSettlingReferrer(null);
+    setCustomPayoutAmount(item.rewardAmount ? String(item.rewardAmount) : "50");
     setPaidReference("");
     setPayoutNotes("");
     setSendEmailOnSettle(true);
@@ -159,29 +181,41 @@ export default function AdminReferralsPage() {
     setPayoutNotes("");
   };
 
-  const handleSettlePayout = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!settlingReferrer && !settlingReferralItem) return;
+  const handleCopyUpi = (upi: string) => {
+    if (!upi || upi === "Not Provided" || upi === "N/A") return;
+    navigator.clipboard.writeText(upi);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
 
-    const parsedAmount = Number(customPayoutAmount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      setFeedback({ type: "error", message: "Please enter a valid payout amount in ₹." });
+  const handleCopyPhone = (phone: string) => {
+    if (!phone || phone === "N/A") return;
+    navigator.clipboard.writeText(phone);
+    setCopiedPhone(phone);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
+
+  const handleConfirmSettlement = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const amount = Number(customPayoutAmount);
+    if (!amount || amount <= 0) {
+      setFeedback({ type: "error", message: "Please enter a valid payout amount (min ₹1)." });
       return;
     }
 
     setSettlingLoading(true);
     try {
       const payload: any = {
-        customRewardAmount: parsedAmount,
-        paidReference: paidReference.trim() || "Offline UPI Settlement",
-        notes: payoutNotes.trim() || undefined,
+        amount,
+        paidReference: paidReference.trim() || undefined,
+        payoutNotes: payoutNotes.trim() || undefined,
         sendEmail: sendEmailOnSettle,
       };
 
-      if (settlingReferralItem) {
-        payload.referralId = settlingReferralItem.referralId || settlingReferralItem.id;
-      } else if (settlingReferrer) {
+      if (settlingReferrer) {
         payload.referrerId = settlingReferrer.id;
+      } else if (settlingReferralItem) {
+        payload.referralId = settlingReferralItem.referralId || settlingReferralItem.id;
       }
 
       const res = await fetch("/api/admin/referrals", {
@@ -192,18 +226,19 @@ export default function AdminReferralsPage() {
 
       const json = await res.json();
       if (res.ok && json.success) {
-        setFeedback({ type: "success", message: json.message || "Payout settled successfully and email sent!" });
-        closeSettleModal();
+        setFeedback({
+          type: "success",
+          message: `Payout of ₹${amount} successfully settled & marked as PAID!`,
+        });
+        setSettlingReferrer(null);
+        setSettlingReferralItem(null);
         fetchReferrals();
-        if (selectedReferrerDetail) {
-          setSelectedReferrerDetail(null);
-        }
       } else {
-        setFeedback({ type: "error", message: json.message || "Failed to settle payout." });
+        setFeedback({ type: "error", message: json.message || "Failed to record payout settlement." });
       }
     } catch (err: any) {
-      console.error("Settlement error:", err);
-      setFeedback({ type: "error", message: "Network error during settlement." });
+      console.error("Payout settlement error:", err);
+      setFeedback({ type: "error", message: "Network error processing payout settlement." });
     } finally {
       setSettlingLoading(false);
     }
@@ -224,6 +259,7 @@ export default function AdminReferralsPage() {
           type: "success",
           message: `🚀 Referral reminder email sent to ${referrer.name} (${referrer.email || "email"}) with code ${referrer.referralCode}!`,
         });
+        await fetchReferrals();
       } else {
         setFeedback({ type: "error", message: json.message || "Failed to send reminder email." });
       }
@@ -248,6 +284,7 @@ export default function AdminReferralsPage() {
       if (res.ok && json.success) {
         setFeedback({ type: "success", message: `🚀 Success! ${json.message}` });
         setShowBroadcastModal(false);
+        await fetchReferrals();
       } else {
         setFeedback({ type: "error", message: json.message || "Failed to send broadcast emails." });
       }
@@ -281,6 +318,40 @@ export default function AdminReferralsPage() {
           type: "success",
           message: `🚀 ${json.message}`,
         });
+        // Optimistically update selectedReferrerDetail in memory
+        setSelectedReferrerDetail((prev: any) => {
+          if (!prev) return prev;
+          const nowIso = new Date().toISOString();
+          const updatedFriends = (prev.referredFriends || []).map((f: any) => {
+            if ((f.id && f.id === friend.id) || (f.referralId && f.referralId === friend.referralId)) {
+              const existingLogs = Array.isArray(f.progressEmailLogs) ? f.progressEmailLogs : [];
+              return {
+                ...f,
+                lastProgressEmailSentAt: nowIso,
+                lastProgressEmailType: nudgeType,
+                progressEmailsCount: (f.progressEmailsCount || 0) + 1,
+                progressEmailLogs: [
+                  {
+                    id: `log-${Date.now()}`,
+                    templateName: nudgeType === "ASK_FRIEND_APPLY" ? "Referral Progress Nudge (Ask to Apply)" : "Referral Progress Notice (Friend Applied)",
+                    subject: nudgeType === "ASK_FRIEND_APPLY" ? `Ask ${friend.name} to Apply` : `${friend.name} Applied`,
+                    sentAt: nowIso,
+                  },
+                  ...existingLogs,
+                ],
+              };
+            }
+            return f;
+          });
+          return {
+            ...prev,
+            totalEmailsSent: (prev.totalEmailsSent || 0) + 1,
+            lastEmailSentAt: nowIso,
+            referredFriends: updatedFriends,
+          };
+        });
+        // Refresh background state
+        fetchReferrals();
       } else {
         setFeedback({
           type: "error",
@@ -629,6 +700,19 @@ export default function AdminReferralsPage() {
               <p className="text-xs text-amber-800/90 mt-0.5">
                 Send an engaging referral activation nudge email with their unique code, signup link, and ₹150 earnings reminder.
               </p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                {metrics.lastBroadcastSentAt ? (
+                  <span className="inline-flex items-center gap-1.5 bg-amber-100/90 text-amber-950 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-amber-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Last Campaign: {formatSentTime(metrics.lastBroadcastSentAt)} ({metrics.lastBroadcastCount || inactiveReferrers.length} delivered)</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-amber-800/90 text-[11px] font-medium">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>No bulk reminder campaign dispatched yet</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -671,7 +755,7 @@ export default function AdminReferralsPage() {
               <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 uppercase tracking-wider text-[11px] border-b border-slate-200">
-                    <th className="p-3.5">Referrer Name</th>
+                    <th className="p-3.5">Referrer Name & Email Status</th>
                     <th className="p-3.5">Phone & Reg No.</th>
                     <th className="p-3.5">Referral Code</th>
                     <th className="p-3.5">Student UPI ID</th>
@@ -691,15 +775,42 @@ export default function AdminReferralsPage() {
                     return (
                       <tr key={ref.id} className="hover:bg-slate-50/70 transition group">
                         <td className="p-3.5 font-bold text-slate-900">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedReferrerDetail(ref)}
-                            className="text-left font-bold text-slate-900 hover:text-red-600 transition flex items-center gap-1.5 cursor-pointer"
-                            title="Click to view all friends referred by this student"
-                          >
-                            <span>{ref.name}</span>
-                            <Eye className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition" />
-                          </button>
+                          <div className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReferrerDetail(ref)}
+                              className="text-left font-bold text-slate-900 hover:text-red-600 transition flex items-center gap-1.5 cursor-pointer"
+                              title="Click to view all friends referred by this student"
+                            >
+                              <span>{ref.name}</span>
+                              <Eye className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition" />
+                            </button>
+
+                            {ref.lastEmailSentAt ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEmailHistoryModalData({
+                                    title: `Email Activity for ${ref.name}`,
+                                    subtitle: `All automated & manual emails sent to ${ref.email}`,
+                                    recipientName: ref.name,
+                                    recipientEmail: ref.email,
+                                    logs: ref.emailLogs || [],
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded-full transition cursor-pointer"
+                                title="Click to view full email communication history"
+                              >
+                                <Mail className="w-3 h-3 text-blue-600" />
+                                <span>Emailed {formatSentTime(ref.lastEmailSentAt)} ({ref.totalEmailsSent || 1}x)</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                                <Clock className="w-3 h-3" />
+                                <span>Never emailed</span>
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3.5 text-slate-600">
                           <div className="font-mono text-[11px] font-bold text-slate-800 flex items-center gap-1">
@@ -784,15 +895,31 @@ export default function AdminReferralsPage() {
                                 type="button"
                                 disabled={sendingReminderId === ref.id}
                                 onClick={() => handleSendIndividualReminder(ref)}
-                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 disabled:opacity-50"
-                                title={`Send referral activation reminder email to ${ref.name}`}
+                                className={`font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 text-xs cursor-pointer active:scale-95 disabled:opacity-50 ${
+                                  ref.lastReminderSentAt
+                                    ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                    : "bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300"
+                                }`}
+                                title={
+                                  ref.lastReminderSentAt
+                                    ? `Last reminded: ${formatSentTime(ref.lastReminderSentAt)}. Click to send another reminder email.`
+                                    : `Send referral activation reminder email to ${ref.name}`
+                                }
                               >
                                 {sendingReminderId === ref.id ? (
                                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                                ) : ref.lastReminderSentAt ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 ) : (
                                   <Mail className="w-3.5 h-3.5 text-amber-600" />
                                 )}
-                                <span>{sendingReminderId === ref.id ? "Sending..." : "Nudge Code"}</span>
+                                <span>
+                                  {sendingReminderId === ref.id
+                                    ? "Sending..."
+                                    : ref.lastReminderSentAt
+                                    ? `Reminded (${formatSentTime(ref.lastReminderSentAt)})`
+                                    : "Nudge Code"}
+                                </span>
                               </button>
                             )}
 
@@ -1126,20 +1253,46 @@ export default function AdminReferralsPage() {
                         {/* Status Badge & Contact & Settle Buttons */}
                         <div className="flex items-center gap-2 flex-wrap">
                           {hasApplications && !isFriendPaid && (
-                            <button
-                              type="button"
-                              disabled={sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED`}
-                              onClick={() => handleSendProgressNudge(friend, "FRIEND_APPLIED")}
-                              className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
-                              title={`Send update email to ${selectedReferrerDetail.name} that ${friend.name} has applied for an event`}
-                            >
-                              {sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED` ? (
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                              ) : (
-                                <Send className="w-3.5 h-3.5 text-blue-600" />
-                              )}
-                              <span>Notify {selectedReferrerDetail.name.split(" ")[0]}: Applied</span>
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {friend.lastProgressEmailSentAt ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEmailHistoryModalData({
+                                      title: `Progress Email History for ${friend.name}`,
+                                      subtitle: `Emails sent to ${selectedReferrerDetail.name} (${selectedReferrerDetail.email}) regarding ${friend.name}`,
+                                      recipientName: selectedReferrerDetail.name,
+                                      recipientEmail: selectedReferrerDetail.email,
+                                      logs: friend.progressEmailLogs || [],
+                                    })
+                                  }
+                                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                                  title="Click to view sent notice timestamp and details"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Notice Sent ({formatSentTime(friend.lastProgressEmailSentAt)})</span>
+                                </button>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                disabled={sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED`}
+                                onClick={() => handleSendProgressNudge(friend, "FRIEND_APPLIED")}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
+                                title={`Send update email to ${selectedReferrerDetail.name} that ${friend.name} has applied for an event`}
+                              >
+                                {sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED` ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                                ) : (
+                                  <Send className="w-3.5 h-3.5 text-blue-600" />
+                                )}
+                                <span>
+                                  {friend.lastProgressEmailSentAt
+                                    ? `Resend Notice (${friend.progressEmailsCount || 1}x)`
+                                    : `Notify ${selectedReferrerDetail.name.split(" ")[0]}: Applied`}
+                                </span>
+                              </button>
+                            </div>
                           )}
 
                           {isFriendPaid ? (
@@ -1332,13 +1485,49 @@ export default function AdminReferralsPage() {
                           </div>
                         ) : (
                           <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                            <div className="flex items-start gap-2 text-amber-900">
-                              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                              <div>
-                                <span className="font-extrabold block">Has not applied for any event yet</span>
-                                <p className="text-[11px] text-amber-800 mt-0.5">
-                                  This student registered using {selectedReferrerDetail.name}&apos;s link but hasn&apos;t filled out an event application yet.
-                                </p>
+                            <div className="space-y-1.5">
+                              <div className="flex items-start gap-2 text-amber-900">
+                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="font-extrabold block">Has not applied for any event yet</span>
+                                  <p className="text-[11px] text-amber-800 mt-0.5">
+                                    This student registered using {selectedReferrerDetail.name}&apos;s link but hasn&apos;t filled out an event application yet.
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Live Email Status */}
+                              <div className="flex items-center gap-2">
+                                {friend.lastProgressEmailSentAt ? (
+                                  <div className="inline-flex items-center gap-1.5 font-bold text-emerald-900 bg-emerald-100/90 border border-emerald-300 px-2.5 py-1 rounded-lg">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span>
+                                      Push Email Sent • {formatSentTime(friend.lastProgressEmailSentAt)} ({friend.progressEmailsCount || 1}x sent)
+                                    </span>
+                                    {friend.progressEmailLogs && friend.progressEmailLogs.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEmailHistoryModalData({
+                                            title: `Push Email Logs for ${friend.name}`,
+                                            subtitle: `Emails sent to ${selectedReferrerDetail.name} (${selectedReferrerDetail.email}) regarding ${friend.name}`,
+                                            recipientName: selectedReferrerDetail.name,
+                                            recipientEmail: selectedReferrerDetail.email,
+                                            logs: friend.progressEmailLogs || [],
+                                          })
+                                        }
+                                        className="ml-1 text-[11px] underline text-emerald-950 hover:text-black font-extrabold cursor-pointer"
+                                      >
+                                        View Log
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="inline-flex items-center gap-1.5 font-medium text-amber-800 bg-amber-100/60 border border-amber-200 px-2.5 py-1 rounded-lg text-[11px]">
+                                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                    <span>Push reminder email has not been sent yet</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -1347,7 +1536,11 @@ export default function AdminReferralsPage() {
                                 type="button"
                                 disabled={sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_ASK_FRIEND_APPLY`}
                                 onClick={() => handleSendProgressNudge(friend, "ASK_FRIEND_APPLY")}
-                                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 disabled:opacity-50 text-white font-extrabold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                                className={`px-3 py-1.5 rounded-xl font-extrabold flex items-center gap-1.5 transition shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-white ${
+                                  friend.lastProgressEmailSentAt
+                                    ? "bg-amber-700 hover:bg-amber-800"
+                                    : "bg-amber-600 hover:bg-amber-700"
+                                }`}
                                 title={`Send email to ${selectedReferrerDetail.name} asking them to push ${friend.name} to apply for an event`}
                               >
                                 {sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_ASK_FRIEND_APPLY` ? (
@@ -1355,7 +1548,11 @@ export default function AdminReferralsPage() {
                                 ) : (
                                   <Mail className="w-3.5 h-3.5 text-white" />
                                 )}
-                                <span>Email {selectedReferrerDetail.name.split(" ")[0]}: Push Friend</span>
+                                <span>
+                                  {friend.lastProgressEmailSentAt
+                                    ? `Resend Push Email (${friend.progressEmailsCount || 1}x)`
+                                    : `Email ${selectedReferrerDetail.name.split(" ")[0]}: Push Friend`}
+                                </span>
                               </button>
 
                               {cleanFriendPhone && (
@@ -1501,7 +1698,7 @@ export default function AdminReferralsPage() {
               );
             })()}
 
-            <form onSubmit={handleSettlePayout} className="space-y-3.5">
+            <form onSubmit={handleConfirmSettlement} className="space-y-3.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                   Custom Payout Amount (₹) *
@@ -1791,6 +1988,94 @@ export default function AdminReferralsPage() {
                     <span>Send to All {inactiveReferrers.length} Students</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* EMAIL COMMUNICATION HISTORY & AUDIT MODAL */}
+      {/* ---------------------------------------------------- */}
+      {emailHistoryModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 border border-slate-200 shadow-2xl space-y-4 relative max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-700 font-bold">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">{emailHistoryModalData.title}</h3>
+                  <p className="text-xs text-slate-500">{emailHistoryModalData.subtitle}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailHistoryModalData(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 space-y-2.5 pr-1">
+              {(!emailHistoryModalData.logs || emailHistoryModalData.logs.length === 0) ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-semibold bg-slate-50 rounded-2xl border border-slate-100">
+                  <Mail className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
+                  <span>No recorded email dispatches found for this specific filter.</span>
+                </div>
+              ) : (
+                emailHistoryModalData.logs.map((log: any, idx: number) => {
+                  const formattedTime = new Date(log.sentAt).toLocaleString("en-GB", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+
+                  return (
+                    <div
+                      key={log.id || idx}
+                      className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 space-y-1.5 text-xs shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-extrabold text-slate-900">{log.templateName || "Referral Notification"}</span>
+                        <span className="text-[10.5px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Delivered</span>
+                        </span>
+                      </div>
+                      <div className="text-slate-700 font-medium text-[11.5px] bg-white p-2 rounded-xl border border-slate-100">
+                        {log.subject}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-200/60">
+                        <span className="truncate max-w-[200px]">
+                          To: {log.recipientEmail || emailHistoryModalData.recipientEmail || "Student"}
+                        </span>
+                        <span className="font-mono text-[10.5px] text-slate-400 shrink-0">{formattedTime}</span>
+                      </div>
+                      {log.openedAt && (
+                        <div className="text-[10px] text-blue-600 font-bold flex items-center gap-1 pt-0.5">
+                          <Eye className="w-3 h-3" />
+                          <span>Opened {log.openCount || 1} time(s) • Last: {formatSentTime(log.openedAt)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setEmailHistoryModalData(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Close History
               </button>
             </div>
           </div>

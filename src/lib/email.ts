@@ -1896,6 +1896,7 @@ export async function sendReferralProgressNudgeEmail({
   referrerCode,
   refereeName,
   refereePhone,
+  refereeId,
   nudgeType,
   eventName,
   eventDate,
@@ -1909,6 +1910,7 @@ export async function sendReferralProgressNudgeEmail({
   referrerCode?: string | null;
   refereeName: string;
   refereePhone?: string | null;
+  refereeId?: string | null;
   nudgeType: "ASK_FRIEND_APPLY" | "FRIEND_APPLIED";
   eventName?: string | null;
   eventDate?: string | Date | null;
@@ -2073,9 +2075,9 @@ export async function sendReferralProgressNudgeEmail({
           recipientName: referrerName,
           templateName: isAskApply ? "Referral Progress Nudge (Ask to Apply)" : "Referral Progress Notice (Friend Applied)",
           subject,
-          bodyPreview: isAskApply
+          bodyPreview: `[refereeId:${refereeId || ""}|refereeName:${refereeName || ""}] ${isAskApply
             ? `${refereeName} registered with code ${referrerCode}. Ask them to apply for an event to earn up to ₹${rewardAmount}.`
-            : `${refereeName} applied for ${eventName || "event"}. Reward unlocks after attendance.`,
+            : `${refereeName} applied for ${eventName || "event"}. Reward unlocks after attendance.`}`,
           sentAt: new Date(),
         },
       }).catch((err) => console.error("Error logging referral progress email:", err));

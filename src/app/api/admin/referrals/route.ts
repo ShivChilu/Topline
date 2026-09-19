@@ -111,9 +111,55 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    // 3. Referrers aggregation map
+    // 3. Referrers aggregation map & email history query
     const activeReward = await getActiveReferralRewardAmount();
     const referrersMap = new Map<string, any>();
+
+    // Fetch all referral-related email logs and audit logs
+    const [allReferralEmailLogs, referralAuditLogs] = await Promise.all([
+      prisma.emailLog.findMany({
+        where: {
+          OR: [
+            { templateName: { contains: "Referral" } },
+            { subject: { contains: "Referral" } },
+            { subject: { contains: "reward" } },
+            { templateName: { contains: "Nudge" } },
+            { templateName: { contains: "Reminder" } },
+          ],
+        },
+        select: {
+          id: true,
+          userId: true,
+          recipientEmail: true,
+          recipientName: true,
+          templateName: true,
+          subject: true,
+          bodyPreview: true,
+          sentAt: true,
+          openedAt: true,
+          openCount: true,
+          clickedAt: true,
+          clickCount: true,
+          clickedAction: true,
+        },
+        orderBy: { sentAt: "desc" },
+      }),
+      prisma.auditLog.findMany({
+        where: {
+          action: {
+            in: ["SEND_REFERRAL_PROGRESS_NUDGE", "SEND_REFERRAL_REMINDER_EMAILS"],
+          },
+        },
+        select: {
+          id: true,
+          action: true,
+          target: true,
+          metadata: true,
+          timestamp: true,
+        },
+        orderBy: { timestamp: "desc" },
+      }),
+    ]);
 
     // Fetch all users who have generated a referral code
     const usersWithCodes = await prisma.user.findMany({
@@ -132,6 +178,19 @@ export async function GET(request: Request) {
     });
 
     usersWithCodes.forEach((u) => {
+      const userEmailLogs = allReferralEmailLogs.filter(
+        (log) => log.userId === u.id || (u.email && log.recipientEmail.toLowerCase() === u.email.toLowerCase())
+      );
+      const userReminderLogs = userEmailLogs.filter(
+        (log) =>
+          log.templateName?.includes("Reminder") ||
+          log.templateName?.includes("Activation") ||
+          log.subject?.toLowerCase().includes("code") ||
+          log.subject?.toLowerCase().includes("earn")
+      );
+      const lastReminderLog = userReminderLogs[0] || null;
+      const lastEmailLog = userEmailLogs[0] || null;
+
       referrersMap.set(u.id, {
         id: u.id,
         name: u.name,
@@ -149,6 +208,11 @@ export async function GET(request: Request) {
         qualifiedReferralIds: [] as string[],
         referredFriends: [] as any[],
         latestActivityAt: u.createdAt,
+        lastReminderSentAt: lastReminderLog ? lastReminderLog.sentAt : null,
+        reminderEmailsCount: userReminderLogs.length,
+        lastEmailSentAt: lastEmailLog ? lastEmailLog.sentAt : null,
+        totalEmailsSent: userEmailLogs.length,
+        emailLogs: userEmailLogs.slice(0, 10),
       });
     });
 
@@ -156,6 +220,21 @@ export async function GET(request: Request) {
     allReferrals.forEach((ref) => {
       let entry = referrersMap.get(ref.referrerId);
       if (!entry) {
+        const userEmailLogs = allReferralEmailLogs.filter(
+          (log) =>
+            log.userId === ref.referrer.id ||
+            (ref.referrer.email && log.recipientEmail.toLowerCase() === ref.referrer.email.toLowerCase())
+        );
+        const userReminderLogs = userEmailLogs.filter(
+          (log) =>
+            log.templateName?.includes("Reminder") ||
+            log.templateName?.includes("Activation") ||
+            log.subject?.toLowerCase().includes("code") ||
+            log.subject?.toLowerCase().includes("earn")
+        );
+        const lastReminderLog = userReminderLogs[0] || null;
+        const lastEmailLog = userEmailLogs[0] || null;
+
         entry = {
           id: ref.referrer.id,
           name: ref.referrer.name,
@@ -173,6 +252,11 @@ export async function GET(request: Request) {
           qualifiedReferralIds: [] as string[],
           referredFriends: [] as any[],
           latestActivityAt: ref.createdAt,
+          lastReminderSentAt: lastReminderLog ? lastReminderLog.sentAt : null,
+          reminderEmailsCount: userReminderLogs.length,
+          lastEmailSentAt: lastEmailLog ? lastEmailLog.sentAt : null,
+          totalEmailsSent: userEmailLogs.length,
+          emailLogs: userEmailLogs.slice(0, 10),
         };
         referrersMap.set(ref.referrerId, entry);
       }
@@ -217,6 +301,54 @@ export async function GET(request: Request) {
           : null,
       }));
 
+      // Match email and audit logs for this specific friend
+      const referrerEmails = allReferralEmailLogs.filter(
+        (log) =>
+          log.userId === ref.referrerId ||
+          (ref.referrer.email && log.recipientEmail.toLowerCase() === ref.referrer.email.toLowerCase())
+      );
+
+      const friendLogs = referrerEmails.filter((log) => {
+        const body = log.bodyPreview || "";
+        const sub = log.subject || "";
+        const friendId = ref.referee.id;
+        const friendName = ref.referee.name.toLowerCase();
+        return (
+          body.includes(`refereeId:${friendId}`) ||
+          body.toLowerCase().includes(friendName) ||
+          sub.toLowerCase().includes(friendName)
+        );
+      });
+
+      const friendAuditLogs = referralAuditLogs.filter((audit) => {
+        if (audit.action !== "SEND_REFERRAL_PROGRESS_NUDGE") return false;
+        const meta: any = audit.metadata || {};
+        return (
+          (meta.referrerId === ref.referrerId || audit.target === ref.referrerId) &&
+          (meta.refereeId === ref.referee.id ||
+            (meta.refereeName && meta.refereeName.toLowerCase() === ref.referee.name.toLowerCase()))
+        );
+      });
+
+      const lastFriendEmail = friendLogs[0] || null;
+      const lastFriendAudit = friendAuditLogs[0] || null;
+
+      let lastProgressEmailSentAt: any = lastFriendEmail?.sentAt || lastFriendAudit?.timestamp || null;
+      let lastProgressEmailType: "ASK_FRIEND_APPLY" | "FRIEND_APPLIED" | null = null;
+
+      if (lastFriendAudit) {
+        const meta: any = lastFriendAudit.metadata || {};
+        lastProgressEmailType = meta.nudgeType || null;
+      } else if (lastFriendEmail) {
+        if (lastFriendEmail.templateName?.includes("Ask to Apply") || lastFriendEmail.subject?.includes("apply")) {
+          lastProgressEmailType = "ASK_FRIEND_APPLY";
+        } else if (lastFriendEmail.templateName?.includes("Applied") || lastFriendEmail.subject?.includes("applied")) {
+          lastProgressEmailType = "FRIEND_APPLIED";
+        }
+      }
+
+      const progressEmailsCount = Math.max(friendLogs.length, friendAuditLogs.length);
+
       entry.referredFriends.push({
         referralId: ref.id,
         id: ref.referee.id,
@@ -232,6 +364,10 @@ export async function GET(request: Request) {
         qualifyingEvent: ref.qualifyingEvent,
         applicationsCount: refereeApps.length,
         applications: refereeApps,
+        lastProgressEmailSentAt,
+        lastProgressEmailType,
+        progressEmailsCount,
+        progressEmailLogs: friendLogs,
       });
     });
 
@@ -242,6 +378,14 @@ export async function GET(request: Request) {
       }
       return b.totalInvited - a.totalInvited;
     });
+
+    // Resolve latest bulk inactive broadcast info
+    const lastBroadcastAudit = referralAuditLogs.find(
+      (a) => a.action === "SEND_REFERRAL_REMINDER_EMAILS"
+    );
+    const lastBroadcastSentAt = lastBroadcastAudit ? lastBroadcastAudit.timestamp : null;
+    const lastBroadcastMeta: any = lastBroadcastAudit?.metadata || {};
+    const lastBroadcastCount = lastBroadcastMeta.sentCount || 0;
 
     return NextResponse.json({
       success: true,
@@ -255,6 +399,8 @@ export async function GET(request: Request) {
         settledPayoutAmount,
         totalEarningsGenerated,
         rewardPerReferral: activeReward,
+        lastBroadcastSentAt,
+        lastBroadcastCount,
       },
       referrers: referrersList,
       ledger: allReferrals.map((r) => {

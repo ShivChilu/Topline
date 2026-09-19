@@ -126,6 +126,7 @@ export async function POST(request: Request) {
       referrerCode: referrer.referralCode,
       refereeName: referee.name,
       refereePhone: referee.phone,
+      refereeId: referee.id,
       nudgeType: validatedNudgeType,
       eventName,
       eventDate,
