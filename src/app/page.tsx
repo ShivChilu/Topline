@@ -389,7 +389,7 @@ export default async function HomePage() {
 
       {/* Why TOPLINE Section */}
       <section className="py-10 sm:py-16 md:py-20 border-t border-slate-100 bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${galleryImages.length > 0 ? "grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center" : "max-w-4xl"}`}>
           <div>
             <span className="text-red-600 text-xs font-extrabold tracking-wider uppercase">
               Partnership & Quality
@@ -400,13 +400,13 @@ export default async function HomePage() {
             <p className="mt-2.5 text-slate-500 leading-relaxed text-xs sm:text-base font-sans">
               We eliminate the stress of manual hiring coordination. Our system provides automated registration tracking, pre-screened student staff, and instant attendance check-ins.
             </p>
-            <div className="mt-5 sm:mt-8 space-y-3 sm:space-y-4">
+            <div className={`mt-5 sm:mt-8 ${galleryImages.length > 0 ? "space-y-3 sm:space-y-4" : "grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6"}`}>
               {[
                 { title: "Pre-Screened Students", desc: "We verify students with clean history records and valid college ID cards." },
                 { title: "Strict Grooming & Conduct", desc: "Strictly enforced dress codes and professional behavior guidelines." },
                 { title: "Automated Attendance & QR Check-Ins", desc: "Digital check-in tracking prevents payroll errors and time theft." },
               ].map((item, idx) => (
-                <div key={idx} className="flex items-start space-x-2.5 sm:space-x-3">
+                <div key={idx} className={`flex items-start space-x-2.5 sm:space-x-3 ${galleryImages.length === 0 ? "bg-white p-4 rounded-xl border border-slate-200 shadow-xs" : ""}`}>
                   <Shield className="text-red-600 w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-bold text-xs sm:text-sm text-slate-900">{item.title}</h4>
@@ -416,30 +416,15 @@ export default async function HomePage() {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-            {galleryImages.length > 0 ? (
-              galleryImages.map((img: any) => (
+          {galleryImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+              {galleryImages.map((img: any) => (
                 <div key={img.id} className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 shadow-xs">
                   <img src={img.imageUrl} alt={img.caption || ""} className="object-cover w-full h-full" />
                 </div>
-              ))
-            ) : (
-              <>
-                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
-                  <Utensils className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
-                  <Gem className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
-                  <Users className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <div className="h-32 sm:h-44 relative rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center shadow-xs">
-                  <Award className="text-slate-300 w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-              </>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
