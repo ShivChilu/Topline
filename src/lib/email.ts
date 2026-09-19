@@ -532,24 +532,24 @@ export async function sendEventSelectionEmail({
               confirmationDeadline
                 ? `
             <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 800; margin-bottom: 14px; display: inline-block; letter-spacing: 0.5px;">
-              ⏰ CONFIRMATION DEADLINE: <span style="color: #ffffff; text-decoration: underline;">${confirmationDeadline}</span>
+              CONFIRMATION DEADLINE: <span style="color: #ffffff; text-decoration: underline;">${confirmationDeadline}</span>
             </div>
             `
                 : ""
             }
-            <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">⚡ Confirm Your Attendance Now</div>
+            <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 6px;">Confirm Your Attendance Now</div>
             <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 16px 0; line-height: 1.5;">
               Click below to confirm your slot on the official duty roster and immediately unlock the <strong>WhatsApp Group Link</strong> for briefing.
             </p>
 
             <div style="margin: 12px 0;">
               <a href="${confirmUrl}" class="btn-confirm" target="_blank" style="display: block; color: #ffffff;">
-                ✅ YES, I AM AVAILABLE (Confirm & Join WhatsApp)
+                YES, I AM AVAILABLE (Confirm & Join WhatsApp)
               </a>
             </div>
             <div style="margin-top: 10px;">
               <a href="${declineUrl}" class="btn-decline" target="_blank" style="display: block; color: #f87171;">
-                ❌ NO, NOT AVAILABLE (Decline & Release Slot)
+                NO, NOT AVAILABLE (Decline & Release Slot)
               </a>
             </div>
           </div>
@@ -571,13 +571,13 @@ export async function sendEventSelectionEmail({
           <!-- OFFICIAL MAIN WHATSAPP GROUP JOIN BOX -->
           <div style="background: #064e3b; border: 1.5px solid #10b981; border-radius: 10px; padding: 16px; margin: 20px 0; text-align: center;">
             <div style="font-size: 14px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">
-              💬 Official Topline WhatsApp Community
+              Official Topline WhatsApp Community
             </div>
             <p style="font-size: 12px; color: #d1fae5; margin: 0 0 12px 0; line-height: 1.4;">
               Not in our main group yet? Join for quick event slot announcements and daily shift updates!
             </p>
             <a href="${trackedMainWhatsAppUrl}" target="_blank" style="display: inline-block; background: #25D366; color: #022c22 !important; text-decoration: none; padding: 10px 22px; border-radius: 6px; font-weight: 800; font-size: 13px; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);">
-              👉 Join Main WhatsApp Group
+              Join Main WhatsApp Group
             </a>
           </div>
 

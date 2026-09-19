@@ -9,6 +9,8 @@ import {
   Sparkles,
   UserCheck,
   Send,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 
 export interface SelectionEmailPreset {
@@ -33,29 +35,29 @@ const SELECTION_EMAIL_PRESETS: SelectionEmailPreset[] = [
   },
   {
     id: "urgent",
-    name: "⚡ Urgent 2-Hour RSVP Notice",
+    name: "Urgent 2-Hour RSVP Notice",
     badge: "Urgent Roster",
     badgeColor: "bg-rose-100 text-rose-800 border-rose-300",
     description: "Time-sensitive selection with a 2-hour confirmation window before slot is released.",
-    subject: "⚡ URGENT: Confirm your slot for {{eventName}}",
+    subject: "URGENT: Confirm your slot for {{eventName}}",
     body: "You are selected for duty at {{eventName}}. You must confirm your availability within 2 hours by clicking YES below to secure your slot.",
   },
   {
     id: "lead_steward",
-    name: "👔 Lead Steward & Duty Briefing",
+    name: "Lead Steward & Duty Briefing",
     badge: "VIP Duty",
     badgeColor: "bg-purple-100 text-purple-800 border-purple-300",
     description: "Duty briefing tailored for team leaders, captains, and lead stewards.",
-    subject: "👔 Duty Briefing & Selection: {{eventName}} — Topline ODC",
+    subject: "Duty Briefing & Selection: {{eventName}} — Topline ODC",
     body: "Congratulations {{name}}!\n\nYou have been selected for leadership / lead steward duty at {{eventName}}.\n\nPlease strictly adhere to the formal dress code (black trousers, pressed white shirt, polished black formal shoes), arrive punctually, and confirm your attendance below.",
   },
   {
     id: "vip_banquet",
-    name: "🍽️ VIP Banquet & Fine-Dining Protocol",
+    name: "VIP Banquet & Fine-Dining Protocol",
     badge: "Fine Dining",
     badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
     description: "Strict grooming and service standards for premium five-star catering assignments.",
-    subject: "🍽️ VIP Banquet Service Assignment: {{eventName}} — Topline ODC",
+    subject: "VIP Banquet Service Assignment: {{eventName}} — Topline ODC",
     body: "You have been selected for the premium VIP Banquet Catering duty at {{eventName}}.\n\nHigh grooming standards, clean formal attire, and 100% punctuality are strictly mandatory. Confirm your availability below.",
   },
 ];
@@ -74,9 +76,9 @@ const PLACEHOLDER_TAGS = [
 ];
 
 const DEADLINE_PRESETS = [
-  "Today before 8:00 PM",
   "Within 2 Hours",
   "Within 1 Hour",
+  "Today before 8:00 PM",
   "Tomorrow 12:00 PM",
   "Before 10:00 PM Tonight",
   "Within 30 Minutes",
@@ -117,7 +119,7 @@ export default function SelectionEmailReviewModal({
   const [messageBody, setMessageBody] = useState<string>(
     "You are selected for {{eventName}}. Please confirm your availability immediately below to secure your slot on the duty roster."
   );
-  const [confirmationDeadline, setConfirmationDeadline] = useState<string>("Today before 8:00 PM");
+  const [confirmationDeadline, setConfirmationDeadline] = useState<string>("Within 2 Hours");
   const [instructions, setInstructions] = useState<string>(event?.instructions || "");
   const [notes, setNotes] = useState<string>(defaultCallingNote || "");
 
@@ -567,8 +569,9 @@ export default function SelectionEmailReviewModal({
               {/* Confirmation Deadline Input & Preset Chips */}
               <div className="bg-white border-2 border-rose-100 p-4 rounded-2xl space-y-2.5 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-extrabold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>⏰ Confirmation Deadline (RSVP Expiry Alert)</span>
+                  <label className="text-xs font-extrabold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>Confirmation Deadline (RSVP Expiry Alert)</span>
                   </label>
                   <span className="text-[11px] text-slate-400">
                     Appears as a prominent top badge in the candidate email

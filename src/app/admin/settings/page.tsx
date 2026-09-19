@@ -466,7 +466,7 @@ export default function AdminSettingsPage() {
                   Automated Candidate Selection & WhatsApp Mails
                 </h3>
                 <p className="text-[11px] text-emerald-800/80">
-                  Automatically approves and dispatches selection emails with 1-click WhatsApp unlock after students apply.
+                  Automatically approves candidates and immediately dispatches selection email with 2-hour confirmation deadline and 1-click WhatsApp unlock.
                 </p>
               </div>
             </div>
@@ -483,40 +483,18 @@ export default function AdminSettingsPage() {
             </label>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Default Delay Timer (Hours after applying)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  max="72"
-                  step="0.5"
-                  value={defaultAutoSelectionDelayHours}
-                  onChange={(e) => setDefaultAutoSelectionDelayHours(e.target.value)}
-                  placeholder="2"
-                  className="w-28 bg-white border border-emerald-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-                />
-                <span className="text-xs text-slate-600 font-semibold">Hours (Default: 2 Hours)</span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Set to 0 for immediate dispatch. Default is 2 hours.
-              </p>
+          <div className="bg-white/90 p-3 rounded-xl border border-emerald-200/80 text-[11.5px] text-slate-700 space-y-1">
+            <div className="font-extrabold text-emerald-900 flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Automated System Behavior:</span>
             </div>
-
-            <div className="bg-white/90 p-3 rounded-xl border border-emerald-200/80 text-[11.5px] text-slate-700 space-y-1">
-              <div className="font-extrabold text-emerald-900 flex items-center gap-1">
-                <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Strict Safety Guards:</span>
-              </div>
-              <ul className="list-disc list-inside text-slate-600 space-y-0.5 text-[11px]">
-                <li><strong>WhatsApp Guard:</strong> Only sends if the event has a valid WhatsApp group link saved.</li>
-                <li><strong>Idempotency:</strong> Guaranteed to send strictly <strong>only once</strong> per candidate.</li>
-                <li><strong>Granular Control:</strong> Can also be turned off per event in the event dashboard or edit page.</li>
-              </ul>
-            </div>
+            <ul className="list-disc list-inside text-slate-600 space-y-0.5 text-[11px]">
+              <li><strong>Instant Dispatch:</strong> Dispatches selection email immediately after the candidate submits the event form.</li>
+              <li><strong>2-Hour Confirmation Window:</strong> The email features a prominent <em>Within 2 Hours</em> confirmation deadline badge.</li>
+              <li><strong>WhatsApp Guard:</strong> Only sends if the event has a valid WhatsApp group link saved.</li>
+              <li><strong>Idempotency:</strong> Guaranteed to send strictly <strong>only once</strong> per candidate.</li>
+              <li><strong>Granular Control:</strong> Can also be turned off per event in the event dashboard or edit page.</li>
+            </ul>
           </div>
         </div>
 

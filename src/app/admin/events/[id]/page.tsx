@@ -1857,7 +1857,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               event.whatsappGroupLink ? (
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold text-[11px] flex items-center gap-1">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  <span>ACTIVE ({event.autoSendSelectionDelayHours ?? 2}h delay after candidate applies)</span>
+                  <span>ACTIVE (Instant on apply • 2h confirmation deadline)</span>
                 </span>
               ) : (
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold text-[11px] flex items-center gap-1">

@@ -95,18 +95,13 @@ export async function processPendingAutoSelectionEmails(eventId?: string): Promi
 
       result.eventsProcessed++;
 
-      const delayHours = typeof event.autoSendSelectionDelayHours === "number" ? event.autoSendSelectionDelayHours : 2;
-      const delayMs = Math.max(0, delayHours * 60 * 60 * 1000);
-      const cutoffTime = new Date(now - delayMs);
-
-      // Find candidates whose application is older than the delay and have not received selection email
+      // Auto-send immediately for candidates who applied for this event and have not yet received selection email
       const eligibleApplications = await prisma.application.findMany({
         where: {
           eventId: event.id,
           status: { in: [ApplicationStatus.APPLIED, ApplicationStatus.UNDER_REVIEW] },
           autoSelectionEmailSentAt: null,
           eventSelectionEmailSentAt: null,
-          createdAt: { lte: cutoffTime },
         },
         include: {
           user: {
@@ -165,14 +160,14 @@ export async function processPendingAutoSelectionEmails(eventId?: string): Promi
                 applicationId: app.id,
                 oldStatus: app.status,
                 newStatus: ApplicationStatus.SELECTED,
-                notes: `Auto-selected via automated system (${delayHours}h post-apply schedule with WhatsApp invite).`,
+                notes: `Auto-selected immediately upon event application with 2-hour confirmation deadline & WhatsApp group invite.`,
               },
             });
           } catch (histErr) {
             console.warn("[AutoSelectionProcessor] Could not write status history:", histErr);
           }
 
-          // Dispatch the high-conversion selection email with 1-click WhatsApp unlock
+          // Dispatch the high-conversion selection email with 1-click WhatsApp unlock and 2-Hour confirmation deadline
           await sendEventSelectionEmail({
             studentName: app.name || app.user?.name || "Candidate",
             email: recipientEmail,
@@ -185,6 +180,7 @@ export async function processPendingAutoSelectionEmails(eventId?: string): Promi
             applicationId: app.id,
             userId: app.userId,
             eventId: event.id,
+            confirmationDeadline: "Within 2 Hours",
             templateName: "Event Selection & WhatsApp Group Invite (Automated)",
           });
 
