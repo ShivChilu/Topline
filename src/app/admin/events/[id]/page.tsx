@@ -1579,7 +1579,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       className="w-full text-left px-4 py-2 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100 flex items-center gap-2 transition cursor-pointer"
                     >
                       <Users className="w-3.5 h-3.5 text-blue-600" />
-                      <span>+ Add Student from Master DB</span>
+                      <span>+ Add Candidate from Directory</span>
                     </button>
                   )}
                   {can("events:reopen_slots") && (
@@ -2021,7 +2021,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <span>Event Email & Candidate Availability Tracker</span>
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-extrabold">Live Engagement</span>
                 </h3>
-                <p className="text-[11px] text-slate-400">Real-time delivery, open rates, and RSVP confirmation button clicks for dispatched event candidates.</p>
+                <p className="text-[11px] text-slate-400">Real-time delivery, open rates, and attendance confirmations for selected candidates.</p>
               </div>
             </div>
 
@@ -2125,9 +2125,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       ? "bg-emerald-500 text-white font-black ring-1 ring-white"
                       : "text-emerald-400 font-bold hover:bg-emerald-900/40"
                   }`}
-                  title="Click to filter RSVP confirmed candidates"
+                  title="Click to filter confirmed candidates"
                 >
-                  ✓ {emailAnalytics.confirmedCount} Confirmed
+                  <Check className="w-3 h-3 inline mr-0.5 text-emerald-400" /> {emailAnalytics.confirmedCount} Confirmed
                 </button>
                 {emailAnalytics.declinedCount > 0 && (
                   <button
@@ -2141,9 +2141,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         ? "bg-rose-500 text-white font-black ring-1 ring-white"
                         : "text-rose-400 font-bold hover:bg-rose-900/40"
                     }`}
-                    title="Click to filter RSVP declined candidates"
+                    title="Click to filter declined candidates"
                   >
-                    ✗ {emailAnalytics.declinedCount} Declined
+                    <X className="w-3 h-3 inline mr-0.5 text-rose-400" /> {emailAnalytics.declinedCount} Declined
                   </button>
                 )}
                 {emailAnalytics.whatsappJoinedCount > 0 && (
@@ -2177,8 +2177,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   {emailTrackingFilter === "OPENED" && "Opened / Read Email (Event)"}
                   {emailTrackingFilter === "UNOPENED" && "Pending / Unopened Email"}
                   {emailTrackingFilter === "ACTION_CLICKED" && "Clicked Any Action Button"}
-                  {emailTrackingFilter === "CONFIRMED" && "Confirmed Attendance (RSVP YES)"}
-                  {emailTrackingFilter === "DECLINED" && "Declined Availability (RSVP NO)"}
+                  {emailTrackingFilter === "CONFIRMED" && "Confirmed Attendance (Yes)"}
+                  {emailTrackingFilter === "DECLINED" && "Declined Availability (No)"}
                   {emailTrackingFilter === "WHATSAPP" && "Joined WhatsApp Group"}
                 </span>
                 <span className="text-slate-400">
@@ -2229,10 +2229,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   type="button"
                   onClick={() => setIsAddFromMasterModalOpen(true)}
                   className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition shadow-2xs whitespace-nowrap cursor-pointer active:scale-95"
-                  title="Search and add registered students directly from master database"
+                  title="Search and add registered candidates directly from candidate directory"
                 >
                   <Users className="w-3.5 h-3.5 text-blue-600" />
-                  <span>+ Add Student</span>
+                  <span>+ Add Candidate</span>
                 </button>
               )}
               {can("events:manage_templates") && (

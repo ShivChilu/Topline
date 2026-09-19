@@ -169,7 +169,7 @@ export default function AddStudentFromMasterModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-black tracking-tight text-white">
-                  Add Registered Student from Master Database
+                  Add Registered Candidate from Directory
                 </h2>
                 <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-red-600/30 text-red-300 border border-red-500/40">
                   Super Admin
@@ -270,7 +270,7 @@ export default function AddStudentFromMasterModal({
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-red-600" />
-              <p className="text-xs font-semibold">Searching registered students database...</p>
+              <p className="text-xs font-semibold">Searching candidate directory...</p>
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="text-center py-16 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
@@ -472,7 +472,7 @@ export default function AddStudentFromMasterModal({
                 />
                 <span className="flex items-center gap-1">
                   <Send className="w-3 h-3 text-red-600" />
-                  Send official duty selection notification email with 1-click RSVP link
+                  Send official duty selection notification email with attendance confirmation link
                 </span>
               </label>
             )}

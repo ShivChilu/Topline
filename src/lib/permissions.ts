@@ -48,8 +48,8 @@ export const EVENT_PERMISSIONS = [
   },
   {
     key: "students:add_from_master",
-    label: "Add Student from Master DB",
-    description: "Search Master Candidate Database and enroll approved students directly to event roster.",
+    label: "Add Candidate from Directory",
+    description: "Search Candidate Directory and enroll approved candidates directly to event roster.",
     category: "Candidate Management",
     isDefault: false,
   },
@@ -97,8 +97,8 @@ export const PERMISSION_PRESETS: PermissionPreset[] = [
   {
     id: "roster_coordinator",
     name: "Roster Coordinator",
-    badge: "Roster + Master DB",
-    description: "Mark attendance, export rosters, and enroll students directly from Master Database.",
+    badge: "Roster + Directory",
+    description: "Mark attendance, export rosters, and enroll candidates directly from Candidate Directory.",
     permissions: [
       "events:view_roster",
       "attendance:mark",

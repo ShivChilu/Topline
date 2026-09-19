@@ -619,7 +619,7 @@ export default function AdminSettingsPage() {
                       onClick={handleRefreshEvents}
                       disabled={isRefreshingEvents}
                       className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm transition"
-                      title="Refresh latest events from database"
+                      title="Refresh latest events list"
                     >
                       <RefreshCw className={`w-3 h-3 ${isRefreshingEvents ? "animate-spin text-red-600" : ""}`} />
                       Refresh
@@ -818,7 +818,7 @@ export default function AdminSettingsPage() {
                       </label>
                     </div>
                     <span className="text-[11px] text-indigo-700/80">
-                      Configure what buttons, lifecycle actions, and master database tools this Event Admin is authorized to use.
+                      Configure what buttons, lifecycle actions, and candidate directory tools this Event Admin is authorized to use.
                     </span>
                   </div>
 
@@ -1054,11 +1054,11 @@ export default function AdminSettingsPage() {
                           <div className="flex items-center gap-1 flex-wrap">
                             <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.2 rounded text-[10px] font-extrabold flex items-center gap-1">
                               <Shield className="w-2.5 h-2.5" />
-                              {(adm.customPermissions?.length || adm.assignedEvents?.[0]?.permissions?.length || 2)} Perms
+                              {(adm.customPermissions?.length || adm.assignedEvents?.[0]?.permissions?.length || 2)} Permissions
                             </span>
                             {(adm.customPermissions?.includes("students:add_from_master") || adm.assignedEvents?.[0]?.permissions?.includes("students:add_from_master")) && (
                               <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded text-[9px] font-bold">
-                                +Master DB
+                                +Directory
                               </span>
                             )}
                             {(adm.customPermissions?.includes("events:close_resume") || adm.assignedEvents?.[0]?.permissions?.includes("events:close_resume")) && (
@@ -1070,7 +1070,7 @@ export default function AdminSettingsPage() {
                         )}
                       </div>
                     ) : (
-                      <span className="text-emerald-700 font-semibold text-xs">🌐 Global Access</span>
+                      <span className="text-emerald-700 font-semibold text-xs">Global Access</span>
                     )}
                   </td>
                   <td className="py-4 px-3 text-xs text-slate-400">{new Date(adm.createdAt).toLocaleDateString("en-GB")}</td>
@@ -1239,7 +1239,7 @@ export default function AdminSettingsPage() {
                         onClick={handleRefreshEvents}
                         disabled={isRefreshingEvents}
                         className="text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 shadow-xs transition cursor-pointer"
-                        title="Refresh latest events from database"
+                        title="Refresh latest events list"
                       >
                         <RefreshCw className={`w-3 h-3 ${isRefreshingEvents ? "animate-spin text-red-600" : ""}`} />
                         Refresh

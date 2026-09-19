@@ -49,7 +49,7 @@ const EVENT_ADMIN_PROMPTS = [
 ];
 
 const SUPERADMIN_WELCOME =
-  "👋 **Hello Super Admin!**\n\nI am your **AI Operations Copilot**. I have full live access to your database to **query any data** or **execute any administrative action**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*\n- *\"Show 100% complete candidates pending review\"*";
+  "Hello Super Admin!\n\nI am your **AI Operations Copilot**. I have full live access to your operations system to **find candidates, check event history**, or **take administrative actions**.\n\nTry asking me or tap the **Mic** to speak:\n- *\"Who attended both the 17th and 21st September events?\"*\n- *\"Mark student Ram as present for 21st September event\"*\n- *\"Show me all female candidates from SRM University above 5'4\"\"*\n- *\"Show 100% complete candidates pending review\"*";
 
 const EVENT_ADMIN_WELCOME =
   "👋 **Hello Event Admin!**\n\nI am your **Event AI Copilot**. I have real-time access to your assigned event to help you **manage candidates**, **check 2-round calling logs**, **record remarks**, **verify WhatsApp group status**, and **mark event attendance**.\n\nTry asking me or tap the **Mic (🎙️)** to speak:\n- *\"For how many students first call is done?\"*\n- *\"Show me all candidates marked as switch off or not reachable\"*\n- *\"Give me the list of students who applied for 21st September\"*\n- *\"Mark student Ram as called with remarks confirmed\"*\n- *\"Who all are marked present today?\"*";
@@ -553,13 +553,13 @@ export default function AdminCopilot() {
                     {userRole === "event_admin" ? "Event AI Copilot" : "Admin AI Copilot"}
                   </h3>
                   <span className="px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
-                    Live DB
+                    Live System
                   </span>
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-slate-400 truncate">
                   {userRole === "event_admin"
                     ? "Assigned Events • Candidate Calling & Attendance"
-                    : "AI Assistant • Real-time DB Queries & Actions"}
+                    : "AI Assistant • Real-time Records & Actions"}
                 </p>
               </div>
             </div>

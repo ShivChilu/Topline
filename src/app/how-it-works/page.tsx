@@ -16,8 +16,8 @@ export default function HowItWorksPage() {
     },
     {
       icon: <CalendarCheck className="w-10 h-10 text-red-600" />,
-      title: "3. Email Selection & 1-Click RSVP",
-      desc: "Once selected, you'll receive an official selection email. Click 'Confirm RSVP' to lock your duty spot and join the event group."
+      title: "3. Selection Email & Confirmation",
+      desc: "Once selected, you'll receive an official selection email. Click 'Confirm Attendance' to lock your duty spot and join the event WhatsApp group."
     },
     {
       icon: <Clock className="w-10 h-10 text-red-600" />,
