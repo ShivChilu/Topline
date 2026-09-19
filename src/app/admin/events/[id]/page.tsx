@@ -175,6 +175,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [inspectCandidate, setInspectCandidate] = useState<any>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [callingNote, setCallingNote] = useState("");
+  const [drawerStep, setDrawerStep] = useState<1 | 2 | 3>(1);
 
   // Delete Confirmation Modal
   const [deleteCandidate, setDeleteCandidate] = useState<any>(null);
@@ -451,6 +452,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
   const openInspectCandidate = (candidate: any) => {
     setInspectCandidate(candidate);
+    setDrawerStep(1);
     const initialRemarks = candidate.callingRemarks || candidate.user?.adminRemarks || candidate.studentId?.adminRemarks || "";
     setCallingNote(initialRemarks);
   };
@@ -3642,228 +3644,404 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 )}
               </div>
 
-              {/* Event Selection & Calling Workflow Box */}
-              <div className="p-5 bg-slate-900 text-white rounded-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              {/* Event Selection & Calling Workflow Guided Stepper Box */}
+              <div className="p-4 sm:p-5 bg-slate-900 text-white rounded-2xl space-y-4 border border-slate-800 shadow-xl">
+                {/* Stepper Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
                   <div>
-                    <h4 className="font-extrabold text-base text-white">Calling, Remarks & Selection Decision</h4>
-                    <p className="text-xs text-slate-400">Update candidate remarks, event application status, and dispatch notifications.</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-red-950/80 text-red-400 border border-red-800/60">
+                        Guided Evaluation
+                      </span>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                        Current: <strong className="text-white">{inspectCandidate.status}</strong>
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-base text-white mt-1">Calling & Decision Workflow</h4>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
-                      Status: {inspectCandidate.status}
-                    </span>
                     <button
+                      type="button"
                       onClick={handleNextCandidate}
                       className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow"
+                      title="Move to next candidate"
                     >
-                      <span>Next</span>
+                      <span>Next Candidate</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* 2-Call Verification Box */}
-                <div className="bg-slate-800/90 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
-                      <span>2-Call Verification Protocol</span>
-                    </span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                      inspectCandidate.call2Done
-                        ? "bg-purple-900/60 text-purple-200 border border-purple-500/40"
-                        : inspectCandidate.call1Done
-                        ? "bg-blue-900/60 text-blue-200 border border-blue-500/40"
-                        : "bg-amber-900/60 text-amber-200 border border-amber-500/40"
-                    }`}>
-                      {inspectCandidate.call2Done
-                        ? "2 Calls Done"
-                        : inspectCandidate.call1Done
-                        ? "1st Call Done"
-                        : "0/2 Calls (Pending)"}
-                    </span>
-                  </div>
+                {/* 3-Step Navigation Tabs */}
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setDrawerStep(1)}
+                    className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
+                      drawerStep === 1
+                        ? "bg-blue-600 text-white shadow"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
+                    <span className="truncate">Calling & Notes</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerStep(2)}
+                    className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
+                      drawerStep === 2
+                        ? "bg-emerald-600 text-white shadow"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span>
+                    <span className="truncate">Selection Decision</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerStep(3)}
+                    className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition text-center ${
+                      drawerStep === 3
+                        ? "bg-purple-600 text-white shadow"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">3</span>
+                    <span className="truncate">Message & Contact</span>
+                  </button>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {/* Call 1 Card */}
-                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                {/* STEP 1: Calling Verification & Notes */}
+                {drawerStep === 1 && (
+                  <div className="space-y-3.5 animate-fadeIn">
+                    {/* 2-Call Verification Box */}
+                    <div className="bg-slate-800/90 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-blue-400 flex items-center gap-1">
-                          {inspectCandidate.call1Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
-                          Call 1
+                        <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                          <PhoneCall className="w-3.5 h-3.5 text-blue-400" />
+                          <span>2-Call Verification Protocol</span>
                         </span>
-                        {inspectCandidate.call1At && (
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {formatAppliedDateTime(inspectCandidate.call1At)}
-                          </span>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                          inspectCandidate.call2Done
+                            ? "bg-purple-900/60 text-purple-200 border border-purple-500/40"
+                            : inspectCandidate.call1Done
+                            ? "bg-blue-900/60 text-blue-200 border border-blue-500/40"
+                            : "bg-amber-900/60 text-amber-200 border border-amber-500/40"
+                        }`}>
+                          {inspectCandidate.call2Done
+                            ? "2 Calls Done"
+                            : inspectCandidate.call1Done
+                            ? "1st Call Done"
+                            : "0/2 Calls (Pending)"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* Call 1 Card */}
+                        <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-blue-400 flex items-center gap-1">
+                              {inspectCandidate.call1Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
+                              Call 1
+                            </span>
+                            {inspectCandidate.call1At && (
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {formatAppliedDateTime(inspectCandidate.call1At)}
+                              </span>
+                            )}
+                          </div>
+                          {inspectCandidate.call1Remarks ? (
+                            <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
+                              &ldquo;{inspectCandidate.call1Remarks}&rdquo;
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openCallLogModal(inspectCandidate, 1)}
+                            className="w-full py-1.5 px-2 text-[11px] font-bold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition flex items-center justify-center gap-1"
+                          >
+                            <Phone className="w-3 h-3" />
+                            <span>{inspectCandidate.call1Done ? "Edit Call 1 Log" : "Log Call 1"}</span>
+                          </button>
+                        </div>
+
+                        {/* Call 2 Card */}
+                        <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
+                              {inspectCandidate.call2Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
+                              Call 2
+                            </span>
+                            {inspectCandidate.call2At && (
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {formatAppliedDateTime(inspectCandidate.call2At)}
+                              </span>
+                            )}
+                          </div>
+                          {inspectCandidate.call2Remarks ? (
+                            <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
+                              &ldquo;{inspectCandidate.call2Remarks}&rdquo;
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openCallLogModal(inspectCandidate, 2)}
+                            className="w-full py-1.5 px-2 text-[11px] font-bold rounded-md bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center gap-1"
+                          >
+                            <PhoneCall className="w-3 h-3" />
+                            <span>{inspectCandidate.call2Done ? "Edit Call 2 Log" : "Log Call 2"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dedicated Remarks Text Box with Fixed Responsive Layout */}
+                    <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Candidate Remarks / Internal Notes</span>
+                        </label>
+                        {savingCandidateRemarks && (
+                          <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
                         )}
                       </div>
-                      {inspectCandidate.call1Remarks ? (
-                        <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
-                          &ldquo;{inspectCandidate.call1Remarks}&rdquo;
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
-                      )}
+                      <div className="flex flex-col sm:flex-row gap-2 w-full">
+                        <input
+                          type="text"
+                          value={callingNote}
+                          onChange={(e) => setCallingNote(e.target.value)}
+                          placeholder="e.g. Confirmed attendance for evening shift, lead steward, on hold..."
+                          className="w-full min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          disabled={savingCandidateRemarks}
+                          onClick={() => handleSaveRemarks(inspectCandidate._id || inspectCandidate.id, callingNote)}
+                          className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs px-4 py-2 rounded-xl transition shrink-0 shadow whitespace-nowrap"
+                        >
+                          {savingCandidateRemarks ? "Saving..." : "Save Remarks"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Navigation to Step 2 */}
+                    <div className="flex justify-end pt-2">
                       <button
                         type="button"
-                        onClick={() => openCallLogModal(inspectCandidate, 1)}
-                        className="w-full py-1 px-2 text-[11px] font-bold rounded-md bg-blue-600 hover:bg-blue-500 text-white transition flex items-center justify-center gap-1"
+                        onClick={() => setDrawerStep(2)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
                       >
-                        <Phone className="w-3 h-3" />
-                        <span>{inspectCandidate.call1Done ? "Edit Call 1 Log" : "Log Call 1"}</span>
+                        <span>Proceed to Selection Decision</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: Selection Decision & Status */}
+                {drawerStep === 2 && (
+                  <div className="space-y-3.5 animate-fadeIn">
+                    {/* Automated Notification Email Toggle */}
+                    <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-slate-200">Email Automation</div>
+                        <div className="text-[11px] text-slate-400">Send automatic selection or status update email to candidate</div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={sendEmailToggle}
+                          onChange={(e) => setSendEmailToggle(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Decision Action Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Approve & Select */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sendEmailToggle) {
+                            const target = inspectCandidate;
+                            setInspectCandidate(null);
+                            openSelectionModal([target]);
+                          } else {
+                            handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED");
+                          }
+                        }}
+                        className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                            <UserCheck className="w-4 h-4 text-emerald-400" />
+                            Approve & Select
+                          </span>
+                          <span className="text-[10px] bg-emerald-900/80 text-emerald-200 px-1.5 py-0.5 rounded font-mono">SELECTED</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 m-0">Confirm candidate for duty & trigger selection workflow</p>
+                      </button>
+
+                      {/* Mark as Hold */}
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "ON_HOLD")}
+                        className="p-3 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-600/60 hover:border-amber-500 text-left rounded-xl transition group shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-amber-400" />
+                            Mark as Hold / Waitlist
+                          </span>
+                          <span className="text-[10px] bg-amber-900/80 text-amber-200 px-1.5 py-0.5 rounded font-mono">ON_HOLD</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 m-0">Keep on backup standby list in case slots open</p>
+                      </button>
+
+                      {/* Reject / Not Selected */}
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
+                        className="p-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/60 hover:border-rose-500 text-left rounded-xl transition group shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                            <UserX className="w-4 h-4 text-rose-400" />
+                            Reject / Not Selected
+                          </span>
+                          <span className="text-[10px] bg-rose-900/80 text-rose-200 px-1.5 py-0.5 rounded font-mono">NOT_SELECTED</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 m-0">Does not meet criteria or missing profile documents</p>
+                      </button>
+
+                      {/* Confirmed Attending */}
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
+                        className="p-3 bg-teal-950/40 hover:bg-teal-900/60 border border-teal-600/60 hover:border-teal-500 text-left rounded-xl transition group shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-teal-300 flex items-center gap-1.5">
+                            <Check className="w-4 h-4 text-teal-400" />
+                            Confirmed (Attending)
+                          </span>
+                          <span className="text-[10px] bg-teal-900/80 text-teal-200 px-1.5 py-0.5 rounded font-mono">CONFIRMED</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 m-0">Candidate has verbally or digitally confirmed slot</p>
                       </button>
                     </div>
 
-                    {/* Call 2 Card */}
-                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-2.5 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
-                          {inspectCandidate.call2Done ? <Check className="w-3 h-3 text-emerald-400" /> : <Clock className="w-3 h-3 text-slate-400" />}
-                          Call 2
-                        </span>
-                        {inspectCandidate.call2At && (
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {formatAppliedDateTime(inspectCandidate.call2At)}
-                          </span>
-                        )}
-                      </div>
-                      {inspectCandidate.call2Remarks ? (
-                        <p className="text-[11px] text-slate-300 italic line-clamp-2 m-0 bg-slate-800/60 p-1.5 rounded">
-                          &ldquo;{inspectCandidate.call2Remarks}&rdquo;
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-slate-500 italic m-0">No remarks logged yet</p>
-                      )}
+                    {/* Additional Status Dropdown */}
+                    <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700 flex items-center justify-between gap-3">
+                      <span className="text-xs font-bold text-slate-300">Other Status Options:</span>
+                      <select
+                        value={inspectCandidate.status}
+                        onChange={(e) => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, e.target.value)}
+                        className="bg-slate-900 border border-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg focus:outline-none focus:border-red-500"
+                      >
+                        <option value="SELECTED">Selected (Approved)</option>
+                        <option value="UNDER_REVIEW">Under Review</option>
+                        <option value="ON_HOLD">Mark as Hold / Waitlist</option>
+                        <option value="NOT_SELECTED">Rejected / Not Selected</option>
+                        <option value="CONFIRMED">Confirmed (Attending)</option>
+                        <option value="CANCELLED">Cancelled / Declined</option>
+                        <option value="ATTENDED">Attended</option>
+                      </select>
+                    </div>
+
+                    {/* Step 2 Navigation */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                       <button
                         type="button"
-                        onClick={() => openCallLogModal(inspectCandidate, 2)}
-                        className="w-full py-1 px-2 text-[11px] font-bold rounded-md bg-purple-600 hover:bg-purple-500 text-white transition flex items-center justify-center gap-1"
+                        onClick={() => setDrawerStep(1)}
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1"
                       >
-                        <PhoneCall className="w-3 h-3" />
-                        <span>{inspectCandidate.call2Done ? "Edit Call 2 Log" : "Log Call 2"}</span>
+                        <ChevronLeft className="w-4 h-4" />
+                        <span>Back to Notes</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDrawerStep(3)}
+                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                      >
+                        <span>Proceed to Message & Contact</span>
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Dedicated Remarks Text Box with Save Button */}
-                <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Quick Candidate Remarks / Notes</span>
-                    </label>
-                    {savingCandidateRemarks && (
-                      <span className="text-[11px] text-amber-400 font-semibold animate-pulse">Saving...</span>
-                    )}
+                {/* STEP 3: Message & Communication */}
+                {drawerStep === 3 && (
+                  <div className="space-y-3.5 animate-fadeIn">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Send Custom Email Message */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = inspectCandidate;
+                          setInspectCandidate(null);
+                          openCustomEmailModal([target]);
+                        }}
+                        className="p-3 bg-blue-950/40 hover:bg-blue-900/60 border border-blue-600/60 hover:border-blue-500 text-left rounded-xl transition group shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-blue-300 flex items-center gap-1.5">
+                            <Mail className="w-4 h-4 text-blue-400" />
+                            Send Custom Email
+                          </span>
+                          <span className="text-[10px] bg-blue-900/80 text-blue-200 px-1.5 py-0.5 rounded font-mono">EMAIL</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 m-0">Open email composer with templates and placeholder tags</p>
+                      </button>
+
+                      {/* Direct WhatsApp Chat */}
+                      <a
+                        href={`https://wa.me/91${(inspectCandidate.phone || inspectCandidate.user?.phone || inspectCandidate.studentId?.phone || "").replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm block"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                            <MessageSquare className="w-4 h-4 text-emerald-400" />
+                            Direct WhatsApp Chat
+                          </span>
+                          <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1 m-0">Open WhatsApp chat directly with candidate's phone number</p>
+                      </a>
+                    </div>
+
+                    {/* Step 3 Navigation */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setDrawerStep(2)}
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        <span>Back to Decision</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNextCandidate}
+                        className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                      >
+                        <span>Done • Next Candidate</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={callingNote}
-                      onChange={(e) => setCallingNote(e.target.value)}
-                      placeholder="e.g. Confirmed attendance for evening shift, lead steward, on hold..."
-                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
-                    />
-                    <button
-                      type="button"
-                      disabled={savingCandidateRemarks}
-                      onClick={() => handleSaveRemarks(inspectCandidate._id || inspectCandidate.id, callingNote)}
-                      className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shrink-0 shadow"
-                    >
-                      {savingCandidateRemarks ? "Saving..." : "Save Remarks"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Status Dropdown & Automation Toggle */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-bold text-slate-300">Mark Status:</label>
-                    <select
-                      value={inspectCandidate.status}
-                      onChange={(e) => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, e.target.value)}
-                      className="bg-slate-800 border border-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl focus:outline-none focus:border-red-500"
-                    >
-                      <option value="SELECTED">Selected (Approved)</option>
-                      <option value="UNDER_REVIEW">Under Review</option>
-                      <option value="ON_HOLD">Mark as Hold / Waitlist</option>
-                      <option value="NOT_SELECTED">Rejected / Not Selected</option>
-                      <option value="CONFIRMED">Confirmed (Attending)</option>
-                      <option value="CANCELLED">Cancelled / Declined</option>
-                      <option value="ATTENDED">Attended</option>
-                    </select>
-                  </div>
-
-                  <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sendEmailToggle}
-                      onChange={(e) => setSendEmailToggle(e.target.checked)}
-                      className="accent-red-600 rounded"
-                    />
-                    Dispatch automated notification email
-                  </label>
-                </div>
-
-                <div className="flex gap-2 flex-wrap justify-end pt-2 border-t border-slate-800">
-                  <button
-                    onClick={() => {
-                      const target = inspectCandidate;
-                      setInspectCandidate(null);
-                      openCustomEmailModal([target]);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                    title="Send custom email with placeholder tags to this candidate"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Send Custom Message
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (sendEmailToggle) {
-                        const target = inspectCandidate;
-                        setInspectCandidate(null);
-                        openSelectionModal([target]);
-                      } else {
-                        handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "SELECTED");
-                      }
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                    title="Review selection email and approve candidate"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                    Approve & Select
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "ON_HOLD")}
-                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                  >
-                    <Clock className="w-4 h-4" />
-                    Mark as Hold
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "NOT_SELECTED")}
-                    className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                  >
-                    <UserX className="w-4 h-4" />
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "CONFIRMED")}
-                    className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    onClick={() => handleUpdateStatus(inspectCandidate._id || inspectCandidate.id, "UNDER_REVIEW")}
-                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
-                  >
-                    Under Review
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
