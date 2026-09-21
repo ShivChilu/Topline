@@ -2003,6 +2003,36 @@ export default function StudentProfilePage() {
                   </div>
                 </div>
 
+                {/* CELEBRATION REWARD BANNER (When student has qualified pending payouts) */}
+                {Boolean(referralData.stats?.pendingPayout && referralData.stats.pendingPayout > 0) && (
+                  <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-purple-500/40 relative overflow-hidden animate-in fade-in slide-in-from-top-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+                      <div className="space-y-1.5">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-black uppercase tracking-wider">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                          <span>Referral Bonus Unlocked!</span>
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                          🎉 Congratulations! You have ₹{referralData.stats.pendingPayout} in Approved Rewards!
+                        </h3>
+                        <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed max-w-xl">
+                          Your referred friend completed their event duty. Your cash bonus is in the payout queue and will be transferred to your registered UPI ID (<strong>{referralData.user.upiId || "No UPI ID added yet"}</strong>) soon!
+                        </p>
+                      </div>
+
+                      {!referralData.user.upiId && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingUpi(true)}
+                          className="bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold px-4 py-2.5 rounded-xl text-xs transition shadow-md shrink-0 cursor-pointer active:scale-95"
+                        >
+                          + Add UPI ID for Payout
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* 2. LIVE REFERRAL METRICS & EARNINGS */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-4 sm:p-5 rounded-2xl border border-purple-200 shadow-2xs space-y-1">

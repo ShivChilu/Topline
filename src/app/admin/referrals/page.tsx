@@ -297,7 +297,10 @@ export default function AdminReferralsPage() {
   };
 
   // Handler for sending progress milestone notification email to the student referrer
-  const handleSendProgressNudge = async (friend: any, nudgeType: "ASK_FRIEND_APPLY" | "FRIEND_APPLIED") => {
+  const handleSendProgressNudge = async (
+    friend: any,
+    nudgeType: "ASK_FRIEND_APPLY" | "FRIEND_APPLIED" | "REFERRAL_QUALIFIED"
+  ) => {
     if (!selectedReferrerDetail) return;
     const nudgeKey = `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_${nudgeType}`;
     setSendingProgressNudgeId(nudgeKey);
@@ -325,6 +328,19 @@ export default function AdminReferralsPage() {
           const updatedFriends = (prev.referredFriends || []).map((f: any) => {
             if ((f.id && f.id === friend.id) || (f.referralId && f.referralId === friend.referralId)) {
               const existingLogs = Array.isArray(f.progressEmailLogs) ? f.progressEmailLogs : [];
+              const templateTitle =
+                nudgeType === "REFERRAL_QUALIFIED"
+                  ? "Referral Completion & Reward Unlocked Notice"
+                  : nudgeType === "ASK_FRIEND_APPLY"
+                  ? "Referral Progress Nudge (Ask to Apply)"
+                  : "Referral Progress Notice (Friend Applied)";
+              const emailSubject =
+                nudgeType === "REFERRAL_QUALIFIED"
+                  ? `🎉 Referral Reward Unlocked for inviting ${friend.name}`
+                  : nudgeType === "ASK_FRIEND_APPLY"
+                  ? `Ask ${friend.name} to Apply`
+                  : `${friend.name} Applied`;
+
               return {
                 ...f,
                 lastProgressEmailSentAt: nowIso,
@@ -333,8 +349,8 @@ export default function AdminReferralsPage() {
                 progressEmailLogs: [
                   {
                     id: `log-${Date.now()}`,
-                    templateName: nudgeType === "ASK_FRIEND_APPLY" ? "Referral Progress Nudge (Ask to Apply)" : "Referral Progress Notice (Friend Applied)",
-                    subject: nudgeType === "ASK_FRIEND_APPLY" ? `Ask ${friend.name} to Apply` : `${friend.name} Applied`,
+                    templateName: templateTitle,
+                    subject: emailSubject,
                     sentAt: nowIso,
                   },
                   ...existingLogs,
@@ -1274,24 +1290,52 @@ export default function AdminReferralsPage() {
                                 </button>
                               ) : null}
 
-                              <button
-                                type="button"
-                                disabled={sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED`}
-                                onClick={() => handleSendProgressNudge(friend, "FRIEND_APPLIED")}
-                                className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
-                                title={`Send update email to ${selectedReferrerDetail.name} that ${friend.name} has applied for an event`}
-                              >
-                                {sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_FRIEND_APPLIED` ? (
-                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                                ) : (
-                                  <Send className="w-3.5 h-3.5 text-blue-600" />
-                                )}
-                                <span>
-                                  {friend.lastProgressEmailSentAt
-                                    ? `Resend Notice (${friend.progressEmailsCount || 1}x)`
-                                    : `Notify ${selectedReferrerDetail.name.split(" ")[0]}: Applied`}
-                                </span>
-                              </button>
+                              {/* Progress / Completion Notice Button */}
+                              {(() => {
+                                const isFriendAttended =
+                                  friend.status === "QUALIFIED" ||
+                                  friend.status === "PAID" ||
+                                  (friend.attendanceRecords && friend.attendanceRecords.some((a: any) => a.attendanceStatus === "PRESENT" || a.attendanceStatus === "LATE")) ||
+                                  (friend.applications && friend.applications.some((app: any) => app.status === "ATTENDED" || (app.attendance && (app.attendance.attendanceStatus === "PRESENT" || app.attendance.attendanceStatus === "LATE"))));
+
+                                const targetNudge = isFriendAttended ? "REFERRAL_QUALIFIED" : "FRIEND_APPLIED";
+                                const isSendingThis = sendingProgressNudgeId === `${selectedReferrerDetail.id}_${friend.id || friend.referralId}_${targetNudge}`;
+
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={isSendingThis}
+                                    onClick={() => handleSendProgressNudge(friend, targetNudge)}
+                                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50 ${
+                                      isFriendAttended
+                                        ? "bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300"
+                                        : "bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200"
+                                    }`}
+                                    title={
+                                      isFriendAttended
+                                        ? `Send reward unlocked congratulatory email to ${selectedReferrerDetail.name} (Friend attended shift, payout pending)`
+                                        : `Send update email to ${selectedReferrerDetail.name} that ${friend.name} has applied for an event`
+                                    }
+                                  >
+                                    {isSendingThis ? (
+                                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                                    ) : isFriendAttended ? (
+                                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                                    ) : (
+                                      <Send className="w-3.5 h-3.5 text-blue-600" />
+                                    )}
+                                    <span>
+                                      {friend.lastProgressEmailSentAt
+                                        ? isFriendAttended
+                                          ? `Resend Reward Notice (${friend.progressEmailsCount || 1}x)`
+                                          : `Resend Notice (${friend.progressEmailsCount || 1}x)`
+                                        : isFriendAttended
+                                        ? `🎉 Notify: Reward Unlocked (₹${friend.rewardAmount || metrics?.rewardPerReferral || 150})`
+                                        : `Notify ${selectedReferrerDetail.name.split(" ")[0]}: Applied`}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
                             </div>
                           )}
 

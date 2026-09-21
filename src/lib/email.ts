@@ -1376,6 +1376,7 @@ export async function sendReferralCompletedStudentAlert({
   refereeName,
   eventName,
   rewardAmount,
+  userId,
 }: {
   referrerName: string;
   referrerEmail: string;
@@ -1383,6 +1384,7 @@ export async function sendReferralCompletedStudentAlert({
   refereeName: string;
   eventName: string;
   rewardAmount: number;
+  userId?: string | null;
 }): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
   try {
     if (!referrerEmail) {
@@ -1391,6 +1393,17 @@ export async function sendReferralCompletedStudentAlert({
 
     const subject = `🎉 Referral Reward Unlocked: ₹${rewardAmount} for inviting ${refereeName}!`;
     const profileUrl = `${getAppBaseUrl()}/profile`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: referrerEmail,
+      recipientName: referrerName,
+      userId,
+      templateName: "Referral Completion & Reward Unlocked Notice",
+      subject,
+      bodyPreview: `Congratulations! ${refereeName} completed duty for ${eventName}. ₹${rewardAmount} reward unlocked & queued for UPI transfer.`,
+    });
+
+    const trackedProfileUrl = getTrackedUrl("VIEW_REWARDS_DASHBOARD", profileUrl);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -1405,8 +1418,8 @@ export async function sendReferralCompletedStudentAlert({
         .content { padding: 30px 24px; text-align: center; }
         .badge { display: inline-block; background: rgba(250, 204, 21, 0.15); border: 1px solid #facc15; color: #fde047; padding: 6px 16px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 18px; }
         .reward-card { background: #0f172a; border: 2px dashed #8b5cf6; border-radius: 14px; padding: 22px; margin: 20px 0; }
-        .reward-amt { font-size: 38px; font-weight: 900; color: #facc15; margin: 8px 0; }
-        .upi-box { background: #1e293b; border-radius: 10px; padding: 12px; margin: 16px 0; font-size: 13px; text-align: left; }
+        .reward-amt { font-size: 40px; font-weight: 900; color: #facc15; margin: 8px 0; }
+        .upi-box { background: #1e293b; border-radius: 10px; padding: 14px; margin: 16px 0; font-size: 13px; text-align: left; }
         .btn { display: inline-block; background: #7c3aed; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 14px; margin: 16px 0; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4); text-align: center; }
         .footer { padding: 18px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
       </style>
@@ -1426,28 +1439,33 @@ export async function sendReferralCompletedStudentAlert({
           <div class="reward-card">
             <div style="font-size: 12px; font-weight: 700; color: #c4b5fd; text-transform: uppercase;">Your Unlocked Bonus</div>
             <div class="reward-amt">₹${rewardAmount}</div>
-            <div style="font-size: 12px; color: #94a3b8;">Approved & Queued for UPI Transfer</div>
+            <div style="font-size: 12px; color: #a7f3d0; font-weight: 600;">✓ Approved &amp; Queued for Direct UPI Transfer</div>
           </div>
 
           <div class="upi-box">
             <div style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">Payout Destination UPI:</div>
             <div style="color: #6ee7b7; font-family: monospace; font-size: 14px; font-weight: 700; margin-top: 4px;">
-              ${referrerUpi ? referrerUpi : "⚠️ No UPI ID found! Please add your UPI ID in profile."}
+              ${referrerUpi ? referrerUpi : "⚠️ No UPI ID registered! Please update your UPI ID on your student dashboard."}
             </div>
+            ${!referrerUpi ? `
+            <div style="color: #fca5a5; font-size: 12px; margin-top: 6px; font-weight: 600;">
+              Please add your UPI ID in your dashboard immediately so the admin team can credit your ₹${rewardAmount} without delay.
+            </div>` : ""}
           </div>
 
           <div>
-            <a href="${profileUrl}" class="btn" style="color: #ffffff;">View My Referral Earnings</a>
+            <a href="${trackedProfileUrl}" class="btn" style="color: #ffffff;">View My Referral Dashboard</a>
           </div>
 
           <p style="color: #9ca3af; font-size: 12px; line-height: 1.6; margin-top: 20px;">
-            Our administrative team will process your payment via UPI. Keep inviting your college friends to earn up to ₹150 for every verified friend!
+            Our administrative team will process your payment via UPI soon. Keep inviting your college friends to earn up to ₹150 for every verified friend!
           </p>
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management.
+          &copy; ${new Date().getFullYear()} Topline ODC &amp; Catering Management.
         </div>
       </div>
+      ${getTrackingPixelHtml()}
     </body>
     </html>
     `;
