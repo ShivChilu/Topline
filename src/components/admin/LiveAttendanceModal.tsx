@@ -648,7 +648,7 @@ export default function LiveAttendanceModal({
                       Waiting for students to scan QR code... incoming check-ins will show here live!
                     </div>
                   ) : (
-                    liveFeed.slice(0, 15).map((log) => (
+                    liveFeed.map((log) => (
                       <div
                         key={log.id}
                         className="p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs animate-in slide-in-from-top-1"

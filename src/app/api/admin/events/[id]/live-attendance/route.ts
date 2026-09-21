@@ -92,7 +92,10 @@ export async function GET(
         orderBy: { createdAt: "asc" },
       }),
       prisma.attendance.findMany({
-        where: { eventId },
+        where: {
+          eventId,
+          attendanceStatus: { in: ["PRESENT", "LATE"] },
+        },
         select: {
           id: true,
           applicationId: true,
@@ -117,7 +120,6 @@ export async function GET(
           },
         },
         orderBy: { checkInTime: "desc" },
-        take: 30,
       }),
     ]);
 
