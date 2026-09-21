@@ -75,24 +75,17 @@ export async function GET(
       views: [{ showGridLines: true, state: "frozen", ySplit: 1 }],
     });
 
-    // Column Definitions
+    // Column Definitions: Exactly 4 requested columns
     worksheet.columns = [
-      { header: "S.No", key: "sno", width: 8 },
-      { header: "Registration Number", key: "regNo", width: 22 },
-      { header: "Candidate Full Name", key: "name", width: 28 },
-      { header: "Phone Number", key: "phone", width: 16 },
-      { header: "College / University", key: "university", width: 24 },
-      { header: "UPI ID / Payout Account", key: "upiId", width: 26 },
-      { header: "Attendance Status", key: "attendanceStatus", width: 18 },
-      { header: "Check-In Time", key: "checkInTime", width: 16 },
-      { header: "Event Payout (₹)", key: "payout", width: 18 },
-      { header: "Payment Status", key: "paymentStatus", width: 18 },
-      { header: "Payment Remarks / UTR Ref", key: "remarks", width: 30 },
+      { header: "S.No", key: "sno", width: 10 },
+      { header: "Registration Number", key: "regNo", width: 24 },
+      { header: "Candidate Full Name", key: "name", width: 34 },
+      { header: "Payment Status", key: "paymentStatus", width: 22 },
     ];
 
     // Style Header Row (Row 1)
     const headerRow = worksheet.getRow(1);
-    headerRow.height = 28;
+    headerRow.height = 30;
     headerRow.eachCell((cell) => {
       cell.fill = {
         type: "pattern",
@@ -121,46 +114,22 @@ export async function GET(
     // Populate Data Rows
     applications.forEach((app, index) => {
       const student = app.user;
-      const att = app.attendance;
-      const isPresent = att && (att.attendanceStatus === "PRESENT" || att.attendanceStatus === "LATE");
-      const attStatus = att ? att.attendanceStatus : "ABSENT";
       const resolvedName = app.name || student?.name || `Student ${app.registrationNumber || "N/A"}`;
-      const resolvedPhone = app.mobileNumber || student?.phone || "";
       const resolvedRegNo = (app.registrationNumber || student?.registrationNumber || "N/A").trim();
-      const university = student?.university || "N/A";
-      const upiId = student?.upiId || "N/A";
-      const payoutVal = app.paymentOverride ?? event.paymentPerStudent ?? 0;
-
-      let checkInTimeStr = "Not Checked In";
-      if (att?.checkInTime) {
-        checkInTimeStr = new Date(att.checkInTime).toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-      }
-
       const initialPaymentStatus = app.paymentStatus === "PAID" ? "PAID" : "PENDING";
 
       const row = worksheet.addRow({
         sno: index + 1,
         regNo: resolvedRegNo,
         name: resolvedName,
-        phone: resolvedPhone,
-        university,
-        upiId,
-        attendanceStatus: attStatus,
-        checkInTime: isPresent ? checkInTimeStr : "ABSENT",
-        payout: payoutVal,
         paymentStatus: initialPaymentStatus,
-        remarks: att?.manualRemarks || "",
       });
 
-      row.height = 24;
+      row.height = 26;
 
       // Base cell styling
       row.eachCell((cell, colNumber) => {
-        cell.font = { name: "Calibri", size: 10 };
+        cell.font = { name: "Calibri", size: 11 };
         cell.border = {
           top: { style: "thin", color: { argb: "FFE2E8F0" } },
           bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
@@ -169,20 +138,15 @@ export async function GET(
         };
 
         // Alignments
-        if (colNumber === 1 || colNumber === 8) {
+        if (colNumber === 1 || colNumber === 2 || colNumber === 4) {
           cell.alignment = { vertical: "middle", horizontal: "center" };
-        } else if (colNumber === 2 || colNumber === 4 || colNumber === 7 || colNumber === 10) {
-          cell.alignment = { vertical: "middle", horizontal: "center" };
-        } else if (colNumber === 9) {
-          cell.alignment = { vertical: "middle", horizontal: "right" };
-          cell.numFmt = "₹#,##0";
         } else {
           cell.alignment = { vertical: "middle", horizontal: "left" };
         }
       });
 
-      // Add In-Cell Dropdown Data Validation for Payment Status Column (Column 10 / J)
-      const paymentCell = row.getCell(10);
+      // Add In-Cell Dropdown Data Validation for Payment Status Column (Column 4 / D)
+      const paymentCell = row.getCell(4);
       paymentCell.dataValidation = {
         type: "list",
         allowBlank: false,
@@ -197,16 +161,16 @@ export async function GET(
     const lastRowIndex = Math.max(2, totalRows + 1);
 
     // Conditional Formatting Rules:
-    // When Payment Status (Column J) is "PENDING" -> whole row is soft red/rose (#FFE2E5)
-    // When Payment Status (Column J) is "PAID" -> whole row is soft green/emerald (#DCFCE7)
+    // When Payment Status (Column D) is "PENDING" -> whole row (A-D) is soft red/rose (#FFE2E5)
+    // When Payment Status (Column D) is "PAID" -> whole row (A-D) is soft green/emerald (#DCFCE7)
     if (totalRows > 0) {
       worksheet.addConditionalFormatting({
-        ref: `A2:K${lastRowIndex}`,
+        ref: `A2:D${lastRowIndex}`,
         rules: [
           {
             priority: 1,
             type: "expression",
-            formulae: [`$J2="PENDING"`],
+            formulae: [`$D2="PENDING"`],
             style: {
               fill: {
                 type: "pattern",
@@ -223,7 +187,7 @@ export async function GET(
           {
             priority: 2,
             type: "expression",
-            formulae: [`$J2="PAID"`],
+            formulae: [`$D2="PAID"`],
             style: {
               fill: {
                 type: "pattern",
