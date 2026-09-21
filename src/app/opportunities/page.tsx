@@ -24,6 +24,8 @@ import {
   Utensils,
   User,
   Gift,
+  AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 
 export const revalidate = 0; // Disable static cache for live availability updates
@@ -245,6 +247,42 @@ export default async function OpportunitiesPage(props: {
             >
               My Profile
             </Link>
+          </div>
+        )}
+
+        {/* Account On Hold Warning Banner */}
+        {user && user.selectionStatus === "ON_HOLD" && (
+          <div className="bg-gradient-to-r from-rose-50 to-amber-50 border-2 border-rose-300 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-slate-800 shadow-md animate-in fade-in flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full box-border">
+            <div className="flex items-start gap-3.5 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-black text-rose-950">Student Account On Hold</h3>
+                  <span className="bg-rose-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                    Registration Restricted
+                  </span>
+                </div>
+                <p className="text-xs text-rose-900 mt-1 leading-relaxed">
+                  {user.adminRemarks || "Your student account is temporarily placed on hold due to an event absence. New event applications are locked."}
+                </p>
+                <p className="text-[11px] text-slate-600 font-medium mt-0.5">
+                  Had an unavoidable emergency? Send your reason directly to admin on WhatsApp to reactivate your account.
+                </p>
+              </div>
+            </div>
+            <a
+              href={`https://wa.me/917986955634?text=${encodeURIComponent(
+                `Hi Admin, my name is ${user.name} (Reg No: ${user.registrationNumber || "N/A"}). My Topline profile is currently ON HOLD. Here is my reason/emergency for absence:\n\n[Explain reason here]`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full md:w-auto bg-[#25D366] hover:bg-[#20bd5a] text-white font-black px-5 py-3 rounded-xl sm:rounded-2xl text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center justify-center gap-2 active:scale-95 text-center cursor-pointer"
+            >
+              <MessageCircle className="w-4 h-4 fill-white" />
+              <span>Appeal on WhatsApp (7986955634)</span>
+            </a>
           </div>
         )}
 

@@ -2090,3 +2090,316 @@ export async function sendReferralProgressNudgeEmail({
   }
 }
 
+/**
+ * Attendance Verified (Present) Confirmation Email
+ */
+export interface AttendancePresentEmailPayload {
+  studentName: string;
+  email: string;
+  registrationNumber?: string | null;
+  eventName: string;
+  eventDate?: string | Date | null;
+  eventLocation?: string | null;
+  reportingTime?: string | null;
+  applicationId?: string | null;
+  userId?: string | null;
+  eventId?: string | null;
+}
+
+export async function sendAttendancePresentEmail({
+  studentName,
+  email,
+  registrationNumber,
+  eventName,
+  eventDate,
+  eventLocation,
+  reportingTime,
+  applicationId,
+  userId,
+  eventId,
+}: AttendancePresentEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email provided." };
+    }
+
+    const subject = `Topline ODC — Attendance Verified (Present) for ${eventName}`;
+    const formattedDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : null;
+
+    const dashboardUrl = `${getAppBaseUrl()}/profile`;
+    const opportunitiesUrl = `${getAppBaseUrl()}/opportunities`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 24px; color: #f3f4f6; }
+        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 32px 24px; text-align: center; }
+        .header-tag { display: inline-block; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; rounded-full; border-radius: 9999px; margin-bottom: 12px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
+        .body { padding: 32px 24px; }
+        .greeting { font-size: 17px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 12px; }
+        .p-text { font-size: 14px; line-height: 1.6; color: #9ca3af; margin-bottom: 20px; }
+        .status-box { background: rgba(5, 150, 105, 0.1); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: 16px; padding: 20px; margin: 24px 0; text-align: center; }
+        .status-badge { display: inline-flex; align-items: center; background: #059669; color: #ffffff; font-size: 13px; font-weight: 900; padding: 6px 16px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .event-details { background: #1f2937; border-radius: 14px; padding: 18px; margin: 20px 0; font-size: 13px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #9ca3af; font-weight: 600; }
+        .detail-val { color: #ffffff; font-weight: 700; }
+        .btn-action { display: block; background: #059669; color: #ffffff !important; font-size: 14px; font-weight: 800; text-align: center; text-decoration: none; padding: 14px 24px; border-radius: 12px; margin: 20px 0 10px 0; transition: background 0.2s; }
+        .btn-secondary { display: block; background: #1f2937; color: #d1d5db !important; font-size: 13px; font-weight: 700; text-align: center; text-decoration: none; padding: 12px 20px; border-radius: 12px; border: 1px solid #374151; }
+        .footer { background: #0b0f19; padding: 20px 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; line-height: 1.5; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-tag">✓ Topline Attendance Verified</div>
+          <h1>Marked Present</h1>
+        </div>
+        <div class="body">
+          <div class="greeting">Hi ${studentName},</div>
+          <p class="p-text">
+            Great job! Your attendance for <strong>${eventName}</strong> has been officially confirmed and marked as <strong>PRESENT</strong> by the event management team.
+          </p>
+
+          <div class="status-box">
+            <div class="status-badge">✓ Duty Completed</div>
+            <div style="font-size: 13px; color: #a7f3d0; font-weight: 600; margin-top: 4px;">
+              Thank you for reporting on time and maintaining professional standards.
+            </div>
+          </div>
+
+          <div class="event-details">
+            <div class="detail-row">
+              <span class="detail-label">Event</span>
+              <span class="detail-val">${eventName}</span>
+            </div>
+            ${formattedDate ? `
+            <div class="detail-row">
+              <span class="detail-label">Date</span>
+              <span class="detail-val">${formattedDate}</span>
+            </div>` : ""}
+            ${eventLocation ? `
+            <div class="detail-row">
+              <span class="detail-label">Location</span>
+              <span class="detail-val">${eventLocation}</span>
+            </div>` : ""}
+            ${registrationNumber ? `
+            <div class="detail-row">
+              <span class="detail-label">Student Reg No</span>
+              <span class="detail-val">${registrationNumber}</span>
+            </div>` : ""}
+          </div>
+
+          <a href="${dashboardUrl}" target="_blank" class="btn-action">
+            📊 View Your Student Dashboard
+          </a>
+
+          <a href="${opportunitiesUrl}" target="_blank" class="btn-secondary">
+            🎪 Browse Next Upcoming Events
+          </a>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Hospitality Operations.<br>
+          For questions or payment updates, contact operations support at <strong>7986955634</strong>.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const res = await sendEmail({ to: email, subject, html });
+
+    if (res.success && (userId || applicationId)) {
+      await prisma.emailLog.create({
+        data: {
+          userId: userId || null,
+          applicationId: applicationId || null,
+          eventId: eventId || null,
+          recipientEmail: email,
+          recipientName: studentName,
+          templateName: "Event Attendance Verified (Present)",
+          subject,
+          bodyPreview: `Marked PRESENT for ${eventName}. Thank you for your service.`,
+          sentAt: new Date(),
+        },
+      }).catch((err) => console.error("Error logging attendance present email:", err));
+    }
+
+    return res;
+  } catch (error: any) {
+    console.error("sendAttendancePresentEmail error:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Attendance Absent & Account On-Hold Notice Email with WhatsApp Appeal
+ */
+export interface AttendanceAbsentHoldEmailPayload {
+  studentName: string;
+  email: string;
+  registrationNumber?: string | null;
+  eventName: string;
+  eventDate?: string | Date | null;
+  eventLocation?: string | null;
+  applicationId?: string | null;
+  userId?: string | null;
+  eventId?: string | null;
+}
+
+export async function sendAttendanceAbsentHoldEmail({
+  studentName,
+  email,
+  registrationNumber,
+  eventName,
+  eventDate,
+  eventLocation,
+  applicationId,
+  userId,
+  eventId,
+}: AttendanceAbsentHoldEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email provided." };
+    }
+
+    const subject = `Topline ODC — Important: Account On Hold (Marked Absent for ${eventName})`;
+    const formattedDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : null;
+
+    const whatsappAppealMessage = encodeURIComponent(
+      `Hi Admin, my name is ${studentName} (Reg No: ${registrationNumber || "N/A"}). I was marked ABSENT for ${eventName}. Here is my reason/emergency for absence:\n\n[Please explain your reason here]`
+    );
+    const whatsappAdminUrl = `https://wa.me/917986955634?text=${whatsappAppealMessage}`;
+    const dashboardUrl = `${getAppBaseUrl()}/profile`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 24px; color: #f3f4f6; }
+        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #374151; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 32px 24px; text-align: center; }
+        .header-tag { display: inline-block; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); color: #fecaca; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 9999px; margin-bottom: 12px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+        .body { padding: 32px 24px; }
+        .greeting { font-size: 17px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 12px; }
+        .p-text { font-size: 14px; line-height: 1.6; color: #9ca3af; margin-bottom: 18px; }
+        .hold-box { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .hold-badge { display: inline-flex; align-items: center; background: #dc2626; color: #ffffff; font-size: 12px; font-weight: 900; padding: 5px 14px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .hold-desc { font-size: 13px; color: #fca5a5; font-weight: 600; line-height: 1.5; }
+        .event-details { background: #1f2937; border-radius: 14px; padding: 18px; margin: 20px 0; font-size: 13px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #9ca3af; font-weight: 600; }
+        .detail-val { color: #ffffff; font-weight: 700; }
+        .btn-whatsapp { display: block; background: #25D366; color: #ffffff !important; font-size: 14px; font-weight: 900; text-align: center; text-decoration: none; padding: 15px 24px; border-radius: 14px; margin: 22px 0 12px 0; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3); }
+        .btn-secondary { display: block; background: #1f2937; color: #d1d5db !important; font-size: 13px; font-weight: 700; text-align: center; text-decoration: none; padding: 12px 20px; border-radius: 12px; border: 1px solid #374151; }
+        .footer { background: #0b0f19; padding: 20px 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; line-height: 1.5; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-tag">⚠️ Attendance Notice</div>
+          <h1>Account Placed On Hold</h1>
+        </div>
+        <div class="body">
+          <div class="greeting">Hi ${studentName},</div>
+          <p class="p-text">
+            You were confirmed on the duty roster for <strong>${eventName}</strong>${formattedDate ? ` on <strong>${formattedDate}</strong>` : ""}, but you were marked <strong>ABSENT</strong> as you did not check in at the venue.
+          </p>
+
+          <div class="hold-box">
+            <div class="hold-badge">⛔ Status: ON HOLD</div>
+            <div class="hold-desc">
+              As per Topline Operations Policy, unexcused absence places your student profile on hold. You will be restricted from registering for upcoming events until this hold is reviewed by an administrator.
+            </div>
+          </div>
+
+          <div class="event-details">
+            <div class="detail-row">
+              <span class="detail-label">Missed Event</span>
+              <span class="detail-val">${eventName}</span>
+            </div>
+            ${formattedDate ? `
+            <div class="detail-row">
+              <span class="detail-label">Event Date</span>
+              <span class="detail-val">${formattedDate}</span>
+            </div>` : ""}
+            ${registrationNumber ? `
+            <div class="detail-row">
+              <span class="detail-label">Student Reg No</span>
+              <span class="detail-val">${registrationNumber}</span>
+            </div>` : ""}
+          </div>
+
+          <p class="p-text" style="color: #e5e7eb; font-weight: 600;">
+            Had a genuine emergency or unavoidable reason?
+          </p>
+          <p class="p-text">
+            Click the button below to submit your explanation directly to the admin on WhatsApp (<strong>7986955634</strong>). Once reviewed and verified, the admin will remove the hold from your account.
+          </p>
+
+          <a href="${whatsappAdminUrl}" target="_blank" class="btn-whatsapp">
+            💬 Send Reason to Admin on WhatsApp (7986955634)
+          </a>
+
+          <a href="${dashboardUrl}" target="_blank" class="btn-secondary">
+            📊 Check Your Student Dashboard
+          </a>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Hospitality Operations.<br>
+          Admin Helpline & Appeals: <strong>7986955634</strong>.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const res = await sendEmail({ to: email, subject, html });
+
+    if (res.success && (userId || applicationId)) {
+      await prisma.emailLog.create({
+        data: {
+          userId: userId || null,
+          applicationId: applicationId || null,
+          eventId: eventId || null,
+          recipientEmail: email,
+          recipientName: studentName,
+          templateName: "Event Attendance Absent (Account On Hold Notice)",
+          subject,
+          bodyPreview: `Marked ABSENT for ${eventName}. Profile placed ON HOLD. WhatsApp appeal: 7986955634`,
+          sentAt: new Date(),
+        },
+      }).catch((err) => console.error("Error logging attendance absent email:", err));
+    }
+
+    return res;
+  } catch (error: any) {
+    console.error("sendAttendanceAbsentHoldEmail error:", error);
+    return { success: false, message: error.message };
+  }
+}

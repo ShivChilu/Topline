@@ -28,6 +28,7 @@ import {
   Star,
   Sliders,
   ShieldCheck,
+  AlertTriangle,
   Info,
   MessageCircle,
   Loader2,
@@ -648,6 +649,42 @@ export default function StudentProfilePage() {
             <button onClick={() => setFeedback(null)} className="text-white/80 hover:text-white p-1">
               <XCircle className="w-5 h-5" />
             </button>
+          </div>
+        )}
+
+        {/* Account On Hold Warning Banner */}
+        {user.selectionStatus === "ON_HOLD" && (
+          <div className="bg-gradient-to-r from-rose-50 to-amber-50 border-2 border-rose-300 rounded-3xl p-5 text-slate-800 shadow-sm animate-in fade-in flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-black text-rose-950">Student Profile Placed On Hold</h3>
+                  <span className="bg-rose-600 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                    Restricted
+                  </span>
+                </div>
+                <p className="text-xs text-rose-900 mt-1 leading-relaxed">
+                  {user.adminRemarks || "Your profile was placed on hold due to an unexcused event absence. New event registrations are temporarily locked."}
+                </p>
+                <p className="text-[11px] text-slate-600 font-medium mt-0.5">
+                  If you had a genuine emergency or valid reason, contact admin on WhatsApp to explain and reactivate your profile.
+                </p>
+              </div>
+            </div>
+            <a
+              href={`https://wa.me/917986955634?text=${encodeURIComponent(
+                `Hi Admin, my name is ${user.name} (Reg No: ${user.registrationNumber || "N/A"}). My Topline profile is currently ON HOLD. Here is my reason/emergency for absence:\n\n[Explain here]`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold px-5 py-3 rounded-2xl text-xs shadow-md transition shrink-0 flex items-center gap-2 active:scale-95 cursor-pointer w-full md:w-auto justify-center"
+            >
+              <MessageCircle className="w-4 h-4 fill-white" />
+              <span>Appeal on WhatsApp (7986955634)</span>
+            </a>
           </div>
         )}
 

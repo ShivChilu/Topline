@@ -47,6 +47,18 @@ export async function POST(
       );
     }
 
+    // Check if student profile is currently ON HOLD
+    if (user.selectionStatus === "ON_HOLD") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "ACCOUNT_ON_HOLD",
+          message: "Your account is currently ON HOLD due to an unexcused event absence. Please contact admin on WhatsApp (7986955634) to appeal and reactivate your profile.",
+        },
+        { status: 403 }
+      );
+    }
+
     // 2. Strict 100% Profile Completeness Gate
     const completeness = await getStudentProfileCompletion(user.id);
     if (!completeness.isComplete) {
