@@ -4,6 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { StudentSelectionStatus } from "@prisma/client";
 import { sendAttendancePresentEmail, sendAttendanceAbsentHoldEmail } from "@/lib/email";
+import { hasEventPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
-    include: { assignedEvents: { select: { eventId: true } } },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
   });
   if (!user || user.isActive === false || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
   return user;
@@ -34,14 +35,16 @@ export async function POST(
 
     const eventId = params.id;
 
-    if (admin.role === "EVENT_ADMIN") {
-      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
-      if (!isAssigned) {
-        return NextResponse.json(
-          { success: false, message: "Forbidden. You do not have access to manage attendance for this event." },
-          { status: 403 }
-        );
-      }
+    // Check if admin has explicit permission to close attendance
+    const canClose = hasEventPermission(admin, "attendance:close", eventId);
+    if (!canClose) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden. Closing attendance is restricted to Super Admins unless explicit permission is granted.",
+        },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => ({}));

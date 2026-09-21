@@ -19,6 +19,13 @@ export const EVENT_PERMISSIONS = [
     isDefault: true,
   },
   {
+    key: "attendance:close",
+    label: "Close & Finalize Attendance",
+    description: "Close attendance session, place absent candidates on hold, and send final status notifications.",
+    category: "Attendance",
+    isDefault: false,
+  },
+  {
     key: "events:close_resume",
     label: "Close & Resume Registration Form",
     description: "Pause student registrations or reopen the public application form.",

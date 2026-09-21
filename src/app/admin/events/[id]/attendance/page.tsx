@@ -56,6 +56,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const [gracePeriod, setGracePeriod] = useState(15);
   const [qrToken, setQrToken] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [canCloseAttendance, setCanCloseAttendance] = useState(false);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -85,6 +86,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
       setAttendance(data.attendance || []);
       setFilteredAttendance(data.attendance || []);
       setEvent(data.event);
+      if (data.canCloseAttendance !== undefined) {
+        setCanCloseAttendance(Boolean(data.canCloseAttendance));
+      }
       setQrEnabled(data.event.attendanceTokenEnabled || false);
       setVerificationField(data.event.attendanceVerificationField || "registrationNumber");
       setGracePeriod(data.event.gracePeriod || 15);
@@ -418,14 +422,16 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCloseModalOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
-            title="Finalize attendance session, put absent students on hold, and dispatch status emails"
-          >
-            <Lock className="w-4 h-4" />
-            <span>Close Attendance</span>
-          </button>
+          {canCloseAttendance && (
+            <button
+              onClick={() => setCloseModalOpen(true)}
+              className="bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
+              title="Finalize attendance session, put absent students on hold, and dispatch status emails"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Close Attendance</span>
+            </button>
+          )}
           <button
             onClick={() => {
               setIsRefreshing(true);

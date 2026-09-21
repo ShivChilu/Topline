@@ -66,6 +66,7 @@ export default function LiveAttendanceModal({
   const [togglingToken, setTogglingToken] = useState(false);
   const [mobileTab, setMobileTab] = useState<"qr" | "feed" | "roster">("qr");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [canCloseAttendance, setCanCloseAttendance] = useState(false);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -84,6 +85,9 @@ export default function LiveAttendanceModal({
         setStats(data.stats);
         setRoster(data.roster || []);
         setLiveFeed(data.liveFeed || []);
+        if (data.canCloseAttendance !== undefined) {
+          setCanCloseAttendance(Boolean(data.canCloseAttendance));
+        }
       }
     } catch (err) {
       console.error("Failed to poll live attendance:", err);
@@ -351,17 +355,19 @@ export default function LiveAttendanceModal({
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Close Attendance Button */}
-              <button
-                type="button"
-                onClick={() => setCloseModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black bg-red-600 hover:bg-red-700 active:scale-95 text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                title="Finalize attendance session, put absent students on hold, and dispatch status emails"
-              >
-                <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden xs:inline">Close Attendance</span>
-                <span className="xs:hidden">Close</span>
-              </button>
+              {/* Close Attendance Button (Restricted to Superadmin / Authorized IAM) */}
+              {canCloseAttendance && (
+                <button
+                  type="button"
+                  onClick={() => setCloseModalOpen(true)}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black bg-red-600 hover:bg-red-700 active:scale-95 text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  title="Finalize attendance session, put absent students on hold, and dispatch status emails"
+                >
+                  <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden xs:inline">Close Attendance</span>
+                  <span className="xs:hidden">Close</span>
+                </button>
+              )}
 
               {/* Live Auto-Refresh Toggle */}
               <button

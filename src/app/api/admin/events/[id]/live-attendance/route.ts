@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { hasEventPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ async function getLoggedInAdmin() {
   if (!decoded || !decoded.id) return null;
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
-    include: { assignedEvents: { select: { eventId: true } } },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
   });
   if (!user || user.isActive === false || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
   return user;
@@ -170,8 +171,11 @@ export async function GET(
       };
     });
 
+    const canCloseAttendance = hasEventPermission(admin, "attendance:close", eventId);
+
     return NextResponse.json({
       success: true,
+      canCloseAttendance,
       event,
       stats: {
         totalConfirmed,
