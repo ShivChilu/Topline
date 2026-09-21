@@ -449,22 +449,22 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
           {/* Main Attendance List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stats grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Present</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{presentCount}</p>
+            <div className="grid grid-cols-4 gap-2 sm:gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+              <div className="p-1 sm:p-2">
+                <p className="text-[9px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Present</p>
+                <p className="text-base sm:text-2xl font-black text-emerald-600 mt-0.5">{presentCount}</p>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Late</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{lateCount}</p>
+              <div className="p-1 sm:p-2">
+                <p className="text-[9px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Late</p>
+                <p className="text-base sm:text-2xl font-black text-amber-600 mt-0.5">{lateCount}</p>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Not Checked In</p>
-                <p className="text-2xl font-bold text-rose-600 mt-1">{absentCount}</p>
+              <div className="p-1 sm:p-2">
+                <p className="text-[9px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Pending</p>
+                <p className="text-base sm:text-2xl font-black text-rose-600 mt-0.5">{absentCount}</p>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
-                <p className="text-xs text-slate-400 uppercase tracking-wider">Rate</p>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{attendanceRate}%</p>
+              <div className="p-1 sm:p-2">
+                <p className="text-[9px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider truncate">Turnout</p>
+                <p className="text-base sm:text-2xl font-black text-slate-800 mt-0.5">{attendanceRate}%</p>
               </div>
             </div>
 

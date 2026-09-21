@@ -408,33 +408,33 @@ export default function LiveAttendanceModal({
           </div>
         </div>
 
-        {/* Real-time Metric Cards Banner */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 bg-slate-50 border-b border-slate-200 shrink-0">
-          <div className="bg-white p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Confirmed</span>
-            <div className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{stats.totalConfirmed}</div>
-            <span className="text-[9px] sm:text-[10px] text-slate-500 font-semibold block truncate">Accepted Duty</span>
+        {/* Real-time Metric Cards Banner (Ultra-Compact Single-Row on Mobile & Desktop) */}
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-3 p-2 sm:p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-slate-200 shadow-2xs text-center sm:text-left">
+            <span className="text-[8px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block truncate">Confirmed</span>
+            <div className="text-sm sm:text-lg font-black text-slate-900 mt-0.5 leading-none">{stats.totalConfirmed}</div>
+            <span className="hidden sm:block text-[9px] text-slate-400 font-medium truncate mt-0.5">Accepted</span>
           </div>
 
-          <div className="bg-white p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-emerald-200/80 bg-emerald-50/20 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Present</span>
-            <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5 flex items-baseline gap-1">
+          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-2xs text-center sm:text-left">
+            <span className="text-[8px] sm:text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block truncate">Present</span>
+            <div className="text-sm sm:text-lg font-black text-emerald-600 mt-0.5 leading-none flex items-baseline justify-center sm:justify-start gap-0.5">
               <span>{stats.markedPresent}</span>
-              {stats.markedLate > 0 && <span className="text-[10px] sm:text-xs text-amber-600 font-bold">({stats.markedLate}L)</span>}
+              {stats.markedLate > 0 && <span className="text-[9px] text-amber-600 font-bold">({stats.markedLate}L)</span>}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-emerald-700 font-semibold block truncate">Checked-in</span>
+            <span className="hidden sm:block text-[9px] text-emerald-600 font-medium truncate mt-0.5">Checked-in</span>
           </div>
 
-          <div className="bg-white p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-amber-200/80 bg-amber-50/20 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider block">Pending</span>
-            <div className="text-xl sm:text-2xl font-black text-amber-600 mt-0.5">{stats.pendingCheckIn}</div>
-            <span className="text-[9px] sm:text-[10px] text-amber-700 font-semibold block truncate">Yet to Scan</span>
+          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-amber-200 bg-amber-50/30 shadow-2xs text-center sm:text-left">
+            <span className="text-[8px] sm:text-[10px] font-extrabold text-amber-700 uppercase tracking-wider block truncate">Pending</span>
+            <div className="text-sm sm:text-lg font-black text-amber-600 mt-0.5 leading-none">{stats.pendingCheckIn}</div>
+            <span className="hidden sm:block text-[9px] text-amber-600 font-medium truncate mt-0.5">Yet to Scan</span>
           </div>
 
-          <div className="bg-white p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-blue-200/80 bg-blue-50/20 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 uppercase tracking-wider block">Turnout</span>
-            <div className="text-xl sm:text-2xl font-black text-blue-600 mt-0.5">{stats.turnoutRate}%</div>
-            <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
+          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-blue-200 bg-blue-50/30 shadow-2xs text-center sm:text-left">
+            <span className="text-[8px] sm:text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block truncate">Turnout</span>
+            <div className="text-sm sm:text-lg font-black text-blue-600 mt-0.5 leading-none">{stats.turnoutRate}%</div>
+            <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden hidden sm:block">
               <div
                 className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(100, stats.turnoutRate)}%` }}
@@ -676,7 +676,7 @@ export default function LiveAttendanceModal({
                 </div>
 
                 {/* Roster List */}
-                <div className="mt-3 space-y-2 max-h-56 sm:max-h-64 overflow-y-auto pr-1 flex-1">
+                <div className="mt-2.5 space-y-1.5 max-h-[55vh] sm:max-h-[60vh] overflow-y-auto pr-1 flex-1">
                   {filteredRoster.length === 0 ? (
                     <div className="text-center py-6 sm:py-8 text-slate-400 text-xs">
                       {roster.length === 0 ? "No confirmed candidates for this event yet." : "No matching candidates found."}
@@ -689,13 +689,13 @@ export default function LiveAttendanceModal({
                       return (
                         <div
                           key={candidate.applicationId}
-                          className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition flex items-center justify-between gap-2 text-xs ${
+                          className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border transition flex items-center justify-between gap-2 text-xs ${
                             isPresent
                               ? "bg-slate-50/50 border-slate-200/60 opacity-80"
                               : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
                           }`}
                         >
-                          <div className="flex items-center gap-2.5 sm:gap-3 truncate min-w-0">
+                          <div className="flex items-center gap-2 sm:gap-2.5 truncate min-w-0">
                             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
                               {candidate.photoUrl ? (
                                 <img src={candidate.photoUrl} alt={candidate.name} className="w-full h-full object-cover" />
