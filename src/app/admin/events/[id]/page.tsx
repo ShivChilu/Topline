@@ -219,12 +219,31 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [copiedWhatsappLink, setCopiedWhatsappLink] = useState(false);
   const [copiedPhoneNumbers, setCopiedPhoneNumbers] = useState(false);
   const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState(false);
+  const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
+  const actionsDropdownRef = useRef<HTMLDivElement | null>(null);
 
   // Admin Role & IAM Feature Permissions
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<CustomEmailTemplate[]>([]);
+
+  // Close actions dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (actionsDropdownRef.current && !actionsDropdownRef.current.contains(e.target as Node)) {
+        setIsActionsDropdownOpen(false);
+      }
+    };
+    if (isActionsDropdownOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+      document.addEventListener("touchstart", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [isActionsDropdownOpen]);
 
   useEffect(() => {
     fetch("/api/admin/users/me")
@@ -1574,119 +1593,147 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
           {/* + Actions Dropdown */}
           {currentAdminRole !== "calling" && (
-            <div className="relative group">
+            <div className="relative" ref={actionsDropdownRef}>
               <button
                 type="button"
-                className="bg-slate-900 hover:bg-black text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                onClick={() => setIsActionsDropdownOpen((prev) => !prev)}
+                className="bg-slate-900 hover:bg-black text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95"
+                title="Event Management Actions"
               >
                 <span>Actions</span>
-                <ChevronDown className="w-3.5 h-3.5" />
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isActionsDropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
-              <div className="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-40 hidden group-hover:block hover:block divide-y divide-slate-100 animate-in fade-in">
-                <div className="py-1">
-                  {can("events:close_resume") && (
-                    event.status === "CLOSED" ? (
+              {isActionsDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-64 max-w-[90vw] bg-white border border-slate-200 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="py-1">
+                    {can("events:close_resume") && (
+                      event.status === "CLOSED" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsActionsDropdownOpen(false);
+                            handleToggleEventFormStatus("OPEN");
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                        >
+                          <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Resume Form (Open)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsActionsDropdownOpen(false);
+                            handleToggleEventFormStatus("CLOSED");
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-900 bg-rose-50/70 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                        >
+                          <Lock className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Close Form (Stop Applications)</span>
+                        </button>
+                      )
+                    )}
+                    {can("students:add_from_master") && (
                       <button
                         type="button"
-                        onClick={() => handleToggleEventFormStatus("OPEN")}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                        onClick={() => {
+                          setIsActionsDropdownOpen(false);
+                          setIsAddFromMasterModalOpen(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Users className="w-3.5 h-3.5 text-blue-600" />
+                        <span>+ Add Candidate from Directory</span>
+                      </button>
+                    )}
+                    {can("events:reopen_slots") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsDropdownOpen(false);
+                          setIsReopenModalOpen(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
                       >
                         <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Resume Form (Open)</span>
+                        <span>Reopen Event (+Add Slots)</span>
                       </button>
-                    ) : (
+                    )}
+                    {can("events:edit") && (
+                      <Link
+                        href={`/admin/events/${eventId}/edit`}
+                        onClick={() => setIsActionsDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 flex items-center gap-2 transition"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Edit Event Specifications</span>
+                      </Link>
+                    )}
+                    {can("events:duplicate") && (
+                      <Link
+                        href={`/admin/events/create?cloneFrom=${eventId}`}
+                        onClick={() => setIsActionsDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Duplicate &amp; Edit as New</span>
+                      </Link>
+                    )}
+                    {can("events:manage_templates") && (
                       <button
                         type="button"
-                        onClick={() => handleToggleEventFormStatus("CLOSED")}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-rose-900 bg-rose-50/70 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                        onClick={() => {
+                          setIsActionsDropdownOpen(false);
+                          setTemplateModalOpen(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
                       >
-                        <Lock className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Close Form (Stop Applications)</span>
+                        <FileText className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Create / Manage Templates</span>
                       </button>
-                    )
-                  )}
-                  {can("students:add_from_master") && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddFromMasterModalOpen(true)}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100 flex items-center gap-2 transition cursor-pointer"
+                    )}
+                  </div>
+                  <div className="py-1">
+                    {can("events:export_data") && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsActionsDropdownOpen(false);
+                            handleExportVcf();
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Export Contacts (.vcf)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsActionsDropdownOpen(false);
+                            handleCopyAllPhones();
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Copy Phone Numbers</span>
+                        </button>
+                      </>
+                    )}
+                    <a
+                      href={`/events/${eventId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setIsActionsDropdownOpen(false)}
+                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
                     >
-                      <Users className="w-3.5 h-3.5 text-blue-600" />
-                      <span>+ Add Candidate from Directory</span>
-                    </button>
-                  )}
-                  {can("events:reopen_slots") && (
-                    <button
-                      type="button"
-                      onClick={() => setIsReopenModalOpen(true)}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Reopen Event (+Add Slots)</span>
-                    </button>
-                  )}
-                  {can("events:edit") && (
-                    <Link
-                      href={`/admin/events/${eventId}/edit`}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 flex items-center gap-2 transition"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Edit Event Specifications</span>
-                    </Link>
-                  )}
-                  {can("events:duplicate") && (
-                    <Link
-                      href={`/admin/events/create?cloneFrom=${eventId}`}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Duplicate &amp; Edit as New</span>
-                    </Link>
-                  )}
-                  {can("events:manage_templates") && (
-                    <button
-                      type="button"
-                      onClick={() => setTemplateModalOpen(true)}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Create / Manage Templates</span>
-                    </button>
-                  )}
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                      <span>View Public Page</span>
+                    </a>
+                  </div>
                 </div>
-                <div className="py-1">
-                  {can("events:export_data") && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleExportVcf()}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                      >
-                        <Download className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Export Contacts (.vcf)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyAllPhones()}
-                        className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                      >
-                        <Copy className="w-3.5 h-3.5 text-teal-600" />
-                        <span>Copy Phone Numbers</span>
-                      </button>
-                    </>
-                  )}
-                  <a
-                    href={`/events/${eventId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                    <span>View Public Page</span>
-                  </a>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
