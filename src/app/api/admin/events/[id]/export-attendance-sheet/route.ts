@@ -86,11 +86,12 @@ export async function GET(
       views: [{ showGridLines: true, state: "frozen", ySplit: 1 }],
     });
 
-    // 5 Columns: S.No, Registration Number, Candidate Name, Attendance Status, Payment Status
+    // 6 Columns: S.No, Registration Number, Candidate Name, Phone Number, Attendance Status, Payment Status
     worksheet.columns = [
       { header: "S.No", key: "sno", width: 10 },
       { header: "Registration Number", key: "regNo", width: 24 },
       { header: "Candidate Name", key: "name", width: 34 },
+      { header: "Phone Number", key: "phone", width: 20 },
       { header: "Attendance Status", key: "attendanceStatus", width: 20 },
       { header: "Payment Status", key: "paymentStatus", width: 22 },
     ];
@@ -128,6 +129,7 @@ export async function GET(
       const student = app.user;
       const resolvedName = app.name || student?.name || `Student ${app.registrationNumber || "N/A"}`;
       const resolvedRegNo = (app.registrationNumber || student?.registrationNumber || "N/A").trim();
+      const resolvedPhone = (app.mobileNumber || student?.phone || "N/A").trim();
       const resolvedAttendanceStatus = app.attendance?.attendanceStatus || (app.status === "ATTENDED" ? "PRESENT" : "ABSENT");
       const initialPaymentStatus = app.paymentStatus === "PAID" ? "PAID" : "PENDING";
 
@@ -135,6 +137,7 @@ export async function GET(
         sno: index + 1,
         regNo: resolvedRegNo,
         name: resolvedName,
+        phone: resolvedPhone,
         attendanceStatus: resolvedAttendanceStatus,
         paymentStatus: initialPaymentStatus,
       });
@@ -151,16 +154,16 @@ export async function GET(
           right: { style: "thin", color: { argb: "FFE2E8F0" } },
         };
 
-        // Alignments: S.No (center), Reg No (center), Name (left), Attendance (center), Payment Status (center)
-        if (colNumber === 1 || colNumber === 2 || colNumber === 4 || colNumber === 5) {
+        // Alignments: S.No (center), Reg No (center), Name (left), Phone (center), Attendance (center), Payment Status (center)
+        if (colNumber === 1 || colNumber === 2 || colNumber === 4 || colNumber === 5 || colNumber === 6) {
           cell.alignment = { vertical: "middle", horizontal: "center" };
         } else {
           cell.alignment = { vertical: "middle", horizontal: "left" };
         }
       });
 
-      // In-Cell Dropdown List for Payment Status (Column 5 / E)
-      const paymentCell = row.getCell(5);
+      // In-Cell Dropdown List for Payment Status (Column 6 / F)
+      const paymentCell = row.getCell(6);
       paymentCell.dataValidation = {
         type: "list",
         allowBlank: false,
@@ -174,17 +177,17 @@ export async function GET(
     const totalRows = sortedApps.length;
     const lastRowIndex = Math.max(2, totalRows + 1);
 
-    // Conditional Formatting Rules across all 5 columns (A to E):
-    // When Payment Status (Column E) is "PENDING" -> entire row turns soft RED (#FFE2E5)
-    // When Payment Status (Column E) is "PAID" -> entire row turns soft GREEN (#DCFCE7)
+    // Conditional Formatting Rules across all 6 columns (A to F):
+    // When Payment Status (Column F) is "PENDING" -> entire row turns soft RED (#FFE2E5)
+    // When Payment Status (Column F) is "PAID" -> entire row turns soft GREEN (#DCFCE7)
     if (totalRows > 0) {
       worksheet.addConditionalFormatting({
-        ref: `A2:E${lastRowIndex}`,
+        ref: `A2:F${lastRowIndex}`,
         rules: [
           {
             priority: 1,
             type: "expression",
-            formulae: [`$E2="PENDING"`],
+            formulae: [`$F2="PENDING"`],
             style: {
               fill: {
                 type: "pattern",
@@ -201,7 +204,7 @@ export async function GET(
           {
             priority: 2,
             type: "expression",
-            formulae: [`$E2="PAID"`],
+            formulae: [`$F2="PAID"`],
             style: {
               fill: {
                 type: "pattern",
