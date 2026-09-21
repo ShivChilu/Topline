@@ -25,6 +25,8 @@ import {
   Lock,
   AlertTriangle,
   Mail,
+  FileSpreadsheet,
+  Download,
 } from "lucide-react";
 
 interface LiveAttendanceModalProps {
@@ -368,14 +370,26 @@ export default function LiveAttendanceModal({
                 <button
                   type="button"
                   onClick={() => setCloseModalOpen(true)}
-                  className="px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-black bg-red-600 hover:bg-red-700 active:scale-95 text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                  title="Finalize attendance session, put absent students on hold, and dispatch status emails"
+                  className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs transition shadow-sm flex items-center gap-1 cursor-pointer"
+                  title="Finalize attendance session and dispatch student status emails"
                 >
                   <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   <span className="hidden xs:inline">Close Attendance</span>
                   <span className="xs:hidden">Close</span>
                 </button>
               )}
+
+              {/* Download Google Sheet (.xlsx) */}
+              <a
+                href={`/api/admin/events/${eventId}/export-attendance-sheet`}
+                download
+                className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                title="Download Attendance Sheet with Dropdowns & Conditional Formatting for Google Sheets (.xlsx)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Google Sheet (.xlsx)</span>
+                <span className="sm:hidden">Sheet</span>
+              </a>
 
               {/* Live Auto-Refresh Toggle */}
               <button
@@ -710,14 +724,14 @@ export default function LiveAttendanceModal({
                       return (
                         <div
                           key={candidate.applicationId}
-                          className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border transition flex items-center justify-between gap-2 text-xs ${
+                          className={`p-2.5 sm:p-3 rounded-2xl border transition flex items-center justify-between gap-2.5 sm:gap-3 text-xs ${
                             isPresent
-                              ? "bg-slate-50/50 border-slate-200/60 opacity-80"
+                              ? "bg-slate-50/70 border-slate-200/80"
                               : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
                           }`}
                         >
-                          <div className="flex items-center gap-2 sm:gap-2.5 truncate min-w-0">
-                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300 mt-0.5 sm:mt-0">
                               {candidate.photoUrl ? (
                                 <img src={candidate.photoUrl} alt={candidate.name} className="w-full h-full object-cover" />
                               ) : (
@@ -726,34 +740,34 @@ export default function LiveAttendanceModal({
                                 </div>
                               )}
                             </div>
-                            <div className="truncate min-w-0">
-                              <div className="flex items-center gap-1.5 truncate">
-                                <span className="font-bold text-slate-900 truncate text-xs">{candidate.name}</span>
-                              </div>
-                              <div className="text-[10px] sm:text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className="truncate">{candidate.registrationNumber}</span>
-                                {cleanPhone ? (
-                                  <>
-                                    <span>•</span>
-                                    <a
-                                      href={`tel:${cleanPhone}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded font-semibold text-[10px] transition active:scale-95"
-                                      title={`Click to call ${candidate.name} (${candidate.phone})`}
-                                    >
-                                      <Phone className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600/30" />
-                                      <span>{candidate.phone}</span>
-                                    </a>
-                                  </>
-                                ) : (
-                                  <span>• No phone</span>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              {/* Full Candidate Name - Never Truncated, Wraps Gracefully */}
+                              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug break-words">
+                                {candidate.name}
+                              </h4>
+                              
+                              {/* Registration Number & Phone Badges */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono font-bold text-[10px] sm:text-[11px] text-slate-800 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md shrink-0">
+                                  {candidate.registrationNumber}
+                                </span>
+                                {cleanPhone && (
+                                  <a
+                                    href={`tel:${cleanPhone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md font-bold text-[10px] transition active:scale-95 shrink-0"
+                                    title={`Call ${candidate.name} (${candidate.phone})`}
+                                  >
+                                    <Phone className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600/30" />
+                                    <span>{candidate.phone}</span>
+                                  </a>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {/* 1-Tap Call Icon Shortcut */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            {/* 1-Tap Call Shortcut */}
                             {cleanPhone && (
                               <a
                                 href={`tel:${cleanPhone}`}
@@ -761,12 +775,12 @@ export default function LiveAttendanceModal({
                                 className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition flex items-center justify-center shrink-0 shadow-2xs hover:scale-105 active:scale-95"
                                 title={`1-Tap Call ${candidate.name}`}
                               >
-                                <Phone className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
+                                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 fill-emerald-600/20" />
                               </a>
                             )}
 
                             {isPresent ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1 sm:gap-1.5">
                                 <div className="text-right">
                                   <span className="px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -781,7 +795,7 @@ export default function LiveAttendanceModal({
                                 <button
                                   type="button"
                                   onClick={() => handleManualSpotMark(candidate.applicationId, candidate.studentId, "ABSENT")}
-                                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl text-[10px] sm:text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
                                   title="Marked by mistake? Click to revert to Absent"
                                 >
                                   <RotateCcw className="w-3 h-3 text-rose-600" />
@@ -792,7 +806,7 @@ export default function LiveAttendanceModal({
                               <button
                                 type="button"
                                 onClick={() => handleManualSpotMark(candidate.applicationId, candidate.studentId, "PRESENT")}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                                className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
                                 title="Mark candidate present immediately"
                               >
                                 <Check className="w-3.5 h-3.5 stroke-[3]" />

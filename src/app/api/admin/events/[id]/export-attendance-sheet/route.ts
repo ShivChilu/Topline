@@ -1,0 +1,262 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
+import ExcelJS from "exceljs";
+
+export const dynamic = "force-dynamic";
+
+async function getLoggedInAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) return null;
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+    include: { assignedEvents: { select: { eventId: true, permissions: true } } },
+  });
+  if (!user || user.isActive === false || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN", "CALLING_ADMIN"].includes(user.role)) return null;
+  return user;
+}
+
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const admin = await getLoggedInAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    const eventId = params.id;
+
+    if (admin.role === "EVENT_ADMIN") {
+      const isAssigned = admin.assignedEvents.some((a) => a.eventId === eventId);
+      if (!isAssigned) {
+        return NextResponse.json({ success: false, message: "Forbidden. Access denied for this event." }, { status: 403 });
+      }
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
+    }
+
+    // Fetch all eligible applications for this event with candidate user details and attendance
+    const applications = await prisma.application.findMany({
+      where: {
+        eventId,
+        status: { in: ["CONFIRMED", "ATTENDED", "ABSENT", "SELECTED", "PAID"] },
+      },
+      include: {
+        user: true,
+        attendance: true,
+      },
+      orderBy: [
+        { createdAt: "asc" },
+      ],
+    });
+
+    // Create ExcelJS Workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Topline Event Management";
+    workbook.lastModifiedBy = admin.name || "Topline Admin";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const sheetName = (event.name || "Attendance").replace(/[*?:/\\\[\]]/g, "").slice(0, 30);
+    const worksheet = workbook.addWorksheet(sheetName, {
+      views: [{ showGridLines: true, state: "frozen", ySplit: 1 }],
+    });
+
+    // Column Definitions
+    worksheet.columns = [
+      { header: "S.No", key: "sno", width: 8 },
+      { header: "Registration Number", key: "regNo", width: 22 },
+      { header: "Candidate Full Name", key: "name", width: 28 },
+      { header: "Phone Number", key: "phone", width: 16 },
+      { header: "College / University", key: "university", width: 24 },
+      { header: "UPI ID / Payout Account", key: "upiId", width: 26 },
+      { header: "Attendance Status", key: "attendanceStatus", width: 18 },
+      { header: "Check-In Time", key: "checkInTime", width: 16 },
+      { header: "Event Payout (₹)", key: "payout", width: 18 },
+      { header: "Payment Status", key: "paymentStatus", width: 18 },
+      { header: "Payment Remarks / UTR Ref", key: "remarks", width: 30 },
+    ];
+
+    // Style Header Row (Row 1)
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 28;
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF0F172A" }, // Dark Slate 900
+      };
+      cell.font = {
+        name: "Calibri",
+        size: 11,
+        bold: true,
+        color: { argb: "FFFFFFFF" }, // White
+      };
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FF334155" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF334155" } },
+        right: { style: "thin", color: { argb: "FF334155" } },
+      };
+    });
+
+    // Populate Data Rows
+    applications.forEach((app, index) => {
+      const student = app.user;
+      const att = app.attendance;
+      const isPresent = att && (att.attendanceStatus === "PRESENT" || att.attendanceStatus === "LATE");
+      const attStatus = att ? att.attendanceStatus : "ABSENT";
+      const resolvedName = app.name || student?.name || `Student ${app.registrationNumber || "N/A"}`;
+      const resolvedPhone = app.mobileNumber || student?.phone || "";
+      const resolvedRegNo = (app.registrationNumber || student?.registrationNumber || "N/A").trim();
+      const university = student?.university || "N/A";
+      const upiId = student?.upiId || "N/A";
+      const payoutVal = app.paymentOverride ?? event.paymentPerStudent ?? 0;
+
+      let checkInTimeStr = "Not Checked In";
+      if (att?.checkInTime) {
+        checkInTimeStr = new Date(att.checkInTime).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+
+      const initialPaymentStatus = app.paymentStatus === "PAID" ? "PAID" : "PENDING";
+
+      const row = worksheet.addRow({
+        sno: index + 1,
+        regNo: resolvedRegNo,
+        name: resolvedName,
+        phone: resolvedPhone,
+        university,
+        upiId,
+        attendanceStatus: attStatus,
+        checkInTime: isPresent ? checkInTimeStr : "ABSENT",
+        payout: payoutVal,
+        paymentStatus: initialPaymentStatus,
+        remarks: att?.manualRemarks || "",
+      });
+
+      row.height = 24;
+
+      // Base cell styling
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: "Calibri", size: 10 };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFE2E8F0" } },
+          bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+          left: { style: "thin", color: { argb: "FFE2E8F0" } },
+          right: { style: "thin", color: { argb: "FFE2E8F0" } },
+        };
+
+        // Alignments
+        if (colNumber === 1 || colNumber === 8) {
+          cell.alignment = { vertical: "middle", horizontal: "center" };
+        } else if (colNumber === 2 || colNumber === 4 || colNumber === 7 || colNumber === 10) {
+          cell.alignment = { vertical: "middle", horizontal: "center" };
+        } else if (colNumber === 9) {
+          cell.alignment = { vertical: "middle", horizontal: "right" };
+          cell.numFmt = "₹#,##0";
+        } else {
+          cell.alignment = { vertical: "middle", horizontal: "left" };
+        }
+      });
+
+      // Add In-Cell Dropdown Data Validation for Payment Status Column (Column 10 / J)
+      const paymentCell = row.getCell(10);
+      paymentCell.dataValidation = {
+        type: "list",
+        allowBlank: false,
+        formulae: ['"PENDING,PAID"'],
+        showErrorMessage: true,
+        errorTitle: "Invalid Payment Status",
+        error: "Please select either PENDING or PAID from the dropdown list.",
+      };
+    });
+
+    const totalRows = applications.length;
+    const lastRowIndex = Math.max(2, totalRows + 1);
+
+    // Conditional Formatting Rules:
+    // When Payment Status (Column J) is "PENDING" -> whole row is soft red/rose (#FFE2E5)
+    // When Payment Status (Column J) is "PAID" -> whole row is soft green/emerald (#DCFCE7)
+    if (totalRows > 0) {
+      worksheet.addConditionalFormatting({
+        ref: `A2:K${lastRowIndex}`,
+        rules: [
+          {
+            priority: 1,
+            type: "expression",
+            formulae: [`$J2="PENDING"`],
+            style: {
+              fill: {
+                type: "pattern",
+                pattern: "solid",
+                bgColor: { argb: "FFFFE2E5" },
+                fgColor: { argb: "FFFFE2E5" },
+              },
+              font: {
+                color: { argb: "FF991B1B" }, // Red text
+                bold: true,
+              },
+            },
+          },
+          {
+            priority: 2,
+            type: "expression",
+            formulae: [`$J2="PAID"`],
+            style: {
+              fill: {
+                type: "pattern",
+                pattern: "solid",
+                bgColor: { argb: "FFDCFCE7" },
+                fgColor: { argb: "FFDCFCE7" },
+              },
+              font: {
+                color: { argb: "FF166534" }, // Green text
+                bold: true,
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    const cleanEventName = (event.name || "Event").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `Topline_Attendance_${cleanEventName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
+  } catch (error: any) {
+    console.error("Export attendance sheet error:", error);
+    return NextResponse.json({ success: false, message: error.message || "Failed to export spreadsheet." }, { status: 500 });
+  }
+}

@@ -429,7 +429,17 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
             <p className="text-slate-500 text-sm">{event?.name || "Loading event details..."}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={`/api/admin/events/${eventId}/export-attendance-sheet`}
+            download
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
+            title="Download formatted spreadsheet with Payment Status dropdowns for Google Sheets & Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Google Sheet (.xlsx)</span>
+          </a>
+
           {canCloseAttendance && (
             <button
               onClick={() => setCloseModalOpen(true)}
@@ -701,17 +711,21 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               onChange={() => handleToggleSelect(item.applicationId)}
                               className="rounded border-slate-200 text-red-655 focus:ring-red-655 mt-1"
                             />
-                            <div>
-                              <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {item.studentName}</h3>
-                              <p className="text-xs text-slate-500 font-mono">Reg No: {item.registrationNumber}</p>
-                              {phoneVal ? (
-                                <a href={`tel:${cleanPhone}`} className="text-xs text-red-600 font-bold hover:underline inline-flex items-center gap-1 mt-1">
-                                  <Phone className="w-3 h-3 text-red-600" />
-                                  <span>{phoneVal}</span>
-                                </a>
-                              ) : (
-                                <span className="text-xs text-slate-450 block mt-1">Mobile number not available</span>
-                              )}
+                            <div className="space-y-1">
+                              <h3 className="font-extrabold text-slate-900 text-sm leading-snug break-words">{index + 1}. {item.studentName}</h3>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] sm:text-xs text-slate-800 font-mono font-bold bg-slate-200/70 border border-slate-300/80 px-1.5 py-0.5 rounded">
+                                  {item.registrationNumber}
+                                </span>
+                                {phoneVal ? (
+                                  <a href={`tel:${cleanPhone}`} className="text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                                    <Phone className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600/30" />
+                                    <span>{phoneVal}</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400">No phone</span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
