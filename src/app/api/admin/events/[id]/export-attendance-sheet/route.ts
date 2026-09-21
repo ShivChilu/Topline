@@ -48,7 +48,7 @@ export async function GET(
       return NextResponse.json({ success: false, message: "Event not found" }, { status: 404 });
     }
 
-    // Fetch all eligible applications for this event with candidate user details and attendance
+    // Fetch all eligible applications for this event
     const applications = await prisma.application.findMany({
       where: {
         eventId,
@@ -58,9 +58,20 @@ export async function GET(
         user: true,
         attendance: true,
       },
-      orderBy: [
-        { createdAt: "asc" },
-      ],
+    });
+
+    // Sort: Present/Late candidates on TOP, Absent/Not Marked at the BOTTOM
+    const sortedApps = [...applications].sort((a, b) => {
+      const aPresent = a.attendance?.attendanceStatus === "PRESENT" || a.attendance?.attendanceStatus === "LATE";
+      const bPresent = b.attendance?.attendanceStatus === "PRESENT" || b.attendance?.attendanceStatus === "LATE";
+
+      if (aPresent !== bPresent) {
+        return aPresent ? -1 : 1; // Present (true) comes FIRST (-1), Absent/Unmarked comes LAST (1)
+      }
+
+      const aName = (a.name || a.user?.name || "").toLowerCase();
+      const bName = (b.name || b.user?.name || "").toLowerCase();
+      return aName.localeCompare(bName);
     });
 
     // Create ExcelJS Workbook
@@ -75,11 +86,11 @@ export async function GET(
       views: [{ showGridLines: true, state: "frozen", ySplit: 1 }],
     });
 
-    // Column Definitions: Exactly 4 requested columns
+    // 4 Columns: S.No, Registration Number, Candidate Name, Payment Status
     worksheet.columns = [
       { header: "S.No", key: "sno", width: 10 },
       { header: "Registration Number", key: "regNo", width: 24 },
-      { header: "Candidate Full Name", key: "name", width: 34 },
+      { header: "Candidate Name", key: "name", width: 34 },
       { header: "Payment Status", key: "paymentStatus", width: 22 },
     ];
 
@@ -112,7 +123,7 @@ export async function GET(
     });
 
     // Populate Data Rows
-    applications.forEach((app, index) => {
+    sortedApps.forEach((app, index) => {
       const student = app.user;
       const resolvedName = app.name || student?.name || `Student ${app.registrationNumber || "N/A"}`;
       const resolvedRegNo = (app.registrationNumber || student?.registrationNumber || "N/A").trim();
@@ -125,7 +136,7 @@ export async function GET(
         paymentStatus: initialPaymentStatus,
       });
 
-      row.height = 26;
+      row.height = 25;
 
       // Base cell styling
       row.eachCell((cell, colNumber) => {
@@ -137,7 +148,7 @@ export async function GET(
           right: { style: "thin", color: { argb: "FFE2E8F0" } },
         };
 
-        // Alignments
+        // Alignments: S.No (center), Reg No (center), Name (left), Payment Status (center)
         if (colNumber === 1 || colNumber === 2 || colNumber === 4) {
           cell.alignment = { vertical: "middle", horizontal: "center" };
         } else {
@@ -145,7 +156,7 @@ export async function GET(
         }
       });
 
-      // Add In-Cell Dropdown Data Validation for Payment Status Column (Column 4 / D)
+      // In-Cell Dropdown List for Payment Status (Column 4 / D)
       const paymentCell = row.getCell(4);
       paymentCell.dataValidation = {
         type: "list",
@@ -157,12 +168,12 @@ export async function GET(
       };
     });
 
-    const totalRows = applications.length;
+    const totalRows = sortedApps.length;
     const lastRowIndex = Math.max(2, totalRows + 1);
 
-    // Conditional Formatting Rules:
-    // When Payment Status (Column D) is "PENDING" -> whole row (A-D) is soft red/rose (#FFE2E5)
-    // When Payment Status (Column D) is "PAID" -> whole row (A-D) is soft green/emerald (#DCFCE7)
+    // Conditional Formatting Rules across all 4 columns (A to D):
+    // When Payment Status (Column D) is "PENDING" -> entire row turns soft RED (#FFE2E5)
+    // When Payment Status (Column D) is "PAID" -> entire row turns soft GREEN (#DCFCE7)
     if (totalRows > 0) {
       worksheet.addConditionalFormatting({
         ref: `A2:D${lastRowIndex}`,
