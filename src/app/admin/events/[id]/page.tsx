@@ -511,6 +511,38 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     }
   };
 
+  // Direct Attendance Email Notices (Only Absentees or Only Presentees)
+  const [sendingAttendanceNotice, setSendingAttendanceNotice] = useState<"ABSENT" | "PRESENT" | null>(null);
+  const handleSendAttendanceEmailNotice = async (target: "ABSENT" | "PRESENT") => {
+    const isAbsent = target === "ABSENT";
+    const confirmText = isAbsent
+      ? "Send Absentee On-Hold Notice to all absentees for this event? Their profiles will be placed ON HOLD with the WhatsApp appeal link (7986955634)."
+      : "Send Duty Verified confirmation emails to all present attendees for this event?";
+    
+    if (!confirm(confirmText)) return;
+
+    try {
+      setSendingAttendanceNotice(target);
+      const res = await fetch(`/api/admin/events/${eventId}/notify-attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Emails dispatched to ${target.toLowerCase()} candidates.`);
+        fetchEventData(true);
+      } else {
+        showToast(data.message || "Failed to dispatch emails.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Error dispatching attendance emails.");
+    } finally {
+      setSendingAttendanceNotice(null);
+    }
+  };
+
   // Export .vcf contacts for fast import into phone / WhatsApp
   const handleExportVcf = (targetApps?: any[]) => {
     const list = targetApps || (statusFilter === "ALL" ? applications.filter(a => a.status === "SELECTED" || a.status === "CONFIRMED") : filteredAndSortedApplications);
@@ -1693,6 +1725,28 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <span>Create / Manage Templates</span>
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsActionsDropdownOpen(false);
+                        handleSendAttendanceEmailNotice("ABSENT");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-800 bg-rose-50/50 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Email Absentees (Hold Notice)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsActionsDropdownOpen(false);
+                        handleSendAttendanceEmailNotice("PRESENT");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Email Presentees (Duty Verified)</span>
+                    </button>
                   </div>
                   <div className="py-1">
                     {can("events:export_data") && (
