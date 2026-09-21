@@ -99,10 +99,10 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
 
   useEffect(() => {
     fetchAttendance(false);
-    // Background silent poll every 8s so attendance list updates without flickering
+    // Background silent poll every 3s so multiple admins stay synchronized in real-time
     pollRef.current = setInterval(() => {
       fetchAttendance(true);
-    }, 8000);
+    }, 3000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -149,7 +149,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   }
 
   useEffect(() => {
-    let result = attendance;
+    let result = [...attendance];
     if (statusFilter !== "ALL") {
       result = result.filter((item) => item.status === statusFilter);
     }
@@ -157,14 +157,23 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
       const q = search.toLowerCase();
       result = result.filter(
         (item) =>
-        (item.studentName || "").toLowerCase().includes(q) ||
-        (item.registrationNumber || "").toLowerCase().includes(q) ||
-        (item.phone || "").toLowerCase().includes(q) ||
+          (item.studentName || "").toLowerCase().includes(q) ||
+          (item.registrationNumber || "").toLowerCase().includes(q) ||
+          (item.phone || "").toLowerCase().includes(q) ||
           Object.values(item.customFieldsData || {}).some((v) =>
             String(v).toLowerCase().includes(q)
           )
       );
     }
+    // Auto-sort: Unmarked/ABSENT on TOP so admins can fast-call, PRESENT/LATE sink to BOTTOM
+    result.sort((a, b) => {
+      const aPresent = a.status === "PRESENT" || a.status === "LATE";
+      const bPresent = b.status === "PRESENT" || b.status === "LATE";
+      if (aPresent !== bPresent) {
+        return aPresent ? 1 : -1;
+      }
+      return (a.studentName || "").localeCompare(b.studentName || "");
+    });
     setFilteredAttendance(result);
   }, [search, statusFilter, attendance]);
 
@@ -541,7 +550,24 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               return <td key={fieldId} className="px-6 py-4 font-semibold text-slate-800">{item.studentName}</td>;
                             }
                             if (fieldId === "phone") {
-                              return <td key={fieldId} className="px-6 py-4 text-slate-550">{item.phone || "Mobile number not available"}</td>;
+                              const clean = (item.phone || "").replace(/\D/g, "");
+                              return (
+                                <td key={fieldId} className="px-6 py-4 text-slate-700">
+                                  {clean ? (
+                                    <a
+                                      href={`tel:${clean}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs transition active:scale-95"
+                                      title={`Call ${item.studentName} (${item.phone})`}
+                                    >
+                                      <Phone className="w-3 h-3 text-emerald-600 fill-emerald-600/30" />
+                                      <span>{item.phone}</span>
+                                    </a>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs">No phone</span>
+                                  )}
+                                </td>
+                              );
                             }
                             const val = getCustomValue(item, fieldId);
                             return <td key={fieldId} className="px-6 py-4 text-slate-700 font-medium">{val || "-"}</td>;
@@ -568,23 +594,25 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               <>
                                 <button
                                   onClick={() => handleManualMark(item.studentId, item.applicationId, "PRESENT")}
-                                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded transition font-bold"
+                                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition font-bold shadow-2xs active:scale-95 cursor-pointer inline-flex items-center gap-1"
                                 >
-                                  Mark Present
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>Present</span>
                                 </button>
                                 <button
                                   onClick={() => handleManualMark(item.studentId, item.applicationId, "LATE")}
-                                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded transition font-bold"
+                                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-xl transition font-bold shadow-2xs active:scale-95 cursor-pointer"
                                 >
                                   Late
                                 </button>
                               </>
                             ) : (
                               <button
-                                  onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
-                                  className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
+                                onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
+                                className="text-xs bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-xl transition font-bold border border-rose-200 shadow-2xs active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                                title="Revert back to Absent"
                               >
-                                Revert
+                                <span>Absent (Revert)</span>
                               </button>
                             )}
                           </td>
@@ -603,6 +631,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                   filteredAttendance.map((item, index) => {
                     const status = item.status;
                     const phoneVal = item.phone || "";
+                    const cleanPhone = phoneVal.replace(/\D/g, "");
                     return (
                       <div key={item.applicationId} className="bg-slate-50/50 p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-3 relative text-left">
                         {/* Header info */}
@@ -618,7 +647,7 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                               <h3 className="font-extrabold text-slate-900 text-sm leading-tight">{index + 1}. {item.studentName}</h3>
                               <p className="text-xs text-slate-500 font-mono">Reg No: {item.registrationNumber}</p>
                               {phoneVal ? (
-                                <a href={`tel:${phoneVal}`} className="text-xs text-red-600 font-bold hover:underline inline-flex items-center gap-1 mt-1">
+                                <a href={`tel:${cleanPhone}`} className="text-xs text-red-600 font-bold hover:underline inline-flex items-center gap-1 mt-1">
                                   <Phone className="w-3 h-3 text-red-600" />
                                   <span>{phoneVal}</span>
                                 </a>
@@ -648,30 +677,44 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
                         )}
 
                         {/* Actions */}
-                        <div className="border-t border-slate-100 pt-2 flex justify-end gap-2">
-                          {status === "ABSENT" ? (
-                            <>
-                              <button
-                                onClick={() => handleManualMark(item.studentId, item.applicationId, "PRESENT")}
-                                className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded transition font-bold"
-                              >
-                                Mark Present
-                              </button>
-                              <button
-                                onClick={() => handleManualMark(item.studentId, item.applicationId, "LATE")}
-                                className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded transition font-bold"
-                              >
-                                Late
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
-                              className="text-xs bg-slate-100 text-slate-655 px-2.5 py-1.5 rounded hover:bg-slate-200 transition font-bold border border-slate-200"
+                        <div className="border-t border-slate-100 pt-2 flex items-center justify-between gap-2">
+                          {cleanPhone ? (
+                            <a
+                              href={`tel:${cleanPhone}`}
+                              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs active:scale-95"
+                              title={`Call ${item.studentName}`}
                             >
-                              Revert
-                            </button>
-                          )}
+                              <Phone className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600/30" />
+                              <span>Call</span>
+                            </a>
+                          ) : <div />}
+
+                          <div className="flex items-center gap-2">
+                            {status === "ABSENT" ? (
+                              <>
+                                <button
+                                  onClick={() => handleManualMark(item.studentId, item.applicationId, "PRESENT")}
+                                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl transition font-bold active:scale-95 flex items-center gap-1"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>Present</span>
+                                </button>
+                                <button
+                                  onClick={() => handleManualMark(item.studentId, item.applicationId, "LATE")}
+                                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-xl transition font-bold active:scale-95"
+                                >
+                                  Late
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleManualMark(item.studentId, item.applicationId, "ABSENT")}
+                                className="text-xs bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-xl transition font-bold border border-rose-200 active:scale-95"
+                              >
+                                Absent (Revert)
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

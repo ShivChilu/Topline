@@ -19,6 +19,9 @@ import {
   Minimize2,
   Sparkles,
   Zap,
+  Phone,
+  PhoneOff,
+  RotateCcw,
 } from "lucide-react";
 
 interface LiveAttendanceModalProps {
@@ -55,7 +58,6 @@ export default function LiveAttendanceModal({
   const [liveFeed, setLiveFeed] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [fullscreenMode, setFullscreenMode] = useState(false);
   const [regeneratingToken, setRegeneratingToken] = useState(false);
   const [togglingToken, setTogglingToken] = useState(false);
@@ -95,7 +97,7 @@ export default function LiveAttendanceModal({
     if (isLiveActive) {
       pollTimerRef.current = setInterval(() => {
         fetchLiveAttendance(false);
-      }, 8000);
+      }, 3000);
     }
 
     const handleVisibilityChange = () => {
@@ -265,15 +267,25 @@ export default function LiveAttendanceModal({
     }
   };
 
-  const filteredRoster = roster.filter((item) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(q) ||
-      item.registrationNumber.toLowerCase().includes(q) ||
-      item.phone.toLowerCase().includes(q)
-    );
-  });
+  // Auto-sort roster: Pending/Absent candidates stay at the TOP for quick calling/marking; Present candidates sink to the BOTTOM
+  const filteredRoster = roster
+    .filter((item) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        (item.name || "").toLowerCase().includes(q) ||
+        (item.registrationNumber || "").toLowerCase().includes(q) ||
+        (item.phone || "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const aPresent = a.attendanceStatus === "PRESENT" || a.attendanceStatus === "LATE";
+      const bPresent = b.attendanceStatus === "PRESENT" || b.attendanceStatus === "LATE";
+      if (aPresent !== bPresent) {
+        return aPresent ? 1 : -1; // Non-present on TOP (0), Present at BOTTOM (1)
+      }
+      return (a.name || "").localeCompare(b.name || "");
+    });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in">
@@ -597,7 +609,9 @@ export default function LiveAttendanceModal({
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
                   <div>
                     <h3 className="text-xs sm:text-sm font-extrabold text-slate-900">Confirmed Candidate Roster</h3>
-                    <p className="text-[11px] text-slate-400">1-Tap spot check-in for offline or battery-dead students</p>
+                    <p className="text-[11px] text-slate-400">
+                      Unmarked at top • 1-tap call & instant spot check-in
+                    </p>
                   </div>
 
                   {/* Search candidate */}
@@ -607,7 +621,7 @@ export default function LiveAttendanceModal({
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search candidate..."
+                      placeholder="Search candidate or phone..."
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600"
                     />
                   </div>
@@ -622,16 +636,18 @@ export default function LiveAttendanceModal({
                   ) : (
                     filteredRoster.map((candidate) => {
                       const isPresent = candidate.attendanceStatus === "PRESENT" || candidate.attendanceStatus === "LATE";
+                      const cleanPhone = (candidate.phone || "").replace(/\D/g, "");
+
                       return (
                         <div
                           key={candidate.applicationId}
                           className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition flex items-center justify-between gap-2 text-xs ${
                             isPresent
-                              ? "bg-emerald-50/40 border-emerald-200"
-                              : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50"
+                              ? "bg-slate-50/50 border-slate-200/60 opacity-80"
+                              : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
                           }`}
                         >
-                          <div className="flex items-center gap-2.5 sm:gap-3 truncate">
+                          <div className="flex items-center gap-2.5 sm:gap-3 truncate min-w-0">
                             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
                               {candidate.photoUrl ? (
                                 <img src={candidate.photoUrl} alt={candidate.name} className="w-full h-full object-cover" />
@@ -641,39 +657,77 @@ export default function LiveAttendanceModal({
                                 </div>
                               )}
                             </div>
-                            <div className="truncate">
-                              <span className="font-bold text-slate-900 block truncate text-xs">{candidate.name}</span>
-                              <div className="text-[10px] sm:text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                            <div className="truncate min-w-0">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="font-bold text-slate-900 truncate text-xs">{candidate.name}</span>
+                              </div>
+                              <div className="text-[10px] sm:text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className="truncate">{candidate.registrationNumber}</span>
-                                <span>•</span>
-                                <span>{candidate.phone}</span>
+                                {cleanPhone ? (
+                                  <>
+                                    <span>•</span>
+                                    <a
+                                      href={`tel:${cleanPhone}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded font-semibold text-[10px] transition active:scale-95"
+                                      title={`Click to call ${candidate.name} (${candidate.phone})`}
+                                    >
+                                      <Phone className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600/30" />
+                                      <span>{candidate.phone}</span>
+                                    </a>
+                                  </>
+                                ) : (
+                                  <span>• No phone</span>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
+                            {/* 1-Tap Call Icon Shortcut */}
+                            {cleanPhone && (
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition flex items-center justify-center shrink-0 shadow-2xs hover:scale-105 active:scale-95"
+                                title={`1-Tap Call ${candidate.name}`}
+                              >
+                                <Phone className="w-4 h-4 text-emerald-600 fill-emerald-600/20" />
+                              </a>
+                            )}
+
                             {isPresent ? (
-                              <div className="text-right">
-                                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  {candidate.attendanceStatus}
-                                </span>
-                                {candidate.checkInTime && (
-                                  <span className="block text-[9px] sm:text-[10px] text-slate-400 font-mono mt-0.5">
-                                    {new Date(candidate.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                              <div className="flex items-center gap-1.5">
+                                <div className="text-right">
+                                  <span className="px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    {candidate.attendanceStatus}
                                   </span>
-                                )}
+                                  {candidate.checkInTime && (
+                                    <span className="block text-[8px] sm:text-[9px] text-slate-400 font-mono">
+                                      {new Date(candidate.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleManualSpotMark(candidate.applicationId, candidate.studentId, "ABSENT")}
+                                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  title="Marked by mistake? Click to revert to Absent"
+                                >
+                                  <RotateCcw className="w-3 h-3 text-rose-600" />
+                                  <span>Absent</span>
+                                </button>
                               </div>
                             ) : (
                               <button
                                 type="button"
-                                disabled={actionLoadingId === candidate.applicationId}
                                 onClick={() => handleManualSpotMark(candidate.applicationId, candidate.studentId, "PRESENT")}
-                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                                title="Mark this candidate present immediately"
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                                title="Mark candidate present immediately"
                               >
-                                <UserCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                <span>{actionLoadingId === candidate.applicationId ? "..." : "Mark"}</span>
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <span>Present</span>
                               </button>
                             )}
                           </div>
