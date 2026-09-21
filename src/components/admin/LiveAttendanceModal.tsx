@@ -67,6 +67,8 @@ export default function LiveAttendanceModal({
   const [mobileTab, setMobileTab] = useState<"qr" | "feed" | "roster">("qr");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [canCloseAttendance, setCanCloseAttendance] = useState(false);
+  const [canRectifyAttendance, setCanRectifyAttendance] = useState(false);
+  const [rectificationToast, setRectificationToast] = useState<string | null>(null);
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -87,6 +89,9 @@ export default function LiveAttendanceModal({
         setLiveFeed(data.liveFeed || []);
         if (data.canCloseAttendance !== undefined) {
           setCanCloseAttendance(Boolean(data.canCloseAttendance));
+        }
+        if (data.canRectifyAttendance !== undefined) {
+          setCanRectifyAttendance(Boolean(data.canRectifyAttendance));
         }
       }
     } catch (err) {
@@ -291,7 +296,7 @@ export default function LiveAttendanceModal({
           applicationId,
           studentId,
           status,
-          remarks: "Admin Spot Check-In",
+          remarks: "Admin Spot/Rectification Override",
         }),
       });
       const data = await res.json();
@@ -299,6 +304,9 @@ export default function LiveAttendanceModal({
         console.error("Attendance update failed on server:", data.message);
         // Rollback on server error
         fetchLiveAttendance(false);
+      } else if (data.message) {
+        setRectificationToast(data.message);
+        setTimeout(() => setRectificationToast(null), 3500);
       }
     } catch (err) {
       console.error("Manual spot mark background sync error:", err);
@@ -662,9 +670,16 @@ export default function LiveAttendanceModal({
               <div className={`bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm flex-1 flex flex-col ${mobileTab === "feed" ? "hidden lg:flex" : "flex"}`}>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
                   <div>
-                    <h3 className="text-xs sm:text-sm font-extrabold text-slate-900">Confirmed Candidate Roster</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs sm:text-sm font-extrabold text-slate-900">Confirmed Candidate Roster</h3>
+                      {!isQrEnabled && (
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[10px] font-black uppercase">
+                          Rectification Active
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-slate-400">
-                      Unmarked at top • 1-tap call & instant spot check-in
+                      Unmarked at top • 1-tap call &amp; instant spot mark/rectify
                     </p>
                   </div>
 
@@ -908,6 +923,14 @@ export default function LiveAttendanceModal({
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Floating Rectification Feedback Toast */}
+      {rectificationToast && (
+        <div className="fixed bottom-6 right-6 z-70 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-2.5 text-xs font-bold animate-in slide-in-from-bottom-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{rectificationToast}</span>
         </div>
       )}
     </div>

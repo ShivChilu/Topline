@@ -4,6 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { processReferralQualification } from "@/lib/referral";
 import { hasEventPermission } from "@/lib/permissions";
+import { StudentSelectionStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export async function GET(
     const applications = await prisma.application.findMany({
       where: {
         eventId,
-        status: { in: ["APPLIED", "SELECTED", "CONFIRMED", "ATTENDED", "PAID"] },
+        status: { in: ["APPLIED", "SELECTED", "CONFIRMED", "ATTENDED", "ABSENT", "PAID"] },
       },
       include: {
         user: {
@@ -134,10 +135,12 @@ export async function GET(
     });
 
     const canCloseAttendance = hasEventPermission(admin, "attendance:close", eventId);
+    const canRectifyAttendance = hasEventPermission(admin, "attendance:rectify", eventId);
 
     return NextResponse.json({
       success: true,
       canCloseAttendance,
+      canRectifyAttendance,
       attendance: list,
       event: {
         ...event,
@@ -230,21 +233,60 @@ export async function POST(
         registrationNumber: app.registrationNumber || "N/A",
         attendanceStatus: normStatus,
         checkInTime: new Date(),
-        manualRemarks: remarks || "Admin Override",
+        manualRemarks: remarks || "Admin Spot/Rectification Override",
       },
       update: {
         attendanceStatus: normStatus,
         checkInTime: new Date(),
-        manualRemarks: remarks || "Admin Override",
+        manualRemarks: remarks || "Admin Spot/Rectification Override",
       },
     });
 
     // Sync status to the application as well
     let newAppStatus = app.status;
+    let holdLifted = false;
+    let holdApplied = false;
+
     if (normStatus === "PRESENT" || normStatus === "LATE") {
       newAppStatus = "ATTENDED";
+
+      // If student was ON_HOLD, auto-lift their hold upon rectification to Present
+      if (actualUserId) {
+        const studentUser = await prisma.user.findUnique({
+          where: { id: actualUserId },
+          select: { selectionStatus: true },
+        });
+        if (studentUser && studentUser.selectionStatus === StudentSelectionStatus.ON_HOLD) {
+          await prisma.user.update({
+            where: { id: actualUserId },
+            data: {
+              selectionStatus: StudentSelectionStatus.SELECTED,
+              adminRemarks: `Hold lifted automatically via attendance rectification (${new Date().toLocaleDateString("en-GB")})`,
+            },
+          });
+          holdLifted = true;
+        }
+      }
     } else if (normStatus === "ABSENT") {
-      newAppStatus = "CONFIRMED";
+      newAppStatus = "ABSENT";
+
+      // If event attendance was closed or event completed, put student ON_HOLD
+      if (actualUserId) {
+        const eventObj = await prisma.event.findUnique({
+          where: { id: eventId },
+          select: { name: true, status: true, attendanceTokenEnabled: true },
+        });
+        if (eventObj && (eventObj.status === "COMPLETED" || !eventObj.attendanceTokenEnabled)) {
+          await prisma.user.update({
+            where: { id: actualUserId },
+            data: {
+              selectionStatus: StudentSelectionStatus.ON_HOLD,
+              adminRemarks: `Placed ON HOLD due to unexcused absence in event: ${eventObj.name} (${new Date().toLocaleDateString("en-GB")})`,
+            },
+          });
+          holdApplied = true;
+        }
+      }
     }
 
     if (newAppStatus !== app.status) {
@@ -262,7 +304,13 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: "Attendance updated manually",
+      message: holdLifted
+        ? "Attendance marked PRESENT. Candidate hold status lifted automatically!"
+        : holdApplied
+        ? "Attendance marked ABSENT. Candidate placed on hold."
+        : "Attendance updated successfully.",
+      holdLifted,
+      holdApplied,
       attendance,
     });
   } catch (error) {

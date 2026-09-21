@@ -63,7 +63,7 @@ export async function GET(
       prisma.application.findMany({
         where: {
           eventId,
-          status: { in: ["CONFIRMED", "ATTENDED"] },
+          status: { in: ["CONFIRMED", "ATTENDED", "ABSENT", "SELECTED"] },
         },
         select: {
           id: true,
@@ -172,10 +172,12 @@ export async function GET(
     });
 
     const canCloseAttendance = hasEventPermission(admin, "attendance:close", eventId);
+    const canRectifyAttendance = hasEventPermission(admin, "attendance:rectify", eventId);
 
     return NextResponse.json({
       success: true,
       canCloseAttendance,
+      canRectifyAttendance,
       event,
       stats: {
         totalConfirmed,

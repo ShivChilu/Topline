@@ -57,6 +57,8 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
   const [qrToken, setQrToken] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [canCloseAttendance, setCanCloseAttendance] = useState(false);
+  const [canRectifyAttendance, setCanRectifyAttendance] = useState(false);
+  const [rectificationToast, setRectificationToast] = useState<string | null>(null);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -88,6 +90,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
       setEvent(data.event);
       if (data.canCloseAttendance !== undefined) {
         setCanCloseAttendance(Boolean(data.canCloseAttendance));
+      }
+      if (data.canRectifyAttendance !== undefined) {
+        setCanRectifyAttendance(Boolean(data.canRectifyAttendance));
       }
       setQrEnabled(data.event.attendanceTokenEnabled || false);
       setVerificationField(data.event.attendanceVerificationField || "registrationNumber");
@@ -355,6 +360,9 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
       const data = await res.json();
       if (!data.success) {
         console.error("Failed to update attendance on server:", data.message);
+      } else if (data.message) {
+        setRectificationToast(data.message);
+        setTimeout(() => setRectificationToast(null), 3500);
       }
       fetchAttendance(true); // silent background refresh
     } catch (err) {
@@ -1048,6 +1056,14 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Floating Rectification Toast */}
+      {rectificationToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-2.5 text-xs font-bold animate-in slide-in-from-bottom-4 duration-200">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{rectificationToast}</span>
         </div>
       )}
     </div>

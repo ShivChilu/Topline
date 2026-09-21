@@ -26,6 +26,13 @@ export const EVENT_PERMISSIONS = [
     isDefault: false,
   },
   {
+    key: "attendance:rectify",
+    label: "Rectify Closed Attendance",
+    description: "Modify attendance records after attendance closure and automatically adjust hold/attended status.",
+    category: "Attendance",
+    isDefault: false,
+  },
+  {
     key: "events:close_resume",
     label: "Close & Resume Registration Form",
     description: "Pause student registrations or reopen the public application form.",
