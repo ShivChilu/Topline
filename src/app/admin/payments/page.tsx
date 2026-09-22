@@ -40,6 +40,7 @@ import {
   ArrowRight,
   Heart,
   UserCheck,
+  Crown,
 } from "lucide-react";
 
 interface PresentWorker {
@@ -64,6 +65,7 @@ interface CaptainItem {
   id: string; // userId
   name: string;
   phone?: string;
+  email?: string;
   registrationNumber?: string;
   upiId?: string;
   gender?: string;
@@ -357,6 +359,84 @@ export default function AdminPaymentsPage() {
     return data.events.find((e: EventSheet) => e.id === selectedEventId) || null;
   }, [data, selectedEventId]);
 
+  // Main Dashboard Navigation Tabs (Event Sheets vs All Captains Directory)
+  const [activeMainTab, setActiveMainTab] = useState<"sheets" | "all_captains">("sheets");
+  const [allCaptainsSearch, setAllCaptainsSearch] = useState("");
+  const [allCaptainsFilter, setAllCaptainsFilter] = useState("ALL");
+
+  // Filtered Stewards List (Strictly excludes Captains and Super Admins from Base Crew List)
+  const activeStewards = useMemo(() => {
+    if (!activeFinance) return activeWorkers;
+    const captainIds = new Set((activeFinance.captains || []).map((c) => String(c.id)));
+    return activeWorkers.filter((w) => {
+      const wUserId = String((w as any).userId || "");
+      const wAppId = String(w.applicationId || "");
+      if (captainIds.has(wUserId) || captainIds.has(wAppId)) return false;
+      return true;
+    });
+  }, [activeWorkers, activeFinance]);
+
+  // Aggregate All Captains Across All Events
+  const allCaptainsAcrossEvents = useMemo(() => {
+    if (!data?.events) return [];
+    const list: Array<{
+      captain: CaptainItem;
+      event: EventSheet;
+    }> = [];
+
+    data.events.forEach((ev: EventSheet) => {
+      (ev.financials?.captains || []).forEach((cap) => {
+        list.push({
+          captain: cap,
+          event: ev,
+        });
+      });
+    });
+
+    return list;
+  }, [data?.events]);
+
+  // Filtered list of captains across all events
+  const filteredCaptainsAcrossEvents = useMemo(() => {
+    return allCaptainsAcrossEvents.filter((item) => {
+      const q = allCaptainsSearch.toLowerCase().trim();
+      const cap = item.captain;
+      const ev = item.event;
+      const roleStr = (cap.role || cap.roleTitle || "").toUpperCase();
+
+      const matchesSearch =
+        !q ||
+        (cap.name && cap.name.toLowerCase().includes(q)) ||
+        (cap.phone && cap.phone.toLowerCase().includes(q)) ||
+        (cap.email && cap.email.toLowerCase().includes(q)) ||
+        roleStr.toLowerCase().includes(q) ||
+        (ev.name && ev.name.toLowerCase().includes(q)) ||
+        (ev.client && ev.client.toLowerCase().includes(q)) ||
+        (ev.location && ev.location.toLowerCase().includes(q));
+
+      if (!matchesSearch) return false;
+
+      if (allCaptainsFilter === "SUPERADMIN") {
+        return !!cap.retainInProfit || roleStr === "SUPERADMIN";
+      }
+      if (allCaptainsFilter === "CAPTAIN") {
+        return roleStr.includes("CAPTAIN") && !cap.retainInProfit;
+      }
+      if (allCaptainsFilter === "FEMALE") {
+        return (
+          roleStr.includes("GIRL") ||
+          roleStr.includes("HOSTESS") ||
+          roleStr.includes("FEMALE")
+        );
+      }
+      if (allCaptainsFilter === "EXTERNAL") {
+        return !cap.retainInProfit && roleStr !== "SUPERADMIN";
+      }
+
+      return true;
+    });
+  }, [allCaptainsAcrossEvents, allCaptainsSearch, allCaptainsFilter]);
+
   // Real-time Auto Calculator for Working Draft & Itemized Revenue
   const calculatedSums = useMemo(() => {
     if (!activeFinance) {
@@ -389,7 +469,7 @@ export default function AdminPaymentsPage() {
     const vehicleRate = Number(activeFinance.clientVehicleRate) || 0;
     const travelBilling = vehicleCount > 0 && vehicleRate > 0 ? vehicleCount * vehicleRate : Number(activeFinance.clientTravelBilling) || 0;
 
-    const itemizedStewardsRevenue = stewardRate * activeWorkers.length;
+    const itemizedStewardsRevenue = stewardRate * activeStewards.length;
     const itemizedCaptainsRevenue = captainRate * (activeFinance.captains || []).length;
     const itemizedTravelRevenue = travelBilling;
     const itemizedCustomRolesRevenue = (activeFinance.clientCustomRoles || []).reduce(
@@ -406,7 +486,7 @@ export default function AdminPaymentsPage() {
         : Number(activeFinance.clientRevenue) || 0;
 
     // 2. Direct Outflow Expenses Calculations
-    const totalWorkerPayouts = activeWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
+    const totalWorkerPayouts = activeStewards.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
     const externalCaptainPayouts = (activeFinance.captains || [])
       .filter((c) => !c.retainInProfit && c.role !== "SUPERADMIN")
       .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
@@ -423,8 +503,8 @@ export default function AdminPaymentsPage() {
     const totalDirectExpenses = totalWorkerPayouts + externalCaptainPayouts + travelExp + foodExp + miscExp;
     const netProfit = effectiveRevenue - totalDirectExpenses;
     const profitMarginPct = effectiveRevenue > 0 ? (netProfit / effectiveRevenue) * 100 : 0;
-    const costPerWorker = activeWorkers.length > 0 ? Math.round(totalDirectExpenses / activeWorkers.length) : 0;
-    const revenuePerWorker = activeWorkers.length > 0 ? Math.round(effectiveRevenue / activeWorkers.length) : 0;
+    const costPerWorker = activeStewards.length > 0 ? Math.round(totalDirectExpenses / activeStewards.length) : 0;
+    const revenuePerWorker = activeStewards.length > 0 ? Math.round(effectiveRevenue / activeStewards.length) : 0;
 
     return {
       itemizedStewardsRevenue,
@@ -446,7 +526,7 @@ export default function AdminPaymentsPage() {
       costPerWorker,
       revenuePerWorker,
     };
-  }, [activeFinance, activeWorkers]);
+  }, [activeFinance, activeStewards]);
 
   // Execute Auto-Save to Backend API
   const executeAutoSave = async (eventId: string, finance: EventFinancials, workers: PresentWorker[]) => {
@@ -637,27 +717,26 @@ export default function AdminPaymentsPage() {
   };
 
   // Handler: Worker wage override change
-  const handleWorkerAmountChange = (index: number, val: string) => {
+  const handleWorkerAmountChange = (appId: string, val: string) => {
     const num = Number(val);
-    setActiveWorkers((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], payoutAmount: isNaN(num) ? 0 : num };
-      return next;
-    });
+    setActiveWorkers((prev) =>
+      prev.map((w) => (w.applicationId === appId ? { ...w, payoutAmount: isNaN(num) ? 0 : num } : w))
+    );
   };
 
   // Handler: Worker payment status toggle
-  const handleToggleWorkerPaymentStatus = (index: number) => {
-    setActiveWorkers((prev) => {
-      const next = [...prev];
-      const newStatus = next[index].paymentStatus === "PAID" ? "UNPAID" : "PAID";
-      next[index] = {
-        ...next[index],
-        paymentStatus: newStatus,
-        paidReference: newStatus === "PAID" ? next[index].paidReference || "UPI Transfer" : "",
-      };
-      return next;
-    });
+  const handleToggleWorkerPaymentStatus = (appId: string) => {
+    setActiveWorkers((prev) =>
+      prev.map((w) => {
+        if (w.applicationId !== appId) return w;
+        const newStatus = w.paymentStatus === "PAID" ? "UNPAID" : "PAID";
+        return {
+          ...w,
+          paymentStatus: newStatus,
+          paidReference: newStatus === "PAID" ? w.paidReference || "UPI Transfer" : "",
+        };
+      })
+    );
   };
 
   // Handler: Add Custom Misc Expense Line Item
@@ -1040,8 +1119,43 @@ export default function AdminPaymentsPage() {
         </div>
       </div>
 
-      {/* Main Workspace: Left Event Selector & Right Financial Sheet */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Tab Navigation: Event Sheets vs All Captains Directory */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          onClick={() => setActiveMainTab("sheets")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm transition cursor-pointer ${
+            activeMainTab === "sheets"
+              ? "bg-red-600 text-white shadow-sm"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <PieChart className="w-4 h-4" />
+          <span>Event Financial Sheets & P&L</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab("all_captains")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm transition cursor-pointer ${
+            activeMainTab === "all_captains"
+              ? "bg-purple-600 text-white shadow-sm"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <Crown className="w-4 h-4 text-amber-300" />
+          <span>Captains of All Events</span>
+          <span
+            className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+              activeMainTab === "all_captains" ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
+            }`}
+          >
+            {allCaptainsAcrossEvents.length}
+          </span>
+        </button>
+      </div>
+
+      {activeMainTab === "sheets" ? (
+        /* Main Workspace: Left Event Selector & Right Financial Sheet */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ---------------------------------------------------- */}
         {/* LEFT COLUMN: EVENTS BROWSER (4 cols) */}
         {/* ---------------------------------------------------- */}
@@ -1651,10 +1765,10 @@ export default function AdminPaymentsPage() {
                     </div>
                     <div>
                       <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
-                        2. Base Crew / Worker Shift Payouts
+                        2. Base Crew / Worker Shift Payouts (Stewards)
                       </h3>
                       <p className="text-xs text-slate-500">
-                        {activeWorkers.length} students marked present • Total Payout: ₹{calculatedSums.totalWorkerPayouts.toLocaleString("en-IN")}
+                        {activeStewards.length} stewards marked present • Total Payout: ₹{calculatedSums.totalWorkerPayouts.toLocaleString("en-IN")}
                       </p>
                     </div>
                   </div>
@@ -1698,7 +1812,7 @@ export default function AdminPaymentsPage() {
                 </div>
 
                 {/* Workers Table */}
-                {activeWorkers.length === 0 ? (
+                {activeStewards.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 text-xs space-y-2 bg-slate-50 rounded-2xl border border-slate-200">
                     <Users className="w-8 h-8 text-slate-300 mx-auto" />
                     <p className="font-bold text-slate-700">No present attendees marked for this event yet.</p>
@@ -1720,7 +1834,7 @@ export default function AdminPaymentsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {activeWorkers.map((w, idx) => {
+                        {activeStewards.map((w, idx) => {
                           const isPaid = w.paymentStatus === "PAID";
                           const hasUpi = w.upiId && w.upiId !== "Not Provided" && w.upiId !== "N/A";
 
@@ -1784,7 +1898,7 @@ export default function AdminPaymentsPage() {
                                     min="0"
                                     step="50"
                                     value={w.payoutAmount}
-                                    onChange={(e) => handleWorkerAmountChange(idx, e.target.value)}
+                                    onChange={(e) => handleWorkerAmountChange(w.applicationId, e.target.value)}
                                     className="w-20 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-blue-600 text-center shadow-2xs"
                                     title="Edit specific wage for this worker"
                                   />
@@ -1795,7 +1909,7 @@ export default function AdminPaymentsPage() {
                               <td className="p-3 text-right">
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleWorkerPaymentStatus(idx)}
+                                  onClick={() => handleToggleWorkerPaymentStatus(w.applicationId)}
                                   className={`px-3 py-1 rounded-xl text-xs font-extrabold transition cursor-pointer active:scale-95 flex items-center gap-1 ml-auto shadow-2xs ${
                                     isPaid
                                       ? "bg-purple-100 text-purple-900 border border-purple-300"
@@ -2273,6 +2387,313 @@ export default function AdminPaymentsPage() {
           )}
         </div>
       </div>
+      ) : (
+        /* ---------------------------------------------------- */
+        /* ALL CAPTAINS & SPECIAL STAFF DIRECTORY WORKSPACE */
+        /* ---------------------------------------------------- */
+        <div className="space-y-6">
+          {/* Top Directory Header & Filter Bar */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700 font-black">
+                    <Crown className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-lg font-black text-slate-900">
+                    Captains & Special Staff Directory Across All Events
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Master centralized registry of all Captains, Super Admins / Founders, and Specialized Crew assigned across all event sheets.
+                </p>
+              </div>
+
+              {/* Quick Search */}
+              <div className="relative w-full md:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  value={allCaptainsSearch}
+                  onChange={(e) => setAllCaptainsSearch(e.target.value)}
+                  placeholder="Search captain name, phone, role, event..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-purple-600 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filter by:</span>
+              {[
+                { id: "ALL", label: `All Roles (${allCaptainsAcrossEvents.length})` },
+                {
+                  id: "SUPERADMIN",
+                  label: `👑 Super Admins / Founders (${allCaptainsAcrossEvents.filter((c) => !!c.captain.retainInProfit || (c.captain.role || c.captain.roleTitle) === "SUPERADMIN").length})`,
+                },
+                {
+                  id: "CAPTAIN",
+                  label: `Captains (${allCaptainsAcrossEvents.filter((c) => (c.captain.role || c.captain.roleTitle || "").toUpperCase().includes("CAPTAIN") && !c.captain.retainInProfit).length})`,
+                },
+                {
+                  id: "FEMALE",
+                  label: `Female Crew / Hostesses (${allCaptainsAcrossEvents.filter((c) => {
+                    const r = (c.captain.role || c.captain.roleTitle || "").toUpperCase();
+                    return r.includes("GIRL") || r.includes("HOSTESS") || r.includes("FEMALE");
+                  }).length})`,
+                },
+                {
+                  id: "EXTERNAL",
+                  label: `External Paid Shifts (${allCaptainsAcrossEvents.filter((c) => !c.captain.retainInProfit && (c.captain.role || c.captain.roleTitle) !== "SUPERADMIN").length})`,
+                },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setAllCaptainsFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    allCaptainsFilter === f.id
+                      ? "bg-purple-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mini Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400 uppercase">Total Captain Deployments</span>
+                <Crown className="w-4 h-4 text-purple-600" />
+              </div>
+              <p className="text-2xl font-black text-slate-900">{allCaptainsAcrossEvents.length}</p>
+              <p className="text-[11px] text-slate-500">Across {data?.events?.length || 0} event sheets</p>
+            </div>
+
+            <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400 uppercase">👑 Super Admin Retained Profit</span>
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+              </div>
+              <p className="text-2xl font-black text-emerald-600">
+                +₹
+                {allCaptainsAcrossEvents
+                  .filter((c) => !!c.captain.retainInProfit || c.captain.role === "SUPERADMIN")
+                  .reduce((sum, c) => sum + (Number(c.captain.payoutAmount) || 1000), 0)
+                  .toLocaleString("en-IN")}
+              </p>
+              <p className="text-[11px] text-emerald-700 font-semibold">Retained directly into Event Net Profit</p>
+            </div>
+
+            <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400 uppercase">External Captain Payouts</span>
+                <Banknote className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className="text-2xl font-black text-slate-900">
+                ₹
+                {allCaptainsAcrossEvents
+                  .filter((c) => !c.captain.retainInProfit && c.captain.role !== "SUPERADMIN")
+                  .reduce((sum, c) => sum + (Number(c.captain.payoutAmount) || 1000), 0)
+                  .toLocaleString("en-IN")}
+              </p>
+              <p className="text-[11px] text-slate-500">Direct outward shift disbursements</p>
+            </div>
+          </div>
+
+          {/* Captains Directory Table */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+            <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-600" />
+                <h3 className="font-extrabold text-sm text-slate-900">
+                  Captains Roster ({filteredCaptainsAcrossEvents.length})
+                </h3>
+              </div>
+            </div>
+
+            {filteredCaptainsAcrossEvents.length === 0 ? (
+              <div className="p-12 text-center space-y-3">
+                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto">
+                  <Crown className="w-6 h-6" />
+                </div>
+                <h4 className="font-extrabold text-slate-800 text-sm">No Captains Found</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {allCaptainsSearch
+                    ? `No captains or events matched "${allCaptainsSearch}". Try clearing your search.`
+                    : "No captains have been assigned to event financial sheets yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-black text-slate-600 uppercase tracking-wider">
+                      <th className="py-3 px-4">Captain / Supervisor</th>
+                      <th className="py-3 px-4">Role Assigned</th>
+                      <th className="py-3 px-4">Event & Client</th>
+                      <th className="py-3 px-4">Date & Venue</th>
+                      <th className="py-3 px-4">Compensation & Accounting</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {filteredCaptainsAcrossEvents.map((item, idx) => {
+                      const isSuperAdmin =
+                        !!item.captain.retainInProfit || item.captain.role === "SUPERADMIN";
+                      return (
+                        <tr key={`${item.event.id}-${item.captain.id}-${idx}`} className="hover:bg-slate-50/80 transition">
+                          {/* Captain Name & Contact */}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                  isSuperAdmin
+                                    ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                    : "bg-purple-100 text-purple-800 border border-purple-200"
+                                }`}
+                              >
+                                {isSuperAdmin ? "👑" : item.captain.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-black text-slate-900">{item.captain.name}</span>
+                                  {isSuperAdmin && (
+                                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-1.5 py-0.2 rounded">
+                                      SUPERADMIN
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                  {item.captain.phone && (
+                                    <span className="flex items-center gap-1">
+                                      <Phone className="w-3 h-3 text-slate-400" />
+                                      {item.captain.phone}
+                                    </span>
+                                  )}
+                                  {item.captain.email && (
+                                    <span className="text-slate-400 hidden sm:inline truncate max-w-[150px]">
+                                      {item.captain.email}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Role Assigned */}
+                          <td className="py-3 px-4">
+                            {(() => {
+                              const roleLabel = item.captain.role || item.captain.roleTitle || "CAPTAIN";
+                              const isFemale = roleLabel.includes("Girls") || roleLabel.includes("Hostess") || roleLabel.includes("Female");
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${
+                                    isSuperAdmin
+                                      ? "bg-amber-50 text-amber-900 border border-amber-300"
+                                      : isFemale
+                                      ? "bg-pink-50 text-pink-800 border border-pink-200"
+                                      : "bg-purple-50 text-purple-800 border border-purple-200"
+                                  }`}
+                                >
+                                  <Award className="w-3.5 h-3.5" />
+                                  {roleLabel}
+                                </span>
+                              );
+                            })()}
+                          </td>
+
+                          {/* Event & Client */}
+                          <td className="py-3 px-4">
+                            <div>
+                              <span className="font-extrabold text-slate-900 block truncate max-w-[200px]">
+                                {item.event.name}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-medium">
+                                Client: {item.event.client || "Direct Client"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Date & Venue */}
+                          <td className="py-3 px-4">
+                            <div>
+                              <span className="font-bold text-slate-800 block">
+                                {item.event.date
+                                  ? new Date(item.event.date).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    })
+                                  : "Date TBA"}
+                              </span>
+                              <span className="text-[11px] text-slate-400 truncate max-w-[180px] block">
+                                {item.event.location || "Hyderabad"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Compensation & Accounting */}
+                          <td className="py-3 px-4">
+                            {isSuperAdmin ? (
+                              <div>
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-black">
+                                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                                  Retained in Profit (+₹{Number(item.captain.payoutAmount || 1000).toLocaleString("en-IN")})
+                                </span>
+                                <p className="text-[10.5px] text-emerald-700 font-medium mt-0.5">
+                                  Founder share • No cash deduction
+                                </p>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-xs font-black">
+                                  ₹{Number(item.captain.payoutAmount || 1000).toLocaleString("en-IN")} Outward Payout
+                                </span>
+                                {item.captain.upiId && item.captain.upiId !== "Not Provided" && (
+                                  <button
+                                    onClick={() => handleCopyUpi(item.captain.upiId!)}
+                                    className="flex items-center gap-1 text-[10.5px] text-slate-500 hover:text-purple-700 font-mono mt-0.5 cursor-pointer"
+                                    title="Click to copy UPI ID"
+                                  >
+                                    <span>UPI: {item.captain.upiId}</span>
+                                    {copiedUpi === item.captain.upiId ? (
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3 h-3 text-slate-400" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Action Button */}
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                setSelectedEventId(item.event.id);
+                                setActiveMainTab("sheets");
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-purple-600 text-white font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
+                            >
+                              <span>Open Sheet</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ---------------------------------------------------- */}
       {/* ADD STAFF ROLE / CAPTAIN FROM MASTER LIST MODAL */}

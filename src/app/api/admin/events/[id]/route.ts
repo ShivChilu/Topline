@@ -77,9 +77,27 @@ export async function GET(
     };
 
     if (getStats) {
-      const applicationsCount = await prisma.application.count({ where: { eventId } });
-      const attendanceCount = await prisma.attendance.count({ where: { eventId } });
-      const paymentsCount = await prisma.application.count({ where: { eventId, paymentStatus: PaymentStatus.PAID } });
+      const applicationsCount = await prisma.application.count({
+        where: {
+          eventId,
+          user: { role: { notIn: ["SUPERADMIN", "ADMIN"] } },
+          NOT: { callingRemarks: { startsWith: "Assigned Role:" } },
+        },
+      });
+      const attendanceCount = await prisma.attendance.count({
+        where: {
+          eventId,
+          user: { role: { notIn: ["SUPERADMIN", "ADMIN"] } },
+          NOT: { manualRemarks: { startsWith: "Assigned Role:" } },
+        },
+      });
+      const paymentsCount = await prisma.application.count({
+        where: {
+          eventId,
+          paymentStatus: PaymentStatus.PAID,
+          user: { role: { notIn: ["SUPERADMIN", "ADMIN"] } },
+        },
+      });
 
       return NextResponse.json({
         success: true,

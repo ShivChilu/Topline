@@ -197,9 +197,17 @@ export async function GET(request: Request) {
         workerOverrides: {},
       };
 
-      // Extract verified presentees
+      // Extract verified presentees (Stewards only - exclude Captains and SuperAdmins from Base Crew list!)
+      const captainIdsSet = new Set((savedFinance.captains || []).map((c) => String(c.id)));
+
       const presentWorkers = ev.applications
         .filter((app) => {
+          // Strictly exclude anyone assigned as a Captain or who is a SuperAdmin/Admin
+          if (captainIdsSet.has(String(app.userId))) return false;
+          if (app.user?.role === "SUPERADMIN" || app.user?.role === "ADMIN") return false;
+          if (app.attendance?.manualRemarks?.startsWith("Assigned Role:")) return false;
+          if (app.callingRemarks?.startsWith("Assigned Role:")) return false;
+
           const isAttended = app.status === ApplicationStatus.ATTENDED;
           const isPresent =
             app.attendance &&
@@ -401,87 +409,27 @@ export async function POST(request: Request) {
       await Promise.all(updates);
     }
 
-    // 4. Synchronize Captain & Specialized Staff assignments to their individual Profile history
-    if (Array.isArray(financeData.captains)) {
-      for (const cap of financeData.captains) {
-        if (!cap.id) continue;
-        try {
-          const studentUser = await prisma.user.findUnique({
-            where: { id: cap.id },
-            select: { id: true, name: true, phone: true, registrationNumber: true },
-          });
-          if (!studentUser) continue;
+    // 4. Clean up any auto-created attendance records for captains & superadmins to ensure stewards count remains clean
+    try {
+      await prisma.attendance.deleteMany({
+        where: {
+          eventId,
+          OR: [
+            { manualRemarks: { startsWith: "Assigned Role:" } },
+            { user: { role: { in: ["SUPERADMIN", "ADMIN"] } } },
+          ],
+        },
+      });
 
-          const roleRemarks = `Assigned Role: ${cap.roleTitle || "Event Lead Captain"}`;
-          const paymentStatusVal = cap.paymentStatus === "PAID" ? PaymentStatus.PAID : PaymentStatus.UNPAID;
-          const payoutOverrideVal = Number(cap.payoutAmount) || 0;
-
-          const existingApp = await prisma.application.findUnique({
-            where: {
-              eventId_userId: {
-                eventId,
-                userId: studentUser.id,
-              },
-            },
-          });
-
-          if (existingApp) {
-            await prisma.application.update({
-              where: { id: existingApp.id },
-              data: {
-                paymentOverride: payoutOverrideVal,
-                paymentStatus: paymentStatusVal,
-                callingRemarks: roleRemarks,
-                status: ApplicationStatus.ATTENDED,
-              },
-            });
-
-            const regNo = studentUser.registrationNumber || cap.registrationNumber || "N/A";
-
-            await prisma.attendance.upsert({
-              where: { applicationId: existingApp.id },
-              update: {
-                attendanceStatus: AttendanceStatus.PRESENT,
-                manualRemarks: roleRemarks,
-              },
-              create: {
-                applicationId: existingApp.id,
-                eventId,
-                userId: studentUser.id,
-                registrationNumber: regNo,
-                attendanceStatus: AttendanceStatus.PRESENT,
-                manualRemarks: roleRemarks,
-              },
-            });
-          } else {
-            const regNo = studentUser.registrationNumber || cap.registrationNumber || "N/A";
-            await prisma.application.create({
-              data: {
-                eventId,
-                userId: studentUser.id,
-                name: studentUser.name || cap.name,
-                mobileNumber: studentUser.phone || cap.phone || "N/A",
-                registrationNumber: regNo,
-                status: ApplicationStatus.ATTENDED,
-                paymentStatus: paymentStatusVal,
-                paymentOverride: payoutOverrideVal,
-                callingRemarks: roleRemarks,
-                attendance: {
-                  create: {
-                    eventId,
-                    userId: studentUser.id,
-                    registrationNumber: regNo,
-                    attendanceStatus: AttendanceStatus.PRESENT,
-                    manualRemarks: roleRemarks,
-                  },
-                },
-              },
-            });
-          }
-        } catch (capErr) {
-          console.warn(`Failed to synchronize captain role for user ${cap.id}:`, capErr);
-        }
-      }
+      await prisma.application.deleteMany({
+        where: {
+          eventId,
+          user: { role: { in: ["SUPERADMIN", "ADMIN"] } },
+          callingRemarks: { startsWith: "Assigned Role:" },
+        },
+      });
+    } catch (cleanupErr) {
+      console.warn("Captain attendance cleanup notice:", cleanupErr);
     }
 
     // 5. Record audit log
