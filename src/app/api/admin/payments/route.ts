@@ -53,10 +53,13 @@ export interface EventFinanceData {
     phone?: string;
     registrationNumber?: string;
     upiId?: string;
+    gender?: string;
+    role?: string;
     roleTitle: string;
     payoutAmount: number;
     paymentStatus: "PAID" | "UNPAID";
     paidReference?: string;
+    retainInProfit?: boolean;
   }>;
   workerOverrides: Record<
     string,
@@ -106,6 +109,7 @@ export async function GET(request: Request) {
                 university: true,
                 upiId: true,
                 gender: true,
+                role: true,
               },
             },
             attendance: {
@@ -136,10 +140,9 @@ export async function GET(request: Request) {
       financeMap.set(eventId, s.value as unknown as EventFinanceData);
     });
 
-    // 3. Fetch Master Students list for Captain selector (Lightweight projection)
+    // 3. Fetch Master User list (including SuperAdmins and Admins) for Captain selector
     const masterStudents = await prisma.user.findMany({
       where: {
-        role: "USER",
         isActive: true,
       },
       select: {
@@ -151,8 +154,12 @@ export async function GET(request: Request) {
         upiId: true,
         selectionStatus: true,
         gender: true,
+        role: true,
       },
-      orderBy: { name: "asc" },
+      orderBy: [
+        { role: "desc" },
+        { name: "asc" },
+      ],
     });
 
     // 4. Transform and calculate metrics per event
@@ -227,12 +234,18 @@ export async function GET(request: Request) {
       // Calculate Event Financial Sums
       const effectiveRevenue = savedFinance.clientRevenue || ev.clientRevenue || 0;
       const totalWorkerPayouts = presentWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
+      const externalCaptainPayouts = (savedFinance.captains || [])
+        .filter((c) => !c.retainInProfit)
+        .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
+      const superAdminRetainedCaptainProfit = (savedFinance.captains || [])
+        .filter((c) => !!c.retainInProfit)
+        .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
       const totalCaptainPayouts = (savedFinance.captains || []).reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
       const travelExp = Number(savedFinance.travelExpenses) || 0;
       const foodExp = Number(savedFinance.foodExpenses) || 0;
       const miscExp = (savedFinance.miscExpenses || []).reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
 
-      const totalDirectExpenses = totalWorkerPayouts + totalCaptainPayouts + travelExp + foodExp + miscExp;
+      const totalDirectExpenses = totalWorkerPayouts + externalCaptainPayouts + travelExp + foodExp + miscExp;
       const netProfit = effectiveRevenue - totalDirectExpenses;
       const profitMarginPct = effectiveRevenue > 0 ? (netProfit / effectiveRevenue) * 100 : 0;
       const isAttendanceClosed = !ev.attendanceTokenEnabled || ["CLOSED", "COMPLETED"].includes(ev.status);
@@ -241,7 +254,7 @@ export async function GET(request: Request) {
       if (presentWorkers.length > 0 || effectiveRevenue > 0) {
         totalAllRevenue += effectiveRevenue;
         totalAllWorkerPayouts += totalWorkerPayouts;
-        totalAllCaptainPayouts += totalCaptainPayouts;
+        totalAllCaptainPayouts += externalCaptainPayouts;
         totalAllTravel += travelExp;
         totalAllFoodMisc += foodExp + miscExp;
         totalAllExpenses += totalDirectExpenses;

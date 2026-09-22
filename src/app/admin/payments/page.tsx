@@ -67,10 +67,12 @@ interface CaptainItem {
   registrationNumber?: string;
   upiId?: string;
   gender?: string;
+  role?: string;
   roleTitle: string;
   payoutAmount: number;
   paymentStatus: "PAID" | "UNPAID";
   paidReference?: string;
+  retainInProfit?: boolean;
 }
 
 interface MiscExpenseItem {
@@ -196,10 +198,11 @@ export default function AdminPaymentsPage() {
   // Add Staff Role / Captain Modal States
   const [showAddCaptainModal, setShowAddCaptainModal] = useState(false);
   const [captainSearchTerm, setCaptainSearchTerm] = useState("");
-  const [captainGenderFilter, setCaptainGenderFilter] = useState<"ALL" | "FEMALE" | "MALE">("ALL");
+  const [captainGenderFilter, setCaptainGenderFilter] = useState<"ALL" | "SUPERADMIN" | "FEMALE" | "MALE">("ALL");
   const [selectedStudentForCaptain, setSelectedStudentForCaptain] = useState<any>(null);
   const [captainRoleInput, setCaptainRoleInput] = useState("Event Lead Captain");
   const [captainPayoutInput, setCaptainPayoutInput] = useState<string>("1000");
+  const [captainRetainInProfitInput, setCaptainRetainInProfitInput] = useState<boolean>(true);
 
   // Print Statement Modal
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -365,6 +368,8 @@ export default function AdminPaymentsPage() {
         itemizedTotalRevenue: 0,
         effectiveRevenue: 0,
         totalWorkerPayouts: 0,
+        externalCaptainPayouts: 0,
+        superAdminRetainedCaptainProfit: 0,
         totalCaptainPayouts: 0,
         travelExp: 0,
         foodExp: 0,
@@ -402,12 +407,20 @@ export default function AdminPaymentsPage() {
 
     // 2. Direct Outflow Expenses Calculations
     const totalWorkerPayouts = activeWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
+    const externalCaptainPayouts = (activeFinance.captains || [])
+      .filter((c) => !c.retainInProfit)
+      .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
+    const superAdminRetainedCaptainProfit = (activeFinance.captains || [])
+      .filter((c) => !!c.retainInProfit)
+      .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
     const totalCaptainPayouts = (activeFinance.captains || []).reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
+
     const travelExp = Number(activeFinance.travelExpenses) || 0;
     const foodExp = Number(activeFinance.foodExpenses) || 0;
     const miscExp = (activeFinance.miscExpenses || []).reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
 
-    const totalDirectExpenses = totalWorkerPayouts + totalCaptainPayouts + travelExp + foodExp + miscExp;
+    // Direct out-of-pocket expenses only deduct external crew/third-party expenses
+    const totalDirectExpenses = totalWorkerPayouts + externalCaptainPayouts + travelExp + foodExp + miscExp;
     const netProfit = effectiveRevenue - totalDirectExpenses;
     const profitMarginPct = effectiveRevenue > 0 ? (netProfit / effectiveRevenue) * 100 : 0;
     const costPerWorker = activeWorkers.length > 0 ? Math.round(totalDirectExpenses / activeWorkers.length) : 0;
@@ -421,6 +434,8 @@ export default function AdminPaymentsPage() {
       itemizedTotalRevenue,
       effectiveRevenue,
       totalWorkerPayouts,
+      externalCaptainPayouts,
+      superAdminRetainedCaptainProfit,
       totalCaptainPayouts,
       travelExp,
       foodExp,
@@ -681,6 +696,8 @@ export default function AdminPaymentsPage() {
   const handleAddCaptainConfirm = () => {
     if (!selectedStudentForCaptain || !activeFinance) return;
     const captainAmt = Number(captainPayoutInput) || 1000;
+    const isSuperAdminUser = ["SUPERADMIN", "ADMIN", "EVENT_ADMIN"].includes(selectedStudentForCaptain.role);
+    const retainInProfit = isSuperAdminUser ? captainRetainInProfitInput : false;
 
     const newCap: CaptainItem = {
       id: selectedStudentForCaptain.id,
@@ -689,10 +706,12 @@ export default function AdminPaymentsPage() {
       registrationNumber: selectedStudentForCaptain.registrationNumber || "N/A",
       upiId: selectedStudentForCaptain.upiId || "Not Provided",
       gender: selectedStudentForCaptain.gender || "N/A",
+      role: selectedStudentForCaptain.role || "USER",
       roleTitle: captainRoleInput.trim() || "Event Lead Captain",
       payoutAmount: captainAmt,
       paymentStatus: "UNPAID",
       paidReference: "",
+      retainInProfit,
     };
 
     // Check if already in list
@@ -711,9 +730,25 @@ export default function AdminPaymentsPage() {
     setSelectedStudentForCaptain(null);
     setCaptainRoleInput("Event Lead Captain");
     setCaptainPayoutInput("1000");
+    setCaptainRetainInProfitInput(true);
     setFeedback({
       type: "success",
-      message: `Assigned ${newCap.name} as ${newCap.roleTitle} (₹${captainAmt}).`,
+      message: `Assigned ${newCap.name} as ${newCap.roleTitle} (₹${captainAmt}${retainInProfit ? " • Retained in Net Profit" : ""}).`,
+    });
+  };
+
+  const handleToggleCaptainRetainInProfit = (captainId: string) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      captains: (activeFinance.captains || []).map((c) =>
+        c.id === captainId
+          ? {
+              ...c,
+              retainInProfit: !c.retainInProfit,
+            }
+          : c
+      ),
     });
   };
 
@@ -1233,9 +1268,16 @@ export default function AdminPaymentsPage() {
 
                 <div className="col-span-2 sm:col-span-2 bg-slate-900 p-3.5 rounded-2xl text-white flex items-center justify-between">
                   <div>
-                    <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-emerald-300 block">
-                      Net Profit Earned
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-emerald-300 block">
+                        Net Profit Earned
+                      </span>
+                      {calculatedSums.superAdminRetainedCaptainProfit > 0 && (
+                        <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                          👑 ₹{calculatedSums.superAdminRetainedCaptainProfit.toLocaleString("en-IN")} Founder/Admin Fee Included
+                        </span>
+                      )}
+                    </div>
                     <p className={`text-2xl font-black ${calculatedSums.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {calculatedSums.netProfit >= 0 ? "+" : ""}₹{calculatedSums.netProfit.toLocaleString("en-IN")}
                     </p>
@@ -1453,7 +1495,7 @@ export default function AdminPaymentsPage() {
                     {/* Custom Roles Inflow (Girls, Bouncers, Bartenders) */}
                     {(activeFinance.clientCustomRoles || []).length > 0 && (
                       <div className="space-y-2 pt-2 border-t border-emerald-200">
-                        <span className="text-[11px] font-black text-emerald-900 uppercase tracking-wider block">
+                        <span className="text-[11px] font-black text-emerald-950 uppercase tracking-wider block">
                           Additional Custom Staff Roles Billed to Client:
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1466,40 +1508,46 @@ export default function AdminPaymentsPage() {
                                 <input
                                   type="text"
                                   value={cr.roleName}
-                                  onChange={(e) => handleUpdateClientCustomRole(cr.id, "roleName", e.target.value)}
-                                  placeholder="Role Title (e.g. Girls / Hostesses)"
-                                  className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-xs font-black text-slate-900"
+                                  onChange={(e) =>
+                                    handleUpdateClientCustomRole(cr.id, "roleName", e.target.value)
+                                  }
+                                  placeholder="Role Title"
+                                  className="w-full font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs"
                                 />
-                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                                  <span>Count:</span>
+                                <div className="flex items-center gap-1.5 text-[11px]">
                                   <input
                                     type="number"
                                     min="1"
                                     value={cr.headcount}
-                                    onChange={(e) => handleUpdateClientCustomRole(cr.id, "headcount", Number(e.target.value) || 0)}
-                                    className="w-12 bg-slate-50 border border-slate-200 rounded px-1 py-0.5 text-xs font-bold text-center text-slate-900"
+                                    onChange={(e) =>
+                                      handleUpdateClientCustomRole(cr.id, "headcount", Number(e.target.value) || 1)
+                                    }
+                                    className="w-12 text-center bg-slate-50 border border-slate-200 rounded px-1 py-0.5 font-black text-slate-800"
                                   />
-                                  <span>× Rate: ₹</span>
+                                  <span className="text-slate-400">&times;</span>
+                                  <span className="text-slate-400">₹</span>
                                   <input
                                     type="number"
                                     min="0"
                                     step="50"
                                     value={cr.ratePerPerson}
-                                    onChange={(e) => handleUpdateClientCustomRole(cr.id, "ratePerPerson", Number(e.target.value) || 0)}
-                                    className="w-16 bg-slate-50 border border-slate-200 rounded px-1 py-0.5 text-xs font-bold text-center text-slate-900"
+                                    onChange={(e) =>
+                                      handleUpdateClientCustomRole(cr.id, "ratePerPerson", Number(e.target.value) || 0)
+                                    }
+                                    className="w-16 text-center bg-slate-50 border border-slate-200 rounded px-1 py-0.5 font-black text-slate-800"
                                   />
                                 </div>
                               </div>
 
-                              <div className="text-right shrink-0">
+                              <div className="text-right space-y-1">
                                 <span className="font-black text-emerald-700 block text-xs">
-                                  ₹{cr.totalAmount.toLocaleString("en-IN")}
+                                  ₹{(Number(cr.headcount || 0) * Number(cr.ratePerPerson || 0)).toLocaleString("en-IN")}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveClientCustomRole(cr.id)}
-                                  className="text-slate-400 hover:text-rose-600 p-1 rounded"
-                                  title="Remove role"
+                                  className="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 cursor-pointer"
+                                  title="Delete Custom Role"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1510,10 +1558,10 @@ export default function AdminPaymentsPage() {
                       </div>
                     )}
 
-                    {/* Auto Itemized Inflow Sum & Sync Action Strip */}
-                    <div className="bg-white p-3 rounded-xl border border-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    {/* Sync Itemized Total to Main Revenue Button */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-emerald-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-900">
                           Auto-Calculated Total Itemized Client Inflow:
                         </span>
                         <span className="text-base font-black text-emerald-700">
@@ -1665,21 +1713,20 @@ export default function AdminPaymentsPage() {
                         <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
                           <th className="p-3 w-12 text-center">#</th>
                           <th className="p-3">Student Name & Contact</th>
-                          <th className="p-3">Roll No & College</th>
-                          <th className="p-3">UPI ID</th>
-                          <th className="p-3">Attendance</th>
-                          <th className="p-3">Shift Wage (₹)</th>
-                          <th className="p-3 text-right">Payment Status</th>
+                          <th className="p-3">College & Roll No</th>
+                          <th className="p-3">UPI Payment ID</th>
+                          <th className="p-3 text-center">Payout Wage (₹)</th>
+                          <th className="p-3 text-right">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium">
+                      <tbody className="divide-y divide-slate-100">
                         {activeWorkers.map((w, idx) => {
                           const isPaid = w.paymentStatus === "PAID";
                           const hasUpi = w.upiId && w.upiId !== "Not Provided" && w.upiId !== "N/A";
 
                           return (
-                            <tr key={w.applicationId || idx} className="hover:bg-slate-50/70 transition">
-                              <td className="p-3 text-center text-slate-400 font-mono text-[11px]">
+                            <tr key={w.applicationId || idx} className={`transition ${isPaid ? "bg-purple-50/20" : "hover:bg-slate-50/80"}`}>
+                              <td className="p-3 text-center font-bold text-slate-400 font-mono text-[11px]">
                                 {idx + 1}
                               </td>
 
@@ -1687,7 +1734,7 @@ export default function AdminPaymentsPage() {
                                 <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
                                   <span>{w.name}</span>
                                   {w.gender && w.gender.toUpperCase().includes("FEMALE") && (
-                                    <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                    <span className="bg-pink-100 text-pink-700 text-[9.5px] font-black px-1.5 py-0.2 rounded-full">
                                       Female
                                     </span>
                                   )}
@@ -1698,10 +1745,8 @@ export default function AdminPaymentsPage() {
                               </td>
 
                               <td className="p-3">
-                                <div className="font-mono font-bold text-slate-800">{w.registrationNumber}</div>
-                                <div className="text-[10.5px] text-slate-400 truncate max-w-[160px]">
-                                  {w.university}
-                                </div>
+                                <div className="font-medium text-slate-800">{w.university || "—"}</div>
+                                <div className="text-[11px] text-slate-400 font-mono">{w.registrationNumber || "—"}</div>
                               </td>
 
                               <td className="p-3">
@@ -1730,15 +1775,9 @@ export default function AdminPaymentsPage() {
                                 )}
                               </td>
 
-                              <td className="p-3">
-                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full text-[10px] font-extrabold">
-                                  ✓ {w.attendanceStatus}
-                                </span>
-                              </td>
-
                               {/* Editable Payout Amount */}
-                              <td className="p-3">
-                                <div className="flex items-center gap-1">
+                              <td className="p-3 text-center">
+                                <div className="inline-flex items-center gap-1">
                                   <span className="text-slate-400 font-bold">₹</span>
                                   <input
                                     type="number"
@@ -1799,9 +1838,19 @@ export default function AdminPaymentsPage() {
                       <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
                         3. Event Captains & Specialized Roles (Supervisors, Hostesses / Girls, Leads)
                       </h3>
-                      <p className="text-xs text-slate-500">
-                        {(activeFinance.captains || []).length} assigned • Total Payout: ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 mt-0.5">
+                        <span>{(activeFinance.captains || []).length} assigned</span>
+                        <span>•</span>
+                        <span>Outward Crew Expense: ₹{calculatedSums.externalCaptainPayouts.toLocaleString("en-IN")}</span>
+                        {calculatedSums.superAdminRetainedCaptainProfit > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="text-amber-800 bg-amber-100 border border-amber-300 font-bold px-2 py-0.5 rounded-full text-[10.5px] flex items-center gap-1">
+                              👑 ₹{calculatedSums.superAdminRetainedCaptainProfit.toLocaleString("en-IN")} Retained in Net Profit (Founder/Admin)
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1820,79 +1869,131 @@ export default function AdminPaymentsPage() {
                     <Award className="w-7 h-7 text-slate-300 mx-auto" />
                     <p className="font-bold text-slate-700">No captains or specialized roles assigned to this event yet.</p>
                     <p className="text-slate-400">
-                      Click &quot;Add Staff / Captain from Master List&quot; above to assign lead captains, girls/hostesses, bartenders or bouncers.
+                      Click &quot;Add Staff / Captain from Master List&quot; above to assign lead captains, Super Admins (Founders), girls/hostesses, bartenders or bouncers.
                     </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {activeFinance.captains.map((cap, cIdx) => (
-                      <div
-                        key={cap.id || cIdx}
-                        className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200 shadow-2xs space-y-3 relative"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="bg-purple-200 text-purple-900 text-[10px] font-black uppercase px-2 py-0.5 rounded">
-                              {cap.roleTitle || "Captain"}
-                            </span>
-                            <h4 className="font-black text-sm text-slate-900 mt-1 flex items-center gap-1.5">
-                              <span>{cap.name}</span>
-                              {cap.gender && cap.gender.toUpperCase().includes("FEMALE") && (
-                                <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
-                                  Female
+                    {activeFinance.captains.map((cap, cIdx) => {
+                      const isFounderRetained = !!cap.retainInProfit;
+                      return (
+                        <div
+                          key={cap.id || cIdx}
+                          className={`p-4 rounded-2xl border shadow-2xs space-y-3 relative transition ${
+                            isFounderRetained
+                              ? "bg-amber-50/60 border-amber-300"
+                              : "bg-purple-50/50 border-purple-200"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                                  isFounderRetained ? "bg-amber-200 text-amber-950" : "bg-purple-200 text-purple-900"
+                                }`}>
+                                  {cap.roleTitle || "Captain"}
+                                </span>
+
+                                {cap.role === "SUPERADMIN" && (
+                                  <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9.5px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                                    👑 Super Admin
+                                  </span>
+                                )}
+                                {cap.role === "ADMIN" && (
+                                  <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[9.5px] font-black px-1.5 py-0.2 rounded-full">
+                                    🛡️ Admin
+                                  </span>
+                                )}
+                                {cap.gender && cap.gender.toUpperCase().includes("FEMALE") && (
+                                  <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                    Female
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="font-black text-sm text-slate-900 mt-1 flex items-center gap-1.5">
+                                <span>{cap.name}</span>
+                              </h4>
+                              <p className="text-[11px] text-slate-500 font-mono">
+                                {cap.phone} • {cap.registrationNumber || "Internal Staff"}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCaptain(cap.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                              title="Remove Captain"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Retain in Profit Switch / Indicator */}
+                          <div className="bg-white/80 p-2 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-700">Accounting:</span>
+                              {isFounderRetained ? (
+                                <span className="text-emerald-700 font-black flex items-center gap-1">
+                                  <span>💰 Retained in Net Profit</span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-600 font-bold">
+                                  <span>💸 Outward Crew Expense</span>
                                 </span>
                               )}
-                            </h4>
-                            <p className="text-[11px] text-slate-500 font-mono">
-                              {cap.phone} • {cap.registrationNumber}
-                            </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCaptainRetainInProfit(cap.id)}
+                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-lg border transition cursor-pointer active:scale-95 ${
+                                isFounderRetained
+                                  ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
+                                  : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                              }`}
+                              title="Toggle whether this captain payout is retained as company profit or paid out as expense"
+                            >
+                              {isFounderRetained ? "Switch to Outflow" : "Switch to Retained Profit"}
+                            </button>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCaptain(cap.id)}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                            title="Remove Captain"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-purple-200/60 text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-500 font-bold">Fee: ₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="100"
+                                value={cap.payoutAmount}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value) || 0;
+                                  setActiveFinance({
+                                    ...activeFinance,
+                                    captains: activeFinance.captains.map((c) =>
+                                      c.id === cap.id ? { ...c, payoutAmount: val } : c
+                                    ),
+                                  });
+                                }}
+                                className="w-20 bg-white border border-purple-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-900 text-center"
+                              />
+                            </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-purple-200/60 text-xs">
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-500 font-bold">Payout: ₹</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="100"
-                              value={cap.payoutAmount}
-                              onChange={(e) => {
-                                const val = Number(e.target.value) || 0;
-                                setActiveFinance({
-                                  ...activeFinance,
-                                  captains: activeFinance.captains.map((c) =>
-                                    c.id === cap.id ? { ...c, payoutAmount: val } : c
-                                  ),
-                                });
-                              }}
-                              className="w-20 bg-white border border-purple-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-900 text-center"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCaptainPaid(cap.id)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                                cap.paymentStatus === "PAID"
+                                  ? "bg-purple-700 text-white"
+                                  : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-100"
+                              }`}
+                            >
+                              {cap.paymentStatus === "PAID" ? "✓ Paid" : "Mark Paid"}
+                            </button>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleToggleCaptainPaid(cap.id)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
-                              cap.paymentStatus === "PAID"
-                                ? "bg-purple-700 text-white"
-                                : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-100"
-                            }`}
-                          >
-                            {cap.paymentStatus === "PAID" ? "✓ Paid" : "Mark Paid"}
-                          </button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2228,28 +2329,35 @@ export default function AdminPaymentsPage() {
 
             {/* Master Student Search Box & Gender Filter */}
             <div className="space-y-1 shrink-0">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-1">
                 <label className="text-[11px] font-bold text-slate-600 uppercase">Search Candidate</label>
-                <div className="flex items-center gap-1 text-[10px] font-bold">
+                <div className="flex items-center gap-1 text-[10px] font-bold flex-wrap">
                   <span>Filter:</span>
                   <button
                     type="button"
                     onClick={() => setCaptainGenderFilter("ALL")}
-                    className={`px-1.5 py-0.5 rounded ${captainGenderFilter === "ALL" ? "bg-purple-600 text-white" : "text-slate-500"}`}
+                    className={`px-1.5 py-0.5 rounded cursor-pointer ${captainGenderFilter === "ALL" ? "bg-purple-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                   >
                     All
                   </button>
                   <button
                     type="button"
+                    onClick={() => setCaptainGenderFilter("SUPERADMIN")}
+                    className={`px-1.5 py-0.5 rounded flex items-center gap-0.5 cursor-pointer ${captainGenderFilter === "SUPERADMIN" ? "bg-amber-500 text-white font-black" : "text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200"}`}
+                  >
+                    👑 Super Admins / Founders
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setCaptainGenderFilter("FEMALE")}
-                    className={`px-1.5 py-0.5 rounded ${captainGenderFilter === "FEMALE" ? "bg-pink-600 text-white" : "text-slate-500"}`}
+                    className={`px-1.5 py-0.5 rounded cursor-pointer ${captainGenderFilter === "FEMALE" ? "bg-pink-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                   >
                     Female (Girls)
                   </button>
                   <button
                     type="button"
                     onClick={() => setCaptainGenderFilter("MALE")}
-                    className={`px-1.5 py-0.5 rounded ${captainGenderFilter === "MALE" ? "bg-blue-600 text-white" : "text-slate-500"}`}
+                    className={`px-1.5 py-0.5 rounded cursor-pointer ${captainGenderFilter === "MALE" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                   >
                     Male
                   </button>
@@ -2262,24 +2370,28 @@ export default function AdminPaymentsPage() {
                   type="text"
                   value={captainSearchTerm}
                   onChange={(e) => setCaptainSearchTerm(e.target.value)}
-                  placeholder="Search student by name, roll no, college..."
+                  placeholder="Search candidate by name, roll no, college, role..."
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900"
                 />
               </div>
             </div>
 
             {/* Search Results List */}
-            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 border border-slate-200 rounded-2xl p-1 max-h-56">
+            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 border border-slate-200 rounded-2xl p-1 max-h-48">
               {((data?.masterStudents || []).filter((s: any) => {
                 const q = captainSearchTerm.toLowerCase();
                 const matchSearch =
                   s.name.toLowerCase().includes(q) ||
                   (s.registrationNumber && s.registrationNumber.toLowerCase().includes(q)) ||
                   (s.university && s.university.toLowerCase().includes(q)) ||
-                  (s.phone && s.phone.toLowerCase().includes(q));
+                  (s.phone && s.phone.toLowerCase().includes(q)) ||
+                  (s.role && s.role.toLowerCase().includes(q));
 
                 if (!matchSearch) return false;
 
+                if (captainGenderFilter === "SUPERADMIN") {
+                  return s.role === "SUPERADMIN" || s.role === "ADMIN";
+                }
                 if (captainGenderFilter === "FEMALE") {
                   return s.gender && s.gender.toUpperCase().includes("FEMALE");
                 }
@@ -2291,21 +2403,40 @@ export default function AdminPaymentsPage() {
               })).map((stud: any) => {
                 const isSelected = selectedStudentForCaptain?.id === stud.id;
                 const isFemale = stud.gender && stud.gender.toUpperCase().includes("FEMALE");
+                const isSuperAdmin = stud.role === "SUPERADMIN";
+                const isAdmin = stud.role === "ADMIN";
 
                 return (
                   <button
                     key={stud.id}
                     type="button"
-                    onClick={() => setSelectedStudentForCaptain(stud)}
+                    onClick={() => {
+                      setSelectedStudentForCaptain(stud);
+                      if (isSuperAdmin || isAdmin) {
+                        setCaptainRetainInProfitInput(true);
+                      }
+                    }}
                     className={`w-full text-left p-2.5 rounded-xl transition flex items-center justify-between text-xs cursor-pointer ${
                       isSelected
                         ? "bg-purple-100 border border-purple-400"
+                        : isSuperAdmin
+                        ? "bg-amber-50/40 hover:bg-amber-50"
                         : "hover:bg-slate-50"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-extrabold text-slate-900">{stud.name}</span>
+                        {isSuperAdmin && (
+                          <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-black px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                            👑 Super Admin
+                          </span>
+                        )}
+                        {isAdmin && (
+                          <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                            🛡️ Admin
+                          </span>
+                        )}
                         {isFemale && (
                           <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
                             Female
@@ -2313,7 +2444,7 @@ export default function AdminPaymentsPage() {
                         )}
                       </div>
                       <span className="text-[10.5px] text-slate-500 font-mono">
-                        {stud.registrationNumber || "No Reg"} • {stud.university || "College"}
+                        {stud.registrationNumber || (isSuperAdmin ? "Topline Founder/SuperAdmin" : "Internal Staff")} • {stud.university || "Topline HQ"}
                       </span>
                     </div>
 
@@ -2330,6 +2461,26 @@ export default function AdminPaymentsPage() {
                 );
               })}
             </div>
+
+            {/* Retain into Net Profit Checkbox */}
+            {selectedStudentForCaptain && (
+              <label className="flex items-start gap-2.5 p-3 rounded-2xl border bg-amber-50/80 border-amber-300 cursor-pointer shrink-0 transition">
+                <input
+                  type="checkbox"
+                  checked={captainRetainInProfitInput}
+                  onChange={(e) => setCaptainRetainInProfitInput(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <div>
+                  <span className="font-extrabold text-xs text-amber-950 block">
+                    👑 Retain Captain Fee into Net Profit (Founder / Super Admin)
+                  </span>
+                  <span className="text-[11px] text-amber-800 leading-snug block">
+                    When checked, this captain fee is charged to the client but <strong>NOT deducted as external crew expense</strong> — it is retained directly in your Net Profit!
+                  </span>
+                </div>
+              </label>
+            )}
 
             {/* Modal Actions */}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 shrink-0">
@@ -2447,12 +2598,27 @@ export default function AdminPaymentsPage() {
                       </td>
                     </tr>
                     <tr>
-                      <td className="p-3 font-bold text-slate-800">Captains, Hostesses & Supervisors</td>
-                      <td className="p-3 text-slate-500">{(activeFinance.captains || []).length} assigned staff</td>
+                      <td className="p-3 font-bold text-slate-800">Captains, Hostesses & Supervisors (Outflows)</td>
+                      <td className="p-3 text-slate-500">
+                        {(activeFinance.captains || []).filter(c => !c.retainInProfit).length} external crew members
+                      </td>
                       <td className="p-3 text-right font-bold text-slate-800">
-                        ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
+                        ₹{calculatedSums.externalCaptainPayouts.toLocaleString("en-IN")}
                       </td>
                     </tr>
+                    {calculatedSums.superAdminRetainedCaptainProfit > 0 && (
+                      <tr className="bg-amber-50/60">
+                        <td className="p-3 font-extrabold text-amber-950">
+                          👑 Super Admin / Founder Retained Captain Profit
+                        </td>
+                        <td className="p-3 text-amber-800">
+                          {(activeFinance.captains || []).filter(c => !!c.retainInProfit).length} founder captain(s) • Retained directly into Net Profit
+                        </td>
+                        <td className="p-3 text-right font-black text-amber-900">
+                          +₹{calculatedSums.superAdminRetainedCaptainProfit.toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <td className="p-3 font-bold text-slate-800">Travel & Logistics</td>
                       <td className="p-3 text-slate-500">
@@ -2480,7 +2646,7 @@ export default function AdminPaymentsPage() {
                     ))}
                     <tr className="bg-slate-100 font-extrabold text-slate-900">
                       <td className="p-3">Total Direct Expenses</td>
-                      <td className="p-3 text-slate-500">Total Outflow</td>
+                      <td className="p-3 text-slate-500">Direct Outflow (excluding retained profit)</td>
                       <td className="p-3 text-right font-black">
                         ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
                       </td>
