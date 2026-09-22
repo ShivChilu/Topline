@@ -1582,10 +1582,6 @@ export async function sendReferralPayoutPaidEmail({
               <span class="val" style="color: #34d399; font-family: monospace;">${cleanUpi}</span>
             </div>
             <div class="details-row">
-              <span class="label">Payment Reference (UTR):</span>
-              <span class="val" style="font-family: monospace; color: #facc15;">${utrSnippet}</span>
-            </div>
-            <div class="details-row">
               <span class="label">Referred Friend:</span>
               <span class="val">${refereeName}</span>
             </div>
