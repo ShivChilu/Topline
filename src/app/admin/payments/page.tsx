@@ -408,10 +408,10 @@ export default function AdminPaymentsPage() {
     // 2. Direct Outflow Expenses Calculations
     const totalWorkerPayouts = activeWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
     const externalCaptainPayouts = (activeFinance.captains || [])
-      .filter((c) => !c.retainInProfit)
+      .filter((c) => !c.retainInProfit && c.role !== "SUPERADMIN")
       .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
     const superAdminRetainedCaptainProfit = (activeFinance.captains || [])
-      .filter((c) => !!c.retainInProfit)
+      .filter((c) => !!c.retainInProfit || c.role === "SUPERADMIN")
       .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
     const totalCaptainPayouts = (activeFinance.captains || []).reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
 
@@ -1875,13 +1875,14 @@ export default function AdminPaymentsPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {activeFinance.captains.map((cap, cIdx) => {
-                      const isFounderRetained = !!cap.retainInProfit;
+                      const isSuperAdmin = cap.role === "SUPERADMIN" || cap.role === "ADMIN";
+                      const isFounderRetained = isSuperAdmin || !!cap.retainInProfit;
                       return (
                         <div
                           key={cap.id || cIdx}
                           className={`p-4 rounded-2xl border shadow-2xs space-y-3 relative transition ${
                             isFounderRetained
-                              ? "bg-amber-50/60 border-amber-300"
+                              ? "bg-gradient-to-br from-amber-50 to-amber-100/40 border-amber-300 ring-1 ring-amber-400/20"
                               : "bg-purple-50/50 border-purple-200"
                           }`}
                         >
@@ -1915,7 +1916,7 @@ export default function AdminPaymentsPage() {
                                 <span>{cap.name}</span>
                               </h4>
                               <p className="text-[11px] text-slate-500 font-mono">
-                                {cap.phone} • {cap.registrationNumber || "Internal Staff"}
+                                {cap.phone} • {cap.registrationNumber || "Topline Founder / Admin"}
                               </p>
                             </div>
 
@@ -1929,68 +1930,100 @@ export default function AdminPaymentsPage() {
                             </button>
                           </div>
 
-                          {/* Retain in Profit Switch / Indicator */}
-                          <div className="bg-white/80 p-2 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-[11px]">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-700">Accounting:</span>
-                              {isFounderRetained ? (
-                                <span className="text-emerald-700 font-black flex items-center gap-1">
-                                  <span>💰 Retained in Net Profit</span>
-                                </span>
-                              ) : (
+                          {/* Accounting Info Strip */}
+                          {isFounderRetained ? (
+                            <div className="bg-amber-100/80 p-2.5 rounded-xl border border-amber-300 flex items-center justify-between gap-2 text-[11px]">
+                              <div className="flex items-center gap-1.5 text-amber-950 font-black">
+                                <span className="text-amber-700 font-bold">👑</span>
+                                <span>Retained in Net Profit (Self-Draw)</span>
+                              </div>
+                              <span className="text-[10px] text-amber-800 font-extrabold bg-white/90 px-2 py-0.5 rounded-md border border-amber-200">
+                                No Outward Payout
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="bg-white/80 p-2 rounded-xl border border-slate-200/80 flex items-center justify-between gap-2 text-[11px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-700">Accounting:</span>
                                 <span className="text-slate-600 font-bold">
                                   <span>💸 Outward Crew Expense</span>
                                 </span>
-                              )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCaptainRetainInProfit(cap.id)}
+                                className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg border bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 transition cursor-pointer active:scale-95"
+                                title="Toggle whether this captain payout is retained as company profit or paid out as expense"
+                              >
+                                Switch to Retained Profit
+                              </button>
                             </div>
+                          )}
 
-                            <button
-                              type="button"
-                              onClick={() => handleToggleCaptainRetainInProfit(cap.id)}
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-lg border transition cursor-pointer active:scale-95 ${
-                                isFounderRetained
-                                  ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
-                                  : "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
-                              }`}
-                              title="Toggle whether this captain payout is retained as company profit or paid out as expense"
-                            >
-                              {isFounderRetained ? "Switch to Outflow" : "Switch to Retained Profit"}
-                            </button>
-                          </div>
+                          {/* Action & Rate Footer */}
+                          {isFounderRetained ? (
+                            <div className="flex items-center justify-between pt-1 border-t border-amber-200/80 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="text-amber-900 font-bold">Client Inflow: ₹</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="100"
+                                  value={cap.payoutAmount}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value) || 0;
+                                    setActiveFinance({
+                                      ...activeFinance,
+                                      captains: activeFinance.captains.map((c) =>
+                                        c.id === cap.id ? { ...c, payoutAmount: val } : c
+                                      ),
+                                    });
+                                  }}
+                                  className="w-20 bg-white border border-amber-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-900 text-center"
+                                />
+                              </div>
 
-                          <div className="flex items-center justify-between pt-1 border-t border-purple-200/60 text-xs">
-                            <div className="flex items-center gap-1">
-                              <span className="text-slate-500 font-bold">Fee: ₹</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="100"
-                                value={cap.payoutAmount}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value) || 0;
-                                  setActiveFinance({
-                                    ...activeFinance,
-                                    captains: activeFinance.captains.map((c) =>
-                                      c.id === cap.id ? { ...c, payoutAmount: val } : c
-                                    ),
-                                  });
-                                }}
-                                className="w-20 bg-white border border-purple-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-900 text-center"
-                              />
+                              <div className="bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-2xs">
+                                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>+₹{cap.payoutAmount.toLocaleString("en-IN")} To Net Profit</span>
+                              </div>
                             </div>
+                          ) : (
+                            <div className="flex items-center justify-between pt-1 border-t border-purple-200/60 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-500 font-bold">Fee: ₹</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="100"
+                                  value={cap.payoutAmount}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value) || 0;
+                                    setActiveFinance({
+                                      ...activeFinance,
+                                      captains: activeFinance.captains.map((c) =>
+                                        c.id === cap.id ? { ...c, payoutAmount: val } : c
+                                      ),
+                                    });
+                                  }}
+                                  className="w-20 bg-white border border-purple-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-900 text-center"
+                                />
+                              </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleToggleCaptainPaid(cap.id)}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
-                                cap.paymentStatus === "PAID"
-                                  ? "bg-purple-700 text-white"
-                                  : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-100"
-                              }`}
-                            >
-                              {cap.paymentStatus === "PAID" ? "✓ Paid" : "Mark Paid"}
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCaptainPaid(cap.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                                  cap.paymentStatus === "PAID"
+                                    ? "bg-purple-700 text-white"
+                                    : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-100"
+                                }`}
+                              >
+                                {cap.paymentStatus === "PAID" ? "✓ Paid" : "Mark Paid"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

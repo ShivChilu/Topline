@@ -232,13 +232,14 @@ export async function GET(request: Request) {
         });
 
       // Calculate Event Financial Sums
-      const effectiveRevenue = savedFinance.clientRevenue || ev.clientRevenue || 0;
+      const effectiveRevenue = savedFinance.clientRevenue || ev.clientRevenue || 0;      // P&L Logic: External crew payouts are direct cash outflows.
+      // Super Admin / Founder captain payouts are retained directly in Net Profit (no cash outflow to third-party crew).
       const totalWorkerPayouts = presentWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
       const externalCaptainPayouts = (savedFinance.captains || [])
-        .filter((c) => !c.retainInProfit)
+        .filter((c) => !c.retainInProfit && c.role !== "SUPERADMIN")
         .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
       const superAdminRetainedCaptainProfit = (savedFinance.captains || [])
-        .filter((c) => !!c.retainInProfit)
+        .filter((c) => !!c.retainInProfit || c.role === "SUPERADMIN")
         .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
       const totalCaptainPayouts = (savedFinance.captains || []).reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
       const travelExp = Number(savedFinance.travelExpenses) || 0;
