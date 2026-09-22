@@ -15,7 +15,8 @@ async function getLoggedInAdmin() {
   const user = await prisma.user.findUnique({
     where: { id: decoded.id },
   });
-  if (!user || user.isActive === false || !["ADMIN", "SUPERADMIN", "EVENT_ADMIN"].includes(user.role)) return null;
+  // Strictly enforce SUPERADMIN role for financial & P&L data
+  if (!user || user.isActive === false || user.role !== "SUPERADMIN") return null;
   return user;
 }
 
@@ -76,7 +77,13 @@ export async function GET(request: Request) {
   try {
     const admin = await getLoggedInAdmin();
     if (!admin) {
-      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Access Denied: Financial statements, expenses, and profit analytics are strictly restricted to Super Admins only.",
+        },
+        { status: 403 }
+      );
     }
 
     // 1. Fetch all events with related attendees and clients
@@ -346,7 +353,13 @@ export async function POST(request: Request) {
   try {
     const admin = await getLoggedInAdmin();
     if (!admin) {
-      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Access Denied: Financial statements, expenses, and profit analytics are strictly restricted to Super Admins only.",
+        },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => ({}));

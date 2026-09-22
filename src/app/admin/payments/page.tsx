@@ -41,6 +41,8 @@ import {
   Heart,
   UserCheck,
   Crown,
+  ShieldAlert,
+  Lock,
 } from "lucide-react";
 
 interface PresentWorker {
@@ -211,6 +213,8 @@ export default function AdminPaymentsPage() {
 
   // Copied states
   const [copiedUpi, setCopiedUpi] = useState<string | null>(null);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
 
   // Auto-save and lifecycle refs
   const isInitializingRef = React.useRef<boolean>(false);
@@ -231,10 +235,32 @@ export default function AdminPaymentsPage() {
     selectedEventIdRef.current = selectedEventId;
   }, [selectedEventId]);
 
+  const verifySuperAdminRole = async () => {
+    try {
+      setAuthChecking(true);
+      const res = await fetch("/api/admin/users/me");
+      const json = await res.json();
+      if (!res.ok || !json.success || json.role !== "superadmin") {
+        setIsUnauthorized(true);
+        return false;
+      }
+      return true;
+    } catch {
+      setIsUnauthorized(true);
+      return false;
+    } finally {
+      setAuthChecking(false);
+    }
+  };
+
   const fetchPaymentsData = async () => {
     try {
       setLoading(true);
       const res = await fetch("/api/admin/payments?t=" + Date.now());
+      if (res.status === 403 || res.status === 401) {
+        setIsUnauthorized(true);
+        return;
+      }
       const json = await res.json();
       if (res.ok && json.success) {
         setData(json);
@@ -245,7 +271,11 @@ export default function AdminPaymentsPage() {
           initWorkingDraft(firstWithPresent);
         }
       } else {
-        setFeedback({ type: "error", message: json.message || "Failed to load payments data." });
+        if (json.message?.includes("Access Denied") || json.message?.includes("restricted")) {
+          setIsUnauthorized(true);
+        } else {
+          setFeedback({ type: "error", message: json.message || "Failed to load payments data." });
+        }
       }
     } catch (err: any) {
       console.error("Fetch payments error:", err);
@@ -256,7 +286,13 @@ export default function AdminPaymentsPage() {
   };
 
   useEffect(() => {
-    fetchPaymentsData();
+    const init = async () => {
+      const isSuper = await verifySuperAdminRole();
+      if (isSuper) {
+        fetchPaymentsData();
+      }
+    };
+    init();
   }, []);
 
   const initWorkingDraft = (ev: EventSheet) => {
@@ -1058,6 +1094,42 @@ export default function AdminPaymentsPage() {
     profitMarginPct: 0,
     totalPresentWorkersCount: 0,
   };
+
+  if (authChecking) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-3">
+        <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          Verifying Super Admin Authorization...
+        </p>
+      </div>
+    );
+  }
+
+  if (isUnauthorized) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center space-y-4">
+        <div className="w-16 h-16 bg-rose-100 text-rose-700 rounded-3xl flex items-center justify-center shadow-lg border border-rose-200">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="max-w-md space-y-2">
+          <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase font-sans">
+            Super Admin Access Required
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            This confidential financial section (client billing, worker shift payouts, logistics outflows, and event net profit analytics) is strictly restricted to <strong>Super Admins</strong> only.
+          </p>
+        </div>
+        <Link
+          href="/admin/dashboard"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-md cursor-pointer"
+        >
+          <span>Return to Dashboard</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-slate-900 pb-12">
