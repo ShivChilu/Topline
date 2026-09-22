@@ -41,6 +41,9 @@ export async function GET() {
             id: true,
             eventId: true,
             status: true,
+            paymentStatus: true,
+            paymentOverride: true,
+            callingRemarks: true,
             createdAt: true,
             attendance: {
               select: {
@@ -58,6 +61,7 @@ export async function GET() {
                 location: true,
                 status: true,
                 reportingTime: true,
+                paymentPerStudent: true,
                 whatsappGroupLink: true,
                 attendanceToken: true,
                 attendanceTokenEnabled: true,
@@ -72,6 +76,61 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ success: false, message: "Student account not found." }, { status: 404 });
     }
+
+    // 1. Fetch all event finance settings to know captain assignments
+    const financeSettings = await prisma.setting.findMany({
+      where: {
+        key: { startsWith: "event_finance_" },
+      },
+    });
+
+    const captainEventMap = new Map<string, { roleTitle: string; payoutAmount: number; paymentStatus: string }>();
+    financeSettings.forEach((s) => {
+      const eventId = s.key.replace("event_finance_", "");
+      const val = s.value as any;
+      if (val && Array.isArray(val.captains)) {
+        const cap = val.captains.find((c: any) => c.id === user.id);
+        if (cap) {
+          captainEventMap.set(eventId, {
+            roleTitle: cap.roleTitle || "Event Lead Captain",
+            payoutAmount: cap.payoutAmount || 0,
+            paymentStatus: cap.paymentStatus || "UNPAID",
+          });
+        }
+      }
+    });
+
+    let captainShiftsCount = 0;
+    let stewardShiftsCount = 0;
+    let totalAttendedShifts = 0;
+
+    const mappedApplications = user.applications.map((app) => {
+      const capInfo = captainEventMap.get(app.eventId);
+      const isCaptain = Boolean(capInfo || app.callingRemarks?.includes("Assigned Role:"));
+      let roleTitle = "Steward / Event Crew";
+      if (capInfo?.roleTitle) {
+        roleTitle = capInfo.roleTitle;
+      } else if (app.callingRemarks?.startsWith("Assigned Role:")) {
+        roleTitle = app.callingRemarks.replace("Assigned Role:", "").split("(")[0].trim();
+      }
+
+      const isAttended = ["ATTENDED", "PAID"].includes(app.status) || app.attendance?.attendanceStatus === "PRESENT";
+      if (isAttended) {
+        totalAttendedShifts += 1;
+        if (isCaptain) {
+          captainShiftsCount += 1;
+        } else {
+          stewardShiftsCount += 1;
+        }
+      }
+
+      return {
+        ...app,
+        roleTitle,
+        isCaptain,
+        payment: capInfo?.payoutAmount ?? (app.paymentOverride ?? (app.event as any)?.paymentPerStudent ?? 500),
+      };
+    });
 
     // Authoritative Server-Side Profile Completeness Calculation
     const completeness = await getStudentProfileCompletion(user.id);
@@ -119,6 +178,9 @@ export async function GET() {
           : null,
         selectionStatus: user.selectionStatus,
         selectedAt: user.selectedAt,
+        captainShiftsCount,
+        stewardShiftsCount,
+        totalAttendedShifts,
         studentPhotos: user.studentPhotos.map((p) => ({
           id: p.id,
           userId: p.userId,
@@ -130,7 +192,7 @@ export async function GET() {
         })),
         dynamicFields,
         completeness,
-        recentApplications: user.applications,
+        recentApplications: mappedApplications,
         role: user.role,
         isActive: user.isActive,
       },

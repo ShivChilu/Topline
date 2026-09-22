@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import {
   User,
   Users,
+  Award,
   Phone,
   Mail,
   GraduationCap,
@@ -736,6 +737,10 @@ export default function StudentProfilePage() {
                     <span className="bg-purple-100 text-purple-900 border border-purple-300 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-2xs">
                       <ShieldCheck className="w-3.5 h-3.5 text-purple-600" /> Admin ({user.role})
                     </span>
+                  ) : user.captainShiftsCount > 0 ? (
+                    <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-[11px] font-black flex items-center gap-1 shadow-2xs">
+                      <Award className="w-3.5 h-3.5 text-amber-600" /> ⭐ Event Captain ({user.captainShiftsCount} Lead Shifts)
+                    </span>
                   ) : user.selectionStatus === "SELECTED" ? (
                     <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1 shadow-2xs">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Selected
@@ -1097,19 +1102,32 @@ export default function StudentProfilePage() {
         {activeTab === "overview" && (
           <div className="space-y-5 animate-in fade-in duration-200">
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Events Applied</span>
                 <span className="text-xl font-black text-slate-900 mt-1 block">{user.recentApplications?.length || 0}</span>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">Lifetime applications</span>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Confirmed / Attended</span>
-                <span className="text-xl font-black text-emerald-600 mt-1 block">
-                  {user.recentApplications?.filter((a: any) => a.status === "CONFIRMED" || a.status === "ATTENDED").length || 0}
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50/60 p-4 rounded-2xl border border-amber-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>Captain Shifts</span>
+                  <Award className="w-3.5 h-3.5 text-amber-600" />
                 </span>
-                <span className="text-[11px] text-emerald-700 mt-0.5 block">Verified duty slots</span>
+                <span className="text-xl font-black text-amber-950 mt-1 block">
+                  {user.captainShiftsCount || 0}
+                </span>
+                <span className="text-[11px] text-amber-700 mt-0.5 block font-medium">
+                  {user.captainShiftsCount > 0 ? "👑 Lead / Supervisor" : "Open for Captain roles"}
+                </span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Steward Shifts</span>
+                <span className="text-xl font-black text-emerald-600 mt-1 block">
+                  {user.stewardShiftsCount || user.recentApplications?.filter((a: any) => a.status === "ATTENDED" && !a.isCaptain).length || 0}
+                </span>
+                <span className="text-[11px] text-emerald-700 mt-0.5 block">👔 General crew duty</span>
               </div>
 
               <button
@@ -1124,23 +1142,23 @@ export default function StudentProfilePage() {
                 <span className="text-xl font-black text-purple-950 mt-1 block">
                   ₹{referralData?.stats?.totalEarned || 0}
                 </span>
-                <span className="text-[11px] text-purple-700 mt-0.5 block font-medium">
-                  {referralData?.stats?.paidEarnings ? `₹${referralData.stats.paidEarnings} paid to UPI` : `${referralData?.stats?.totalInvited || 0} friends invited`}
+                <span className="text-[11px] text-purple-700 mt-0.5 block font-medium truncate">
+                  {referralData?.stats?.paidEarnings ? `₹${referralData.stats.paidEarnings} paid` : `${referralData?.stats?.totalInvited || 0} invited`}
                 </span>
               </button>
 
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attire Photos</span>
                 <span className="text-xl font-black text-purple-600 mt-1 block">{photos.length}</span>
-                <span className="text-[11px] text-purple-700 mt-0.5 block">{photos.length >= 2 ? "✓ Verified photos" : "Upload formal & full"}</span>
+                <span className="text-[11px] text-purple-700 mt-0.5 block">{photos.length >= 2 ? "✓ Verified photos" : "Upload formal"}</span>
               </div>
 
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Payout UPI Handle</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Payout UPI</span>
                 <span className="text-xs font-mono font-bold text-slate-900 mt-1.5 block truncate">
-                  {formData.upiId || "Not set yet"}
+                  {formData.upiId || "Not set"}
                 </span>
-                <span className="text-[11px] text-slate-500 mt-0.5 block">{formData.upiId ? "✓ Direct settlement" : "⚠️ Add UPI in Edit"}</span>
+                <span className="text-[11px] text-slate-500 mt-0.5 block">{formData.upiId ? "✓ Direct UPI" : "⚠️ Add UPI"}</span>
               </div>
             </div>
 
@@ -1435,14 +1453,29 @@ export default function StudentProfilePage() {
                     <div key={app.id} className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-3 text-xs">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div>
-                          <Link href={`/events/${ev.id}`} className="font-black text-slate-900 hover:text-red-600 text-sm">
-                            {ev.name}
-                          </Link>
-                          <div className="flex items-center gap-2.5 text-slate-500 text-[11px] mt-0.5 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link href={`/events/${ev.id}`} className="font-black text-slate-900 hover:text-red-600 text-sm">
+                              {ev.name}
+                            </Link>
+
+                            {app.isCaptain || (app.roleTitle && app.roleTitle !== "Steward / Event Crew") ? (
+                              <span className="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                                <Award className="w-3 h-3 text-amber-600" />
+                                <span>{app.roleTitle || "Event Lead Captain"}</span>
+                              </span>
+                            ) : (
+                              <span className="bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Users className="w-2.5 h-2.5 text-slate-500" />
+                                <span>Steward / Crew</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2.5 text-slate-500 text-[11px] mt-1 flex-wrap">
                             {ev.date && (
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3 text-red-500" />
-                                <span>{new Date(ev.date).toLocaleDateString("en-GB")}</span>
+                                <span>{new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
                               </span>
                             )}
                             {ev.location && (
@@ -1457,12 +1490,10 @@ export default function StudentProfilePage() {
                                 <span>{ev.reportingTime}</span>
                               </span>
                             )}
-                            {ev.paymentPerStudent && (
-                              <span className="font-bold text-slate-800 flex items-center gap-1">
-                                <Banknote className="w-3 h-3 text-emerald-600" />
-                                <span>₹{ev.paymentPerStudent}</span>
-                              </span>
-                            )}
+                            <span className="font-bold text-slate-800 flex items-center gap-1">
+                              <Banknote className="w-3 h-3 text-emerald-600" />
+                              <span>₹{app.payment || ev.paymentPerStudent || 500}</span>
+                            </span>
                           </div>
                         </div>
 

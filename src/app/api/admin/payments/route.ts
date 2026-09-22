@@ -387,7 +387,90 @@ export async function POST(request: Request) {
       await Promise.all(updates);
     }
 
-    // 4. Record audit log
+    // 4. Synchronize Captain & Specialized Staff assignments to their individual Profile history
+    if (Array.isArray(financeData.captains)) {
+      for (const cap of financeData.captains) {
+        if (!cap.id) continue;
+        try {
+          const studentUser = await prisma.user.findUnique({
+            where: { id: cap.id },
+            select: { id: true, name: true, phone: true, registrationNumber: true },
+          });
+          if (!studentUser) continue;
+
+          const roleRemarks = `Assigned Role: ${cap.roleTitle || "Event Lead Captain"}`;
+          const paymentStatusVal = cap.paymentStatus === "PAID" ? PaymentStatus.PAID : PaymentStatus.UNPAID;
+          const payoutOverrideVal = Number(cap.payoutAmount) || 0;
+
+          const existingApp = await prisma.application.findUnique({
+            where: {
+              eventId_userId: {
+                eventId,
+                userId: studentUser.id,
+              },
+            },
+          });
+
+          if (existingApp) {
+            await prisma.application.update({
+              where: { id: existingApp.id },
+              data: {
+                paymentOverride: payoutOverrideVal,
+                paymentStatus: paymentStatusVal,
+                callingRemarks: roleRemarks,
+                status: ApplicationStatus.ATTENDED,
+              },
+            });
+
+            const regNo = studentUser.registrationNumber || cap.registrationNumber || "N/A";
+
+            await prisma.attendance.upsert({
+              where: { applicationId: existingApp.id },
+              update: {
+                attendanceStatus: AttendanceStatus.PRESENT,
+                manualRemarks: roleRemarks,
+              },
+              create: {
+                applicationId: existingApp.id,
+                eventId,
+                userId: studentUser.id,
+                registrationNumber: regNo,
+                attendanceStatus: AttendanceStatus.PRESENT,
+                manualRemarks: roleRemarks,
+              },
+            });
+          } else {
+            const regNo = studentUser.registrationNumber || cap.registrationNumber || "N/A";
+            await prisma.application.create({
+              data: {
+                eventId,
+                userId: studentUser.id,
+                name: studentUser.name || cap.name,
+                mobileNumber: studentUser.phone || cap.phone || "N/A",
+                registrationNumber: regNo,
+                status: ApplicationStatus.ATTENDED,
+                paymentStatus: paymentStatusVal,
+                paymentOverride: payoutOverrideVal,
+                callingRemarks: roleRemarks,
+                attendance: {
+                  create: {
+                    eventId,
+                    userId: studentUser.id,
+                    registrationNumber: regNo,
+                    attendanceStatus: AttendanceStatus.PRESENT,
+                    manualRemarks: roleRemarks,
+                  },
+                },
+              },
+            });
+          }
+        } catch (capErr) {
+          console.warn(`Failed to synchronize captain role for user ${cap.id}:`, capErr);
+        }
+      }
+    }
+
+    // 5. Record audit log
     await prisma.auditLog.create({
       data: {
         adminId: admin.id,

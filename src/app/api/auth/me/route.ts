@@ -40,6 +40,69 @@ export async function GET() {
       return NextResponse.json({ success: false, user: null }, { status: 401 });
     }
 
+    // 1. Fetch all event finance settings to know captain assignments
+    const financeSettings = await prisma.setting.findMany({
+      where: {
+        key: { startsWith: "event_finance_" },
+      },
+    });
+
+    const captainEventMap = new Map<string, { roleTitle: string; payoutAmount: number; paymentStatus: string }>();
+    financeSettings.forEach((s) => {
+      const eventId = s.key.replace("event_finance_", "");
+      const val = s.value as any;
+      if (val && Array.isArray(val.captains)) {
+        const cap = val.captains.find((c: any) => c.id === user.id);
+        if (cap) {
+          captainEventMap.set(eventId, {
+            roleTitle: cap.roleTitle || "Event Lead Captain",
+            payoutAmount: cap.payoutAmount || 0,
+            paymentStatus: cap.paymentStatus || "UNPAID",
+          });
+        }
+      }
+    });
+
+    let captainShiftsCount = 0;
+    let stewardShiftsCount = 0;
+
+    const mappedApplications = user.applications.map((app) => {
+      const capInfo = captainEventMap.get(app.eventId);
+      const isCaptain = Boolean(capInfo || app.callingRemarks?.includes("Assigned Role:"));
+      let roleTitle = "Steward / Event Crew";
+      if (capInfo?.roleTitle) {
+        roleTitle = capInfo.roleTitle;
+      } else if (app.callingRemarks?.startsWith("Assigned Role:")) {
+        roleTitle = app.callingRemarks.replace("Assigned Role:", "").split("(")[0].trim();
+      }
+
+      const isAttended = ["ATTENDED", "PAID"].includes(app.status) || app.attendance?.attendanceStatus === "PRESENT";
+      if (isAttended) {
+        if (isCaptain) {
+          captainShiftsCount += 1;
+        } else {
+          stewardShiftsCount += 1;
+        }
+      }
+
+      return {
+        id: app.id,
+        eventId: app.eventId,
+        eventName: app.event.name,
+        eventDate: app.event.date,
+        eventLocation: app.event.location,
+        reportingTime: app.event.reportingTime,
+        payment: capInfo?.payoutAmount ?? (app.paymentOverride ?? app.event.paymentPerStudent ?? 500),
+        status: app.status.toLowerCase(),
+        whatsappGroupLink: app.event.whatsappGroupLink || null,
+        attendanceStatus: app.attendance?.attendanceStatus || null,
+        checkInTime: app.attendance?.checkInTime || null,
+        createdAt: app.createdAt,
+        roleTitle,
+        isCaptain,
+      };
+    });
+
     // Authoritative Server-Side Profile Completeness Calculation
     const completeness = await getStudentProfileCompletion(user.id);
 
@@ -54,7 +117,10 @@ export async function GET() {
     const cancelledCount = user.applications.filter((a) => a.status === "CANCELLED").length;
     const totalEarnings = user.applications
       .filter((a) => ["ATTENDED", "PAID"].includes(a.status))
-      .reduce((sum, a) => sum + (a.paymentOverride ?? a.event.paymentPerStudent ?? 0), 0);
+      .reduce((sum, a) => {
+        const cap = captainEventMap.get(a.eventId);
+        return sum + (cap?.payoutAmount ?? (a.paymentOverride ?? a.event.paymentPerStudent ?? 0));
+      }, 0);
 
     return NextResponse.json({
       success: true,
@@ -81,6 +147,8 @@ export async function GET() {
         selectedCount,
         attendedCount,
         cancelledCount,
+        captainShiftsCount,
+        stewardShiftsCount,
         totalEarnings,
         createdAt: user.createdAt,
         completeness,
@@ -93,20 +161,7 @@ export async function GET() {
           createdAt: p.createdAt,
           url: `/api/photos/student?photoId=${p.id}`,
         })),
-        applications: user.applications.map((app) => ({
-          id: app.id,
-          eventId: app.eventId,
-          eventName: app.event.name,
-          eventDate: app.event.date,
-          eventLocation: app.event.location,
-          reportingTime: app.event.reportingTime,
-          payment: app.paymentOverride ?? app.event.paymentPerStudent,
-          status: app.status.toLowerCase(),
-          whatsappGroupLink: app.event.whatsappGroupLink || null,
-          attendanceStatus: app.attendance?.attendanceStatus || null,
-          checkInTime: app.attendance?.checkInTime || null,
-          createdAt: app.createdAt,
-        })),
+        applications: mappedApplications,
       },
     });
   } catch (error) {
