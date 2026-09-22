@@ -19,12 +19,29 @@ async function getLoggedInAdmin() {
   return user;
 }
 
+export interface ClientCustomRoleBilling {
+  id: string;
+  roleName: string;
+  headcount: number;
+  ratePerPerson: number;
+  totalAmount: number;
+}
+
 export interface EventFinanceData {
+  billingMode?: "LUMP_SUM" | "ITEMIZED";
   clientRevenue: number;
+  clientStewardRate?: number;
+  clientCaptainRate?: number;
+  clientVehiclesCount?: number;
+  clientVehicleRate?: number;
+  clientTravelBilling?: number;
+  clientCustomRoles?: ClientCustomRoleBilling[];
   clientPaymentStatus: "PAID" | "PARTIAL" | "PENDING";
   clientInvoiceRef?: string;
   clientNotes?: string;
   defaultWorkerPayout: number;
+  travelVehiclesCount?: number;
+  travelCostPerVehicle?: number;
   travelExpenses: number;
   travelNotes?: string;
   foodExpenses: number;
@@ -133,6 +150,7 @@ export async function GET(request: Request) {
         university: true,
         upiId: true,
         selectionStatus: true,
+        gender: true,
       },
       orderBy: { name: "asc" },
     });
@@ -149,11 +167,20 @@ export async function GET(request: Request) {
 
     const eventSheets = events.map((ev) => {
       const savedFinance: EventFinanceData = financeMap.get(ev.id) || {
+        billingMode: "ITEMIZED",
         clientRevenue: ev.clientRevenue || 0,
+        clientStewardRate: (ev.paymentPerStudent || 500) + 200,
+        clientCaptainRate: 1500,
+        clientVehiclesCount: 1,
+        clientVehicleRate: 2000,
+        clientTravelBilling: 2000,
+        clientCustomRoles: [],
         clientPaymentStatus: "PENDING",
         clientInvoiceRef: "",
         clientNotes: "",
         defaultWorkerPayout: ev.paymentPerStudent || 500,
+        travelVehiclesCount: 1,
+        travelCostPerVehicle: 1500,
         travelExpenses: 0,
         travelNotes: "",
         foodExpenses: 0,
@@ -187,6 +214,7 @@ export async function GET(request: Request) {
             registrationNumber: app.registrationNumber || app.user?.registrationNumber || "N/A",
             university: app.user?.university || "N/A",
             upiId: app.user?.upiId || "Not Provided",
+            gender: app.user?.gender || "N/A",
             attendanceStatus: app.attendance?.attendanceStatus || "PRESENT",
             checkInTime: app.attendance?.checkInTime || null,
             payoutAmount: assignedPayout,
@@ -235,7 +263,14 @@ export async function GET(request: Request) {
         presentCount: presentWorkers.length,
         presentWorkers,
         financials: {
+          billingMode: savedFinance.billingMode || "ITEMIZED",
           clientRevenue: effectiveRevenue,
+          clientStewardRate: savedFinance.clientStewardRate !== undefined ? savedFinance.clientStewardRate : (ev.paymentPerStudent || 500) + 200,
+          clientCaptainRate: savedFinance.clientCaptainRate !== undefined ? savedFinance.clientCaptainRate : 1500,
+          clientVehiclesCount: savedFinance.clientVehiclesCount !== undefined ? savedFinance.clientVehiclesCount : 1,
+          clientVehicleRate: savedFinance.clientVehicleRate !== undefined ? savedFinance.clientVehicleRate : 2000,
+          clientTravelBilling: savedFinance.clientTravelBilling !== undefined ? savedFinance.clientTravelBilling : 2000,
+          clientCustomRoles: savedFinance.clientCustomRoles || [],
           clientPaymentStatus: savedFinance.clientPaymentStatus || "PENDING",
           clientInvoiceRef: savedFinance.clientInvoiceRef || "",
           clientNotes: savedFinance.clientNotes || "",
@@ -243,6 +278,8 @@ export async function GET(request: Request) {
           totalWorkerPayouts,
           captains: savedFinance.captains || [],
           totalCaptainPayouts,
+          travelVehiclesCount: savedFinance.travelVehiclesCount !== undefined ? savedFinance.travelVehiclesCount : 1,
+          travelCostPerVehicle: savedFinance.travelCostPerVehicle !== undefined ? savedFinance.travelCostPerVehicle : 1500,
           travelExpenses: travelExp,
           travelNotes: savedFinance.travelNotes || "",
           foodExpenses: foodExp,

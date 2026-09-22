@@ -36,6 +36,10 @@ import {
   HelpCircle,
   DollarSign,
   PieChart,
+  Layers,
+  ArrowRight,
+  Heart,
+  UserCheck,
 } from "lucide-react";
 
 interface PresentWorker {
@@ -47,6 +51,7 @@ interface PresentWorker {
   registrationNumber: string;
   university: string;
   upiId: string;
+  gender?: string;
   attendanceStatus: string;
   checkInTime: string | null;
   payoutAmount: number;
@@ -61,6 +66,7 @@ interface CaptainItem {
   phone?: string;
   registrationNumber?: string;
   upiId?: string;
+  gender?: string;
   roleTitle: string;
   payoutAmount: number;
   paymentStatus: "PAID" | "UNPAID";
@@ -73,8 +79,23 @@ interface MiscExpenseItem {
   amount: number;
 }
 
+interface ClientCustomRoleBilling {
+  id: string;
+  roleName: string;
+  headcount: number;
+  ratePerPerson: number;
+  totalAmount: number;
+}
+
 interface EventFinancials {
+  billingMode?: "LUMP_SUM" | "ITEMIZED";
   clientRevenue: number;
+  clientStewardRate?: number;
+  clientCaptainRate?: number;
+  clientVehiclesCount?: number;
+  clientVehicleRate?: number;
+  clientTravelBilling?: number;
+  clientCustomRoles?: ClientCustomRoleBilling[];
   clientPaymentStatus: "PAID" | "PARTIAL" | "PENDING";
   clientInvoiceRef: string;
   clientNotes: string;
@@ -82,6 +103,8 @@ interface EventFinancials {
   totalWorkerPayouts: number;
   captains: CaptainItem[];
   totalCaptainPayouts: number;
+  travelVehiclesCount?: number;
+  travelCostPerVehicle?: number;
   travelExpenses: number;
   travelNotes: string;
   foodExpenses: number;
@@ -110,6 +133,16 @@ interface EventSheet {
   financials: EventFinancials;
 }
 
+const PRESET_STAFF_ROLES = [
+  "Event Lead Captain",
+  "Hostess / Female Steward (Girls)",
+  "Floor Supervisor",
+  "Bartender / Beverage Lead",
+  "Security / Bouncer",
+  "VIP Table Attendant",
+  "Kitchen / Buffet Coordinator",
+];
+
 export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
@@ -123,9 +156,10 @@ export default function AdminPaymentsPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Add Captain Modal States
+  // Add Staff Role / Captain Modal States
   const [showAddCaptainModal, setShowAddCaptainModal] = useState(false);
   const [captainSearchTerm, setCaptainSearchTerm] = useState("");
+  const [captainGenderFilter, setCaptainGenderFilter] = useState<"ALL" | "FEMALE" | "MALE">("ALL");
   const [selectedStudentForCaptain, setSelectedStudentForCaptain] = useState<any>(null);
   const [captainRoleInput, setCaptainRoleInput] = useState("Event Lead Captain");
   const [captainPayoutInput, setCaptainPayoutInput] = useState<string>("1000");
@@ -165,7 +199,18 @@ export default function AdminPaymentsPage() {
   }, []);
 
   const initWorkingDraft = (ev: EventSheet) => {
-    setActiveFinance({ ...ev.financials });
+    setActiveFinance({
+      ...ev.financials,
+      billingMode: ev.financials.billingMode || "ITEMIZED",
+      clientStewardRate: ev.financials.clientStewardRate !== undefined ? ev.financials.clientStewardRate : (ev.financials.defaultWorkerPayout || 500) + 200,
+      clientCaptainRate: ev.financials.clientCaptainRate !== undefined ? ev.financials.clientCaptainRate : 1500,
+      clientVehiclesCount: ev.financials.clientVehiclesCount !== undefined ? ev.financials.clientVehiclesCount : (ev.financials.travelVehiclesCount || 1),
+      clientVehicleRate: ev.financials.clientVehicleRate !== undefined ? ev.financials.clientVehicleRate : 2000,
+      clientTravelBilling: ev.financials.clientTravelBilling !== undefined ? ev.financials.clientTravelBilling : (ev.financials.travelExpenses || 2000),
+      clientCustomRoles: ev.financials.clientCustomRoles || [],
+      travelVehiclesCount: ev.financials.travelVehiclesCount !== undefined ? ev.financials.travelVehiclesCount : 1,
+      travelCostPerVehicle: ev.financials.travelCostPerVehicle !== undefined ? ev.financials.travelCostPerVehicle : 1500,
+    });
     setActiveWorkers([...ev.presentWorkers]);
   };
 
@@ -208,10 +253,16 @@ export default function AdminPaymentsPage() {
     return data.events.find((e: EventSheet) => e.id === selectedEventId) || null;
   }, [data, selectedEventId]);
 
-  // Real-time Auto Calculator for Working Draft
+  // Real-time Auto Calculator for Working Draft & Itemized Revenue
   const calculatedSums = useMemo(() => {
     if (!activeFinance) {
       return {
+        itemizedStewardsRevenue: 0,
+        itemizedCaptainsRevenue: 0,
+        itemizedTravelRevenue: 0,
+        itemizedCustomRolesRevenue: 0,
+        itemizedTotalRevenue: 0,
+        effectiveRevenue: 0,
         totalWorkerPayouts: 0,
         totalCaptainPayouts: 0,
         travelExp: 0,
@@ -221,9 +272,34 @@ export default function AdminPaymentsPage() {
         netProfit: 0,
         profitMarginPct: 0,
         costPerWorker: 0,
+        revenuePerWorker: 0,
       };
     }
 
+    // 1. Client Itemized Inflow Calculations
+    const stewardRate = Number(activeFinance.clientStewardRate) || 0;
+    const captainRate = Number(activeFinance.clientCaptainRate) || 0;
+    const vehicleCount = Number(activeFinance.clientVehiclesCount) || 0;
+    const vehicleRate = Number(activeFinance.clientVehicleRate) || 0;
+    const travelBilling = vehicleCount > 0 && vehicleRate > 0 ? vehicleCount * vehicleRate : Number(activeFinance.clientTravelBilling) || 0;
+
+    const itemizedStewardsRevenue = stewardRate * activeWorkers.length;
+    const itemizedCaptainsRevenue = captainRate * (activeFinance.captains || []).length;
+    const itemizedTravelRevenue = travelBilling;
+    const itemizedCustomRolesRevenue = (activeFinance.clientCustomRoles || []).reduce(
+      (sum, r) => sum + (Number(r.headcount || 0) * Number(r.ratePerPerson || 0)),
+      0
+    );
+
+    const itemizedTotalRevenue =
+      itemizedStewardsRevenue + itemizedCaptainsRevenue + itemizedTravelRevenue + itemizedCustomRolesRevenue;
+
+    const effectiveRevenue =
+      activeFinance.billingMode === "ITEMIZED" && itemizedTotalRevenue > 0
+        ? itemizedTotalRevenue
+        : Number(activeFinance.clientRevenue) || 0;
+
+    // 2. Direct Outflow Expenses Calculations
     const totalWorkerPayouts = activeWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
     const totalCaptainPayouts = (activeFinance.captains || []).reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
     const travelExp = Number(activeFinance.travelExpenses) || 0;
@@ -231,12 +307,18 @@ export default function AdminPaymentsPage() {
     const miscExp = (activeFinance.miscExpenses || []).reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
 
     const totalDirectExpenses = totalWorkerPayouts + totalCaptainPayouts + travelExp + foodExp + miscExp;
-    const clientRev = Number(activeFinance.clientRevenue) || 0;
-    const netProfit = clientRev - totalDirectExpenses;
-    const profitMarginPct = clientRev > 0 ? (netProfit / clientRev) * 100 : 0;
+    const netProfit = effectiveRevenue - totalDirectExpenses;
+    const profitMarginPct = effectiveRevenue > 0 ? (netProfit / effectiveRevenue) * 100 : 0;
     const costPerWorker = activeWorkers.length > 0 ? Math.round(totalDirectExpenses / activeWorkers.length) : 0;
+    const revenuePerWorker = activeWorkers.length > 0 ? Math.round(effectiveRevenue / activeWorkers.length) : 0;
 
     return {
+      itemizedStewardsRevenue,
+      itemizedCaptainsRevenue,
+      itemizedTravelRevenue,
+      itemizedCustomRolesRevenue,
+      itemizedTotalRevenue,
+      effectiveRevenue,
       totalWorkerPayouts,
       totalCaptainPayouts,
       travelExp,
@@ -246,8 +328,59 @@ export default function AdminPaymentsPage() {
       netProfit,
       profitMarginPct: Number(profitMarginPct.toFixed(1)),
       costPerWorker,
+      revenuePerWorker,
     };
   }, [activeFinance, activeWorkers]);
+
+  // Sync Itemized Revenue to Total Client Revenue
+  const handleSyncItemizedRevenue = () => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      clientRevenue: calculatedSums.itemizedTotalRevenue,
+    });
+    setFeedback({
+      type: "success",
+      message: `Updated total client revenue to ₹${calculatedSums.itemizedTotalRevenue.toLocaleString("en-IN")} based on itemized steward, captain, vehicle & custom role rates.`,
+    });
+  };
+
+  // Handler: Add Custom Role Inflow in Client Billing
+  const handleAddClientCustomRole = () => {
+    if (!activeFinance) return;
+    const newRole: ClientCustomRoleBilling = {
+      id: "role_" + Date.now(),
+      roleName: "Hostess / Female Steward (Girls)",
+      headcount: 2,
+      ratePerPerson: 1200,
+      totalAmount: 2400,
+    };
+    setActiveFinance({
+      ...activeFinance,
+      clientCustomRoles: [...(activeFinance.clientCustomRoles || []), newRole],
+    });
+  };
+
+  const handleUpdateClientCustomRole = (id: string, field: keyof ClientCustomRoleBilling, val: any) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      clientCustomRoles: (activeFinance.clientCustomRoles || []).map((r) => {
+        if (r.id !== id) return r;
+        const updated = { ...r, [field]: val };
+        updated.totalAmount = (Number(updated.headcount) || 0) * (Number(updated.ratePerPerson) || 0);
+        return updated;
+      }),
+    });
+  };
+
+  const handleRemoveClientCustomRole = (id: string) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      clientCustomRoles: (activeFinance.clientCustomRoles || []).filter((r) => r.id !== id),
+    });
+  };
 
   // Handler: Apply default worker payout to all workers
   const handleApplyDefaultToAllWorkers = () => {
@@ -336,7 +469,7 @@ export default function AdminPaymentsPage() {
     });
   };
 
-  // Handler: Add Captain from Master List
+  // Handler: Add Captain / Staff Role from Master List
   const handleAddCaptainConfirm = () => {
     if (!selectedStudentForCaptain || !activeFinance) return;
     const captainAmt = Number(captainPayoutInput) || 1000;
@@ -347,7 +480,8 @@ export default function AdminPaymentsPage() {
       phone: selectedStudentForCaptain.phone || "N/A",
       registrationNumber: selectedStudentForCaptain.registrationNumber || "N/A",
       upiId: selectedStudentForCaptain.upiId || "Not Provided",
-      roleTitle: captainRoleInput.trim() || "Lead Captain",
+      gender: selectedStudentForCaptain.gender || "N/A",
+      roleTitle: captainRoleInput.trim() || "Event Lead Captain",
       payoutAmount: captainAmt,
       paymentStatus: "UNPAID",
       paidReference: "",
@@ -356,7 +490,7 @@ export default function AdminPaymentsPage() {
     // Check if already in list
     const existing = (activeFinance.captains || []).find((c) => c.id === newCap.id);
     if (existing) {
-      setFeedback({ type: "error", message: `${newCap.name} is already assigned as a Captain.` });
+      setFeedback({ type: "error", message: `${newCap.name} is already assigned to a role in this event.` });
       return;
     }
 
@@ -415,8 +549,14 @@ export default function AdminPaymentsPage() {
         };
       });
 
+      const effectiveClientRevenue =
+        activeFinance.billingMode === "ITEMIZED" && calculatedSums.itemizedTotalRevenue > 0
+          ? calculatedSums.itemizedTotalRevenue
+          : Number(activeFinance.clientRevenue) || 0;
+
       const payloadFinanceData = {
         ...activeFinance,
+        clientRevenue: effectiveClientRevenue,
         workerOverrides: workerOverridesMap,
       };
 
@@ -483,7 +623,7 @@ export default function AdminPaymentsPage() {
             </span>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
-            Real-time Profit & Loss engine. Track client billing revenue, audit worker shift payouts, assign event captains, log travel expenses, and auto-calculate net profit.
+            Real-time Profit & Loss engine. Track client billing by steward, captain, vehicles & custom roles, audit worker shift payouts, assign captains & female crew, log travel expenses, and auto-calculate net profit.
           </p>
         </div>
 
@@ -571,11 +711,11 @@ export default function AdminPaymentsPage() {
         {/* Captains Payouts */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Captains & Leads</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Captains & Roles</p>
             <Award className="w-4 h-4 text-purple-600" />
           </div>
           <p className="text-2xl sm:text-3xl font-black text-slate-900">₹{metrics.totalCaptainPayouts.toLocaleString("en-IN")}</p>
-          <p className="text-[10px] text-slate-400">Supervisors / coordinators</p>
+          <p className="text-[10px] text-slate-400">Supervisors & specialized crew</p>
         </div>
 
         {/* Logistics & Ops */}
@@ -587,7 +727,7 @@ export default function AdminPaymentsPage() {
           <p className="text-2xl sm:text-3xl font-black text-slate-900">
             ₹{(metrics.totalTravelExpenses + metrics.totalFoodMiscExpenses).toLocaleString("en-IN")}
           </p>
-          <p className="text-[10px] text-slate-400">Cabs, bus, refreshments, misc</p>
+          <p className="text-[10px] text-slate-400">Vehicles, food, refreshments, misc</p>
         </div>
 
         {/* Net Profit */}
@@ -820,7 +960,7 @@ export default function AdminPaymentsPage() {
                     Gross Client Revenue
                   </span>
                   <p className="text-xl sm:text-2xl font-black text-slate-900">
-                    ₹{(Number(activeFinance.clientRevenue) || 0).toLocaleString("en-IN")}
+                    ₹{calculatedSums.effectiveRevenue.toLocaleString("en-IN")}
                   </p>
                   <span className="text-[10px] text-slate-400">Total Inflow</span>
                 </div>
@@ -859,7 +999,7 @@ export default function AdminPaymentsPage() {
               {/* SECTION 1: REVENUE & CLIENT BILLING INFLOW */}
               {/* ------------------------------------------------ */}
               <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
                       <Banknote className="w-4 h-4" />
@@ -868,21 +1008,276 @@ export default function AdminPaymentsPage() {
                       <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
                         1. Client Billing & Revenue Inflow
                       </h3>
-                      <p className="text-xs text-slate-500">Contract amount received from client / banquet host</p>
+                      <p className="text-xs text-slate-500">
+                        Contract rates charged to client for stewards, captains, vehicles & custom roles
+                      </p>
                     </div>
                   </div>
 
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
-                    activeFinance.clientPaymentStatus === "PAID"
-                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                      : activeFinance.clientPaymentStatus === "PARTIAL"
-                      ? "bg-amber-100 text-amber-800 border border-amber-300"
-                      : "bg-rose-100 text-rose-800 border border-rose-300"
-                  }`}>
-                    Status: {activeFinance.clientPaymentStatus}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Billing Mode Toggle */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setActiveFinance({ ...activeFinance, billingMode: "ITEMIZED" })}
+                        className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                          activeFinance.billingMode === "ITEMIZED"
+                            ? "bg-white text-slate-900 shadow-2xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Itemized Billing
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFinance({ ...activeFinance, billingMode: "LUMP_SUM" })}
+                        className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                          activeFinance.billingMode === "LUMP_SUM"
+                            ? "bg-white text-slate-900 shadow-2xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Lump-Sum
+                      </button>
+                    </div>
+
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
+                      activeFinance.clientPaymentStatus === "PAID"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : activeFinance.clientPaymentStatus === "PARTIAL"
+                        ? "bg-amber-100 text-amber-800 border border-amber-300"
+                        : "bg-rose-100 text-rose-800 border border-rose-300"
+                    }`}>
+                      Status: {activeFinance.clientPaymentStatus}
+                    </span>
+                  </div>
                 </div>
 
+                {/* Itemized Client Billing Breakdown Grid */}
+                {activeFinance.billingMode === "ITEMIZED" && (
+                  <div className="bg-emerald-50/40 rounded-2xl p-4 border border-emerald-200/80 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-emerald-950 uppercase tracking-wider">
+                        <Layers className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Client Contract Rates (Inflow Unit Rates)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddClientCustomRole}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition cursor-pointer active:scale-95"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add New Role (e.g. Girls / Hostesses)</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+                      {/* 1. Steward Rate from Client */}
+                      <div className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-slate-800 text-[11px] uppercase">
+                            Per Steward Rate
+                          </span>
+                          <span className="text-[10.5px] font-bold text-slate-500 font-mono">
+                            {activeWorkers.length} Stewards
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="50"
+                            value={activeFinance.clientStewardRate || ""}
+                            onChange={(e) =>
+                              setActiveFinance({
+                                ...activeFinance,
+                                clientStewardRate: Number(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-6 pr-2 py-1.5 text-xs font-black text-slate-900"
+                            placeholder="800"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="text-slate-400">Total Stewards Inflow:</span>
+                          <span className="font-black text-emerald-700">
+                            ₹{calculatedSums.itemizedStewardsRevenue.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 2. Captain Rate from Client */}
+                      <div className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-slate-800 text-[11px] uppercase">
+                            Per Captain Rate
+                          </span>
+                          <span className="text-[10.5px] font-bold text-slate-500 font-mono">
+                            {(activeFinance.captains || []).length} Captain(s)
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="100"
+                            value={activeFinance.clientCaptainRate || ""}
+                            onChange={(e) =>
+                              setActiveFinance({
+                                ...activeFinance,
+                                clientCaptainRate: Number(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-6 pr-2 py-1.5 text-xs font-black text-slate-900"
+                            placeholder="1500"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="text-slate-400">Total Captains Inflow:</span>
+                          <span className="font-black text-emerald-700">
+                            ₹{calculatedSums.itemizedCaptainsRevenue.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3. Travel Billing from Client (Vehicles) */}
+                      <div className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-slate-800 text-[11px] uppercase">
+                            Travel / Vehicles Inflow
+                          </span>
+                          <span className="text-[10.5px] font-bold text-slate-500 font-mono">
+                            {activeFinance.clientVehiclesCount || 1} Vehicle(s)
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[9.5px] font-bold text-slate-500 uppercase block">Vehicles</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={activeFinance.clientVehiclesCount || 1}
+                              onChange={(e) =>
+                                setActiveFinance({
+                                  ...activeFinance,
+                                  clientVehiclesCount: Number(e.target.value) || 0,
+                                })
+                              }
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-center text-slate-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9.5px] font-bold text-slate-500 uppercase block">₹ / Vehicle</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="100"
+                              value={activeFinance.clientVehicleRate || 2000}
+                              onChange={(e) =>
+                                setActiveFinance({
+                                  ...activeFinance,
+                                  clientVehicleRate: Number(e.target.value) || 0,
+                                })
+                              }
+                              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-center text-slate-900"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                          <span className="text-slate-400">Total Travel Inflow:</span>
+                          <span className="font-black text-emerald-700">
+                            ₹{calculatedSums.itemizedTravelRevenue.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom Roles Inflow (Girls, Bouncers, Bartenders) */}
+                    {(activeFinance.clientCustomRoles || []).length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-emerald-200">
+                        <span className="text-[11px] font-black text-emerald-900 uppercase tracking-wider block">
+                          Additional Custom Staff Roles Billed to Client:
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {activeFinance.clientCustomRoles?.map((cr) => (
+                            <div
+                              key={cr.id}
+                              className="bg-white p-3 rounded-xl border border-emerald-200 flex items-center justify-between gap-2 text-xs"
+                            >
+                              <div className="flex-1 space-y-1">
+                                <input
+                                  type="text"
+                                  value={cr.roleName}
+                                  onChange={(e) => handleUpdateClientCustomRole(cr.id, "roleName", e.target.value)}
+                                  placeholder="Role Title (e.g. Girls / Hostesses)"
+                                  className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-xs font-black text-slate-900"
+                                />
+                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                  <span>Count:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={cr.headcount}
+                                    onChange={(e) => handleUpdateClientCustomRole(cr.id, "headcount", Number(e.target.value) || 0)}
+                                    className="w-12 bg-slate-50 border border-slate-200 rounded px-1 py-0.5 text-xs font-bold text-center text-slate-900"
+                                  />
+                                  <span>× Rate: ₹</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="50"
+                                    value={cr.ratePerPerson}
+                                    onChange={(e) => handleUpdateClientCustomRole(cr.id, "ratePerPerson", Number(e.target.value) || 0)}
+                                    className="w-16 bg-slate-50 border border-slate-200 rounded px-1 py-0.5 text-xs font-bold text-center text-slate-900"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                <span className="font-black text-emerald-700 block text-xs">
+                                  ₹{cr.totalAmount.toLocaleString("en-IN")}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveClientCustomRole(cr.id)}
+                                  className="text-slate-400 hover:text-rose-600 p-1 rounded"
+                                  title="Remove role"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Auto Itemized Inflow Sum & Sync Action Strip */}
+                    <div className="bg-white p-3 rounded-xl border border-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                          Auto-Calculated Total Itemized Client Inflow:
+                        </span>
+                        <span className="text-base font-black text-emerald-700">
+                          ₹{calculatedSums.itemizedTotalRevenue.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSyncItemizedRevenue}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-2xs"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Sync as Contract Total (₹{calculatedSums.itemizedTotalRevenue.toLocaleString("en-IN")})</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Core Revenue & Payment Info Strip */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
@@ -1033,7 +1428,14 @@ export default function AdminPaymentsPage() {
                               </td>
 
                               <td className="p-3">
-                                <div className="font-extrabold text-slate-900">{w.name}</div>
+                                <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                                  <span>{w.name}</span>
+                                  {w.gender && w.gender.toUpperCase().includes("FEMALE") && (
+                                    <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                      Female
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
                                   <span>{w.phone}</span>
                                 </div>
@@ -1129,7 +1531,7 @@ export default function AdminPaymentsPage() {
               </div>
 
               {/* ------------------------------------------------ */}
-              {/* SECTION 3: EVENT CAPTAINS & SUPERVISORS */}
+              {/* SECTION 3: EVENT CAPTAINS & SPECIALIZED ROLES */}
               {/* ------------------------------------------------ */}
               <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -1139,10 +1541,10 @@ export default function AdminPaymentsPage() {
                     </div>
                     <div>
                       <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
-                        3. Event Captains & Supervisors
+                        3. Event Captains & Specialized Roles (Supervisors, Hostesses / Girls, Leads)
                       </h3>
                       <p className="text-xs text-slate-500">
-                        {(activeFinance.captains || []).length} captain(s) assigned • Total Payout: ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
+                        {(activeFinance.captains || []).length} assigned • Total Payout: ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
                       </p>
                     </div>
                   </div>
@@ -1153,16 +1555,16 @@ export default function AdminPaymentsPage() {
                     className="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add Captain / Supervisor</span>
+                    <span>Add Staff / Captain from Master List</span>
                   </button>
                 </div>
 
                 {(!activeFinance.captains || activeFinance.captains.length === 0) ? (
                   <div className="p-6 text-center text-slate-400 text-xs space-y-1.5 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
                     <Award className="w-7 h-7 text-slate-300 mx-auto" />
-                    <p className="font-bold text-slate-700">No captains assigned to this event yet.</p>
+                    <p className="font-bold text-slate-700">No captains or specialized roles assigned to this event yet.</p>
                     <p className="text-slate-400">
-                      Click &quot;Add Captain / Supervisor&quot; above to select students from the Master List and assign lead payouts.
+                      Click &quot;Add Staff / Captain from Master List&quot; above to assign lead captains, girls/hostesses, bartenders or bouncers.
                     </p>
                   </div>
                 ) : (
@@ -1177,7 +1579,14 @@ export default function AdminPaymentsPage() {
                             <span className="bg-purple-200 text-purple-900 text-[10px] font-black uppercase px-2 py-0.5 rounded">
                               {cap.roleTitle || "Captain"}
                             </span>
-                            <h4 className="font-black text-sm text-slate-900 mt-1">{cap.name}</h4>
+                            <h4 className="font-black text-sm text-slate-900 mt-1 flex items-center gap-1.5">
+                              <span>{cap.name}</span>
+                              {cap.gender && cap.gender.toUpperCase().includes("FEMALE") && (
+                                <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                  Female
+                                </span>
+                              )}
+                            </h4>
                             <p className="text-[11px] text-slate-500 font-mono">
                               {cap.phone} • {cap.registrationNumber}
                             </p>
@@ -1236,21 +1645,62 @@ export default function AdminPaymentsPage() {
               {/* SECTION 4 & 5: LOGISTICS, TRAVEL & OPERATIONAL EXPENSES */}
               {/* ------------------------------------------------ */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Travel Expenses */}
+                {/* Travel & Vehicles Expenses */}
                 <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3.5">
                   <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
                     <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
                       <Truck className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-sm text-slate-900">4. Travel & Logistics</h4>
-                      <p className="text-[11px] text-slate-500">Cab, auto, bus, petrol costs</p>
+                      <h4 className="font-extrabold text-sm text-slate-900">4. Travel & Vehicles Outflow</h4>
+                      <p className="text-[11px] text-slate-500">Cab, auto, bus, fuel costs per vehicle</p>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">No. of Vehicles</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={activeFinance.travelVehiclesCount || 1}
+                          onChange={(e) => {
+                            const cnt = Number(e.target.value) || 0;
+                            const costPer = activeFinance.travelCostPerVehicle || 1500;
+                            setActiveFinance({
+                              ...activeFinance,
+                              travelVehiclesCount: cnt,
+                              travelExpenses: cnt * costPer,
+                            });
+                          }}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-black text-slate-900 text-center"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">₹ / Vehicle Cost</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={activeFinance.travelCostPerVehicle || 1500}
+                          onChange={(e) => {
+                            const costPer = Number(e.target.value) || 0;
+                            const cnt = activeFinance.travelVehiclesCount || 1;
+                            setActiveFinance({
+                              ...activeFinance,
+                              travelCostPerVehicle: costPer,
+                              travelExpenses: cnt * costPer,
+                            });
+                          }}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-black text-slate-900 text-center"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase">Travel Amount (₹)</label>
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">Total Travel Outflow (₹)</label>
                       <div className="relative">
                         <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
                         <input
@@ -1397,7 +1847,7 @@ export default function AdminPaymentsPage() {
                     Calculated Summary
                   </span>
                   <p className="text-base font-black">
-                    Revenue: ₹{(Number(activeFinance.clientRevenue) || 0).toLocaleString("en-IN")} • Expenses: ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
+                    Revenue: ₹{calculatedSums.effectiveRevenue.toLocaleString("en-IN")} • Expenses: ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
                   </p>
                   <p className="text-xs text-emerald-400 font-bold">
                     Net Profit: +₹{calculatedSums.netProfit.toLocaleString("en-IN")} ({calculatedSums.profitMarginPct}% Margin)
@@ -1435,19 +1885,19 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* ADD CAPTAIN FROM MASTER LIST MODAL */}
+      {/* ADD STAFF ROLE / CAPTAIN FROM MASTER LIST MODAL */}
       {/* ---------------------------------------------------- */}
       {showAddCaptainModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-slate-200 shadow-2xl space-y-4 relative flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 border border-slate-200 shadow-2xl space-y-4 relative flex flex-col max-h-[92vh]">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700 font-black">
                   <Award className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Add Captain / Supervisor</h3>
-                  <p className="text-xs text-slate-500">Select candidate from Master Student List</p>
+                  <h3 className="text-base font-extrabold text-slate-900">Add Staff Role / Captain</h3>
+                  <p className="text-xs text-slate-500">Assign Captains, Hostesses/Girls, Bartenders or Bouncers</p>
                 </div>
               </div>
               <button
@@ -1461,7 +1911,36 @@ export default function AdminPaymentsPage() {
               </button>
             </div>
 
-            {/* Role & Payout Inputs */}
+            {/* Quick Role Selection Badges */}
+            <div className="space-y-1.5 shrink-0">
+              <label className="text-[11px] font-bold text-slate-600 uppercase">Quick Role Presets</label>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {PRESET_STAFF_ROLES.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => {
+                      setCaptainRoleInput(role);
+                      if (role.includes("Girls") || role.includes("Hostess")) {
+                        setCaptainGenderFilter("FEMALE");
+                        setCaptainPayoutInput("1200");
+                      } else {
+                        setCaptainPayoutInput("1000");
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-extrabold transition cursor-pointer ${
+                      captainRoleInput === role
+                        ? "bg-purple-600 text-white shadow-2xs"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Role Title & Payout Inputs */}
             <div className="grid grid-cols-2 gap-3 shrink-0">
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-600 uppercase">Role / Title</label>
@@ -1469,13 +1948,13 @@ export default function AdminPaymentsPage() {
                   type="text"
                   value={captainRoleInput}
                   onChange={(e) => setCaptainRoleInput(e.target.value)}
-                  placeholder="e.g. Lead Captain"
+                  placeholder="e.g. Hostess / Female Steward"
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 uppercase">Captain Fee (₹)</label>
+                <label className="text-[11px] font-bold text-slate-600 uppercase">Staff Payout (₹)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
                   <input
@@ -1491,9 +1970,36 @@ export default function AdminPaymentsPage() {
               </div>
             </div>
 
-            {/* Master Student Search Box */}
+            {/* Master Student Search Box & Gender Filter */}
             <div className="space-y-1 shrink-0">
-              <label className="text-[11px] font-bold text-slate-600 uppercase">Search Candidate</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-600 uppercase">Search Candidate</label>
+                <div className="flex items-center gap-1 text-[10px] font-bold">
+                  <span>Filter:</span>
+                  <button
+                    type="button"
+                    onClick={() => setCaptainGenderFilter("ALL")}
+                    className={`px-1.5 py-0.5 rounded ${captainGenderFilter === "ALL" ? "bg-purple-600 text-white" : "text-slate-500"}`}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCaptainGenderFilter("FEMALE")}
+                    className={`px-1.5 py-0.5 rounded ${captainGenderFilter === "FEMALE" ? "bg-pink-600 text-white" : "text-slate-500"}`}
+                  >
+                    Female (Girls)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCaptainGenderFilter("MALE")}
+                    className={`px-1.5 py-0.5 rounded ${captainGenderFilter === "MALE" ? "bg-blue-600 text-white" : "text-slate-500"}`}
+                  >
+                    Male
+                  </button>
+                </div>
+              </div>
+
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                 <input
@@ -1507,17 +2013,28 @@ export default function AdminPaymentsPage() {
             </div>
 
             {/* Search Results List */}
-            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 border border-slate-200 rounded-2xl p-1 max-h-60">
+            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 border border-slate-200 rounded-2xl p-1 max-h-56">
               {((data?.masterStudents || []).filter((s: any) => {
                 const q = captainSearchTerm.toLowerCase();
-                return (
+                const matchSearch =
                   s.name.toLowerCase().includes(q) ||
                   (s.registrationNumber && s.registrationNumber.toLowerCase().includes(q)) ||
                   (s.university && s.university.toLowerCase().includes(q)) ||
-                  (s.phone && s.phone.toLowerCase().includes(q))
-                );
+                  (s.phone && s.phone.toLowerCase().includes(q));
+
+                if (!matchSearch) return false;
+
+                if (captainGenderFilter === "FEMALE") {
+                  return s.gender && s.gender.toUpperCase().includes("FEMALE");
+                }
+                if (captainGenderFilter === "MALE") {
+                  return s.gender && s.gender.toUpperCase().includes("MALE");
+                }
+
+                return true;
               })).map((stud: any) => {
                 const isSelected = selectedStudentForCaptain?.id === stud.id;
+                const isFemale = stud.gender && stud.gender.toUpperCase().includes("FEMALE");
 
                 return (
                   <button
@@ -1531,7 +2048,14 @@ export default function AdminPaymentsPage() {
                     }`}
                   >
                     <div>
-                      <span className="font-extrabold text-slate-900 block">{stud.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-extrabold text-slate-900">{stud.name}</span>
+                        {isFemale && (
+                          <span className="bg-pink-100 text-pink-700 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                            Female
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10.5px] text-slate-500 font-mono">
                         {stud.registrationNumber || "No Reg"} • {stud.university || "College"}
                       </span>
@@ -1570,7 +2094,7 @@ export default function AdminPaymentsPage() {
                 onClick={handleAddCaptainConfirm}
                 className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-purple-600 hover:bg-purple-700 transition cursor-pointer disabled:opacity-50"
               >
-                Assign as Captain (₹{captainPayoutInput || "1000"})
+                Assign as {captainRoleInput} (₹{captainPayoutInput || "1000"})
               </button>
             </div>
           </div>
@@ -1650,9 +2174,13 @@ export default function AdminPaymentsPage() {
                   <tbody className="divide-y divide-slate-100 font-medium">
                     <tr className="bg-emerald-50/50">
                       <td className="p-3 font-extrabold text-emerald-900">Total Client Revenue (Inflow)</td>
-                      <td className="p-3 text-slate-600">Contract billing ({activeFinance.clientPaymentStatus})</td>
+                      <td className="p-3 text-slate-600">
+                        {activeFinance.billingMode === "ITEMIZED"
+                          ? `₹${activeFinance.clientStewardRate || 800}/steward • ₹${activeFinance.clientCaptainRate || 1500}/captain • ${activeFinance.clientVehiclesCount || 1} vehicle(s)`
+                          : `Contract billing (${activeFinance.clientPaymentStatus})`}
+                      </td>
                       <td className="p-3 text-right font-black text-emerald-700">
-                        ₹{(Number(activeFinance.clientRevenue) || 0).toLocaleString("en-IN")}
+                        ₹{calculatedSums.effectiveRevenue.toLocaleString("en-IN")}
                       </td>
                     </tr>
                     <tr>
@@ -1663,15 +2191,17 @@ export default function AdminPaymentsPage() {
                       </td>
                     </tr>
                     <tr>
-                      <td className="p-3 font-bold text-slate-800">Captains & Supervisors</td>
-                      <td className="p-3 text-slate-500">{(activeFinance.captains || []).length} assigned captains</td>
+                      <td className="p-3 font-bold text-slate-800">Captains, Hostesses & Supervisors</td>
+                      <td className="p-3 text-slate-500">{(activeFinance.captains || []).length} assigned staff</td>
                       <td className="p-3 text-right font-bold text-slate-800">
                         ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
                       </td>
                     </tr>
                     <tr>
                       <td className="p-3 font-bold text-slate-800">Travel & Logistics</td>
-                      <td className="p-3 text-slate-500">{activeFinance.travelNotes || "Cab / Bus / Petrol"}</td>
+                      <td className="p-3 text-slate-500">
+                        {activeFinance.travelVehiclesCount || 1} Vehicle(s) • {activeFinance.travelNotes || "Cab / Bus / Petrol"}
+                      </td>
                       <td className="p-3 text-right font-bold text-slate-800">
                         ₹{calculatedSums.travelExp.toLocaleString("en-IN")}
                       </td>
