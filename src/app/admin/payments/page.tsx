@@ -143,6 +143,40 @@ const PRESET_STAFF_ROLES = [
   "Kitchen / Buffet Coordinator",
 ];
 
+const DRAFT_STORAGE_PREFIX = "topline_payment_draft_";
+
+const getSavedDraft = (eventId: string) => {
+  if (typeof window === "undefined" || !eventId) return null;
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_PREFIX + eventId);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+};
+
+const saveDraftToStorage = (eventId: string, finance: EventFinancials, workers: PresentWorker[]) => {
+  if (typeof window === "undefined" || !eventId) return;
+  try {
+    localStorage.setItem(
+      DRAFT_STORAGE_PREFIX + eventId,
+      JSON.stringify({
+        finance,
+        workers,
+        updatedAt: Date.now(),
+      })
+    );
+  } catch (e) {}
+};
+
+const clearDraftFromStorage = (eventId: string) => {
+  if (typeof window === "undefined" || !eventId) return;
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_PREFIX + eventId);
+  } catch (e) {}
+};
+
 export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
@@ -154,6 +188,9 @@ export default function AdminPaymentsPage() {
   const [activeFinance, setActiveFinance] = useState<EventFinancials | null>(null);
   const [activeWorkers, setActiveWorkers] = useState<PresentWorker[]>([]);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Add Staff Role / Captain Modal States
@@ -169,6 +206,25 @@ export default function AdminPaymentsPage() {
 
   // Copied states
   const [copiedUpi, setCopiedUpi] = useState<string | null>(null);
+
+  // Auto-save and lifecycle refs
+  const isInitializingRef = React.useRef<boolean>(false);
+  const autoSaveTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const activeFinanceRef = React.useRef<EventFinancials | null>(null);
+  const activeWorkersRef = React.useRef<PresentWorker[]>([]);
+  const selectedEventIdRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    activeFinanceRef.current = activeFinance;
+  }, [activeFinance]);
+
+  useEffect(() => {
+    activeWorkersRef.current = activeWorkers;
+  }, [activeWorkers]);
+
+  useEffect(() => {
+    selectedEventIdRef.current = selectedEventId;
+  }, [selectedEventId]);
 
   const fetchPaymentsData = async () => {
     try {
@@ -199,7 +255,10 @@ export default function AdminPaymentsPage() {
   }, []);
 
   const initWorkingDraft = (ev: EventSheet) => {
-    setActiveFinance({
+    isInitializingRef.current = true;
+    const localDraft = getSavedDraft(ev.id);
+
+    const baseServerFinance: EventFinancials = {
       ...ev.financials,
       billingMode: ev.financials.billingMode || "ITEMIZED",
       clientStewardRate: ev.financials.clientStewardRate !== undefined ? ev.financials.clientStewardRate : (ev.financials.defaultWorkerPayout || 500) + 200,
@@ -210,8 +269,50 @@ export default function AdminPaymentsPage() {
       clientCustomRoles: ev.financials.clientCustomRoles || [],
       travelVehiclesCount: ev.financials.travelVehiclesCount !== undefined ? ev.financials.travelVehiclesCount : 1,
       travelCostPerVehicle: ev.financials.travelCostPerVehicle !== undefined ? ev.financials.travelCostPerVehicle : 1500,
-    });
-    setActiveWorkers([...ev.presentWorkers]);
+    };
+
+    if (localDraft?.finance) {
+      // Draft found in localStorage! Restore exact user modifications
+      setActiveFinance({
+        ...baseServerFinance,
+        ...localDraft.finance,
+      });
+
+      if (localDraft.workers && Array.isArray(localDraft.workers)) {
+        const draftMap = new Map<string, PresentWorker>(
+          localDraft.workers.map((w: PresentWorker) => [w.applicationId, w])
+        );
+        const merged = ev.presentWorkers.map((w) => {
+          const d = draftMap.get(w.applicationId);
+          return d
+            ? {
+                ...w,
+                payoutAmount: d.payoutAmount,
+                paymentStatus: d.paymentStatus,
+                paidReference: d.paidReference,
+                notes: d.notes,
+              }
+            : w;
+        });
+        setActiveWorkers(merged);
+      } else {
+        setActiveWorkers([...ev.presentWorkers]);
+      }
+      setHasUnsavedDraft(true);
+      setAutoSaveStatus("saved");
+      if (localDraft.updatedAt) {
+        setLastSavedTime(new Date(localDraft.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      }
+    } else {
+      setActiveFinance(baseServerFinance);
+      setActiveWorkers([...ev.presentWorkers]);
+      setHasUnsavedDraft(false);
+      setAutoSaveStatus("idle");
+    }
+
+    setTimeout(() => {
+      isInitializingRef.current = false;
+    }, 200);
   };
 
   const handleSelectEvent = (ev: EventSheet) => {
@@ -332,6 +433,87 @@ export default function AdminPaymentsPage() {
     };
   }, [activeFinance, activeWorkers]);
 
+  // Execute Auto-Save to Backend API
+  const executeAutoSave = async (eventId: string, finance: EventFinancials, workers: PresentWorker[]) => {
+    try {
+      setAutoSaveStatus("saving");
+      const workerOverridesMap: Record<string, any> = {};
+      workers.forEach((w) => {
+        workerOverridesMap[w.applicationId] = {
+          payoutAmount: w.payoutAmount,
+          paymentStatus: w.paymentStatus,
+          paidReference: w.paidReference,
+          notes: w.notes,
+        };
+      });
+
+      const stewardRate = Number(finance.clientStewardRate) || 0;
+      const captainRate = Number(finance.clientCaptainRate) || 0;
+      const vehicleCount = Number(finance.clientVehiclesCount) || 0;
+      const vehicleRate = Number(finance.clientVehicleRate) || 0;
+      const travelBilling = vehicleCount > 0 && vehicleRate > 0 ? vehicleCount * vehicleRate : Number(finance.clientTravelBilling) || 0;
+      const itemizedCustomRolesRevenue = (finance.clientCustomRoles || []).reduce(
+        (sum, r) => sum + (Number(r.headcount || 0) * Number(r.ratePerPerson || 0)),
+        0
+      );
+      const computedItemizedRevenue = (stewardRate * workers.length) + (captainRate * (finance.captains || []).length) + travelBilling + itemizedCustomRolesRevenue;
+      const effectiveClientRevenue = finance.billingMode === "ITEMIZED" && computedItemizedRevenue > 0 ? computedItemizedRevenue : Number(finance.clientRevenue) || 0;
+
+      const payloadFinanceData = {
+        ...finance,
+        clientRevenue: effectiveClientRevenue,
+        workerOverrides: workerOverridesMap,
+      };
+
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId,
+          financeData: payloadFinanceData,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setAutoSaveStatus("saved");
+        const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setLastSavedTime(nowTime);
+        saveDraftToStorage(eventId, finance, workers);
+      } else {
+        setAutoSaveStatus("error");
+      }
+    } catch (e) {
+      console.error("Auto-save network error:", e);
+      setAutoSaveStatus("error");
+    }
+  };
+
+  // Trigger Local Storage Persistence & Debounced Auto-Save
+  useEffect(() => {
+    if (isInitializingRef.current || !selectedEventId || !activeFinance) return;
+
+    // 1. Immediately persist locally so browser refresh / close retains exact state
+    saveDraftToStorage(selectedEventId, activeFinance, activeWorkers);
+    setHasUnsavedDraft(true);
+    setAutoSaveStatus("saving");
+
+    // 2. Debounce auto-save to database (1.2s delay after user stops typing)
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      executeAutoSave(selectedEventId, activeFinance, activeWorkers);
+    }, 1200);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [activeFinance, activeWorkers, selectedEventId]);
+
   // Sync Itemized Revenue to Total Client Revenue
   const handleSyncItemizedRevenue = () => {
     if (!activeFinance) return;
@@ -343,6 +525,32 @@ export default function AdminPaymentsPage() {
       type: "success",
       message: `Updated total client revenue to ₹${calculatedSums.itemizedTotalRevenue.toLocaleString("en-IN")} based on itemized steward, captain, vehicle & custom role rates.`,
     });
+  };
+
+  // Revert / Discard Draft
+  const handleResetDraft = () => {
+    if (!currentEvent) return;
+    clearDraftFromStorage(currentEvent.id);
+    isInitializingRef.current = true;
+    setActiveFinance({
+      ...currentEvent.financials,
+      billingMode: currentEvent.financials.billingMode || "ITEMIZED",
+      clientStewardRate: currentEvent.financials.clientStewardRate !== undefined ? currentEvent.financials.clientStewardRate : (currentEvent.financials.defaultWorkerPayout || 500) + 200,
+      clientCaptainRate: currentEvent.financials.clientCaptainRate !== undefined ? currentEvent.financials.clientCaptainRate : 1500,
+      clientVehiclesCount: currentEvent.financials.clientVehiclesCount !== undefined ? currentEvent.financials.clientVehiclesCount : (currentEvent.financials.travelVehiclesCount || 1),
+      clientVehicleRate: currentEvent.financials.clientVehicleRate !== undefined ? currentEvent.financials.clientVehicleRate : 2000,
+      clientTravelBilling: currentEvent.financials.clientTravelBilling !== undefined ? currentEvent.financials.clientTravelBilling : (currentEvent.financials.travelExpenses || 2000),
+      clientCustomRoles: currentEvent.financials.clientCustomRoles || [],
+      travelVehiclesCount: currentEvent.financials.travelVehiclesCount !== undefined ? currentEvent.financials.travelVehiclesCount : 1,
+      travelCostPerVehicle: currentEvent.financials.travelCostPerVehicle !== undefined ? currentEvent.financials.travelCostPerVehicle : 1500,
+    });
+    setActiveWorkers([...currentEvent.presentWorkers]);
+    setHasUnsavedDraft(false);
+    setAutoSaveStatus("idle");
+    setFeedback({ type: "success", message: "Reverted changes back to saved database version." });
+    setTimeout(() => {
+      isInitializingRef.current = false;
+    }, 200);
   };
 
   // Handler: Add Custom Role Inflow in Client Billing
@@ -538,6 +746,11 @@ export default function AdminPaymentsPage() {
     if (!currentEvent || !activeFinance) return;
     setSaving(true);
     try {
+      // Clear pending debounce
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
       // Build worker overrides map
       const workerOverridesMap: Record<string, any> = {};
       activeWorkers.forEach((w) => {
@@ -571,6 +784,10 @@ export default function AdminPaymentsPage() {
 
       const json = await res.json();
       if (res.ok && json.success) {
+        setAutoSaveStatus("saved");
+        const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setLastSavedTime(nowTime);
+        saveDraftToStorage(currentEvent.id, activeFinance, activeWorkers);
         setFeedback({
           type: "success",
           message: `🎉 Financial sheet for "${currentEvent.name}" successfully saved! Net Profit: ₹${calculatedSums.netProfit} (${calculatedSums.profitMarginPct}% Margin)`,
@@ -630,6 +847,45 @@ export default function AdminPaymentsPage() {
         <div className="flex flex-wrap items-center gap-2">
           {currentEvent && (
             <>
+              {/* Auto-Save Live Status Indicator */}
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold shadow-2xs">
+                {autoSaveStatus === "saving" && (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                    <span className="text-amber-700 font-bold">Auto-saving...</span>
+                  </>
+                )}
+                {autoSaveStatus === "saved" && (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Auto-saved {lastSavedTime ? `(${lastSavedTime})` : ""}</span>
+                  </>
+                )}
+                {autoSaveStatus === "idle" && (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="text-slate-600 font-medium">Auto-save active</span>
+                  </>
+                )}
+                {autoSaveStatus === "error" && (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                    <span className="text-rose-600 font-bold">Offline / Save pending</span>
+                  </>
+                )}
+              </div>
+
+              {hasUnsavedDraft && (
+                <button
+                  onClick={handleResetDraft}
+                  className="bg-white hover:bg-slate-100 text-slate-600 hover:text-rose-600 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-slate-300 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  title="Discard local changes and revert to database values"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Discard Draft</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setShowPrintModal(true)}
                 className="bg-white hover:bg-slate-100 text-slate-700 font-bold px-3.5 py-2.5 rounded-xl text-xs transition border border-slate-300 flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
