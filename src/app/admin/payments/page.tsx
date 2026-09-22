@@ -528,6 +528,126 @@ export default function AdminPaymentsPage() {
     };
   }, [activeFinance, activeStewards]);
 
+  // Granular Financial Calculation Model (matches exact category & breakdown specifications)
+  const financialCalculationModel = useMemo(() => {
+    if (!activeFinance) return null;
+
+    // 1. Captains
+    const captainQty = (activeFinance.captains || []).length;
+    const captainRateReceived = Number(activeFinance.clientCaptainRate) || 0;
+    const captainTotalReceived = captainQty * captainRateReceived;
+    const captainActualPaid = (activeFinance.captains || [])
+      .filter((c) => !c.retainInProfit && (c.role || c.roleTitle) !== "SUPERADMIN")
+      .reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
+    const captainProfit = captainTotalReceived - captainActualPaid;
+
+    const captainBreakdowns = (activeFinance.captains || []).map((c, idx) => {
+      const isSuperAdmin = !!c.retainInProfit || (c.role || c.roleTitle) === "SUPERADMIN";
+      const paid = isSuperAdmin ? 0 : Number(c.payoutAmount) || 0;
+      const profit = captainRateReceived - paid;
+      return {
+        index: idx + 1,
+        name: c.name,
+        role: c.role || c.roleTitle || "Captain",
+        rateReceived: captainRateReceived,
+        paid,
+        isSuperAdmin,
+        profit,
+      };
+    });
+
+    // 2. Stewards
+    const stewardQty = activeStewards.length;
+    const stewardRateReceived = Number(activeFinance.clientStewardRate) || 0;
+    const stewardTotalReceived = stewardQty * stewardRateReceived;
+    const stewardActualPaid = activeStewards.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
+    const stewardProfit = stewardTotalReceived - stewardActualPaid;
+    const avgStewardPaid =
+      stewardQty > 0 ? Math.round(stewardActualPaid / stewardQty) : Number(activeFinance.defaultWorkerPayout) || 800;
+
+    // 3. Vehicles
+    const vehicleQty =
+      Number(activeFinance.clientVehiclesCount) || Number(activeFinance.travelVehiclesCount) || 1;
+    const vehicleRateReceived =
+      Number(activeFinance.clientVehicleRate) ||
+      (vehicleQty > 0 ? Math.round((Number(activeFinance.clientTravelBilling) || 0) / vehicleQty) : 0);
+    const vehicleTotalReceived =
+      vehicleQty * vehicleRateReceived > 0
+        ? vehicleQty * vehicleRateReceived
+        : Number(activeFinance.clientTravelBilling) || 0;
+    const vehicleActualPaid = Number(activeFinance.travelExpenses) || 0;
+    const vehiclePaidPerUnit = vehicleQty > 0 ? Math.round(vehicleActualPaid / vehicleQty) : vehicleActualPaid;
+    const vehicleProfit = vehicleTotalReceived - vehicleActualPaid;
+
+    // 4. Custom Roles
+    const customRolesList = (activeFinance.clientCustomRoles || []).map((r) => {
+      const totalRec = Number(r.headcount || 0) * Number(r.ratePerPerson || 0);
+      const paid = 0;
+      const prof = totalRec - paid;
+      return {
+        name: r.roleName,
+        qty: Number(r.headcount || 0),
+        rateReceived: Number(r.ratePerPerson || 0),
+        totalReceived: totalRec,
+        actualPaid: paid,
+        profit: prof,
+      };
+    });
+
+    // 5. Food & Misc
+    const foodPaid = Number(activeFinance.foodExpenses) || 0;
+    const miscPaid = (activeFinance.miscExpenses || []).reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+
+    // 6. Overall Totals
+    const totalReceived =
+      activeFinance.billingMode === "ITEMIZED" && calculatedSums.itemizedTotalRevenue > 0
+        ? calculatedSums.itemizedTotalRevenue
+        : Number(activeFinance.clientRevenue) || 0;
+
+    const totalActualPaid = calculatedSums.totalDirectExpenses;
+    const totalProfit = calculatedSums.netProfit;
+
+    const superAdminRetainedTotal = (activeFinance.captains || [])
+      .filter((c) => !!c.retainInProfit || (c.role || c.roleTitle) === "SUPERADMIN")
+      .reduce((sum, c) => sum + (captainRateReceived || Number(c.payoutAmount) || 1300), 0);
+
+    return {
+      captains: {
+        qty: captainQty,
+        rateReceived: captainRateReceived,
+        totalReceived: captainTotalReceived,
+        actualPaid: captainActualPaid,
+        profit: captainProfit,
+        breakdowns: captainBreakdowns,
+      },
+      stewards: {
+        qty: stewardQty,
+        rateReceived: stewardRateReceived,
+        totalReceived: stewardTotalReceived,
+        actualPaid: stewardActualPaid,
+        profit: stewardProfit,
+        avgPaid: avgStewardPaid,
+      },
+      vehicles: {
+        qty: vehicleQty,
+        rateReceived: vehicleRateReceived,
+        totalReceived: vehicleTotalReceived,
+        actualPaid: vehicleActualPaid,
+        paidPerUnit: vehiclePaidPerUnit,
+        profit: vehicleProfit,
+      },
+      customRoles: customRolesList,
+      foodPaid,
+      foodNotes: activeFinance.foodNotes,
+      miscPaid,
+      miscExpenses: activeFinance.miscExpenses || [],
+      totalReceived,
+      totalActualPaid,
+      totalProfit,
+      superAdminRetainedTotal,
+    };
+  }, [activeFinance, activeStewards, calculatedSums]);
+
   // Execute Auto-Save to Backend API
   const executeAutoSave = async (eventId: string, finance: EventFinancials, workers: PresentWorker[]) => {
     try {
@@ -2344,6 +2464,200 @@ export default function AdminPaymentsPage() {
                 )}
               </div>
 
+              {/* ------------------------------------------------ */}
+              {/* SECTION 7: LIVE FINANCIAL CALCULATION & P&L BREAKDOWN */}
+              {/* ------------------------------------------------ */}
+              {financialCalculationModel && (
+                <div className="bg-black text-slate-100 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl space-y-7 font-sans">
+                  {/* 1. Header & Table */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                        Financial calculation
+                      </h3>
+                      <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                        {financialCalculationModel.totalReceived > 0
+                          ? `${((financialCalculationModel.totalProfit / financialCalculationModel.totalReceived) * 100).toFixed(1)}% Margin`
+                          : "0% Margin"}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm font-sans">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 font-semibold text-[11px] sm:text-xs uppercase tracking-wider">
+                            <th className="py-2.5 px-3">Category</th>
+                            <th className="py-2.5 px-3 text-center">Qty</th>
+                            <th className="py-2.5 px-3 text-right">Rate Received</th>
+                            <th className="py-2.5 px-3 text-right">Total Received</th>
+                            <th className="py-2.5 px-3 text-right">Actual Paid</th>
+                            <th className="py-2.5 px-3 text-right">Profit</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/60 font-medium font-sans">
+                          {/* Captains Row */}
+                          <tr className="hover:bg-white/[0.02] transition">
+                            <td className="py-3 px-3 font-bold text-white">Captains</td>
+                            <td className="py-3 px-3 text-center text-slate-300">{financialCalculationModel.captains.qty}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.captains.rateReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right text-slate-200">₹{financialCalculationModel.captains.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.captains.actualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right font-black text-emerald-400">₹{financialCalculationModel.captains.profit.toLocaleString("en-IN")}</td>
+                          </tr>
+
+                          {/* Stewards Row */}
+                          <tr className="hover:bg-white/[0.02] transition">
+                            <td className="py-3 px-3 font-bold text-white">Stewards</td>
+                            <td className="py-3 px-3 text-center text-slate-300">{financialCalculationModel.stewards.qty}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.stewards.rateReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right text-slate-200">₹{financialCalculationModel.stewards.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.stewards.actualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right font-black text-emerald-400">₹{financialCalculationModel.stewards.profit.toLocaleString("en-IN")}</td>
+                          </tr>
+
+                          {/* Vehicles Row */}
+                          <tr className="hover:bg-white/[0.02] transition">
+                            <td className="py-3 px-3 font-bold text-white">Vehicles</td>
+                            <td className="py-3 px-3 text-center text-slate-300">{financialCalculationModel.vehicles.qty}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.vehicles.rateReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right text-slate-200">₹{financialCalculationModel.vehicles.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.vehicles.actualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-3 text-right font-black text-emerald-400">₹{financialCalculationModel.vehicles.profit.toLocaleString("en-IN")}</td>
+                          </tr>
+
+                          {/* Custom Roles (if any) */}
+                          {financialCalculationModel.customRoles.map((r, i) => (
+                            <tr key={i} className="hover:bg-white/[0.02] transition">
+                              <td className="py-3 px-3 font-bold text-white">{r.name}</td>
+                              <td className="py-3 px-3 text-center text-slate-300">{r.qty}</td>
+                              <td className="py-3 px-3 text-right text-slate-300">₹{r.rateReceived.toLocaleString("en-IN")}</td>
+                              <td className="py-3 px-3 text-right text-slate-200">₹{r.totalReceived.toLocaleString("en-IN")}</td>
+                              <td className="py-3 px-3 text-right text-slate-300">₹{r.actualPaid.toLocaleString("en-IN")}</td>
+                              <td className="py-3 px-3 text-right font-black text-emerald-400">₹{r.profit.toLocaleString("en-IN")}</td>
+                            </tr>
+                          ))}
+
+                          {/* Food & Misc Expenses (if any) */}
+                          {financialCalculationModel.foodPaid > 0 && (
+                            <tr className="hover:bg-white/[0.02] transition text-slate-400">
+                              <td className="py-3 px-3">Food & Refreshments</td>
+                              <td className="py-3 px-3 text-center">-</td>
+                              <td className="py-3 px-3 text-right">-</td>
+                              <td className="py-3 px-3 text-right">₹0</td>
+                              <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.foodPaid.toLocaleString("en-IN")}</td>
+                              <td className="py-3 px-3 text-right text-rose-400 font-bold">-₹{financialCalculationModel.foodPaid.toLocaleString("en-IN")}</td>
+                            </tr>
+                          )}
+
+                          {financialCalculationModel.miscPaid > 0 && (
+                            <tr className="hover:bg-white/[0.02] transition text-slate-400">
+                              <td className="py-3 px-3">Misc Operations</td>
+                              <td className="py-3 px-3 text-center">-</td>
+                              <td className="py-3 px-3 text-right">-</td>
+                              <td className="py-3 px-3 text-right">₹0</td>
+                              <td className="py-3 px-3 text-right text-slate-300">₹{financialCalculationModel.miscPaid.toLocaleString("en-IN")}</td>
+                              <td className="py-3 px-3 text-right text-rose-400 font-bold">-₹{financialCalculationModel.miscPaid.toLocaleString("en-IN")}</td>
+                            </tr>
+                          )}
+
+                          {/* TOTAL Row */}
+                          <tr className="border-t-2 border-slate-700 bg-slate-900/80 font-black text-white text-sm sm:text-base">
+                            <td className="py-3.5 px-3">TOTAL</td>
+                            <td className="py-3.5 px-3"></td>
+                            <td className="py-3.5 px-3"></td>
+                            <td className="py-3.5 px-3 text-right text-slate-100">₹{financialCalculationModel.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3.5 px-3 text-right text-slate-100">₹{financialCalculationModel.totalActualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-3.5 px-3 text-right text-emerald-400">₹{financialCalculationModel.totalProfit.toLocaleString("en-IN")}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 2. Captain breakdown */}
+                  {financialCalculationModel.captains.qty > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                      <h4 className="text-sm sm:text-base font-bold text-white">Captain breakdown</h4>
+                      <ul className="space-y-1 text-xs sm:text-sm text-slate-300 font-sans">
+                        {financialCalculationModel.captains.breakdowns.map((cb) => (
+                          <li key={cb.index} className="flex items-center flex-wrap gap-1.5">
+                            <span>• Captain {cb.index}{cb.name ? ` (${cb.name})` : ""}:</span>
+                            <span>Received ₹{cb.rateReceived.toLocaleString("en-IN")}</span>
+                            <span className="text-slate-500">→</span>
+                            <span className={cb.isSuperAdmin ? "text-amber-300 font-bold" : "text-slate-300"}>
+                              {cb.isSuperAdmin ? "No payment (Super Admin / Founder)" : `Paid ₹${cb.paid.toLocaleString("en-IN")}`}
+                            </span>
+                            <span className="text-slate-500">→</span>
+                            <span className="font-bold text-emerald-400">Profit ₹{cb.profit.toLocaleString("en-IN")}</span>
+                          </li>
+                        ))}
+                        <li className="font-black text-white pt-1">
+                          • Captain profit = ₹{financialCalculationModel.captains.profit.toLocaleString("en-IN")}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 3. Steward breakdown */}
+                  {financialCalculationModel.stewards.qty > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                      <h4 className="text-sm sm:text-base font-bold text-white">Steward breakdown</h4>
+                      <ul className="space-y-1 text-xs sm:text-sm text-slate-300 font-sans">
+                        <li>
+                          • {financialCalculationModel.stewards.qty} × ₹{financialCalculationModel.stewards.rateReceived.toLocaleString("en-IN")} received = ₹{financialCalculationModel.stewards.totalReceived.toLocaleString("en-IN")}
+                        </li>
+                        <li>
+                          • {financialCalculationModel.stewards.qty} × ₹{financialCalculationModel.stewards.avgPaid.toLocaleString("en-IN")} paid = ₹{financialCalculationModel.stewards.actualPaid.toLocaleString("en-IN")}
+                        </li>
+                        <li className="font-black text-white pt-1">
+                          • Steward profit = ₹{financialCalculationModel.stewards.profit.toLocaleString("en-IN")}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 4. Vehicle breakdown */}
+                  {financialCalculationModel.vehicles.qty > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                      <h4 className="text-sm sm:text-base font-bold text-white">Vehicle breakdown</h4>
+                      <ul className="space-y-1 text-xs sm:text-sm text-slate-300 font-sans">
+                        <li>
+                          • {financialCalculationModel.vehicles.qty} × ₹{financialCalculationModel.vehicles.rateReceived.toLocaleString("en-IN")} received = ₹{financialCalculationModel.vehicles.totalReceived.toLocaleString("en-IN")}
+                        </li>
+                        <li>
+                          • {financialCalculationModel.vehicles.qty} × ₹{financialCalculationModel.vehicles.paidPerUnit.toLocaleString("en-IN")} paid = ₹{financialCalculationModel.vehicles.actualPaid.toLocaleString("en-IN")}
+                        </li>
+                        <li className="font-black text-white pt-1">
+                          • Vehicle profit = ₹{financialCalculationModel.vehicles.profit.toLocaleString("en-IN")}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 5. Final result */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                    <h4 className="text-sm sm:text-base font-bold text-white">Final result</h4>
+                    <div className="space-y-1 text-xs sm:text-sm font-semibold">
+                      <p className="text-slate-200">
+                        Total Amount Received: <span className="text-white font-black">₹{financialCalculationModel.totalReceived.toLocaleString("en-IN")}</span>
+                      </p>
+                      <p className="text-slate-200">
+                        Total Actual Expenses: <span className="text-white font-black">₹{financialCalculationModel.totalActualPaid.toLocaleString("en-IN")}</span>
+                      </p>
+                      <p className="text-emerald-400 font-black text-base sm:text-lg pt-0.5">
+                        Net Profit: ₹{financialCalculationModel.totalProfit.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+
+                    {financialCalculationModel.superAdminRetainedTotal > 0 && (
+                      <div className="pt-2 text-xs text-amber-300 font-medium bg-amber-950/40 border border-amber-800/60 rounded-xl p-3">
+                        💡 The ₹{financialCalculationModel.superAdminRetainedTotal.toLocaleString("en-IN")} for the super-admin captain is correctly treated as <strong>profit</strong>, since you don&apos;t have to pay it to anyone.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Bottom Action Strip */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-3xl shadow-lg border border-slate-800">
                 <div>
@@ -3022,101 +3336,197 @@ export default function AdminPaymentsPage() {
                 </div>
               </div>
 
-              {/* Financial Ledger Summary Table */}
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase">
-                    <tr>
-                      <th className="p-3">Financial Category</th>
-                      <th className="p-3">Details / Quantity</th>
-                      <th className="p-3 text-right">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    <tr className="bg-emerald-50/50">
-                      <td className="p-3 font-extrabold text-emerald-900">Total Client Revenue (Inflow)</td>
-                      <td className="p-3 text-slate-600">
-                        {activeFinance.billingMode === "ITEMIZED"
-                          ? `₹${activeFinance.clientStewardRate || 800}/steward • ₹${activeFinance.clientCaptainRate || 1500}/captain • ${activeFinance.clientVehiclesCount || 1} vehicle(s)`
-                          : `Contract billing (${activeFinance.clientPaymentStatus})`}
-                      </td>
-                      <td className="p-3 text-right font-black text-emerald-700">
-                        ₹{calculatedSums.effectiveRevenue.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-bold text-slate-800">Base Crew / Worker Wages</td>
-                      <td className="p-3 text-slate-500">{activeWorkers.length} verified present workers</td>
-                      <td className="p-3 text-right font-bold text-slate-800">
-                        ₹{calculatedSums.totalWorkerPayouts.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-bold text-slate-800">Captains, Hostesses & Supervisors (Outflows)</td>
-                      <td className="p-3 text-slate-500">
-                        {(activeFinance.captains || []).filter(c => !c.retainInProfit).length} external crew members
-                      </td>
-                      <td className="p-3 text-right font-bold text-slate-800">
-                        ₹{calculatedSums.externalCaptainPayouts.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    {calculatedSums.superAdminRetainedCaptainProfit > 0 && (
-                      <tr className="bg-amber-50/60">
-                        <td className="p-3 font-extrabold text-amber-950">
-                          👑 Super Admin / Founder Retained Captain Profit
-                        </td>
-                        <td className="p-3 text-amber-800">
-                          {(activeFinance.captains || []).filter(c => !!c.retainInProfit).length} founder captain(s) • Retained directly into Net Profit
-                        </td>
-                        <td className="p-3 text-right font-black text-amber-900">
-                          +₹{calculatedSums.superAdminRetainedCaptainProfit.toLocaleString("en-IN")}
-                        </td>
-                      </tr>
+              {/* Financial Calculation & Granular Breakdown */}
+              {financialCalculationModel && (
+                <div className="bg-black text-slate-100 rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-6 font-sans">
+                  {/* Table */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-base sm:text-lg font-extrabold text-white">
+                        Financial calculation
+                      </h4>
+                      <span className="text-[11px] font-mono text-emerald-400 font-bold">
+                        {financialCalculationModel.totalReceived > 0
+                          ? `${((financialCalculationModel.totalProfit / financialCalculationModel.totalReceived) * 100).toFixed(1)}% Profit Margin`
+                          : "0%"}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 font-semibold text-[10.5px] uppercase">
+                            <th className="py-2 px-2">Category</th>
+                            <th className="py-2 px-2 text-center">Qty</th>
+                            <th className="py-2 px-2 text-right">Rate Received</th>
+                            <th className="py-2 px-2 text-right">Total Received</th>
+                            <th className="py-2 px-2 text-right">Actual Paid</th>
+                            <th className="py-2 px-2 text-right">Profit</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900 font-medium">
+                          {/* Captains Row */}
+                          <tr>
+                            <td className="py-2.5 px-2 font-bold text-white">Captains</td>
+                            <td className="py-2.5 px-2 text-center text-slate-300">{financialCalculationModel.captains.qty}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-300">₹{financialCalculationModel.captains.rateReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-200">₹{financialCalculationModel.captains.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-300">₹{financialCalculationModel.captains.actualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right font-black text-emerald-400">₹{financialCalculationModel.captains.profit.toLocaleString("en-IN")}</td>
+                          </tr>
+
+                          {/* Stewards Row */}
+                          <tr>
+                            <td className="py-2.5 px-2 font-bold text-white">Stewards</td>
+                            <td className="py-2.5 px-2 text-center text-slate-300">{financialCalculationModel.stewards.qty}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-300">₹{financialCalculationModel.stewards.rateReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-200">₹{financialCalculationModel.stewards.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-300">₹{financialCalculationModel.stewards.actualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right font-black text-emerald-400">₹{financialCalculationModel.stewards.profit.toLocaleString("en-IN")}</td>
+                          </tr>
+
+                          {/* Vehicles Row */}
+                          <tr>
+                            <td className="py-2.5 px-2 font-bold text-white">Vehicles</td>
+                            <td className="py-2.5 px-2 text-center text-slate-300">{financialCalculationModel.vehicles.qty}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-300">₹{financialCalculationModel.vehicles.rateReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-200">₹{financialCalculationModel.vehicles.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right text-slate-300">₹{financialCalculationModel.vehicles.actualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-2.5 px-2 text-right font-black text-emerald-400">₹{financialCalculationModel.vehicles.profit.toLocaleString("en-IN")}</td>
+                          </tr>
+
+                          {/* Custom Roles (if any) */}
+                          {financialCalculationModel.customRoles.map((r, i) => (
+                            <tr key={i}>
+                              <td className="py-2.5 px-2 font-bold text-white">{r.name}</td>
+                              <td className="py-2.5 px-2 text-center text-slate-300">{r.qty}</td>
+                              <td className="py-2.5 px-2 text-right text-slate-300">₹{r.rateReceived.toLocaleString("en-IN")}</td>
+                              <td className="py-2.5 px-2 text-right text-slate-200">₹{r.totalReceived.toLocaleString("en-IN")}</td>
+                              <td className="py-2.5 px-2 text-right text-slate-300">₹{r.actualPaid.toLocaleString("en-IN")}</td>
+                              <td className="py-2.5 px-2 text-right font-black text-emerald-400">₹{r.profit.toLocaleString("en-IN")}</td>
+                            </tr>
+                          ))}
+
+                          {/* Food & Misc Expenses (if any) */}
+                          {financialCalculationModel.foodPaid > 0 && (
+                            <tr className="text-slate-400">
+                              <td className="py-2 px-2">Food & Refreshments</td>
+                              <td className="py-2 px-2 text-center">-</td>
+                              <td className="py-2 px-2 text-right">-</td>
+                              <td className="py-2 px-2 text-right">₹0</td>
+                              <td className="py-2 px-2 text-right text-slate-300">₹{financialCalculationModel.foodPaid.toLocaleString("en-IN")}</td>
+                              <td className="py-2 px-2 text-right text-rose-400 font-bold">-₹{financialCalculationModel.foodPaid.toLocaleString("en-IN")}</td>
+                            </tr>
+                          )}
+
+                          {financialCalculationModel.miscPaid > 0 && (
+                            <tr className="text-slate-400">
+                              <td className="py-2 px-2">Misc Operations</td>
+                              <td className="py-2 px-2 text-center">-</td>
+                              <td className="py-2 px-2 text-right">-</td>
+                              <td className="py-2 px-2 text-right">₹0</td>
+                              <td className="py-2 px-2 text-right text-slate-300">₹{financialCalculationModel.miscPaid.toLocaleString("en-IN")}</td>
+                              <td className="py-2 px-2 text-right text-rose-400 font-bold">-₹{financialCalculationModel.miscPaid.toLocaleString("en-IN")}</td>
+                            </tr>
+                          )}
+
+                          {/* TOTAL Row */}
+                          <tr className="border-t border-slate-700 bg-slate-900/80 font-black text-white text-xs sm:text-sm">
+                            <td className="py-3 px-2">TOTAL</td>
+                            <td className="py-3 px-2"></td>
+                            <td className="py-3 px-2"></td>
+                            <td className="py-3 px-2 text-right text-slate-100">₹{financialCalculationModel.totalReceived.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-2 text-right text-slate-100">₹{financialCalculationModel.totalActualPaid.toLocaleString("en-IN")}</td>
+                            <td className="py-3 px-2 text-right text-emerald-400">₹{financialCalculationModel.totalProfit.toLocaleString("en-IN")}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Captain breakdown */}
+                  {financialCalculationModel.captains.qty > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                      <h5 className="text-xs sm:text-sm font-bold text-white">Captain breakdown</h5>
+                      <ul className="space-y-1 text-xs text-slate-300 font-sans">
+                        {financialCalculationModel.captains.breakdowns.map((cb) => (
+                          <li key={cb.index} className="flex items-center flex-wrap gap-1">
+                            <span>• Captain {cb.index}{cb.name ? ` (${cb.name})` : ""}:</span>
+                            <span>Received ₹{cb.rateReceived.toLocaleString("en-IN")}</span>
+                            <span className="text-slate-500">→</span>
+                            <span className={cb.isSuperAdmin ? "text-amber-300 font-bold" : "text-slate-300"}>
+                              {cb.isSuperAdmin ? "No payment (Super Admin / Founder)" : `Paid ₹${cb.paid.toLocaleString("en-IN")}`}
+                            </span>
+                            <span className="text-slate-500">→</span>
+                            <span className="font-bold text-emerald-400">Profit ₹{cb.profit.toLocaleString("en-IN")}</span>
+                          </li>
+                        ))}
+                        <li className="font-black text-white pt-0.5">
+                          • Captain profit = ₹{financialCalculationModel.captains.profit.toLocaleString("en-IN")}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Steward breakdown */}
+                  {financialCalculationModel.stewards.qty > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                      <h5 className="text-xs sm:text-sm font-bold text-white">Steward breakdown</h5>
+                      <ul className="space-y-1 text-xs text-slate-300 font-sans">
+                        <li>
+                          • {financialCalculationModel.stewards.qty} × ₹{financialCalculationModel.stewards.rateReceived.toLocaleString("en-IN")} received = ₹{financialCalculationModel.stewards.totalReceived.toLocaleString("en-IN")}
+                        </li>
+                        <li>
+                          • {financialCalculationModel.stewards.qty} × ₹{financialCalculationModel.stewards.avgPaid.toLocaleString("en-IN")} paid = ₹{financialCalculationModel.stewards.actualPaid.toLocaleString("en-IN")}
+                        </li>
+                        <li className="font-black text-white pt-0.5">
+                          • Steward profit = ₹{financialCalculationModel.stewards.profit.toLocaleString("en-IN")}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Vehicle breakdown */}
+                  {financialCalculationModel.vehicles.qty > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                      <h5 className="text-xs sm:text-sm font-bold text-white">Vehicle breakdown</h5>
+                      <ul className="space-y-1 text-xs text-slate-300 font-sans">
+                        <li>
+                          • {financialCalculationModel.vehicles.qty} × ₹{financialCalculationModel.vehicles.rateReceived.toLocaleString("en-IN")} received = ₹{financialCalculationModel.vehicles.totalReceived.toLocaleString("en-IN")}
+                        </li>
+                        <li>
+                          • {financialCalculationModel.vehicles.qty} × ₹{financialCalculationModel.vehicles.paidPerUnit.toLocaleString("en-IN")} paid = ₹{financialCalculationModel.vehicles.actualPaid.toLocaleString("en-IN")}
+                        </li>
+                        <li className="font-black text-white pt-0.5">
+                          • Vehicle profit = ₹{financialCalculationModel.vehicles.profit.toLocaleString("en-IN")}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Final result */}
+                  <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                    <h5 className="text-xs sm:text-sm font-bold text-white">Final result</h5>
+                    <div className="space-y-1 text-xs font-semibold">
+                      <p className="text-slate-200">
+                        Total Amount Received: <span className="text-white font-black">₹{financialCalculationModel.totalReceived.toLocaleString("en-IN")}</span>
+                      </p>
+                      <p className="text-slate-200">
+                        Total Actual Expenses: <span className="text-white font-black">₹{financialCalculationModel.totalActualPaid.toLocaleString("en-IN")}</span>
+                      </p>
+                      <p className="text-emerald-400 font-black text-sm sm:text-base pt-0.5">
+                        Net Profit: ₹{financialCalculationModel.totalProfit.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+
+                    {financialCalculationModel.superAdminRetainedTotal > 0 && (
+                      <div className="pt-2 text-[11px] text-amber-300 font-medium bg-amber-950/40 border border-amber-800/60 rounded-xl p-2.5">
+                        💡 The ₹{financialCalculationModel.superAdminRetainedTotal.toLocaleString("en-IN")} for the super-admin captain is correctly treated as <strong>profit</strong>, since you don&apos;t have to pay it to anyone.
+                      </div>
                     )}
-                    <tr>
-                      <td className="p-3 font-bold text-slate-800">Travel & Logistics</td>
-                      <td className="p-3 text-slate-500">
-                        {activeFinance.travelVehiclesCount || 1} Vehicle(s) • {activeFinance.travelNotes || "Cab / Bus / Petrol"}
-                      </td>
-                      <td className="p-3 text-right font-bold text-slate-800">
-                        ₹{calculatedSums.travelExp.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-bold text-slate-800">Food & Refreshments</td>
-                      <td className="p-3 text-slate-500">{activeFinance.foodNotes || "Snacks & Water"}</td>
-                      <td className="p-3 text-right font-bold text-slate-800">
-                        ₹{calculatedSums.foodExp.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    {(activeFinance.miscExpenses || []).map((m) => (
-                      <tr key={m.id}>
-                        <td className="p-3 font-medium text-slate-700">Misc: {m.label}</td>
-                        <td className="p-3 text-slate-400">Operational expense</td>
-                        <td className="p-3 text-right font-medium text-slate-700">
-                          ₹{Number(m.amount).toLocaleString("en-IN")}
-                        </td>
-                      </tr>
-                    ))}
-                    <tr className="bg-slate-100 font-extrabold text-slate-900">
-                      <td className="p-3">Total Direct Expenses</td>
-                      <td className="p-3 text-slate-500">Direct Outflow (excluding retained profit)</td>
-                      <td className="p-3 text-right font-black">
-                        ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                    <tr className="bg-slate-900 text-white font-black text-sm">
-                      <td className="p-3.5 text-emerald-400">NET GROSS PROFIT</td>
-                      <td className="p-3.5 text-emerald-300 text-xs font-bold">
-                        {calculatedSums.profitMarginPct}% Net Margin
-                      </td>
-                      <td className="p-3.5 text-right text-emerald-400 text-base">
-                        +₹{calculatedSums.netProfit.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
