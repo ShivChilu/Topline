@@ -482,7 +482,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { referralIds, referralId, referrerId, customRewardAmount, paidReference, notes, sendEmail: shouldSendEmail } = body;
+    const {
+      referralIds,
+      referralId,
+      referrerId,
+      customRewardAmount,
+      amount,
+      paidReference,
+      notes,
+      sendEmail: shouldSendEmail,
+    } = body;
 
     let targetIds: string[] = [];
 
@@ -514,9 +523,16 @@ export async function POST(request: Request) {
         ? paidReference.trim()
         : "Offline UPI Settlement Completed";
 
+    const rawAmt =
+      customRewardAmount !== undefined && customRewardAmount !== null
+        ? customRewardAmount
+        : amount !== undefined && amount !== null
+        ? amount
+        : null;
+
     const customAmtNum =
-      customRewardAmount !== undefined && customRewardAmount !== null && !isNaN(Number(customRewardAmount))
-        ? Math.max(0, Number(customRewardAmount))
+      rawAmt !== null && !isNaN(Number(rawAmt))
+        ? Math.max(0, Number(rawAmt))
         : null;
 
     if (customAmtNum !== null && customAmtNum > 0) {

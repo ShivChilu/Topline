@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Gift,
+  Banknote,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import AdminCopilot from "@/components/admin/AdminCopilot";
@@ -91,6 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       : adminRole === "event_admin"
       ? [
           { name: "Assigned Events", href: "/admin/events", icon: <CalendarDays className="w-5 h-5" /> },
+          { name: "Event Financials", href: "/admin/payments", icon: <Banknote className="w-5 h-5" /> },
         ]
       : [
           { name: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -98,6 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           { name: "Applications", href: "/admin/applications", icon: <FileSpreadsheet className="w-5 h-5" /> },
           { name: "Students", href: "/admin/students", icon: <Users2 className="w-5 h-5" /> },
           { name: "Referrals & Payouts", href: "/admin/referrals", icon: <Gift className="w-5 h-5" /> },
+          { name: "Payments & Event P&L", href: "/admin/payments", icon: <Banknote className="w-5 h-5" /> },
           { name: "Clients", href: "/admin/clients", icon: <Building2 className="w-5 h-5" /> },
           { name: "Gallery", href: "/admin/gallery", icon: <Image className="w-5 h-5" /> },
           { name: "Website settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },

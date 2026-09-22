@@ -1510,9 +1510,12 @@ export async function sendReferralPayoutPaidEmail({
       return { success: false, message: "No email address provided for student referrer." };
     }
 
-    const subject = `💰 Payout Processed: ₹${paidAmount} Referral Reward Credited to Your UPI!`;
+    const subject = `🎉 Congratulations! ₹${paidAmount} Referral Reward Credited to Your UPI!`;
     const profileUrl = `${getAppBaseUrl()}/profile`;
     const utrSnippet = paidReference && paidReference.trim() ? paidReference.trim() : "Direct UPI Transfer Completed";
+    const cleanUpi = referrerUpi && referrerUpi.trim() && referrerUpi !== "Not Provided" && referrerUpi !== "N/A"
+      ? referrerUpi.trim()
+      : "Your Registered UPI ID";
 
     const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
       to: referrerEmail,
@@ -1520,7 +1523,7 @@ export async function sendReferralPayoutPaidEmail({
       userId,
       templateName: "Referral Reward Payout Settled",
       subject,
-      bodyPreview: `Referral reward of ₹${paidAmount} for inviting ${refereeName} has been paid to your UPI (${referrerUpi || "UPI"}). UTR: ${utrSnippet}`,
+      bodyPreview: `🎉 Congratulations ${referrerName}! ₹${paidAmount} referral reward credited to your UPI (${cleanUpi}) for referring ${refereeName}.`,
     });
 
     const trackedProfileUrl = getTrackedUrl("VIEW_REWARDS_DASHBOARD", profileUrl);
@@ -1530,49 +1533,56 @@ export async function sendReferralPayoutPaidEmail({
     <html>
     <head>
       <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>${subject}</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
-        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .header { background: linear-gradient(135deg, #059669, #0d9488); padding: 26px; text-align: center; }
-        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: 1px; }
-        .content { padding: 30px 24px; text-align: center; }
-        .badge { display: inline-block; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 16px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 18px; }
-        .paid-card { background: #064e3b/30; border: 2px solid #10b981; border-radius: 14px; padding: 22px; margin: 20px 0; }
-        .paid-amt { font-size: 40px; font-weight: 900; color: #34d399; margin: 8px 0; }
-        .details-box { background: #1f2937; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 13px; text-align: left; }
-        .details-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151; }
+        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        .header { background: linear-gradient(135deg, #059669 0%, #047857 50%, #0f172a 100%); padding: 32px 24px; text-align: center; border-bottom: 1px solid rgba(16, 185, 129, 0.3); }
+        .header-tag { display: inline-block; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: #ffffff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 5px 14px; border-radius: 9999px; margin-bottom: 12px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
+        .content { padding: 32px 26px; text-align: center; }
+        .greeting { font-size: 18px; font-weight: 800; color: #ffffff; margin-bottom: 12px; }
+        .p-text { color: #d1d5db; line-height: 1.6; font-size: 14.5px; margin: 0 0 20px 0; text-align: left; }
+        .reward-card { background: linear-gradient(180deg, rgba(5, 150, 105, 0.15) 0%, rgba(6, 78, 59, 0.35) 100%); border: 2px solid #10b981; border-radius: 18px; padding: 24px; margin: 24px 0; text-align: center; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.2); }
+        .reward-label { font-size: 12px; font-weight: 800; color: #a7f3d0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .reward-amount { font-size: 46px; font-weight: 900; color: #34d399; letter-spacing: -1px; margin: 4px 0 6px 0; }
+        .reward-status { display: inline-flex; align-items: center; gap: 6px; background: #059669; color: #ffffff; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; }
+        .details-box { background: #1f2937; border: 1px solid #374151; border-radius: 14px; padding: 18px; margin: 22px 0; font-size: 13.5px; text-align: left; }
+        .details-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2d3748; }
         .details-row:last-child { border-bottom: none; }
         .label { color: #9ca3af; font-weight: 600; }
         .val { color: #ffffff; font-weight: 700; }
-        .btn { display: inline-block; background: #059669; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 14px; margin: 16px 0; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4); text-align: center; }
-        .footer { padding: 18px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .btn-action { display: block; background: #059669; color: #ffffff !important; text-decoration: none; padding: 15px 28px; border-radius: 14px; font-weight: 900; font-size: 15px; margin: 24px 0 12px 0; box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4); text-align: center; }
+        .share-banner { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 14px; padding: 14px; margin-top: 20px; font-size: 13px; color: #93c5fd; text-align: center; }
+        .footer { padding: 22px; text-align: center; font-size: 11.5px; color: #6b7280; border-top: 1px solid #1f2937; line-height: 1.5; background: #0b0f17; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>TOPLINE REWARDS SETTLEMENT</h1>
+          <div class="header-tag">🎉 Topline Student Rewards</div>
+          <h1>Reward Paid Successfully!</h1>
         </div>
         <div class="content">
-          <div class="badge">✅ PAYMENT TRANSFERRED SUCCESSFULLY</div>
-          <h2 style="color: #ffffff; margin-top: 0; font-size: 20px;">Hi ${referrerName || "Topline Partner"}, Your Referral Payout is Completed!</h2>
-          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px; margin: 0 0 16px 0;">
-            Great news! Our administrative team has processed your referral cash reward for inviting <strong style="color: #ffffff;">${refereeName}</strong>.
+          <div class="greeting">Congratulations ${referrerName || "Topline Partner"}! 🎊</div>
+          <p class="p-text">
+            Awesome job! Your referral cash reward has been processed and credited directly to your UPI account for successfully inviting your friend <strong style="color: #ffffff;">${refereeName}</strong> to Topline ODC.
           </p>
 
-          <div class="paid-card">
-            <div style="font-size: 12px; font-weight: 700; color: #a7f3d0; text-transform: uppercase;">Amount Deposited</div>
-            <div class="paid-amt">₹${paidAmount}</div>
-            <div style="font-size: 12px; color: #6ee7b7; font-weight: 600;">Status: Paid to UPI</div>
+          <div class="reward-card">
+            <div class="reward-label">Cash Reward Credited</div>
+            <div class="reward-amount">₹${paidAmount}</div>
+            <div class="reward-status">✓ Deposited to Your UPI</div>
           </div>
 
           <div class="details-box">
             <div class="details-row">
-              <span class="label">Destination UPI:</span>
-              <span class="val" style="color: #6ee7b7; font-family: monospace;">${referrerUpi || "Registered UPI Handle"}</span>
+              <span class="label">Beneficiary UPI ID:</span>
+              <span class="val" style="color: #34d399; font-family: monospace;">${cleanUpi}</span>
             </div>
             <div class="details-row">
-              <span class="label">Payment Reference / UTR:</span>
+              <span class="label">Payment Reference (UTR):</span>
               <span class="val" style="font-family: monospace; color: #facc15;">${utrSnippet}</span>
             </div>
             <div class="details-row">
@@ -1581,28 +1591,33 @@ export async function sendReferralPayoutPaidEmail({
             </div>
             ${eventName ? `
             <div class="details-row">
-              <span class="label">Completed Event:</span>
+              <span class="label">Qualifying Gig / Event:</span>
               <span class="val">${eventName}</span>
             </div>
             ` : ""}
             ${totalLifetimeEarned !== undefined && totalLifetimeEarned !== null ? `
             <div class="details-row">
-              <span class="label">Total Lifetime Referral Earnings:</span>
+              <span class="label">Total Lifetime Earnings:</span>
               <span class="val" style="color: #facc15; font-size: 14px;">₹${totalLifetimeEarned}</span>
             </div>
             ` : ""}
+            <div class="details-row">
+              <span class="label">Payment Status:</span>
+              <span class="val" style="color: #34d399;">PAID & SETTLED</span>
+            </div>
           </div>
 
-          <div>
-            <a href="${trackedProfileUrl}" class="btn" style="color: #ffffff;">View My Rewards Dashboard</a>
-          </div>
+          <a href="${trackedProfileUrl}" class="btn-action" style="color: #ffffff;">
+            📊 View My Rewards Dashboard
+          </a>
 
-          <p style="color: #9ca3af; font-size: 12px; line-height: 1.6; margin-top: 20px;">
-            Thank you for being an active Topline student affiliate. Keep sharing your invite link to continue earning up to ₹150 for every friend who joins!
-          </p>
+          <div class="share-banner">
+            🚀 <strong>Want to earn more?</strong> Keep sharing your unique referral link with your classmates and earn up to ₹150 for every friend who joins and works a shift!
+          </div>
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} Topline ODC & Catering Management.
+          &copy; ${new Date().getFullYear()} Topline ODC & Student Community Operations.<br />
+          For any payout queries, contact finance support on WhatsApp: <strong>7986955634</strong>.
         </div>
       </div>
       ${getTrackingPixelHtml()}

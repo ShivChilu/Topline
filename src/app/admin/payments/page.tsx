@@ -1,0 +1,1725 @@
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import {
+  Banknote,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Award,
+  Truck,
+  Coffee,
+  Plus,
+  Trash2,
+  Save,
+  CheckCircle2,
+  Clock,
+  Search,
+  Filter,
+  Calendar,
+  MapPin,
+  Building2,
+  Printer,
+  Download,
+  AlertCircle,
+  X,
+  CreditCard,
+  Copy,
+  Check,
+  RefreshCw,
+  ExternalLink,
+  ChevronRight,
+  ShieldCheck,
+  Sparkles,
+  Phone,
+  HelpCircle,
+  DollarSign,
+  PieChart,
+} from "lucide-react";
+
+interface PresentWorker {
+  applicationId: string;
+  userId: string;
+  name: string;
+  phone: string;
+  email: string;
+  registrationNumber: string;
+  university: string;
+  upiId: string;
+  attendanceStatus: string;
+  checkInTime: string | null;
+  payoutAmount: number;
+  paymentStatus: "PAID" | "UNPAID";
+  paidReference?: string;
+  notes?: string;
+}
+
+interface CaptainItem {
+  id: string; // userId
+  name: string;
+  phone?: string;
+  registrationNumber?: string;
+  upiId?: string;
+  roleTitle: string;
+  payoutAmount: number;
+  paymentStatus: "PAID" | "UNPAID";
+  paidReference?: string;
+}
+
+interface MiscExpenseItem {
+  id: string;
+  label: string;
+  amount: number;
+}
+
+interface EventFinancials {
+  clientRevenue: number;
+  clientPaymentStatus: "PAID" | "PARTIAL" | "PENDING";
+  clientInvoiceRef: string;
+  clientNotes: string;
+  defaultWorkerPayout: number;
+  totalWorkerPayouts: number;
+  captains: CaptainItem[];
+  totalCaptainPayouts: number;
+  travelExpenses: number;
+  travelNotes: string;
+  foodExpenses: number;
+  foodNotes: string;
+  miscExpenses: MiscExpenseItem[];
+  totalDirectExpenses: number;
+  netProfit: number;
+  profitMarginPct: number;
+  costPerWorker: number;
+  revenuePerWorker: number;
+}
+
+interface EventSheet {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  workType: string;
+  workersRequired: number;
+  client: any;
+  status: string;
+  attendanceTokenEnabled: boolean;
+  isAttendanceClosed: boolean;
+  presentCount: number;
+  presentWorkers: PresentWorker[];
+  financials: EventFinancials;
+}
+
+export default function AdminPaymentsPage() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  // Active Event Working Draft State
+  const [activeFinance, setActiveFinance] = useState<EventFinancials | null>(null);
+  const [activeWorkers, setActiveWorkers] = useState<PresentWorker[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Add Captain Modal States
+  const [showAddCaptainModal, setShowAddCaptainModal] = useState(false);
+  const [captainSearchTerm, setCaptainSearchTerm] = useState("");
+  const [selectedStudentForCaptain, setSelectedStudentForCaptain] = useState<any>(null);
+  const [captainRoleInput, setCaptainRoleInput] = useState("Event Lead Captain");
+  const [captainPayoutInput, setCaptainPayoutInput] = useState<string>("1000");
+
+  // Print Statement Modal
+  const [showPrintModal, setShowPrintModal] = useState(false);
+
+  // Copied states
+  const [copiedUpi, setCopiedUpi] = useState<string | null>(null);
+
+  const fetchPaymentsData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/payments?t=" + Date.now());
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setData(json);
+        // Default select first event if none selected
+        if (json.events && json.events.length > 0 && !selectedEventId) {
+          const firstWithPresent = json.events.find((e: EventSheet) => e.presentCount > 0) || json.events[0];
+          setSelectedEventId(firstWithPresent.id);
+          initWorkingDraft(firstWithPresent);
+        }
+      } else {
+        setFeedback({ type: "error", message: json.message || "Failed to load payments data." });
+      }
+    } catch (err: any) {
+      console.error("Fetch payments error:", err);
+      setFeedback({ type: "error", message: "Network error loading payments data." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPaymentsData();
+  }, []);
+
+  const initWorkingDraft = (ev: EventSheet) => {
+    setActiveFinance({ ...ev.financials });
+    setActiveWorkers([...ev.presentWorkers]);
+  };
+
+  const handleSelectEvent = (ev: EventSheet) => {
+    setSelectedEventId(ev.id);
+    initWorkingDraft(ev);
+  };
+
+  // Filtered Events List
+  const filteredEvents = useMemo(() => {
+    if (!data?.events) return [];
+    return data.events.filter((ev: EventSheet) => {
+      const q = searchTerm.toLowerCase();
+      const matchSearch =
+        ev.name.toLowerCase().includes(q) ||
+        ev.location.toLowerCase().includes(q) ||
+        (ev.client?.name && ev.client.name.toLowerCase().includes(q));
+
+      if (!matchSearch) return false;
+
+      if (statusFilter === "CLOSED_ATTENDANCE") {
+        return ev.isAttendanceClosed && ev.presentCount > 0;
+      }
+      if (statusFilter === "WITH_PRESENT") {
+        return ev.presentCount > 0;
+      }
+      if (statusFilter === "PROFITABLE") {
+        return ev.financials.netProfit > 0;
+      }
+      if (statusFilter === "PENDING_REVENUE") {
+        return ev.financials.clientPaymentStatus !== "PAID";
+      }
+
+      return true;
+    });
+  }, [data, searchTerm, statusFilter]);
+
+  const currentEvent: EventSheet | null = useMemo(() => {
+    if (!data?.events || !selectedEventId) return null;
+    return data.events.find((e: EventSheet) => e.id === selectedEventId) || null;
+  }, [data, selectedEventId]);
+
+  // Real-time Auto Calculator for Working Draft
+  const calculatedSums = useMemo(() => {
+    if (!activeFinance) {
+      return {
+        totalWorkerPayouts: 0,
+        totalCaptainPayouts: 0,
+        travelExp: 0,
+        foodExp: 0,
+        miscExp: 0,
+        totalDirectExpenses: 0,
+        netProfit: 0,
+        profitMarginPct: 0,
+        costPerWorker: 0,
+      };
+    }
+
+    const totalWorkerPayouts = activeWorkers.reduce((sum, w) => sum + (Number(w.payoutAmount) || 0), 0);
+    const totalCaptainPayouts = (activeFinance.captains || []).reduce((sum, c) => sum + (Number(c.payoutAmount) || 0), 0);
+    const travelExp = Number(activeFinance.travelExpenses) || 0;
+    const foodExp = Number(activeFinance.foodExpenses) || 0;
+    const miscExp = (activeFinance.miscExpenses || []).reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+
+    const totalDirectExpenses = totalWorkerPayouts + totalCaptainPayouts + travelExp + foodExp + miscExp;
+    const clientRev = Number(activeFinance.clientRevenue) || 0;
+    const netProfit = clientRev - totalDirectExpenses;
+    const profitMarginPct = clientRev > 0 ? (netProfit / clientRev) * 100 : 0;
+    const costPerWorker = activeWorkers.length > 0 ? Math.round(totalDirectExpenses / activeWorkers.length) : 0;
+
+    return {
+      totalWorkerPayouts,
+      totalCaptainPayouts,
+      travelExp,
+      foodExp,
+      miscExp,
+      totalDirectExpenses,
+      netProfit,
+      profitMarginPct: Number(profitMarginPct.toFixed(1)),
+      costPerWorker,
+    };
+  }, [activeFinance, activeWorkers]);
+
+  // Handler: Apply default worker payout to all workers
+  const handleApplyDefaultToAllWorkers = () => {
+    if (!activeFinance) return;
+    const defaultAmt = Number(activeFinance.defaultWorkerPayout) || 500;
+    setActiveWorkers((prev) =>
+      prev.map((w) => ({
+        ...w,
+        payoutAmount: defaultAmt,
+      }))
+    );
+    setFeedback({
+      type: "success",
+      message: `Updated all ${activeWorkers.length} workers to standard base rate of ₹${defaultAmt}.`,
+    });
+  };
+
+  // Handler: Mark all workers as PAID
+  const handleMarkAllWorkersPaid = () => {
+    setActiveWorkers((prev) =>
+      prev.map((w) => ({
+        ...w,
+        paymentStatus: "PAID",
+        paidReference: w.paidReference || "Bank / UPI Batch Payout Completed",
+      }))
+    );
+    setFeedback({
+      type: "success",
+      message: `Marked all ${activeWorkers.length} worker payouts as PAID. Click "Save Financial Sheet" to persist.`,
+    });
+  };
+
+  // Handler: Worker wage override change
+  const handleWorkerAmountChange = (index: number, val: string) => {
+    const num = Number(val);
+    setActiveWorkers((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], payoutAmount: isNaN(num) ? 0 : num };
+      return next;
+    });
+  };
+
+  // Handler: Worker payment status toggle
+  const handleToggleWorkerPaymentStatus = (index: number) => {
+    setActiveWorkers((prev) => {
+      const next = [...prev];
+      const newStatus = next[index].paymentStatus === "PAID" ? "UNPAID" : "PAID";
+      next[index] = {
+        ...next[index],
+        paymentStatus: newStatus,
+        paidReference: newStatus === "PAID" ? next[index].paidReference || "UPI Transfer" : "",
+      };
+      return next;
+    });
+  };
+
+  // Handler: Add Custom Misc Expense Line Item
+  const handleAddMiscExpense = () => {
+    if (!activeFinance) return;
+    const newItem: MiscExpenseItem = {
+      id: "misc_" + Date.now(),
+      label: "Logistics / Operational Item",
+      amount: 500,
+    };
+    setActiveFinance({
+      ...activeFinance,
+      miscExpenses: [...(activeFinance.miscExpenses || []), newItem],
+    });
+  };
+
+  const handleUpdateMiscExpense = (id: string, field: "label" | "amount", val: any) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      miscExpenses: (activeFinance.miscExpenses || []).map((m) =>
+        m.id === id ? { ...m, [field]: field === "amount" ? Number(val) || 0 : val } : m
+      ),
+    });
+  };
+
+  const handleRemoveMiscExpense = (id: string) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      miscExpenses: (activeFinance.miscExpenses || []).filter((m) => m.id !== id),
+    });
+  };
+
+  // Handler: Add Captain from Master List
+  const handleAddCaptainConfirm = () => {
+    if (!selectedStudentForCaptain || !activeFinance) return;
+    const captainAmt = Number(captainPayoutInput) || 1000;
+
+    const newCap: CaptainItem = {
+      id: selectedStudentForCaptain.id,
+      name: selectedStudentForCaptain.name,
+      phone: selectedStudentForCaptain.phone || "N/A",
+      registrationNumber: selectedStudentForCaptain.registrationNumber || "N/A",
+      upiId: selectedStudentForCaptain.upiId || "Not Provided",
+      roleTitle: captainRoleInput.trim() || "Lead Captain",
+      payoutAmount: captainAmt,
+      paymentStatus: "UNPAID",
+      paidReference: "",
+    };
+
+    // Check if already in list
+    const existing = (activeFinance.captains || []).find((c) => c.id === newCap.id);
+    if (existing) {
+      setFeedback({ type: "error", message: `${newCap.name} is already assigned as a Captain.` });
+      return;
+    }
+
+    setActiveFinance({
+      ...activeFinance,
+      captains: [...(activeFinance.captains || []), newCap],
+    });
+
+    setShowAddCaptainModal(false);
+    setSelectedStudentForCaptain(null);
+    setCaptainRoleInput("Event Lead Captain");
+    setCaptainPayoutInput("1000");
+    setFeedback({
+      type: "success",
+      message: `Assigned ${newCap.name} as ${newCap.roleTitle} (₹${captainAmt}).`,
+    });
+  };
+
+  const handleRemoveCaptain = (captainId: string) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      captains: (activeFinance.captains || []).filter((c) => c.id !== captainId),
+    });
+  };
+
+  const handleToggleCaptainPaid = (captainId: string) => {
+    if (!activeFinance) return;
+    setActiveFinance({
+      ...activeFinance,
+      captains: (activeFinance.captains || []).map((c) =>
+        c.id === captainId
+          ? {
+              ...c,
+              paymentStatus: c.paymentStatus === "PAID" ? "UNPAID" : "PAID",
+              paidReference: c.paymentStatus === "UNPAID" ? "Direct UPI Transfer" : "",
+            }
+          : c
+      ),
+    });
+  };
+
+  // Save Event Financials Sheet
+  const handleSaveFinancialSheet = async () => {
+    if (!currentEvent || !activeFinance) return;
+    setSaving(true);
+    try {
+      // Build worker overrides map
+      const workerOverridesMap: Record<string, any> = {};
+      activeWorkers.forEach((w) => {
+        workerOverridesMap[w.applicationId] = {
+          payoutAmount: w.payoutAmount,
+          paymentStatus: w.paymentStatus,
+          paidReference: w.paidReference,
+          notes: w.notes,
+        };
+      });
+
+      const payloadFinanceData = {
+        ...activeFinance,
+        workerOverrides: workerOverridesMap,
+      };
+
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: currentEvent.id,
+          financeData: payloadFinanceData,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFeedback({
+          type: "success",
+          message: `🎉 Financial sheet for "${currentEvent.name}" successfully saved! Net Profit: ₹${calculatedSums.netProfit} (${calculatedSums.profitMarginPct}% Margin)`,
+        });
+        fetchPaymentsData();
+      } else {
+        setFeedback({ type: "error", message: json.message || "Failed to save financial sheet." });
+      }
+    } catch (err: any) {
+      console.error("Save finance sheet error:", err);
+      setFeedback({ type: "error", message: "Network error saving financial sheet." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyUpi = (upi: string) => {
+    if (!upi || upi === "Not Provided" || upi === "N/A") return;
+    navigator.clipboard.writeText(upi);
+    setCopiedUpi(upi);
+    setTimeout(() => setCopiedUpi(null), 2000);
+  };
+
+  const metrics = data?.metrics || {
+    totalEventsCount: 0,
+    closedEventsCount: 0,
+    totalRevenue: 0,
+    totalWorkerPayouts: 0,
+    totalCaptainPayouts: 0,
+    totalTravelExpenses: 0,
+    totalFoodMiscExpenses: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    profitMarginPct: 0,
+    totalPresentWorkersCount: 0,
+  };
+
+  return (
+    <div className="space-y-6 text-slate-900 pb-12">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-wider text-red-600 uppercase font-sans">
+              Payments & Event P&L
+            </h1>
+            <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Profit Margin: {metrics.profitMarginPct}%</span>
+            </span>
+          </div>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1">
+            Real-time Profit & Loss engine. Track client billing revenue, audit worker shift payouts, assign event captains, log travel expenses, and auto-calculate net profit.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {currentEvent && (
+            <>
+              <button
+                onClick={() => setShowPrintModal(true)}
+                className="bg-white hover:bg-slate-100 text-slate-700 font-bold px-3.5 py-2.5 rounded-xl text-xs transition border border-slate-300 flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                title="View printable executive P&L statement"
+              >
+                <Printer className="w-4 h-4 text-slate-600" />
+                <span>Print Statement</span>
+              </button>
+
+              <button
+                onClick={handleSaveFinancialSheet}
+                disabled={saving}
+                className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                {saving ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <Save className="w-4 h-4 text-white" />
+                )}
+                <span>Save Financial Sheet</span>
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={fetchPaymentsData}
+            disabled={loading}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-3.5 py-2.5 rounded-xl text-xs transition border border-slate-300 flex items-center gap-2 cursor-pointer active:scale-95"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Feedback Toast */}
+      {feedback && (
+        <div
+          className={`p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-between shadow-md animate-in fade-in ${
+            feedback.type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 shrink-0" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="text-white/80 hover:text-white p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 5 High-Level KPI Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+        {/* Total Revenue */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gross Revenue</p>
+            <Banknote className="w-4 h-4 text-emerald-600" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900">₹{metrics.totalRevenue.toLocaleString("en-IN")}</p>
+          <p className="text-[10px] text-slate-400">Total client billing received</p>
+        </div>
+
+        {/* Worker Wages */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Worker Wages</p>
+            <Users className="w-4 h-4 text-blue-600" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900">₹{metrics.totalWorkerPayouts.toLocaleString("en-IN")}</p>
+          <p className="text-[10px] text-slate-400">{metrics.totalPresentWorkersCount} duty shifts completed</p>
+        </div>
+
+        {/* Captains Payouts */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Captains & Leads</p>
+            <Award className="w-4 h-4 text-purple-600" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900">₹{metrics.totalCaptainPayouts.toLocaleString("en-IN")}</p>
+          <p className="text-[10px] text-slate-400">Supervisors / coordinators</p>
+        </div>
+
+        {/* Logistics & Ops */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Travel & Operations</p>
+            <Truck className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900">
+            ₹{(metrics.totalTravelExpenses + metrics.totalFoodMiscExpenses).toLocaleString("en-IN")}
+          </p>
+          <p className="text-[10px] text-slate-400">Cabs, bus, refreshments, misc</p>
+        </div>
+
+        {/* Net Profit */}
+        <div className={`p-4 sm:p-5 rounded-2xl border shadow-xs space-y-1 col-span-2 sm:col-span-1 ${
+          metrics.netProfit >= 0
+            ? "bg-gradient-to-br from-emerald-950 to-slate-900 text-white border-emerald-800"
+            : "bg-gradient-to-br from-rose-950 to-slate-900 text-white border-rose-800"
+        }`}>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-300">Net Profit</p>
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-emerald-400">
+            {metrics.netProfit >= 0 ? "+" : "-"}₹{Math.abs(metrics.netProfit).toLocaleString("en-IN")}
+          </p>
+          <p className="text-[10px] text-slate-300 font-bold">
+            {metrics.profitMarginPct}% Overall Net Margin
+          </p>
+        </div>
+      </div>
+
+      {/* Main Workspace: Left Event Selector & Right Financial Sheet */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* ---------------------------------------------------- */}
+        {/* LEFT COLUMN: EVENTS BROWSER (4 cols) */}
+        {/* ---------------------------------------------------- */}
+        <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col max-h-[85vh]">
+          {/* Header & Filter Search */}
+          <div className="p-4 border-b border-slate-200 bg-slate-50 space-y-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-red-600" />
+                <h3 className="font-extrabold text-sm text-slate-900">Events Directory</h3>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                {filteredEvents.length} Events
+              </span>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search event, client, venue..."
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-600"
+              />
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[10.5px]">
+              {[
+                { id: "ALL", label: "All" },
+                { id: "CLOSED_ATTENDANCE", label: "Closed Attendance" },
+                { id: "WITH_PRESENT", label: "Has Presentees" },
+                { id: "PROFITABLE", label: "Profitable" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setStatusFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition whitespace-nowrap cursor-pointer ${
+                    statusFilter === f.id
+                      ? "bg-red-600 text-white shadow-2xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Events Scrollable List */}
+          <div className="divide-y divide-slate-100 overflow-y-auto flex-1 p-2 space-y-1">
+            {filteredEvents.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs space-y-2">
+                <AlertCircle className="w-6 h-6 mx-auto text-slate-300" />
+                <p className="font-bold text-slate-600">No matching events found</p>
+                <p className="text-[11px]">Adjust your search query or filters.</p>
+              </div>
+            ) : (
+              filteredEvents.map((ev: EventSheet) => {
+                const isSelected = selectedEventId === ev.id;
+                const isProfit = ev.financials.netProfit >= 0;
+
+                return (
+                  <button
+                    key={ev.id}
+                    onClick={() => handleSelectEvent(ev)}
+                    className={`w-full text-left p-3.5 rounded-2xl transition cursor-pointer flex flex-col gap-2 ${
+                      isSelected
+                        ? "bg-red-50/80 border-2 border-red-600 shadow-xs"
+                        : "bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 line-clamp-1">
+                        {ev.name}
+                      </h4>
+                      {ev.isAttendanceClosed ? (
+                        <span className="shrink-0 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 rounded-md text-[10px] font-black uppercase">
+                          ✓ Closed ({ev.presentCount})
+                        </span>
+                      ) : (
+                        <span className="shrink-0 bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                          {ev.status} ({ev.presentCount})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <span className="font-mono">
+                        {new Date(ev.date).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <span>•</span>
+                      <span className="truncate max-w-[140px]">{ev.location}</span>
+                    </div>
+
+                    {/* Quick Financial Glance */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Revenue</span>
+                        <span className="font-black text-slate-800">
+                          ₹{ev.financials.clientRevenue.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Net Margin</span>
+                        <span className={`font-black ${isProfit ? "text-emerald-600" : "text-rose-600"}`}>
+                          {isProfit ? "+" : ""}₹{ev.financials.netProfit.toLocaleString("en-IN")} ({ev.financials.profitMarginPct}%)
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------- */}
+        {/* RIGHT COLUMN: EVENT FINANCIAL SHEET & P&L WORKSPACE (8 cols) */}
+        {/* ---------------------------------------------------- */}
+        <div className="lg:col-span-8 space-y-6">
+          {!currentEvent || !activeFinance ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+              <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="font-extrabold text-slate-700 text-base">Select an event from the left directory</p>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Select any catering or hospitality event to view and manage client billing, worker wages, supervisor fees, travel expenses, and profit margins.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Event Header Banner Card */}
+              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-red-950 rounded-3xl p-5 sm:p-6 text-white shadow-md border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="bg-red-500/20 text-red-300 border border-red-500/30 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-red-400" />
+                      Active Financial Sheet
+                    </span>
+                    {currentEvent.isAttendanceClosed ? (
+                      <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold">
+                        ✓ Attendance Closed • {activeWorkers.length} Verified Present
+                      </span>
+                    ) : (
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold">
+                        Attendance In Progress • {activeWorkers.length} Present
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white !text-white">
+                    {currentEvent.name}
+                  </h2>
+                  <div className="flex items-center gap-3 text-xs text-slate-300 flex-wrap">
+                    <span className="flex items-center gap-1 font-mono">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      {new Date(currentEvent.date).toLocaleDateString("en-GB", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {currentEvent.location}
+                    </span>
+                    {currentEvent.client?.name && (
+                      <>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 text-red-300 font-bold">
+                          <Building2 className="w-3.5 h-3.5 text-red-400" />
+                          Client: {currentEvent.client.name}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleSaveFinancialSheet}
+                    disabled={saving}
+                    className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black px-4 py-2.5 rounded-xl text-xs transition flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span>Save Sheet</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Real-time Profit & Loss Summary Hero Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs">
+                <div>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Gross Client Revenue
+                  </span>
+                  <p className="text-xl sm:text-2xl font-black text-slate-900">
+                    ₹{(Number(activeFinance.clientRevenue) || 0).toLocaleString("en-IN")}
+                  </p>
+                  <span className="text-[10px] text-slate-400">Total Inflow</span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Total Direct Expenses
+                  </span>
+                  <p className="text-xl sm:text-2xl font-black text-slate-900">
+                    ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
+                  </p>
+                  <span className="text-[10px] text-slate-400">All Outflows</span>
+                </div>
+
+                <div className="col-span-2 sm:col-span-2 bg-slate-900 p-3.5 rounded-2xl text-white flex items-center justify-between">
+                  <div>
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-emerald-300 block">
+                      Net Profit Earned
+                    </span>
+                    <p className={`text-2xl font-black ${calculatedSums.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {calculatedSums.netProfit >= 0 ? "+" : ""}₹{calculatedSums.netProfit.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full text-xs font-black">
+                      {calculatedSums.profitMarginPct}% Margin
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-1">
+                      Avg Cost: ₹{calculatedSums.costPerWorker} / worker
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ------------------------------------------------ */}
+              {/* SECTION 1: REVENUE & CLIENT BILLING INFLOW */}
+              {/* ------------------------------------------------ */}
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                      <Banknote className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
+                        1. Client Billing & Revenue Inflow
+                      </h3>
+                      <p className="text-xs text-slate-500">Contract amount received from client / banquet host</p>
+                    </div>
+                  </div>
+
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
+                    activeFinance.clientPaymentStatus === "PAID"
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                      : activeFinance.clientPaymentStatus === "PARTIAL"
+                      ? "bg-amber-100 text-amber-800 border border-amber-300"
+                      : "bg-rose-100 text-rose-800 border border-rose-300"
+                  }`}>
+                    Status: {activeFinance.clientPaymentStatus}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Total Revenue Received (₹) *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-2.5 font-bold text-slate-400 text-sm">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={activeFinance.clientRevenue}
+                        onChange={(e) =>
+                          setActiveFinance({ ...activeFinance, clientRevenue: Number(e.target.value) || 0 })
+                        }
+                        className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-3.5 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:border-emerald-600"
+                        placeholder="50000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Payment Status
+                    </label>
+                    <select
+                      value={activeFinance.clientPaymentStatus}
+                      onChange={(e) =>
+                        setActiveFinance({
+                          ...activeFinance,
+                          clientPaymentStatus: e.target.value as any,
+                        })
+                      }
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
+                    >
+                      <option value="PAID">PAID (Full Settlement Received)</option>
+                      <option value="PARTIAL">PARTIAL (Advance Received)</option>
+                      <option value="PENDING">PENDING (Invoice Raised / Awaiting Payment)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Invoice / UTR Reference
+                    </label>
+                    <input
+                      type="text"
+                      value={activeFinance.clientInvoiceRef}
+                      onChange={(e) =>
+                        setActiveFinance({ ...activeFinance, clientInvoiceRef: e.target.value })
+                      }
+                      placeholder="e.g. INV-2026-084 or GPay UTR 42910"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ------------------------------------------------ */}
+              {/* SECTION 2: WORKER SHIFT PAYOUTS (Base Crew) */}
+              {/* ------------------------------------------------ */}
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-black">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
+                        2. Base Crew / Worker Shift Payouts
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {activeWorkers.length} students marked present • Total Payout: ₹{calculatedSums.totalWorkerPayouts.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Standard Base Rate Controller */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
+                      <span className="text-[11px] font-bold text-slate-500">Standard Rate:</span>
+                      <span className="text-xs font-bold text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="100"
+                        step="50"
+                        value={activeFinance.defaultWorkerPayout}
+                        onChange={(e) =>
+                          setActiveFinance({
+                            ...activeFinance,
+                            defaultWorkerPayout: Number(e.target.value) || 500,
+                          })
+                        }
+                        className="w-16 bg-white border border-slate-300 rounded-lg px-1.5 py-0.5 text-xs font-black text-center text-slate-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyDefaultToAllWorkers}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10.5px] px-2 py-1 rounded-lg transition cursor-pointer active:scale-95"
+                        title="Set this base rate for all workers in this list"
+                      >
+                        Apply to All
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleMarkAllWorkersPaid}
+                      className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition cursor-pointer"
+                    >
+                      Mark All as Paid
+                    </button>
+                  </div>
+                </div>
+
+                {/* Workers Table */}
+                {activeWorkers.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs space-y-2 bg-slate-50 rounded-2xl border border-slate-200">
+                    <Users className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="font-bold text-slate-700">No present attendees marked for this event yet.</p>
+                    <p className="text-slate-400">
+                      Once attendance is verified or marked present via the QR Scanner, candidates will automatically appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/80">
+                          <th className="p-3 w-12 text-center">#</th>
+                          <th className="p-3">Student Name & Contact</th>
+                          <th className="p-3">Roll No & College</th>
+                          <th className="p-3">UPI ID</th>
+                          <th className="p-3">Attendance</th>
+                          <th className="p-3">Shift Wage (₹)</th>
+                          <th className="p-3 text-right">Payment Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {activeWorkers.map((w, idx) => {
+                          const isPaid = w.paymentStatus === "PAID";
+                          const hasUpi = w.upiId && w.upiId !== "Not Provided" && w.upiId !== "N/A";
+
+                          return (
+                            <tr key={w.applicationId || idx} className="hover:bg-slate-50/70 transition">
+                              <td className="p-3 text-center text-slate-400 font-mono text-[11px]">
+                                {idx + 1}
+                              </td>
+
+                              <td className="p-3">
+                                <div className="font-extrabold text-slate-900">{w.name}</div>
+                                <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                                  <span>{w.phone}</span>
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <div className="font-mono font-bold text-slate-800">{w.registrationNumber}</div>
+                                <div className="text-[10.5px] text-slate-400 truncate max-w-[160px]">
+                                  {w.university}
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                {hasUpi ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                                      {w.upiId}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyUpi(w.upiId)}
+                                      className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition cursor-pointer"
+                                      title="Copy UPI ID"
+                                    >
+                                      {copiedUpi === w.upiId ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px] font-bold">
+                                    No UPI
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="p-3">
+                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                                  ✓ {w.attendanceStatus}
+                                </span>
+                              </td>
+
+                              {/* Editable Payout Amount */}
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400 font-bold">₹</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="50"
+                                    value={w.payoutAmount}
+                                    onChange={(e) => handleWorkerAmountChange(idx, e.target.value)}
+                                    className="w-20 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-blue-600 text-center shadow-2xs"
+                                    title="Edit specific wage for this worker"
+                                  />
+                                </div>
+                              </td>
+
+                              {/* Payment Status Toggle */}
+                              <td className="p-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleWorkerPaymentStatus(idx)}
+                                  className={`px-3 py-1 rounded-xl text-xs font-extrabold transition cursor-pointer active:scale-95 flex items-center gap-1 ml-auto shadow-2xs ${
+                                    isPaid
+                                      ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  }`}
+                                  title={isPaid ? "Click to toggle UNPAID" : "Click to mark as PAID"}
+                                >
+                                  {isPaid ? (
+                                    <>
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                                      <span>Paid</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>Mark Paid</span>
+                                    </>
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ------------------------------------------------ */}
+              {/* SECTION 3: EVENT CAPTAINS & SUPERVISORS */}
+              {/* ------------------------------------------------ */}
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-black">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
+                        3. Event Captains & Supervisors
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {(activeFinance.captains || []).length} captain(s) assigned • Total Payout: ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCaptainModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Captain / Supervisor</span>
+                  </button>
+                </div>
+
+                {(!activeFinance.captains || activeFinance.captains.length === 0) ? (
+                  <div className="p-6 text-center text-slate-400 text-xs space-y-1.5 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                    <Award className="w-7 h-7 text-slate-300 mx-auto" />
+                    <p className="font-bold text-slate-700">No captains assigned to this event yet.</p>
+                    <p className="text-slate-400">
+                      Click &quot;Add Captain / Supervisor&quot; above to select students from the Master List and assign lead payouts.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {activeFinance.captains.map((cap, cIdx) => (
+                      <div
+                        key={cap.id || cIdx}
+                        className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200 shadow-2xs space-y-3 relative"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="bg-purple-200 text-purple-900 text-[10px] font-black uppercase px-2 py-0.5 rounded">
+                              {cap.roleTitle || "Captain"}
+                            </span>
+                            <h4 className="font-black text-sm text-slate-900 mt-1">{cap.name}</h4>
+                            <p className="text-[11px] text-slate-500 font-mono">
+                              {cap.phone} • {cap.registrationNumber}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCaptain(cap.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="Remove Captain"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-purple-200/60 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-500 font-bold">Payout: ₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="100"
+                              value={cap.payoutAmount}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                setActiveFinance({
+                                  ...activeFinance,
+                                  captains: activeFinance.captains.map((c) =>
+                                    c.id === cap.id ? { ...c, payoutAmount: val } : c
+                                  ),
+                                });
+                              }}
+                              className="w-20 bg-white border border-purple-300 rounded-lg px-2 py-0.5 text-xs font-black text-slate-900 text-center"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCaptainPaid(cap.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                              cap.paymentStatus === "PAID"
+                                ? "bg-purple-700 text-white"
+                                : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-100"
+                            }`}
+                          >
+                            {cap.paymentStatus === "PAID" ? "✓ Paid" : "Mark Paid"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ------------------------------------------------ */}
+              {/* SECTION 4 & 5: LOGISTICS, TRAVEL & OPERATIONAL EXPENSES */}
+              {/* ------------------------------------------------ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Travel Expenses */}
+                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3.5">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                      <Truck className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-900">4. Travel & Logistics</h4>
+                      <p className="text-[11px] text-slate-500">Cab, auto, bus, petrol costs</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">Travel Amount (₹)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={activeFinance.travelExpenses}
+                          onChange={(e) =>
+                            setActiveFinance({ ...activeFinance, travelExpenses: Number(e.target.value) || 0 })
+                          }
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs font-black text-slate-900"
+                          placeholder="2500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">Logistics Details</label>
+                      <input
+                        type="text"
+                        value={activeFinance.travelNotes}
+                        onChange={(e) =>
+                          setActiveFinance({ ...activeFinance, travelNotes: e.target.value })
+                        }
+                        placeholder="e.g. 2 Autos for morning shift + 1 Cab"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Food & Refreshments */}
+                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3.5">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold">
+                      <Coffee className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-900">5. Food & Refreshments</h4>
+                      <p className="text-[11px] text-slate-500">Snacks, tea, water bottles</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">Food / Snacks (₹)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="50"
+                          value={activeFinance.foodExpenses}
+                          onChange={(e) =>
+                            setActiveFinance({ ...activeFinance, foodExpenses: Number(e.target.value) || 0 })
+                          }
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs font-black text-slate-900"
+                          placeholder="1200"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase">Food Notes</label>
+                      <input
+                        type="text"
+                        value={activeFinance.foodNotes}
+                        onChange={(e) =>
+                          setActiveFinance({ ...activeFinance, foodNotes: e.target.value })
+                        }
+                        placeholder="e.g. Tea & snacks during evening shift"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ------------------------------------------------ */}
+              {/* SECTION 6: DYNAMIC MISCELLANEOUS EXPENSE ITEMS */}
+              {/* ------------------------------------------------ */}
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h4 className="font-extrabold text-sm sm:text-base text-slate-900">
+                      6. Other Operational & Misc Expenses
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Uniform dry cleaning, equipment rent, bouncer fees, breakages, etc.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddMiscExpense}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-300 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Expense Item</span>
+                  </button>
+                </div>
+
+                {(!activeFinance.miscExpenses || activeFinance.miscExpenses.length === 0) ? (
+                  <p className="text-xs text-slate-400 italic">No miscellaneous line items added.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {activeFinance.miscExpenses.map((m) => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m.label}
+                          onChange={(e) => handleUpdateMiscExpense(m.id, "label", e.target.value)}
+                          placeholder="e.g. Uniform cleaning or equipment rent"
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 font-medium"
+                        />
+                        <div className="relative w-28">
+                          <span className="absolute left-2.5 top-1.5 font-bold text-slate-400 text-xs">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="50"
+                            value={m.amount}
+                            onChange={(e) => handleUpdateMiscExpense(m.id, "amount", e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-6 pr-2 py-1.5 text-xs font-black text-slate-900 text-center"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMiscExpense(m.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Action Strip */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-3xl shadow-lg border border-slate-800">
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider block">
+                    Calculated Summary
+                  </span>
+                  <p className="text-base font-black">
+                    Revenue: ₹{(Number(activeFinance.clientRevenue) || 0).toLocaleString("en-IN")} • Expenses: ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-xs text-emerald-400 font-bold">
+                    Net Profit: +₹{calculatedSums.netProfit.toLocaleString("en-IN")} ({calculatedSums.profitMarginPct}% Margin)
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPrintModal(true)}
+                    className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition border border-white/20 flex items-center gap-1.5"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Statement</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveFinancialSheet}
+                    disabled={saving}
+                    className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black px-5 py-2.5 rounded-xl text-xs transition flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      <Save className="w-4 h-4 text-white" />
+                    )}
+                    <span>Save Financial Sheet</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ---------------------------------------------------- */}
+      {/* ADD CAPTAIN FROM MASTER LIST MODAL */}
+      {/* ---------------------------------------------------- */}
+      {showAddCaptainModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-slate-200 shadow-2xl space-y-4 relative flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700 font-black">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Add Captain / Supervisor</h3>
+                  <p className="text-xs text-slate-500">Select candidate from Master Student List</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddCaptainModal(false);
+                  setSelectedStudentForCaptain(null);
+                }}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Role & Payout Inputs */}
+            <div className="grid grid-cols-2 gap-3 shrink-0">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-600 uppercase">Role / Title</label>
+                <input
+                  type="text"
+                  value={captainRoleInput}
+                  onChange={(e) => setCaptainRoleInput(e.target.value)}
+                  placeholder="e.g. Lead Captain"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-600 uppercase">Captain Fee (₹)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 font-bold text-slate-400 text-xs">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={captainPayoutInput}
+                    onChange={(e) => setCaptainPayoutInput(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-xs font-black text-slate-900"
+                    placeholder="1000"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Master Student Search Box */}
+            <div className="space-y-1 shrink-0">
+              <label className="text-[11px] font-bold text-slate-600 uppercase">Search Candidate</label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  value={captainSearchTerm}
+                  onChange={(e) => setCaptainSearchTerm(e.target.value)}
+                  placeholder="Search student by name, roll no, college..."
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900"
+                />
+              </div>
+            </div>
+
+            {/* Search Results List */}
+            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 border border-slate-200 rounded-2xl p-1 max-h-60">
+              {((data?.masterStudents || []).filter((s: any) => {
+                const q = captainSearchTerm.toLowerCase();
+                return (
+                  s.name.toLowerCase().includes(q) ||
+                  (s.registrationNumber && s.registrationNumber.toLowerCase().includes(q)) ||
+                  (s.university && s.university.toLowerCase().includes(q)) ||
+                  (s.phone && s.phone.toLowerCase().includes(q))
+                );
+              })).map((stud: any) => {
+                const isSelected = selectedStudentForCaptain?.id === stud.id;
+
+                return (
+                  <button
+                    key={stud.id}
+                    type="button"
+                    onClick={() => setSelectedStudentForCaptain(stud)}
+                    className={`w-full text-left p-2.5 rounded-xl transition flex items-center justify-between text-xs cursor-pointer ${
+                      isSelected
+                        ? "bg-purple-100 border border-purple-400"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <div>
+                      <span className="font-extrabold text-slate-900 block">{stud.name}</span>
+                      <span className="text-[10.5px] text-slate-500 font-mono">
+                        {stud.registrationNumber || "No Reg"} • {stud.university || "College"}
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      {isSelected ? (
+                        <span className="bg-purple-700 text-white font-bold text-[10px] px-2 py-0.5 rounded-md">
+                          Selected
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px] font-mono">{stud.phone}</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddCaptainModal(false);
+                  setSelectedStudentForCaptain(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 bg-white border border-slate-200"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={!selectedStudentForCaptain}
+                onClick={handleAddCaptainConfirm}
+                className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-purple-600 hover:bg-purple-700 transition cursor-pointer disabled:opacity-50"
+              >
+                Assign as Captain (₹{captainPayoutInput || "1000"})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* EXECUTIVE PRINTABLE STATEMENT MODAL */}
+      {/* ---------------------------------------------------- */}
+      {showPrintModal && currentEvent && activeFinance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-6 relative flex flex-col max-h-[92vh] overflow-y-auto">
+            {/* Header with Print Controls */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div>
+                <span className="text-[10px] font-black uppercase text-red-600 tracking-wider">
+                  Topline ODC & Hospitality Operations
+                </span>
+                <h3 className="text-lg font-black text-slate-900">Event Financial Statement & P&L Summary</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Document</span>
+                </button>
+                <button
+                  onClick={() => setShowPrintModal(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Statement Content */}
+            <div className="space-y-4 text-xs">
+              {/* Event Metadata Table */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-2 gap-2.5">
+                <div>
+                  <span className="text-slate-400 text-[10.5px] uppercase font-bold block">Event Name</span>
+                  <span className="font-extrabold text-slate-900 text-sm">{currentEvent.name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] uppercase font-bold block">Event Date</span>
+                  <span className="font-bold text-slate-800">
+                    {new Date(currentEvent.date).toLocaleDateString("en-GB", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] uppercase font-bold block">Location</span>
+                  <span className="font-medium text-slate-800">{currentEvent.location}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 text-[10.5px] uppercase font-bold block">Client / Banquet</span>
+                  <span className="font-bold text-slate-800">{currentEvent.client?.name || "Corporate Client"}</span>
+                </div>
+              </div>
+
+              {/* Financial Ledger Summary Table */}
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase">
+                    <tr>
+                      <th className="p-3">Financial Category</th>
+                      <th className="p-3">Details / Quantity</th>
+                      <th className="p-3 text-right">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    <tr className="bg-emerald-50/50">
+                      <td className="p-3 font-extrabold text-emerald-900">Total Client Revenue (Inflow)</td>
+                      <td className="p-3 text-slate-600">Contract billing ({activeFinance.clientPaymentStatus})</td>
+                      <td className="p-3 text-right font-black text-emerald-700">
+                        ₹{(Number(activeFinance.clientRevenue) || 0).toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-bold text-slate-800">Base Crew / Worker Wages</td>
+                      <td className="p-3 text-slate-500">{activeWorkers.length} verified present workers</td>
+                      <td className="p-3 text-right font-bold text-slate-800">
+                        ₹{calculatedSums.totalWorkerPayouts.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-bold text-slate-800">Captains & Supervisors</td>
+                      <td className="p-3 text-slate-500">{(activeFinance.captains || []).length} assigned captains</td>
+                      <td className="p-3 text-right font-bold text-slate-800">
+                        ₹{calculatedSums.totalCaptainPayouts.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-bold text-slate-800">Travel & Logistics</td>
+                      <td className="p-3 text-slate-500">{activeFinance.travelNotes || "Cab / Bus / Petrol"}</td>
+                      <td className="p-3 text-right font-bold text-slate-800">
+                        ₹{calculatedSums.travelExp.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-bold text-slate-800">Food & Refreshments</td>
+                      <td className="p-3 text-slate-500">{activeFinance.foodNotes || "Snacks & Water"}</td>
+                      <td className="p-3 text-right font-bold text-slate-800">
+                        ₹{calculatedSums.foodExp.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    {(activeFinance.miscExpenses || []).map((m) => (
+                      <tr key={m.id}>
+                        <td className="p-3 font-medium text-slate-700">Misc: {m.label}</td>
+                        <td className="p-3 text-slate-400">Operational expense</td>
+                        <td className="p-3 text-right font-medium text-slate-700">
+                          ₹{Number(m.amount).toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-slate-100 font-extrabold text-slate-900">
+                      <td className="p-3">Total Direct Expenses</td>
+                      <td className="p-3 text-slate-500">Total Outflow</td>
+                      <td className="p-3 text-right font-black">
+                        ₹{calculatedSums.totalDirectExpenses.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                    <tr className="bg-slate-900 text-white font-black text-sm">
+                      <td className="p-3.5 text-emerald-400">NET GROSS PROFIT</td>
+                      <td className="p-3.5 text-emerald-300 text-xs font-bold">
+                        {calculatedSums.profitMarginPct}% Net Margin
+                      </td>
+                      <td className="p-3.5 text-right text-emerald-400 text-base">
+                        +₹{calculatedSums.netProfit.toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-3 border-t border-slate-200 text-[11px] text-slate-400 text-center">
+              &copy; {new Date().getFullYear()} Topline ODC & Catering Operations Management • Official Financial Statement
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -49,10 +49,12 @@ export default function AdminReferralsPage() {
   const [selectedReward, setSelectedReward] = useState<number>(50);
   const [updatingReward, setUpdatingReward] = useState(false);
 
-  // Payout Settlement Modal
+  // Payout Settlement Modal & Dynamic Per-Item Amounts
   const [settlingReferrer, setSettlingReferrer] = useState<any>(null);
   const [settlingReferralItem, setSettlingReferralItem] = useState<any>(null);
   const [customPayoutAmount, setCustomPayoutAmount] = useState<string>("");
+  const [itemCustomAmounts, setItemCustomAmounts] = useState<Record<string, string>>({});
+  const [settlingDirectId, setSettlingDirectId] = useState<string | null>(null);
   const [paidReference, setPaidReference] = useState("");
   const [payoutNotes, setPayoutNotes] = useState("");
   const [sendEmailOnSettle, setSendEmailOnSettle] = useState<boolean>(true);
@@ -75,6 +77,18 @@ export default function AdminReferralsPage() {
     recipientEmail?: string;
     logs: any[];
   } | null>(null);
+
+  // Helper for per-referral dynamic amount state
+  const getItemAmount = (itemKey: string, fallbackAmt: number | string = 50): string => {
+    if (itemCustomAmounts[itemKey] !== undefined && itemCustomAmounts[itemKey] !== "") {
+      return itemCustomAmounts[itemKey];
+    }
+    return String(fallbackAmt || 50);
+  };
+
+  const setItemAmount = (itemKey: string, val: string) => {
+    setItemCustomAmounts((prev) => ({ ...prev, [itemKey]: val }));
+  };
 
   // Helper for human-readable relative/formatted timestamp
   const formatSentTime = (dateStr?: string | null) => {
@@ -165,10 +179,15 @@ export default function AdminReferralsPage() {
     setSendEmailOnSettle(true);
   };
 
-  const openSettleReferralItemModal = (item: any) => {
+  const openSettleReferralItemModal = (item: any, dynamicAmount?: string | number) => {
     setSettlingReferralItem(item);
     setSettlingReferrer(null);
-    setCustomPayoutAmount(item.rewardAmount ? String(item.rewardAmount) : "50");
+    const itemKey = item.referralId || item.id;
+    const initialAmt =
+      dynamicAmount !== undefined && dynamicAmount !== ""
+        ? String(dynamicAmount)
+        : getItemAmount(itemKey, item.rewardAmount || metrics?.rewardPerReferral || 50);
+    setCustomPayoutAmount(initialAmt);
     setPaidReference("");
     setPayoutNotes("");
     setSendEmailOnSettle(true);
@@ -195,6 +214,72 @@ export default function AdminReferralsPage() {
     setTimeout(() => setCopiedPhone(null), 2000);
   };
 
+  // Instant 1-Click Direct Settlement
+  const handleDirectSettleItem = async (friendOrLedgerItem: any, dynamicAmount?: string | number) => {
+    const itemKey = friendOrLedgerItem.referralId || friendOrLedgerItem.id;
+    const targetAmt = Number(
+      dynamicAmount !== undefined && dynamicAmount !== ""
+        ? dynamicAmount
+        : getItemAmount(itemKey, friendOrLedgerItem.rewardAmount || 50)
+    );
+
+    if (!targetAmt || targetAmt <= 0) {
+      setFeedback({ type: "error", message: "Please specify a valid reward amount (min ₹1)." });
+      return;
+    }
+
+    setSettlingDirectId(itemKey);
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referralId: itemKey,
+          amount: targetAmt,
+          customRewardAmount: targetAmt,
+          sendEmail: true,
+          paidReference: "Direct Offline UPI Settlement",
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFeedback({
+          type: "success",
+          message: `🎉 Payout of ₹${targetAmt} marked as PAID & celebratory email sent to student!`,
+        });
+
+        // Update selectedReferrerDetail locally in-memory if modal is currently open
+        if (selectedReferrerDetail) {
+          setSelectedReferrerDetail((prev: any) => {
+            if (!prev) return prev;
+            const updatedFriends = (prev.referredFriends || []).map((f: any) =>
+              f.referralId === itemKey || f.id === itemKey
+                ? { ...f, referralStatus: "PAID", rewardAmount: targetAmt }
+                : f
+            );
+            return {
+              ...prev,
+              unpaidBalance: Math.max(0, (prev.unpaidBalance || 0) - targetAmt),
+              paidBalance: (prev.paidBalance || 0) + targetAmt,
+              paidCount: (prev.paidCount || 0) + 1,
+              qualifiedCount: Math.max(0, (prev.qualifiedCount || 1) - 1),
+              referredFriends: updatedFriends,
+            };
+          });
+        }
+        fetchReferrals();
+      } else {
+        setFeedback({ type: "error", message: json.message || "Failed to record payout settlement." });
+      }
+    } catch (err: any) {
+      console.error("Direct payout settlement error:", err);
+      setFeedback({ type: "error", message: "Network error processing payout settlement." });
+    } finally {
+      setSettlingDirectId(null);
+    }
+  };
+
   const handleConfirmSettlement = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const amount = Number(customPayoutAmount);
@@ -205,8 +290,10 @@ export default function AdminReferralsPage() {
 
     setSettlingLoading(true);
     try {
+      const targetItemKey = settlingReferralItem ? (settlingReferralItem.referralId || settlingReferralItem.id) : null;
       const payload: any = {
         amount,
+        customRewardAmount: amount,
         paidReference: paidReference.trim() || undefined,
         payoutNotes: payoutNotes.trim() || undefined,
         sendEmail: sendEmailOnSettle,
@@ -215,7 +302,7 @@ export default function AdminReferralsPage() {
       if (settlingReferrer) {
         payload.referrerId = settlingReferrer.id;
       } else if (settlingReferralItem) {
-        payload.referralId = settlingReferralItem.referralId || settlingReferralItem.id;
+        payload.referralId = targetItemKey;
       }
 
       const res = await fetch("/api/admin/referrals", {
@@ -228,8 +315,29 @@ export default function AdminReferralsPage() {
       if (res.ok && json.success) {
         setFeedback({
           type: "success",
-          message: `Payout of ₹${amount} successfully settled & marked as PAID!`,
+          message: `🎉 Payout of ₹${amount} successfully settled & marked as PAID! Email notification sent.`,
         });
+
+        // Update selectedReferrerDetail locally in-memory if modal is open
+        if (selectedReferrerDetail && targetItemKey) {
+          setSelectedReferrerDetail((prev: any) => {
+            if (!prev) return prev;
+            const updatedFriends = (prev.referredFriends || []).map((f: any) =>
+              f.referralId === targetItemKey || f.id === targetItemKey
+                ? { ...f, referralStatus: "PAID", rewardAmount: amount }
+                : f
+            );
+            return {
+              ...prev,
+              unpaidBalance: Math.max(0, (prev.unpaidBalance || 0) - amount),
+              paidBalance: (prev.paidBalance || 0) + amount,
+              paidCount: (prev.paidCount || 0) + 1,
+              qualifiedCount: Math.max(0, (prev.qualifiedCount || 1) - 1),
+              referredFriends: updatedFriends,
+            };
+          });
+        }
+
         setSettlingReferrer(null);
         setSettlingReferralItem(null);
         fetchReferrals();
@@ -1146,17 +1254,60 @@ export default function AdminReferralsPage() {
                         </td>
                         <td className="p-3.5 text-right">
                           {!isPaid ? (
-                            <button
-                              type="button"
-                              onClick={() => openSettleReferralItemModal(row)}
-                              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer text-xs ml-auto"
-                            >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              <span>Settle ₹{row.rewardAmount || metrics?.rewardPerReferral || 150}</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                              <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1">
+                                <span className="text-[10px] font-bold text-slate-400 pl-1">₹</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={getItemAmount(row.id, row.rewardAmount || metrics?.rewardPerReferral || 50)}
+                                  onChange={(e) => setItemAmount(row.id, e.target.value)}
+                                  className="w-14 px-1 py-0.5 bg-white border border-slate-300 rounded text-[11px] font-black text-slate-900 focus:outline-none focus:border-emerald-600 text-center"
+                                  title="Custom payout amount"
+                                />
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={settlingDirectId === row.id}
+                                onClick={() =>
+                                  handleDirectSettleItem(
+                                    row,
+                                    getItemAmount(row.id, row.rewardAmount || 50)
+                                  )
+                                }
+                                className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-2.5 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer text-xs disabled:opacity-50"
+                                title="Instantly settle & send congratulatory email"
+                              >
+                                {settlingDirectId === row.id ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <CreditCard className="w-3.5 h-3.5" />
+                                )}
+                                <span>
+                                  {settlingDirectId === row.id
+                                    ? "Paying..."
+                                    : `Settle ₹${getItemAmount(row.id, row.rewardAmount || metrics?.rewardPerReferral || 150)}`}
+                                </span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openSettleReferralItemModal(
+                                    row,
+                                    getItemAmount(row.id, row.rewardAmount || 50)
+                                  )
+                                }
+                                className="p-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs transition cursor-pointer"
+                                title="Open full settlement options (UTR reference)"
+                              >
+                                <Settings className="w-3.5 h-3.5 text-slate-500" />
+                              </button>
+                            </div>
                           ) : (
-                            <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                              ✓ Paid
+                            <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-block">
+                              ✓ Paid ₹{row.rewardAmount}
                             </span>
                           )}
                         </td>
@@ -1340,27 +1491,88 @@ export default function AdminReferralsPage() {
                           )}
 
                           {isFriendPaid ? (
-                            <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1 rounded-lg text-xs font-extrabold flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                            <span className="bg-purple-100 text-purple-800 border border-purple-300 px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
+                              <CheckCircle2 className="w-4 h-4 text-purple-600" />
                               <span>Paid ₹{friend.rewardAmount || metrics?.rewardPerReferral || 150}</span>
                             </span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openSettleReferralItemModal({
-                                  referralId: friend.referralId,
-                                  id: friend.referralId,
-                                  name: friend.name,
-                                  rewardAmount: friend.rewardAmount || metrics?.rewardPerReferral || 150,
-                                  referrer: selectedReferrerDetail,
-                                })
-                              }
-                              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-1 rounded-xl text-xs flex items-center gap-1 shadow-2xs transition cursor-pointer"
-                            >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              <span>Mark Paid (₹{friend.rewardAmount || metrics?.rewardPerReferral || 150})</span>
-                            </button>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Dynamic Amount Input & Quick Presets */}
+                              <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-xl p-1.5">
+                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider pl-1">₹</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  value={getItemAmount(friend.referralId || friend.id, friend.rewardAmount || metrics?.rewardPerReferral || 50)}
+                                  onChange={(e) => setItemAmount(friend.referralId || friend.id, e.target.value)}
+                                  className="w-16 sm:w-20 px-1.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-600 text-center shadow-2xs"
+                                  placeholder="Amt"
+                                  title="Enter custom payout amount for this referral (e.g. 110, 50)"
+                                />
+                                <div className="flex items-center gap-1">
+                                  {[50, 100, 110, 150].map((presetAmt) => (
+                                    <button
+                                      key={presetAmt}
+                                      type="button"
+                                      onClick={() => setItemAmount(friend.referralId || friend.id, String(presetAmt))}
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-black transition cursor-pointer ${
+                                        getItemAmount(friend.referralId || friend.id, friend.rewardAmount || 50) === String(presetAmt)
+                                          ? "bg-emerald-600 text-white shadow-2xs"
+                                          : "bg-white hover:bg-slate-200 text-slate-700 border border-slate-200"
+                                      }`}
+                                      title={`Set ₹${presetAmt}`}
+                                    >
+                                      {presetAmt}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={settlingDirectId === (friend.referralId || friend.id)}
+                                onClick={() =>
+                                  handleDirectSettleItem(
+                                    friend,
+                                    getItemAmount(friend.referralId || friend.id, friend.rewardAmount || 50)
+                                  )
+                                }
+                                className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                                title="Instantly mark as PAID & send celebratory email to student"
+                              >
+                                {settlingDirectId === (friend.referralId || friend.id) ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                                ) : (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                                )}
+                                <span>
+                                  {settlingDirectId === (friend.referralId || friend.id)
+                                    ? "Paying..."
+                                    : `Mark Paid (₹${getItemAmount(friend.referralId || friend.id, friend.rewardAmount || 50)})`}
+                                </span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openSettleReferralItemModal(
+                                    {
+                                      referralId: friend.referralId,
+                                      id: friend.referralId,
+                                      name: friend.name,
+                                      rewardAmount: Number(getItemAmount(friend.referralId || friend.id, friend.rewardAmount || 50)),
+                                      referrer: selectedReferrerDetail,
+                                    },
+                                    getItemAmount(friend.referralId || friend.id, friend.rewardAmount || 50)
+                                  )
+                                }
+                                className="p-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs flex items-center gap-1 transition cursor-pointer"
+                                title="Open full settlement options (custom UTR / notes)"
+                              >
+                                <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                              </button>
+                            </div>
                           )}
 
                           {friend.phone && friend.phone !== "N/A" && (
