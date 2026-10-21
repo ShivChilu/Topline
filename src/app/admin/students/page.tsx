@@ -516,7 +516,7 @@ export default function AdminStudentsPage() {
   };
 
   // Handle bulk selection update
-  const handleBulkSelection = async (nextStatus: "SELECTED" | "NOT_SELECTED" | "UNDER_REVIEW") => {
+  const handleBulkSelection = async (nextStatus: "SELECTED" | "NOT_SELECTED" | "UNDER_REVIEW" | "ON_HOLD") => {
     if (selectedStudentIds.length === 0) return;
     if (!confirm(`Are you sure you want to mark ${selectedStudentIds.length} candidate(s) as ${nextStatus}?`)) return;
 
@@ -888,6 +888,7 @@ export default function AdminStudentsPage() {
     const total = students.length;
     const selected = students.filter((s) => s.selectionStatus === "SELECTED").length;
     const underReview = students.filter((s) => s.selectionStatus === "UNDER_REVIEW").length;
+    const onHold = students.filter((s) => s.selectionStatus === "ON_HOLD").length;
     const notSelected = students.filter((s) => s.selectionStatus === "NOT_SELECTED").length;
     const withPhotos = students.filter((s) => s.profilePhotoUrl || s.photos.length > 0).length;
     const pending100 = students.filter((s) => (s.completenessScore >= 100) && s.selectionStatus === "UNDER_REVIEW").length;
@@ -904,6 +905,7 @@ export default function AdminStudentsPage() {
       total,
       selected,
       underReview,
+      onHold,
       notSelected,
       withPhotos,
       pending100,
@@ -1671,39 +1673,123 @@ export default function AdminStudentsPage() {
 
       {/* Metrics Banner */}
       {activeTab !== "fields" && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-semibold text-slate-400 block uppercase">Total Candidates</span>
-            <span className="text-2xl font-extrabold text-slate-900 mt-1 block">{stats.total}</span>
-          </div>
-          <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-200 shadow-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <button
+            type="button"
+            onClick={() => setSelectionFilter("ALL")}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer shadow-sm ${
+              selectionFilter === "ALL"
+                ? "bg-slate-900 text-white border-slate-900 ring-2 ring-slate-900/20"
+                : "bg-white border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            <span className={`text-xs font-semibold block uppercase ${selectionFilter === "ALL" ? "text-slate-300" : "text-slate-400"}`}>
+              Total Candidates
+            </span>
+            <span className={`text-2xl font-extrabold mt-1 block ${selectionFilter === "ALL" ? "text-white" : "text-slate-900"}`}>
+              {stats.total}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectionFilter("SELECTED")}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer shadow-sm ${
+              selectionFilter === "SELECTED"
+                ? "bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/30"
+                : "bg-emerald-50/50 border-emerald-200 hover:border-emerald-300"
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-700 uppercase">Selected</span>
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span className={`text-xs font-semibold uppercase ${selectionFilter === "SELECTED" ? "text-emerald-100" : "text-emerald-700"}`}>
+                Selected
+              </span>
+              <CheckCircle className={`w-4 h-4 ${selectionFilter === "SELECTED" ? "text-emerald-100" : "text-emerald-600"}`} />
             </div>
-            <span className="text-2xl font-extrabold text-emerald-700 mt-1 block">{stats.selected}</span>
-          </div>
-          <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-200 shadow-sm">
+            <span className={`text-2xl font-extrabold mt-1 block ${selectionFilter === "SELECTED" ? "text-white" : "text-emerald-700"}`}>
+              {stats.selected}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectionFilter("UNDER_REVIEW")}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer shadow-sm ${
+              selectionFilter === "UNDER_REVIEW"
+                ? "bg-amber-500 text-white border-amber-500 ring-2 ring-amber-400/30"
+                : "bg-amber-50/50 border-amber-200 hover:border-amber-300"
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-700 uppercase">Under Review</span>
-              <Clock className="w-4 h-4 text-amber-600" />
+              <span className={`text-xs font-semibold uppercase ${selectionFilter === "UNDER_REVIEW" ? "text-amber-100" : "text-amber-700"}`}>
+                Under Review
+              </span>
+              <Clock className={`w-4 h-4 ${selectionFilter === "UNDER_REVIEW" ? "text-amber-100" : "text-amber-600"}`} />
             </div>
-            <span className="text-2xl font-extrabold text-amber-700 mt-1 block">{stats.underReview}</span>
-          </div>
-          <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-200 shadow-sm">
+            <span className={`text-2xl font-extrabold mt-1 block ${selectionFilter === "UNDER_REVIEW" ? "text-white" : "text-amber-700"}`}>
+              {stats.underReview}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectionFilter("ON_HOLD")}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer shadow-sm ${
+              selectionFilter === "ON_HOLD"
+                ? "bg-amber-700 text-white border-amber-700 ring-2 ring-amber-600/30"
+                : "bg-amber-50 border-amber-300 hover:border-amber-400"
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-rose-700 uppercase">Not Selected</span>
-              <XCircle className="w-4 h-4 text-rose-600" />
+              <span className={`text-xs font-semibold uppercase ${selectionFilter === "ON_HOLD" ? "text-amber-100" : "text-amber-900 font-bold"}`}>
+                On Hold (Absent)
+              </span>
+              <AlertCircle className={`w-4 h-4 ${selectionFilter === "ON_HOLD" ? "text-amber-100" : "text-amber-600"}`} />
             </div>
-            <span className="text-2xl font-extrabold text-rose-700 mt-1 block">{stats.notSelected}</span>
-          </div>
-          <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200 shadow-sm">
+            <span className={`text-2xl font-extrabold mt-1 block ${selectionFilter === "ON_HOLD" ? "text-white" : "text-amber-900"}`}>
+              {stats.onHold}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectionFilter("NOT_SELECTED")}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer shadow-sm ${
+              selectionFilter === "NOT_SELECTED"
+                ? "bg-rose-600 text-white border-rose-600 ring-2 ring-rose-500/30"
+                : "bg-rose-50/50 border-rose-200 hover:border-rose-300"
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-indigo-700 uppercase">With Photos</span>
-              <Camera className="w-4 h-4 text-indigo-600" />
+              <span className={`text-xs font-semibold uppercase ${selectionFilter === "NOT_SELECTED" ? "text-rose-100" : "text-rose-700"}`}>
+                Not Selected
+              </span>
+              <XCircle className={`w-4 h-4 ${selectionFilter === "NOT_SELECTED" ? "text-rose-100" : "text-rose-600"}`} />
             </div>
-            <span className="text-2xl font-extrabold text-indigo-700 mt-1 block">{stats.withPhotos}</span>
-          </div>
+            <span className={`text-2xl font-extrabold mt-1 block ${selectionFilter === "NOT_SELECTED" ? "text-white" : "text-rose-700"}`}>
+              {stats.notSelected}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPhotoFilter(photoFilter === "WITH_PHOTOS" ? "ALL" : "WITH_PHOTOS")}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer shadow-sm ${
+              photoFilter === "WITH_PHOTOS"
+                ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-500/30"
+                : "bg-indigo-50/50 border-indigo-200 hover:border-indigo-300"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`text-xs font-semibold uppercase ${photoFilter === "WITH_PHOTOS" ? "text-indigo-100" : "text-indigo-700"}`}>
+                With Photos
+              </span>
+              <Camera className={`w-4 h-4 ${photoFilter === "WITH_PHOTOS" ? "text-indigo-100" : "text-indigo-600"}`} />
+            </div>
+            <span className={`text-2xl font-extrabold mt-1 block ${photoFilter === "WITH_PHOTOS" ? "text-white" : "text-indigo-700"}`}>
+              {stats.withPhotos}
+            </span>
+          </button>
         </div>
       )}
 
@@ -2279,11 +2365,16 @@ export default function AdminStudentsPage() {
               <select
                 value={selectionFilter}
                 onChange={(e) => setSelectionFilter(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:border-red-600"
+                className={`text-xs font-semibold rounded-xl px-3 py-2 border transition focus:outline-none focus:border-red-600 ${
+                  selectionFilter === "ON_HOLD"
+                    ? "bg-amber-50 text-amber-900 border-amber-300 ring-2 ring-amber-500/20 font-bold"
+                    : "bg-slate-50 border-slate-200 text-slate-700"
+                }`}
               >
                 <option value="ALL">All Selection Statuses</option>
                 <option value="SELECTED">Selected Only</option>
                 <option value="UNDER_REVIEW">Under Review</option>
+                <option value="ON_HOLD">⏸ On Hold (Absent / Restricted)</option>
                 <option value="NOT_SELECTED">Not Selected</option>
               </select>
 
@@ -2555,10 +2646,20 @@ export default function AdminStudentsPage() {
                 <button
                   disabled={actionLoading === "bulk"}
                   onClick={() => handleBulkSelection("UNDER_REVIEW")}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  title="Remove hold and restore selected candidates to Under Review"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Remove Hold / Under Review ({selectedStudentIds.length})
+                </button>
+                <button
+                  disabled={actionLoading === "bulk"}
+                  onClick={() => handleBulkSelection("ON_HOLD")}
                   className="bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                  title="Put selected candidates on hold"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  Under Review
+                  Mark On Hold ({selectedStudentIds.length})
                 </button>
                 <button
                   disabled={actionLoading === "bulk"}
@@ -2861,7 +2962,7 @@ export default function AdminStudentsPage() {
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                                 : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                             }`}
-                            title="Approve & Select Candidate"
+                            title="Approve & Select Candidate (Lifts hold)"
                           >
                             <Check className="w-3 h-3" />
                             {student.selectionStatus === "SELECTED" ? "Selected" : "Select"}
@@ -2869,16 +2970,34 @@ export default function AdminStudentsPage() {
 
                           <button
                             disabled={actionLoading === student.id}
-                            onClick={() => handleUpdateSelection(student.id, "ON_HOLD")}
+                            onClick={() =>
+                              handleUpdateSelection(
+                                student.id,
+                                student.selectionStatus === "ON_HOLD" ? "UNDER_REVIEW" : "ON_HOLD"
+                              )
+                            }
                             className={`py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                               student.selectionStatus === "ON_HOLD"
-                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                ? "bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 ring-1 ring-amber-400"
                                 : "bg-slate-100 hover:bg-amber-600 hover:text-white text-slate-700"
                             }`}
-                            title="Mark Candidate On Hold / Waitlist"
+                            title={
+                              student.selectionStatus === "ON_HOLD"
+                                ? "Candidate is On Hold (Absent restriction). Click to Remove Hold (restores to Under Review)."
+                                : "Mark Candidate On Hold / Waitlist"
+                            }
                           >
-                            <Clock className="w-3 h-3" />
-                            {student.selectionStatus === "ON_HOLD" ? "On Hold" : "Hold"}
+                            {student.selectionStatus === "ON_HOLD" ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 text-amber-800" />
+                                <span>Unhold</span>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="w-3 h-3" />
+                                <span>Hold</span>
+                              </>
+                            )}
                           </button>
 
                           <button
@@ -3133,6 +3252,17 @@ export default function AdminStudentsPage() {
                         >
                           <History className="w-4 h-4" />
                         </button>
+                        {student.selectionStatus === "ON_HOLD" && (
+                          <button
+                            disabled={actionLoading === student.id}
+                            onClick={() => handleUpdateSelection(student.id, "UNDER_REVIEW")}
+                            className="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                            title="Candidate is On Hold (Absent restriction). Click to Remove Hold (restores to Under Review)."
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span className="text-[10px]">Unhold</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleUpdateSelection(student.id, student.selectionStatus === "SELECTED" ? "NOT_SELECTED" : "SELECTED")}
                           className={`p-1.5 rounded-lg text-xs font-bold ${
@@ -3140,7 +3270,7 @@ export default function AdminStudentsPage() {
                               ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
                               : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                           }`}
-                          title={student.selectionStatus === "SELECTED" ? "Deselect" : "Select"}
+                          title={student.selectionStatus === "SELECTED" ? "Deselect" : "Select (Lifts hold)"}
                         >
                           {student.selectionStatus === "SELECTED" ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </button>
@@ -3915,6 +4045,26 @@ export default function AdminStudentsPage() {
                   </div>
                 </div>
 
+                {/* On Hold Notification Banner */}
+                {inspectStudent.selectionStatus === "ON_HOLD" && (
+                  <div className="bg-amber-950/60 border border-amber-500/50 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>
+                        Candidate is <strong>ON HOLD</strong> (restricted from applying due to past event absence). Click <strong>Remove Hold</strong> or <strong>Approve & Select</strong> to reinstate.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateSelection(inspectStudent.id, "UNDER_REVIEW")}
+                      className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg font-bold text-xs shrink-0 transition flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Remove Hold</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Quick Status Dropdown & Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                   <div className="flex items-center gap-2">
@@ -3926,7 +4076,7 @@ export default function AdminStudentsPage() {
                     >
                       <option value="SELECTED">Selected (Approved)</option>
                       <option value="UNDER_REVIEW">Under Review</option>
-                      <option value="ON_HOLD">Mark as Hold / Waitlist</option>
+                      <option value="ON_HOLD">⏸ On Hold (Absent / Restricted)</option>
                       <option value="NOT_SELECTED">Rejected / Not Selected</option>
                     </select>
                   </div>
@@ -3958,17 +4108,30 @@ export default function AdminStudentsPage() {
                   <button
                     onClick={() => handleUpdateSelection(inspectStudent.id, "SELECTED")}
                     className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                    title="Approve student and lift any hold"
                   >
                     <UserCheck className="w-4 h-4" />
                     Approve & Select
                   </button>
-                  <button
-                    onClick={() => handleUpdateSelection(inspectStudent.id, "ON_HOLD")}
-                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
-                  >
-                    <Clock className="w-4 h-4" />
-                    Mark as Hold
-                  </button>
+                  {inspectStudent.selectionStatus === "ON_HOLD" ? (
+                    <button
+                      onClick={() => handleUpdateSelection(inspectStudent.id, "UNDER_REVIEW")}
+                      className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                      title="Remove hold and restore candidate to Under Review"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Remove Hold (Restore)
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleUpdateSelection(inspectStudent.id, "ON_HOLD")}
+                      className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                      title="Mark as On Hold / Waitlist"
+                    >
+                      <Clock className="w-4 h-4" />
+                      Mark as Hold
+                    </button>
+                  )}
                   <button
                     onClick={() => handleUpdateSelection(inspectStudent.id, "NOT_SELECTED")}
                     className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5"
