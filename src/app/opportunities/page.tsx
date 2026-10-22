@@ -361,7 +361,9 @@ export default async function OpportunitiesPage(props: {
               <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 w-full lg:w-auto shrink-0 pt-2 lg:pt-0">
                 <div className="text-left lg:text-right">
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Per Student Pay</p>
-                  <p className="text-3xl font-black text-red-400 font-mono">₹{featuredOpenEvent.paymentPerStudent}</p>
+                  <p className="text-xl sm:text-3xl font-black text-red-400 font-mono">
+                    {user ? `₹${featuredOpenEvent.paymentPerStudent}` : "Verified Shift Pay"}
+                  </p>
                 </div>
                 <Link
                   href={`/events/${featuredOpenEvent.id}`}
@@ -552,7 +554,9 @@ export default async function OpportunitiesPage(props: {
                   <div className="bg-slate-50/75 px-6 py-4.5 flex items-center justify-between border-t border-slate-100">
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Per Student Pay</p>
-                      <p className="text-xl font-extrabold text-red-600 font-mono">₹{event.paymentPerStudent}</p>
+                      <p className="text-base sm:text-xl font-extrabold text-red-600 font-sans">
+                        {user ? `₹${event.paymentPerStudent}` : "Verified Shift Pay"}
+                      </p>
                     </div>
 
                     {/* Action Button */}

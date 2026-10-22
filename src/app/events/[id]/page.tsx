@@ -7,6 +7,8 @@ import EventAssistantChatbot from "@/components/events/EventAssistantChatbot";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle, Gift, ArrowRight, Sparkles } from "lucide-react";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
 
 export const revalidate = 0; // Live check for status changes
 
@@ -54,6 +56,20 @@ export default async function EventDetailsPage(props: {
 
   const effectiveStatus = getEffectiveEventStatus(event);
   const isPast = isEventPast(event.date);
+
+  let isLoggedInStudent = false;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("user_token")?.value;
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded && decoded.id) {
+        isLoggedInStudent = true;
+      }
+    }
+  } catch {
+    // public visitor or crawler
+  }
 
   const customFormFields = event.eventFormFields.map((eff: any) => ({
     id: eff.formField.id,
@@ -131,7 +147,9 @@ export default async function EventDetailsPage(props: {
               <p className="text-xs text-slate-500 uppercase font-semibold">Payment Rate</p>
               <div className="flex items-center space-x-1 mt-1">
                 <Banknote className="w-4 h-4 text-red-600" />
-                <span className="font-bold text-red-600">₹{event.paymentPerStudent}</span>
+                <span className="font-bold text-red-600">
+                  {isLoggedInStudent ? `₹${event.paymentPerStudent}` : "Competitive Shift Pay (Verified Students)"}
+                </span>
               </div>
             </div>
             {event.reportingTime && (

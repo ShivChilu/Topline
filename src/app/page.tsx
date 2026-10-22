@@ -21,6 +21,10 @@ import {
   Sparkles,
   CheckCircle,
   Gift,
+  Phone,
+  GraduationCap,
+  ShieldCheck,
+  HelpCircle,
 } from "lucide-react";
 
 export const revalidate = 0; // Dynamic rendering for latest opportunities
@@ -151,7 +155,7 @@ export default async function HomePage() {
                 <span>Urgent</span>
               </span>
               <span className="text-white text-[11.5px] sm:text-xs truncate font-medium min-w-0">
-                <strong className="font-extrabold">{heroFeaturedEvent.name}</strong> • ₹{heroFeaturedEvent.paymentPerStudent}/shift
+                <strong className="font-extrabold">{heroFeaturedEvent.name}</strong> • Open Shift Recruitment
               </span>
             </div>
             <Link
@@ -176,7 +180,7 @@ export default async function HomePage() {
               className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md shadow-red-600/30 hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
             >
               <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
-              <span>Apply for {heroFeaturedEvent.name} (₹{heroFeaturedEvent.paymentPerStudent})</span>
+              <span>Apply for {heroFeaturedEvent.name}</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
             </Link>
           ) : (
@@ -262,6 +266,41 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* For Clients & Event Organizers: Hire Catering Staff */}
+      <section className="py-8 sm:py-12 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white border-t border-slate-800 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm shadow-xl">
+            <div className="space-y-2 max-w-2xl">
+              <span className="px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider bg-red-600 text-white inline-block">
+                For Hotels, Resorts &amp; Catering Businesses
+              </span>
+              <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+                Looking to Hire Catering Staff or Banquet Stewards?
+              </h2>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                Hotels, luxury resorts, banquet halls, and wedding caterers can hire pre-screened, dependable university student workforces across Phagwara, Jalandhar, Amritsar, Ludhiana, Punjab, and Northern India. Contact through our website or call Founder Chiluveru Shiva Prasad directly.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+              <a
+                href="tel:+917986955634"
+                className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black px-6 py-3.5 rounded-2xl text-xs sm:text-sm uppercase tracking-wider transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Call +91 79869 55634</span>
+              </a>
+              <Link
+                href="/contact"
+                className="bg-white hover:bg-slate-100 active:scale-95 text-slate-900 font-extrabold px-6 py-3.5 rounded-2xl text-xs sm:text-sm uppercase tracking-wider transition flex items-center justify-center gap-2 text-center"
+              >
+                <span>Book Staff Online</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Latest Opportunities Section */}
       <section className="py-10 sm:py-16 md:py-20 bg-slate-50/80 border-t border-slate-200/80 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -338,8 +377,8 @@ export default async function HomePage() {
                     </div>
                     <div className="bg-slate-50/80 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between border-t border-slate-100 relative z-10">
                       <div>
-                        <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Per Student Pay</p>
-                        <p className="text-lg sm:text-xl font-black text-red-600 font-mono">₹{event.paymentPerStudent}</p>
+                        <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Compensation</p>
+                        <p className="text-sm sm:text-base font-extrabold text-red-600 font-sans">Verified Shift Pay</p>
                       </div>
                       <Link
                         href={`/events/${event.id}`}
@@ -425,6 +464,135 @@ export default async function HomePage() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Founders & Leadership Section */}
+      <section className="py-10 sm:py-16 md:py-20 border-t border-slate-200/80 bg-white relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+            <span className="text-red-600 text-xs font-extrabold uppercase tracking-wider">Leadership &amp; Origin</span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-1">
+              Founded by LPU Students in Phagwara, Punjab
+            </h2>
+            <p className="mt-2 text-slate-600 text-xs sm:text-base leading-relaxed">
+              TOPLINE ODC was founded by Lovely Professional University (LPU) students Chiluveru Shiva Prasad and Balaji. Headquartered in Phagwara, Punjab, we provide verified student workforces for catering events, banquet service, buffet management, and hospitality coordination across Amritsar, Jalandhar, Ludhiana, and Northern India.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* Founder 1 */}
+            <div className="bg-slate-50/80 rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4 hover:border-red-300 transition group">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-rose-600 text-white flex items-center justify-center font-black text-xl shadow-md">
+                  SP
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-red-600 transition">
+                    Chiluveru Shiva Prasad
+                  </h3>
+                  <p className="text-xs font-extrabold text-red-600 uppercase tracking-wider">Founder &amp; Director</p>
+                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                    <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+                    <span>LPU Student • Phagwara, Punjab</span>
+                  </p>
+                </div>
+              </div>
+              <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                Leads operations, strategic client catering partnerships, and workforce logistics across luxury hotels and banquet events throughout Punjab.
+              </p>
+              <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-500">Client Booking Line:</span>
+                <a href="tel:+917986955634" className="text-red-600 hover:text-red-700 font-extrabold flex items-center gap-1">
+                  <Phone className="w-3 h-3" />
+                  <span>+91 79869 55634</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Founder 2 */}
+            <div className="bg-slate-50/80 rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4 hover:border-red-300 transition group">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-white flex items-center justify-center font-black text-xl shadow-md">
+                  B
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-red-600 transition">
+                    Balaji
+                  </h3>
+                  <p className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Co-Founder &amp; Operations</p>
+                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                    <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+                    <span>LPU Student • Phagwara, Punjab</span>
+                  </p>
+                </div>
+              </div>
+              <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                Manages on-ground team leads, student candidate coordination, quality assurance, and venue logistics to guarantee flawless event delivery.
+              </p>
+              <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-500">Location:</span>
+                <span className="text-slate-700 font-extrabold">Phagwara, Punjab</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Frequently Asked Questions (FAQ) Section */}
+      <section className="py-10 sm:py-16 md:py-20 border-t border-slate-200/80 bg-slate-50/50 relative">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <span className="text-red-600 text-xs font-extrabold uppercase tracking-wider">Help &amp; Information</span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm mt-1">
+              Everything you need to know about TOPLINE ODC catering and hospitality staffing.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>Who founded TOPLINE ODC?</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-6">
+                TOPLINE ODC was founded by <strong>Lovely Professional University (LPU) students Chiluveru Shiva Prasad (Founder) and Balaji (Co-Founder)</strong> in Phagwara, Punjab, India.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>How can clients hire catering staff or banquet stewards?</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-6">
+                Hotels, resorts, event planners, and catering businesses can hire professional catering staff and banquet stewards by visiting our website at <Link href="/contact" className="text-red-600 font-bold underline">toplineodc.co.in/contact</Link> or by calling Founder Chiluveru Shiva Prasad directly at <a href="tel:+917986955634" className="text-red-600 font-extrabold underline">+91 79869 55634</a>.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>Where does TOPLINE ODC operate?</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-6">
+                Headquartered in <strong>Phagwara, Punjab</strong> (near LPU), TOPLINE ODC operates across Punjab (including <strong>Amritsar, Jalandhar, Ludhiana, Phagwara</strong>) and across Northern India.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>What kind of workforce does TOPLINE ODC deploy?</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-6">
+                We supply verified university student workforces for banquet service, catering food counter management, buffet operations, VIP guest hospitality, and event coordination.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
