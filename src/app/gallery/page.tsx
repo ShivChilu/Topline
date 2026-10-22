@@ -19,6 +19,36 @@ export default async function GalleryPage() {
   // Fallback high-quality images if DB is empty
   const fallbackImages = [
     {
+      id: "sc1",
+      imageUrl: "/images/showcase/indian-wedding-catering.jpg",
+      caption: "Grand Indian Wedding Banquet & Dining Service",
+      category: "Wedding Catering",
+    },
+    {
+      id: "sc2",
+      imageUrl: "/images/showcase/banquet-stewards-service.jpg",
+      caption: "Luxury Banquet Stewards & Wine Service Operations",
+      category: "Banquets",
+    },
+    {
+      id: "sc3",
+      imageUrl: "/images/showcase/vip-fine-dining-service.jpg",
+      caption: "VIP Fine Dining Silver Cloche Plate Service",
+      category: "Fine Dining",
+    },
+    {
+      id: "sc4",
+      imageUrl: "/images/showcase/catering-banquet-setup.jpg",
+      caption: "Banquet Hall Table Layout & Food Counter Setup",
+      category: "Catering Setup",
+    },
+    {
+      id: "sc5",
+      imageUrl: "/images/showcase/corporate-gala-staff.png",
+      caption: "Corporate Gala Reception & Hors d'Oeuvres Staffing",
+      category: "Service Staff",
+    },
+    {
       id: "fb1",
       imageUrl: "https://images.unsplash.com/photo-1555244162-803834f70033?w=800&auto=format&fit=crop&q=60",
       caption: "Buffet Operations & Food Presentation",
@@ -30,18 +60,6 @@ export default async function GalleryPage() {
       caption: "Banquet Hall Grand Layout & Dining Service Setup",
       category: "Banquets",
     },
-    {
-      id: "fb3",
-      imageUrl: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&auto=format&fit=crop&q=60",
-      caption: "Corporate Event Guest Hospitality Services",
-      category: "Service Staff",
-    },
-    {
-      id: "fb4",
-      imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&auto=format&fit=crop&q=60",
-      caption: "Fine Dining Plate Operations & Waiter Services",
-      category: "Fine Dining",
-    }
   ];
 
   const displayImages =

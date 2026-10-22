@@ -13,12 +13,28 @@ interface HeroSlideshowProps {
 export default function HeroSlideshow({ headline, subheadline, children }: HeroSlideshowProps) {
   const slides = [
     {
-      desktop: "/images/hero/hospitality-02.jpg",
-      mobile: "/images/hero/hospitality-02-mobile.jpg",
+      desktop: "/images/showcase/indian-wedding-catering.jpg",
+      mobile: "/images/showcase/indian-wedding-catering.jpg",
     },
     {
-      desktop: "/images/hero/hospitality-03.jpg",
-      mobile: "/images/hero/hospitality-03-mobile.jpg",
+      desktop: "/images/showcase/banquet-stewards-service.jpg",
+      mobile: "/images/showcase/banquet-stewards-service.jpg",
+    },
+    {
+      desktop: "/images/showcase/vip-fine-dining-service.jpg",
+      mobile: "/images/showcase/vip-fine-dining-service.jpg",
+    },
+    {
+      desktop: "/images/showcase/catering-banquet-setup.jpg",
+      mobile: "/images/showcase/catering-banquet-setup.jpg",
+    },
+    {
+      desktop: "/images/showcase/corporate-gala-staff.png",
+      mobile: "/images/showcase/corporate-gala-staff.png",
+    },
+    {
+      desktop: "/images/hero/hospitality-02.jpg",
+      mobile: "/images/hero/hospitality-02-mobile.jpg",
     },
   ];
 

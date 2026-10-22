@@ -2,6 +2,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HeroSlideshow from "@/components/HeroSlideshow";
+import EventShowcaseSlideshow from "@/components/EventShowcaseSlideshow";
 import { prisma } from "@/lib/prisma";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import { cookies } from "next/headers";
@@ -300,6 +301,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Event Operations & Catering Visual Showcase Slideshow */}
+      <EventShowcaseSlideshow />
 
       {/* Latest Opportunities Section */}
       <section className="py-10 sm:py-16 md:py-20 bg-slate-50/80 border-t border-slate-200/80 relative">
