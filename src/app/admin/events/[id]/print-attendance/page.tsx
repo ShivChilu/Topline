@@ -1,22 +1,22 @@
 "use client";
 
-import React, { use, useEffect, useState, useMemo } from "react";
+import React, { use, useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import {
+  Download,
   Printer,
   ArrowLeft,
   LayoutGrid,
   List,
-  Filter,
   CheckCircle,
   Users,
   Calendar,
   MapPin,
   Clock,
   User,
-  ShieldCheck,
+  Loader2,
   Phone,
-  FileSpreadsheet,
+  FileCheck,
 } from "lucide-react";
 
 interface Application {
@@ -62,6 +62,21 @@ function formatTime12(timeStr: string) {
   return `${strHours}:${minutes} ${ampm}`;
 }
 
+async function fetchPhotoAsDataUrl(url: string): Promise<string> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return url;
+    const blob = await res.blob();
+    return new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
+
 export default function PrintAttendancePage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -71,13 +86,19 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Print customization controls
-  const [layoutMode, setLayoutMode] = useState<"grid" | "table">("grid");
+  // PDF Generation State
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<string | null>(null);
+
+  // View & Customization Controls
+  const [layoutMode, setLayoutMode] = useState<"table" | "grid">("table");
   const [statusFilter, setStatusFilter] = useState<"CONFIRMED" | "CONFIRMED_SELECTED" | "ALL">("CONFIRMED");
   const [sortBy, setSortBy] = useState<"name" | "regNo" | "order">("name");
   const [gridDensity, setGridDensity] = useState<"10" | "8">("10"); // 10 per page (2x5) or 8 per page (2x4)
   const [showPhone, setShowPhone] = useState(true);
   const [showUniversity, setShowUniversity] = useState(true);
+
+  const pagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -108,6 +129,19 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
           if (confirmedCount === 0 && apps.some((a) => a.status === "SELECTED")) {
             setStatusFilter("CONFIRMED_SELECTED");
           }
+
+          // Pre-fetch candidate photos as base64 in background for instant, 100% reliable PDF canvas export
+          Promise.all(
+            apps.map(async (app) => {
+              if (app.photoUrl && app.photoUrl.startsWith("/")) {
+                const base64 = await fetchPhotoAsDataUrl(app.photoUrl);
+                return { ...app, photoUrl: base64 };
+              }
+              return app;
+            })
+          ).then((updatedApps) => {
+            setApplications(updatedApps);
+          });
         }
       } catch (err: any) {
         console.error("Error loading attendance print data:", err);
@@ -119,7 +153,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
     loadData();
   }, [eventId]);
 
-  // Filtered and Sorted Candidates
+  // Filter and sort candidates
   const filteredCandidates = useMemo(() => {
     let list = applications.filter((app) => {
       if (statusFilter === "CONFIRMED") return app.status === "CONFIRMED";
@@ -142,18 +176,118 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
     });
   }, [applications, statusFilter, sortBy]);
 
+  // Calculate clean, mathematically exact multi-page chunks
+  // Table View:
+  // - If <= 11 students: All fit on Page 1 along with Supervisor Sign-Off box
+  // - Otherwise: Page 1 holds 13 rows; Subsequent pages hold 14 rows; Last page holds up to 9 rows + Supervisor Box
+  const pagedTableData = useMemo(() => {
+    const list = filteredCandidates;
+    if (list.length === 0) return [[]];
+    if (list.length <= 11) {
+      return [list];
+    }
+    const chunks: Application[][] = [];
+    chunks.push(list.slice(0, 13));
+    let remaining = list.slice(13);
+
+    while (remaining.length > 0) {
+      // If remaining <= 9, it fits on this final page with the supervisor box
+      if (remaining.length <= 9) {
+        chunks.push(remaining);
+        break;
+      }
+      // If remaining is 10-14, take 13 so it doesn't leave an awkward lone student
+      if (remaining.length <= 14) {
+        chunks.push(remaining);
+        break;
+      }
+      chunks.push(remaining.slice(0, 14));
+      remaining = remaining.slice(14);
+    }
+    return chunks;
+  }, [filteredCandidates]);
+
+  // Grid View:
+  // - 10 students per page (2x5) or 8 students per page (2x4)
+  const pagedGridData = useMemo(() => {
+    const list = filteredCandidates;
+    if (list.length === 0) return [[]];
+    const perPage = parseInt(gridDensity, 10) || 10;
+    const chunks: Application[][] = [];
+    for (let i = 0; i < list.length; i += perPage) {
+      chunks.push(list.slice(i, i + perPage));
+    }
+    return chunks;
+  }, [filteredCandidates, gridDensity]);
+
+  const activePages = layoutMode === "table" ? pagedTableData : pagedGridData;
+  const totalPages = activePages.length;
+
+  // Direct PDF Download Handler
+  const handleDownloadPdf = async () => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    setPdfProgress("Initializing PDF engine...");
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const html2canvas = (await import("html2canvas")).default;
+
+      const pageElements = document.querySelectorAll<HTMLElement>(".printable-a4-page");
+      if (!pageElements.length) {
+        alert("No attendance pages found to export.");
+        return;
+      }
+
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        setPdfProgress(`Rendering Sheet ${i + 1} of ${pageElements.length}...`);
+        const pageEl = pageElements[i];
+
+        const canvas = await html2canvas(pageEl, {
+          scale: 2, // 2x sharp high-DPI quality
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          windowWidth: 1200,
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+        if (i > 0) {
+          doc.addPage("a4", "portrait");
+        }
+        doc.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+      }
+
+      setPdfProgress("Saving PDF to Downloads...");
+      const safeTitle = (event?.name || "Event")
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_+/g, "_")
+        .slice(0, 35);
+      const dateStr = event?.date ? new Date(event.date).toISOString().slice(0, 10) : "roster";
+      const fileName = `Attendance_${safeTitle}_${dateStr}.pdf`;
+
+      doc.save(fileName);
+    } catch (err: any) {
+      console.error("PDF generation error:", err);
+      alert("Failed to generate PDF. Please try again or use the browser print option.");
+    } finally {
+      setIsGeneratingPdf(false);
+      setPdfProgress(null);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
-
-  // Estimated sheets
-  const estimatedPages = useMemo(() => {
-    if (layoutMode === "grid") {
-      const perPage = parseInt(gridDensity, 10);
-      return Math.ceil(filteredCandidates.length / perPage) || 1;
-    }
-    return Math.ceil(filteredCandidates.length / 13) || 1;
-  }, [filteredCandidates.length, layoutMode, gridDensity]);
 
   if (loading) {
     return (
@@ -192,11 +326,11 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
   });
 
   return (
-    <div className="min-h-screen bg-slate-200/70 text-slate-900 pb-16 font-sans">
+    <div className="min-h-screen bg-slate-200/80 text-slate-900 pb-16 font-sans">
       {/* ------------------------------------------------------------- */}
-      {/* TOP CONTROL BAR (HIDDEN IN PRINT)                             */}
+      {/* TOP CONTROL BAR (HIDDEN DURING PRINT)                         */}
       {/* ------------------------------------------------------------- */}
-      <header className="no-print sticky top-0 z-50 bg-slate-900 text-white border-b border-slate-800 px-4 py-3 shadow-md">
+      <header className="no-print sticky top-0 z-50 bg-slate-900 text-white border-b border-slate-800 px-4 py-3 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
@@ -209,12 +343,12 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] bg-red-600 font-black px-2 py-0.5 rounded text-white uppercase tracking-wider">
-                  Print Ready
+                  Attendance PDF
                 </span>
                 <h1 className="text-sm font-extrabold truncate max-w-md">{event.name}</h1>
               </div>
               <p className="text-[11px] text-slate-400">
-                {filteredCandidates.length} students &bull; ~{estimatedPages} {estimatedPages === 1 ? "page" : "pages"} A4
+                {filteredCandidates.length} students &bull; {totalPages} {totalPages === 1 ? "page" : "pages"} A4
               </p>
             </div>
           </div>
@@ -225,6 +359,17 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
             <div className="bg-slate-800 p-0.5 rounded-xl border border-slate-700 flex items-center text-xs">
               <button
                 type="button"
+                onClick={() => setLayoutMode("table")}
+                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                  layoutMode === "table" ? "bg-red-600 text-white shadow" : "text-slate-300 hover:text-white"
+                }`}
+                title="Compact Table Roster (13-14 students per page, maximum paper savings)"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>Compact Table</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setLayoutMode("grid")}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
                   layoutMode === "grid" ? "bg-red-600 text-white shadow" : "text-slate-300 hover:text-white"
@@ -232,18 +377,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                 title="Grid Boxes (8-10 students per page with large photo & signature box)"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Grid Cards ({gridDensity}/page)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayoutMode("table")}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  layoutMode === "table" ? "bg-red-600 text-white shadow" : "text-slate-300 hover:text-white"
-                }`}
-                title="Compact Table Roster (12-14 students per page, maximum paper savings)"
-              >
-                <List className="w-3.5 h-3.5" />
-                <span>Compact Table (14/page)</span>
+                <span>Grid Cards</span>
               </button>
             </div>
 
@@ -283,26 +417,49 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
               </select>
             )}
 
-            {/* Primary Print Button */}
+            {/* DIRECT DOWNLOAD PDF BUTTON (PRIMARY) */}
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-lg transition cursor-pointer disabled:opacity-50"
+              title="Directly download PDF file with complete list into your Downloads folder"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>{pdfProgress || "Generating PDF..."}</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download PDF ({filteredCandidates.length})</span>
+                </>
+              )}
+            </button>
+
+            {/* Secondary Browser Print Button */}
             <button
               type="button"
               onClick={handlePrint}
-              className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-lg transition cursor-pointer"
+              disabled={isGeneratingPdf}
+              className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Open browser print dialog (Ctrl+P)"
             >
-              <Printer className="w-4 h-4" />
-              <span>Print Sheet / Save PDF</span>
+              <Printer className="w-3.5 h-3.5 text-slate-400" />
+              <span>Print</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Screen Instructions Banner (Hidden on Print) */}
+      {/* Screen Helper Banner (Hidden on Print) */}
       <div className="no-print max-w-5xl mx-auto px-4 mt-4">
         <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl p-3 sm:p-4 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
             <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
             <span>
-              <strong>Print Setup:</strong> Paper is formatted for standard <strong>A4 Portrait</strong>. Page breaks and signature boxes are automatically optimized to avoid cutting students across sheets.
+              <strong>Direct PDF Download:</strong> Click the green <strong>&quot;Download PDF&quot;</strong> button above to download the complete file with all <strong>{filteredCandidates.length} students</strong> directly into your Downloads folder across {totalPages} clean A4 {totalPages === 1 ? "page" : "pages"}.
             </span>
           </div>
           <div className="flex items-center gap-3 shrink-0 text-slate-700 font-semibold">
@@ -329,317 +486,367 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* PRINTABLE A4 PAPER CONTAINER                                  */}
+      {/* PAGINATED A4 PAGES CONTAINER                                 */}
       {/* ------------------------------------------------------------- */}
-      <main className="max-w-[210mm] mx-auto mt-4 sm:mt-6 bg-white p-5 sm:p-7 shadow-2xl rounded-xl print:shadow-none print:p-0 print:m-0 print:max-w-none print:w-full print:rounded-none">
-        {/* Document Master Header */}
-        <div className="border-b-2 border-black pb-3 mb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-base sm:text-lg tracking-wider text-black uppercase">TOPLINE ODC</span>
-                <span className="text-xs font-bold text-slate-600 uppercase border-l border-slate-400 pl-2">
-                  Event Attendance &amp; Physical Signature Sheet
-                </span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-tight mt-1 leading-snug">
-                {event.name}
-              </h2>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="inline-block bg-black text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded">
-                Official Roster
-              </span>
-              <p className="text-[10px] text-slate-600 font-mono mt-1">
-                Generated: {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-              </p>
-            </div>
-          </div>
+      <div ref={pagesContainerRef} className="mt-4 sm:mt-6">
+        {activePages.map((pageCandidates, pageIndex) => {
+          const pageNum = pageIndex + 1;
+          const isFirstPage = pageIndex === 0;
+          const isLastPage = pageIndex === activePages.length - 1;
 
-          {/* Event Specs Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-2 border-t border-slate-300 text-xs">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-              <div>
-                <span className="text-[9px] text-slate-500 uppercase block font-bold">Event Date</span>
-                <span className="font-bold text-black">{formattedEventDate}</span>
-              </div>
-            </div>
+          // Calculate running candidate starting index
+          let startIndex = 0;
+          for (let p = 0; p < pageIndex; p++) {
+            startIndex += activePages[p].length;
+          }
 
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-              <div>
-                <span className="text-[9px] text-slate-500 uppercase block font-bold">Reporting Time</span>
-                <span className="font-bold text-black">{formatTime12(event.reportingTime) || "As per duty slot"}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-              <div>
-                <span className="text-[9px] text-slate-500 uppercase block font-bold">Venue / Location</span>
-                <span className="font-bold text-black truncate block max-w-[150px]">{event.location}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-              <div>
-                <span className="text-[9px] text-slate-500 uppercase block font-bold">Confirmed Stewards</span>
-                <span className="font-black text-black">
-                  {filteredCandidates.length} Total {event.workersRequired ? `(Req: ${event.workersRequired})` : ""}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ------------------------------------------------------------- */}
-        {/* LAYOUT 1: GRID CARDS BOX VIEW (8 - 10 PER PAGE)               */}
-        {/* ------------------------------------------------------------- */}
-        {layoutMode === "grid" && (
-          <div
-            className={`grid grid-cols-2 gap-3 ${
-              gridDensity === "10" ? "print:gap-2.5" : "print:gap-3.5"
-            }`}
-          >
-            {filteredCandidates.map((candidate, idx) => {
-              const name = candidate.name || candidate.user?.name || "Student";
-              const regNo = candidate.registrationNumber || candidate.user?.registrationNumber || "Reg No N/A";
-              const phone = candidate.mobileNumber || candidate.user?.phone || "";
-              const university = candidate.user?.university || "";
-              const photo = candidate.photoUrl;
-
-              return (
-                <div
-                  key={candidate.id}
-                  className="print-avoid-break bg-white border-2 border-black rounded-lg p-2.5 flex items-stretch gap-2.5 relative shadow-2xs print:shadow-none"
-                  style={{
-                    pageBreakInside: "avoid",
-                    breakInside: "avoid",
-                    minHeight: gridDensity === "10" ? "42mm" : "50mm",
-                  }}
-                >
-                  {/* S.No Badge */}
-                  <span className="absolute top-1 right-1 text-[10px] font-black bg-black text-white px-1.5 py-0.2 rounded font-mono">
-                    #{idx + 1}
-                  </span>
-
-                  {/* Candidate Photo Box */}
-                  <div className="w-[62px] h-[78px] shrink-0 bg-slate-100 border border-black rounded overflow-hidden flex items-center justify-center relative">
-                    {photo ? (
-                      <img
-                        src={photo}
-                        alt={name}
-                        className="w-full h-full object-cover"
-                        crossOrigin="anonymous"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-1 text-center">
-                        <User className="w-5 h-5 text-slate-400" />
-                        <span className="text-[8px] font-black uppercase text-slate-500 mt-0.5">No Photo</span>
+          return (
+            <div
+              key={`page-${pageIndex}`}
+              className="printable-a4-page mx-auto bg-white p-5 sm:p-6 mb-6 shadow-2xl rounded-sm print:shadow-none print:m-0 print:rounded-none"
+              style={{
+                width: "210mm",
+                minHeight: "297mm",
+                boxSizing: "border-box",
+                pageBreakAfter: "always",
+                breakAfter: "page",
+              }}
+            >
+              {/* PAGE TOP: HEADER */}
+              {isFirstPage ? (
+                /* Master Document Header on Page 1 */
+                <div className="border-b-2 border-black pb-3 mb-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-base sm:text-lg tracking-wider text-black uppercase">
+                          TOPLINE ODC
+                        </span>
+                        <span className="text-xs font-bold text-slate-600 uppercase border-l border-slate-400 pl-2">
+                          Event Attendance &amp; Physical Signature Sheet
+                        </span>
                       </div>
-                    )}
+                      <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-tight mt-1 leading-snug">
+                        {event.name}
+                      </h2>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="inline-block bg-black text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded">
+                        Official Roster
+                      </span>
+                      <p className="text-[10px] text-slate-600 font-mono mt-1">
+                        Generated: {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Student Details & Signature Box */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between pr-4">
-                    <div>
-                      {/* Name */}
-                      <h4 className="font-black text-xs sm:text-sm text-black leading-tight truncate uppercase">
-                        {name}
-                      </h4>
-
-                      {/* Reg No / Roll No */}
-                      <p className="text-[11px] font-black font-mono text-black mt-0.5 tracking-tight truncate">
-                        ID: {regNo}
-                      </p>
-
-                      {/* Phone & College */}
-                      <div className="text-[10px] text-slate-700 space-y-0.5 mt-0.5 font-medium">
-                        {showPhone && phone && (
-                          <p className="truncate font-semibold text-slate-800">Ph: {phone}</p>
-                        )}
-                        {showUniversity && university && (
-                          <p className="truncate text-slate-600">{university}</p>
-                        )}
+                  {/* Event Specs */}
+                  <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2 border-t border-slate-300 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+                      <div>
+                        <span className="text-[8.5px] text-slate-500 uppercase block font-bold">Event Date</span>
+                        <span className="font-bold text-black text-[11px]">{formattedEventDate}</span>
                       </div>
                     </div>
 
-                    {/* Physical Signature Box */}
-                    <div className="mt-1.5 pt-1 border-t border-slate-300">
-                      <div className="border border-black rounded px-2 py-1 bg-slate-50/50 print:bg-transparent h-9 flex flex-col justify-between">
-                        <span className="text-[7.5px] font-black uppercase tracking-wider text-slate-700 block">
-                          Student Physical Signature
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+                      <div>
+                        <span className="text-[8.5px] text-slate-500 uppercase block font-bold">Reporting Time</span>
+                        <span className="font-bold text-black text-[11px]">
+                          {formatTime12(event.reportingTime) || "As per duty slot"}
                         </span>
-                        <div className="flex items-end justify-between text-[8px] text-slate-400 font-mono">
-                          <span>Sign above</span>
-                          <span>In: ______</span>
-                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+                      <div>
+                        <span className="text-[8.5px] text-slate-500 uppercase block font-bold">Venue / Location</span>
+                        <span className="font-bold text-black text-[11px] truncate block max-w-[140px]">
+                          {event.location}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+                      <div>
+                        <span className="text-[8.5px] text-slate-500 uppercase block font-bold">Confirmed Stewards</span>
+                        <span className="font-black text-black text-[11px]">
+                          {filteredCandidates.length} Total {event.workersRequired ? `(Req: ${event.workersRequired})` : ""}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ) : (
+                /* Compact Repeat Header on Page 2+ */
+                <div className="border-b-2 border-black pb-2 mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-sm tracking-wider text-black uppercase">TOPLINE ODC</span>
+                    <span className="text-xs text-slate-700 font-bold uppercase truncate max-w-md">
+                      &bull; {event.name}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-mono font-bold text-slate-600">
+                      {formattedEventDate} &bull; Page {pageNum} of {totalPages}
+                    </span>
+                  </div>
+                </div>
+              )}
 
-        {/* ------------------------------------------------------------- */}
-        {/* LAYOUT 2: COMPACT TABLE ROSTER (12 - 14 PER PAGE)             */}
-        {/* ------------------------------------------------------------- */}
-        {layoutMode === "table" && (
-          <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full border-collapse border-2 border-black text-left text-xs">
-              <thead>
-                <tr className="bg-slate-200 print:bg-slate-200 border-b-2 border-black text-black">
-                  <th className="p-1.5 border border-black text-center w-8 font-black">#</th>
-                  <th className="p-1.5 border border-black text-center w-14 font-black">Photo</th>
-                  <th className="p-1.5 border border-black font-black">Candidate Name &amp; Contact</th>
-                  <th className="p-1.5 border border-black font-black w-32">Roll / Reg No</th>
-                  {showUniversity && (
-                    <th className="p-1.5 border border-black font-black w-28">University / City</th>
-                  )}
-                  <th className="p-1.5 border border-black text-center font-black w-44">
-                    Physical Signature (Pen)
-                  </th>
-                  <th className="p-1.5 border border-black text-center font-black w-20">In-Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCandidates.map((candidate, idx) => {
-                  const name = candidate.name || candidate.user?.name || "Student";
-                  const regNo = candidate.registrationNumber || candidate.user?.registrationNumber || "N/A";
-                  const phone = candidate.mobileNumber || candidate.user?.phone || "";
-                  const university = candidate.user?.university || "";
-                  const photo = candidate.photoUrl;
-
-                  return (
-                    <tr
-                      key={candidate.id}
-                      className="print-avoid-break border-b border-black text-black"
-                      style={{ pageBreakInside: "avoid", breakInside: "avoid", height: "17mm" }}
-                    >
-                      {/* Serial Number */}
-                      <td className="p-1 border border-black text-center font-black font-mono">
-                        {idx + 1}
-                      </td>
-
-                      {/* Photo Thumbnail */}
-                      <td className="p-1 border border-black text-center">
-                        <div className="w-10 h-12 mx-auto bg-slate-100 border border-slate-400 rounded overflow-hidden flex items-center justify-center">
-                          {photo ? (
-                            <img src={photo} alt={name} className="w-full h-full object-cover" crossOrigin="anonymous" />
-                          ) : (
-                            <User className="w-4 h-4 text-slate-400" />
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Name & Phone */}
-                      <td className="p-1.5 border border-black">
-                        <p className="font-black text-xs uppercase leading-tight">{name}</p>
-                        {showPhone && phone && (
-                          <p className="text-[10px] text-slate-700 font-mono font-medium mt-0.5">{phone}</p>
+              {/* PAGE BODY */}
+              <div className="flex-1">
+                {layoutMode === "table" ? (
+                  /* ---------------- TABLE LAYOUT ---------------- */
+                  <table className="w-full border-collapse border-2 border-black text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-200 border-b-2 border-black text-black">
+                        <th className="p-1 border border-black text-center w-8 font-black">#</th>
+                        <th className="p-1 border border-black text-center w-12 font-black">Photo</th>
+                        <th className="p-1.5 border border-black font-black">Candidate Name &amp; Contact</th>
+                        <th className="p-1.5 border border-black font-black w-28">Roll / Reg No</th>
+                        {showUniversity && (
+                          <th className="p-1.5 border border-black font-black w-28">University / City</th>
                         )}
-                      </td>
+                        <th className="p-1.5 border border-black text-center font-black w-44">
+                          Physical Signature (Pen)
+                        </th>
+                        <th className="p-1.5 border border-black text-center font-black w-18">In-Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageCandidates.map((candidate, rowIdx) => {
+                        const globalIdx = startIndex + rowIdx + 1;
+                        const name = candidate.name || candidate.user?.name || "Student";
+                        const regNo = candidate.registrationNumber || candidate.user?.registrationNumber || "N/A";
+                        const phone = candidate.mobileNumber || candidate.user?.phone || "";
+                        const university = candidate.user?.university || "";
+                        const photo = candidate.photoUrl;
 
-                      {/* Reg No */}
-                      <td className="p-1.5 border border-black font-black font-mono text-xs">
-                        {regNo}
-                      </td>
+                        return (
+                          <tr
+                            key={candidate.id}
+                            className="border-b border-black text-black"
+                            style={{ height: "16.5mm" }}
+                          >
+                            {/* Serial Number */}
+                            <td className="p-1 border border-black text-center font-black font-mono">
+                              {globalIdx}
+                            </td>
 
-                      {/* University */}
-                      {showUniversity && (
-                        <td className="p-1.5 border border-black text-[10.5px] text-slate-700 truncate max-w-[120px]">
-                          {university || "-"}
-                        </td>
-                      )}
+                            {/* Photo Thumbnail */}
+                            <td className="p-1 border border-black text-center">
+                              <div className="w-9 h-11 mx-auto bg-slate-100 border border-slate-400 rounded overflow-hidden flex items-center justify-center">
+                                {photo ? (
+                                  <img
+                                    src={photo}
+                                    alt={name}
+                                    className="w-full h-full object-cover"
+                                    crossOrigin="anonymous"
+                                  />
+                                ) : (
+                                  <User className="w-4 h-4 text-slate-400" />
+                                )}
+                              </div>
+                            </td>
 
-                      {/* Physical Signature Column */}
-                      <td className="p-1 border border-black text-center">
-                        <div className="w-full h-9 border border-dashed border-slate-400 rounded flex items-end justify-center pb-0.5">
-                          <span className="text-[7.5px] uppercase tracking-wider text-slate-400 font-bold">
-                            Signature Line
+                            {/* Name & Phone */}
+                            <td className="p-1.5 border border-black">
+                              <p className="font-black text-xs uppercase leading-tight truncate max-w-[180px]">
+                                {name}
+                              </p>
+                              {showPhone && phone && (
+                                <p className="text-[10px] text-slate-700 font-mono font-semibold mt-0.5">{phone}</p>
+                              )}
+                            </td>
+
+                            {/* Reg No */}
+                            <td className="p-1.5 border border-black font-black font-mono text-xs truncate max-w-[120px]">
+                              {regNo}
+                            </td>
+
+                            {/* University */}
+                            {showUniversity && (
+                              <td className="p-1.5 border border-black text-[10px] text-slate-700 truncate max-w-[120px]">
+                                {university || "-"}
+                              </td>
+                            )}
+
+                            {/* Physical Signature Box */}
+                            <td className="p-1 border border-black text-center">
+                              <div className="w-full h-9 border border-dashed border-slate-400 rounded flex items-end justify-center pb-0.5">
+                                <span className="text-[7.5px] uppercase tracking-wider text-slate-400 font-bold">
+                                  Signature Line
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* In-Time */}
+                            <td className="p-1 border border-black text-center">
+                              <div className="h-9 flex items-center justify-center text-[10px] font-mono text-slate-400">
+                                ____:____
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  /* ---------------- GRID CARDS LAYOUT ---------------- */
+                  <div
+                    className={`grid grid-cols-2 gap-2.5 ${
+                      gridDensity === "10" ? "gap-y-2.5" : "gap-y-3.5"
+                    }`}
+                  >
+                    {pageCandidates.map((candidate, rowIdx) => {
+                      const globalIdx = startIndex + rowIdx + 1;
+                      const name = candidate.name || candidate.user?.name || "Student";
+                      const regNo = candidate.registrationNumber || candidate.user?.registrationNumber || "Reg No N/A";
+                      const phone = candidate.mobileNumber || candidate.user?.phone || "";
+                      const university = candidate.user?.university || "";
+                      const photo = candidate.photoUrl;
+
+                      return (
+                        <div
+                          key={candidate.id}
+                          className="bg-white border-2 border-black rounded-lg p-2 flex items-stretch gap-2 relative"
+                          style={{
+                            minHeight: gridDensity === "10" ? "42mm" : "48mm",
+                          }}
+                        >
+                          {/* S.No Badge */}
+                          <span className="absolute top-1 right-1 text-[9.5px] font-black bg-black text-white px-1.5 py-0.2 rounded font-mono">
+                            #{globalIdx}
                           </span>
+
+                          {/* Candidate Photo Box */}
+                          <div className="w-[58px] h-[74px] shrink-0 bg-slate-100 border border-black rounded overflow-hidden flex items-center justify-center relative">
+                            {photo ? (
+                              <img
+                                src={photo}
+                                alt={name}
+                                className="w-full h-full object-cover"
+                                crossOrigin="anonymous"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-1 text-center">
+                                <User className="w-5 h-5 text-slate-400" />
+                                <span className="text-[7.5px] font-black uppercase text-slate-500 mt-0.5">No Photo</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Student Details & Signature Box */}
+                          <div className="flex-1 min-w-0 flex flex-col justify-between pr-3">
+                            <div>
+                              <h4 className="font-black text-xs text-black leading-tight truncate uppercase">
+                                {name}
+                              </h4>
+                              <p className="text-[10.5px] font-black font-mono text-black mt-0.5 tracking-tight truncate">
+                                ID: {regNo}
+                              </p>
+                              <div className="text-[9.5px] text-slate-700 space-y-0.5 mt-0.5">
+                                {showPhone && phone && (
+                                  <p className="truncate font-semibold text-slate-800">Ph: {phone}</p>
+                                )}
+                                {showUniversity && university && (
+                                  <p className="truncate text-slate-600">{university}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Physical Signature Box */}
+                            <div className="mt-1 pt-1 border-t border-slate-300">
+                              <div className="border border-black rounded px-1.5 py-0.5 bg-slate-50 h-8 flex flex-col justify-between">
+                                <span className="text-[7px] font-black uppercase tracking-wider text-slate-700 block">
+                                  Physical Signature
+                                </span>
+                                <div className="flex items-end justify-between text-[7.5px] text-slate-400 font-mono">
+                                  <span>Sign above</span>
+                                  <span>In: ______</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </td>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                      {/* In-Time / Remarks */}
-                      <td className="p-1 border border-black text-center">
-                        <div className="h-9 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          ____:____
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              {/* PAGE BOTTOM: SUPERVISOR SIGN-OFF (ONLY ON LAST PAGE) */}
+              {isLastPage && (
+                <div className="mt-4 pt-2.5 border-t-2 border-black text-xs text-black">
+                  <div className="grid grid-cols-3 gap-4 pb-1.5">
+                    <div>
+                      <p className="font-bold text-[9.5px] uppercase text-slate-600">Event In-Charge / Supervisor</p>
+                      <div className="h-8 border-b border-black flex items-end pb-0.5 font-mono text-[10.5px]">
+                        Name:
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-bold text-[9.5px] uppercase text-slate-600">Headcount Verification</p>
+                      <div className="h-8 border-b border-black flex items-end justify-between pb-0.5 font-mono text-[10.5px]">
+                        <span>Present: _____</span>
+                        <span>Absent: _____</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-bold text-[9.5px] uppercase text-slate-600">Authorized Signature</p>
+                      <div className="h-8 border-b border-black flex items-end pb-0.5 font-mono text-[10.5px]">
+                        Sign:
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-        {/* Empty State */}
-        {filteredCandidates.length === 0 && (
-          <div className="py-12 text-center text-slate-500 space-y-2">
-            <p className="text-sm font-bold">No candidates found for selected status: {statusFilter}</p>
-            <p className="text-xs">Try selecting &quot;Confirmed + Selected&quot; or &quot;All Active Candidates&quot; at the top.</p>
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------- */}
-        {/* DOCUMENT FOOTER & SUPERVISOR VERIFICATION SIGN-OFF            */}
-        {/* ------------------------------------------------------------- */}
-        <div
-          className="print-avoid-break mt-6 pt-3 border-t-2 border-black text-xs text-black"
-          style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
-        >
-          <div className="grid grid-cols-3 gap-4 pb-2">
-            <div>
-              <p className="font-bold text-[10px] uppercase text-slate-600">Event In-Charge / Supervisor</p>
-              <div className="h-10 border-b border-black flex items-end pb-1 font-mono text-[11px]">
-                Name:
+              {/* SHEET FOOTER */}
+              <div className="mt-2 pt-1 border-t border-slate-300 flex items-center justify-between text-[8.5px] text-slate-500 font-mono">
+                <span>TOPLINE ODC Operations &bull; Physical Attendance &bull; Confidential</span>
+                <span className="font-bold text-black">
+                  Page {pageNum} of {totalPages}
+                </span>
               </div>
             </div>
-            <div>
-              <p className="font-bold text-[10px] uppercase text-slate-600">Attendance Headcount</p>
-              <div className="h-10 border-b border-black flex items-end justify-between pb-1 font-mono text-[11px]">
-                <span>Present: _____</span>
-                <span>Absent: _____</span>
-              </div>
-            </div>
-            <div>
-              <p className="font-bold text-[10px] uppercase text-slate-600">Authorized Signature</p>
-              <div className="h-10 border-b border-black flex items-end pb-1 font-mono text-[11px]">
-                Sign:
-              </div>
-            </div>
-          </div>
-          <p className="text-[9px] text-slate-500 text-center pt-2">
-            TOPLINE ODC Operations &bull; Physical Identity Verified with Physical University ID &bull; Confidential
-          </p>
-        </div>
-      </main>
+          );
+        })}
+      </div>
 
-      {/* Embedded Print Styling */}
+      {/* Embedded Print Styling for Standard Print Dialog */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm 8mm 8mm 8mm;
+            margin: 0;
           }
-          body {
+          html, body {
             background-color: #ffffff !important;
             color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           .no-print {
             display: none !important;
           }
-          .print-avoid-break {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+          .printable-a4-page {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 8mm 10mm !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            height: 297mm !important;
           }
         }
       `}</style>

@@ -80,6 +80,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
+  // Dedicated clean full-page container for printable physical attendance roster
+  // (Prevents sidebar rendering, eliminates h-screen overflow-hidden clipping, and removes floating copilot)
+  if (pathname.includes("/print-attendance")) {
+    return <div className="min-h-screen bg-slate-100 text-slate-900">{children}</div>;
+  }
+
   if (checkingAuth) {
     return (
       <div className="flex h-screen bg-slate-50 items-center justify-center text-slate-500 font-bold text-sm">

@@ -1624,15 +1624,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <span>Attendance Hub</span>
           </button>
 
-          {/* Print Physical Attendance Sheet */}
+          {/* Download Physical Attendance PDF / Sheet */}
           <Link
             href={`/admin/events/${eventId}/print-attendance`}
             target="_blank"
-            className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
-            title="Print Attendance Roster with Photos & Signature Boxes"
+            className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+            title="Download Attendance PDF Roster with Photos & Signature Boxes"
           >
-            <Printer className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Print Sheet</span>
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Attendance PDF</span>
           </Link>
 
           {/* + Actions Dropdown */}
@@ -1791,10 +1791,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       href={`/admin/events/${eventId}/print-attendance`}
                       target="_blank"
                       onClick={() => setIsActionsDropdownOpen(false)}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-2 transition"
+                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 flex items-center gap-2 transition"
                     >
-                      <Printer className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Print Attendance Sheet</span>
+                      <Download className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Download Attendance PDF</span>
                     </Link>
                     <a
                       href={`/events/${eventId}`}
