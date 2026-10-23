@@ -98,6 +98,49 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
   const [gridDensity, setGridDensity] = useState<"10" | "8">("10"); // 10 per page (2x5) or 8 per page (2x4)
   const [showPhone, setShowPhone] = useState(true);
   const [showUniversity, setShowUniversity] = useState(true);
+  const [photoSize, setPhotoSize] = useState<"large" | "xlarge" | "compact">("large");
+
+  // Dynamic Photo & Row Dimensions
+  // "large" (Default): 21mm x 26mm (5x larger than before, clear passport face!)
+  // "xlarge": 25mm x 31mm (Huge photo for maximum clarity)
+  // "compact": 15mm x 19mm (For fitting more rows per page)
+  const photoSpecs = useMemo(() => {
+    if (photoSize === "xlarge") {
+      return {
+        rowHeight: "34mm",
+        photoColWidth: "30mm",
+        photoWidth: "25mm",
+        photoHeight: "31mm",
+        page1Limit: 6,
+        otherLimit: 7,
+        lastBoxLimit: 5,
+        badgeText: "Extra Large (25×31mm)",
+      };
+    }
+    if (photoSize === "compact") {
+      return {
+        rowHeight: "20mm",
+        photoColWidth: "20mm",
+        photoWidth: "15mm",
+        photoHeight: "19mm",
+        page1Limit: 10,
+        otherLimit: 12,
+        lastBoxLimit: 9,
+        badgeText: "Compact (15×19mm)",
+      };
+    }
+    // "large" (Default recommended)
+    return {
+      rowHeight: "27mm",
+      photoColWidth: "26mm",
+      photoWidth: "21mm",
+      photoHeight: "26mm",
+      page1Limit: 7,
+      otherLimit: 8,
+      lastBoxLimit: 7,
+      badgeText: "Large Passport (21×26mm)",
+    };
+  }, [photoSize]);
 
   const pagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -182,36 +225,51 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
     });
   }, [applications, statusFilter, sortBy]);
 
-  // Calculate clean, mathematically exact multi-page chunks
-  // Table View:
-  // - If <= 11 students: All fit on Page 1 along with Supervisor Sign-Off box
-  // - Otherwise: Page 1 holds 13 rows; Subsequent pages hold 14 rows; Last page holds up to 9 rows + Supervisor Box
+  // Calculate clean, balanced multi-page chunks calibrated to photoSpecs
   const pagedTableData = useMemo(() => {
     const list = filteredCandidates;
     if (list.length === 0) return [[]];
-    if (list.length <= 11) {
+
+    const { page1Limit, otherLimit, lastBoxLimit } = photoSpecs;
+
+    // Fits on single page with supervisor box
+    if (list.length <= lastBoxLimit) {
       return [list];
     }
-    const chunks: Application[][] = [];
-    chunks.push(list.slice(0, 13));
-    let remaining = list.slice(13);
-
-    while (remaining.length > 0) {
-      // If remaining <= 9, it fits on this final page with the supervisor box
-      if (remaining.length <= 9) {
-        chunks.push(remaining);
-        break;
-      }
-      // If remaining is 10-14, take 13 so it doesn't leave an awkward lone student
-      if (remaining.length <= 14) {
-        chunks.push(remaining);
-        break;
-      }
-      chunks.push(remaining.slice(0, 14));
-      remaining = remaining.slice(14);
+    // Fits on single page without supervisor box
+    if (list.length <= page1Limit) {
+      const half = Math.ceil(list.length / 2);
+      return [list.slice(0, half), list.slice(half)];
     }
-    return chunks;
-  }, [filteredCandidates]);
+
+    // Determine total pages needed
+    const remaining = list.length - page1Limit;
+    let pagesNeeded = 1 + Math.ceil(remaining / otherLimit);
+    // Ensure the last page has enough space for the supervisor box
+    const lastPageItems = list.length - (page1Limit + (pagesNeeded - 2) * otherLimit);
+    if (lastPageItems > lastBoxLimit) {
+      pagesNeeded++;
+    }
+
+    // Distribute candidates evenly across pages
+    const chunks: Application[][] = [];
+    let offset = 0;
+    for (let p = 0; p < pagesNeeded; p++) {
+      const isFirst = p === 0;
+      const isLast = p === pagesNeeded - 1;
+      const maxForThisPage = isFirst ? page1Limit : isLast ? lastBoxLimit : otherLimit;
+      const remainingPages = pagesNeeded - p;
+      const remainingItems = list.length - offset;
+      let countToTake = Math.min(maxForThisPage, Math.ceil(remainingItems / remainingPages));
+      if (isLast) {
+        countToTake = remainingItems;
+      }
+      chunks.push(list.slice(offset, offset + countToTake));
+      offset += countToTake;
+      if (offset >= list.length) break;
+    }
+    return chunks.length > 0 ? chunks : [[]];
+  }, [filteredCandidates, photoSpecs]);
 
   // Grid View:
   // - 10 students per page (2x5) or 8 students per page (2x4)
@@ -441,6 +499,35 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
               <option value="order">Sort: Application Order</option>
             </select>
 
+            {/* Photo Size Selector (Primary for Table Roster) */}
+            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-xs">
+              <span className="text-[10px] uppercase font-bold text-slate-400 pl-2 pr-1">Photo Size:</span>
+              <button
+                type="button"
+                onClick={() => setPhotoSize("large")}
+                className={'px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ' + (photoSize === "large" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-300 hover:text-white")}
+                title="Large Passport Size (21×26mm - 5x bigger, clear recognizable faces)"
+              >
+                Large (Clear Face)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoSize("xlarge")}
+                className={'px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ' + (photoSize === "xlarge" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-300 hover:text-white")}
+                title="Extra Large (25×31mm - Maximum face clarity for verification)"
+              >
+                Extra Large
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoSize("compact")}
+                className={'px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ' + (photoSize === "compact" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-300 hover:text-white")}
+                title="Compact (15×19mm - More rows per sheet)"
+              >
+                Compact
+              </button>
+            </div>
+
             {/* Density (for grid mode) */}
             {layoutMode === "grid" && (
               <select
@@ -650,16 +737,16 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                     <thead>
                       <tr className="bg-slate-200 border-b-2 border-black text-black">
                         <th className="p-1 border border-black text-center w-8 font-black">#</th>
-                        <th className="p-1 border border-black text-center w-12 font-black">Photo</th>
-                        <th className="p-1.5 border border-black font-black">Candidate Name &amp; Contact</th>
-                        <th className="p-1.5 border border-black font-black w-28">Roll / Reg No</th>
+                        <th className="p-1.5 border border-black text-center font-black" style={{ width: photoSpecs.photoColWidth }}>Photo</th>
+                        <th className="p-2 border border-black font-black">Candidate Name &amp; Contact</th>
+                        <th className="p-2 border border-black font-black w-28">Roll / Reg No</th>
                         {showUniversity && (
-                          <th className="p-1.5 border border-black font-black w-28">University / City</th>
+                          <th className="p-2 border border-black font-black w-28">University / City</th>
                         )}
-                        <th className="p-1.5 border border-black text-center font-black w-40">
+                        <th className="p-2 border border-black text-center font-black w-44">
                           Signature
                         </th>
-                        <th className="p-1.5 border border-black text-center font-black w-18">In-Time</th>
+                        <th className="p-2 border border-black text-center font-black w-20">In-Time</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -675,64 +762,74 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                           <tr
                             key={candidate.id}
                             className="border-b border-black text-black"
-                            style={{ height: "16.5mm" }}
+                            style={{ height: photoSpecs.rowHeight }}
                           >
                             {/* Serial Number */}
-                            <td className="p-1 border border-black text-center font-black font-mono">
+                            <td className="p-1 border border-black text-center font-black font-mono text-sm align-middle">
                               {globalIdx}
                             </td>
 
-                            {/* Photo Thumbnail */}
-                            <td className="p-1 border border-black text-center">
-                              <div className="w-9 h-11 mx-auto bg-slate-100 border border-slate-400 rounded overflow-hidden flex items-center justify-center">
+                            {/* Large Passport Photo Box */}
+                            <td className="p-1.5 border border-black text-center align-middle">
+                              <div
+                                className="mx-auto bg-slate-100 border-2 border-slate-700 rounded-md overflow-hidden flex items-center justify-center shadow-xs"
+                                style={{ width: photoSpecs.photoWidth, height: photoSpecs.photoHeight }}
+                              >
                                 {photo ? (
                                   <img
                                     src={photo}
                                     alt={name}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover object-top"
                                     crossOrigin="anonymous"
                                   />
                                 ) : (
-                                  <User className="w-4 h-4 text-slate-400" />
+                                  <div className="flex flex-col items-center justify-center text-slate-400 p-1 text-center">
+                                    <User className="w-5 h-5 text-slate-400" />
+                                    <span className="text-[7px] font-black uppercase text-slate-500 mt-0.5">No Photo</span>
+                                  </div>
                                 )}
                               </div>
                             </td>
 
                             {/* Name & Phone */}
-                            <td className="p-1.5 border border-black">
-                              <p className="font-black text-xs uppercase leading-tight truncate max-w-[180px]">
+                            <td className="p-2 border border-black align-middle">
+                              <p className="font-black text-sm uppercase leading-tight tracking-tight">
                                 {name}
                               </p>
                               {showPhone && phone && (
-                                <p className="text-[10px] text-slate-700 font-mono font-semibold mt-0.5">{phone}</p>
+                                <p className="text-xs font-bold text-slate-800 font-mono mt-1 flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-slate-500 shrink-0" />
+                                  <span>{phone}</span>
+                                </p>
                               )}
                             </td>
 
-                            {/* Reg No */}
-                            <td className="p-1.5 border border-black font-black font-mono text-xs truncate max-w-[120px]">
+                            {/* Reg / Roll No */}
+                            <td className="p-2 border border-black font-black font-mono text-sm tracking-tight align-middle">
                               {regNo}
                             </td>
 
-                            {/* University */}
+                            {/* University / City */}
                             {showUniversity && (
-                              <td className="p-1.5 border border-black text-[10px] text-slate-700 truncate max-w-[120px]">
-                                {university || "-"}
+                              <td className="p-2 border border-black text-xs text-slate-800 leading-tight align-middle">
+                                {university || "—"}
                               </td>
                             )}
 
-                            {/* Signature Box */}
-                            <td className="p-1 border border-black text-center">
-                              <div className="w-full h-9 border border-dashed border-slate-400 rounded flex items-end justify-center pb-0.5">
-                                <span className="text-[7.5px] uppercase tracking-wider text-slate-400 font-bold">
+                            {/* Physical Signature Box (Spacious for Pen) */}
+                            <td className="p-2 border border-black text-center align-middle">
+                              <div className="w-full h-11 border-2 border-dashed border-slate-400 rounded-lg flex flex-col justify-between p-1 bg-slate-50/60">
+                                <span className="text-[7.5px] uppercase tracking-wider text-slate-400 font-bold block text-left">
                                   Signature
                                 </span>
+                                <span className="text-[8px] font-mono text-slate-300">Sign Here</span>
                               </div>
                             </td>
 
-                            {/* In-Time */}
-                            <td className="p-1 border border-black text-center">
-                              <div className="h-9 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                                ____:____
+                            {/* In-Time Slot */}
+                            <td className="p-2 border border-black text-center align-middle">
+                              <div className="h-11 flex items-center justify-center text-xs font-mono text-slate-400">
+                                ___:___
                               </div>
                             </td>
                           </tr>
@@ -760,7 +857,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                           key={candidate.id}
                           className="bg-white border-2 border-black rounded-lg p-2 flex items-stretch gap-2 relative"
                           style={{
-                            minHeight: gridDensity === "10" ? "42mm" : "48mm",
+                            minHeight: gridDensity === "10" ? "48mm" : "56mm",
                           }}
                         >
                           {/* S.No Badge */}
@@ -768,19 +865,25 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                             #{globalIdx}
                           </span>
 
-                          {/* Candidate Photo Box */}
-                          <div className="w-[58px] h-[74px] shrink-0 bg-slate-100 border border-black rounded overflow-hidden flex items-center justify-center relative">
+                          {/* Candidate Photo Box (Large & Focused) */}
+                          <div
+                            className="shrink-0 bg-slate-100 border-2 border-black rounded-lg overflow-hidden flex items-center justify-center relative shadow-xs"
+                            style={{
+                              width: gridDensity === "10" ? "75px" : "88px",
+                              height: gridDensity === "10" ? "95px" : "112px",
+                            }}
+                          >
                             {photo ? (
                               <img
                                 src={photo}
                                 alt={name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover object-top"
                                 crossOrigin="anonymous"
                               />
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-1 text-center">
-                                <User className="w-5 h-5 text-slate-400" />
-                                <span className="text-[7.5px] font-black uppercase text-slate-500 mt-0.5">No Photo</span>
+                                <User className="w-6 h-6 text-slate-400" />
+                                <span className="text-[8px] font-black uppercase text-slate-500 mt-0.5">No Photo</span>
                               </div>
                             )}
                           </div>
