@@ -21,6 +21,7 @@ import {
   Lock,
   CheckCircle2,
   AlertTriangle,
+  Printer,
   X,
 } from "lucide-react";
 
@@ -430,6 +431,15 @@ export default function AdminEventAttendancePage(props: { params: Promise<{ id: 
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={`/admin/events/${eventId}/print-attendance`}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-3.5 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2 cursor-pointer active:scale-95"
+            title="Download & Print physical attendance roster with candidate photos, reg numbers, and signature boxes"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Sheet (With Photos)</span>
+          </Link>
+
           <a
             href={`/api/admin/events/${eventId}/export-attendance-sheet`}
             download
