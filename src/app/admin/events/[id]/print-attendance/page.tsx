@@ -227,7 +227,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
   const handleDownloadPdf = async () => {
     if (isGeneratingPdf) return;
     setIsGeneratingPdf(true);
-    setPdfProgress("Initializing PDF engine...");
+    setPdfProgress("Preparing images & fonts...");
 
     try {
       const { jsPDF } = await import("jspdf");
@@ -238,6 +238,33 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
         alert("No attendance pages found to export.");
         return;
       }
+
+      // Ensure all images are converted to base64 Data URLs so canvas is 100% clean and exportable
+      const allImgs = document.querySelectorAll<HTMLImageElement>(".printable-a4-page img");
+      await Promise.all(
+        Array.from(allImgs).map(async (img) => {
+          if (img.src && !img.src.startsWith("data:")) {
+            try {
+              const res = await fetch(img.src);
+              if (res.ok) {
+                const blob = await res.blob();
+                const reader = new FileReader();
+                await new Promise<void>((resolve) => {
+                  reader.onloadend = () => {
+                    if (typeof reader.result === "string") {
+                      img.src = reader.result;
+                    }
+                    resolve();
+                  };
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch {
+              // Ignore individual image failure
+            }
+          }
+        })
+      );
 
       const doc = new jsPDF({
         orientation: "portrait",
@@ -253,10 +280,10 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
         const canvas = await html2canvas(pageEl, {
           scale: 2, // 2x sharp high-DPI quality
           useCORS: true,
-          allowTaint: true,
+          allowTaint: false, // Must be false so toDataURL never throws SecurityError
           backgroundColor: "#ffffff",
           logging: false,
-          windowWidth: 1200,
+          imageTimeout: 15000,
         });
 
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
@@ -278,7 +305,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
       doc.save(fileName);
     } catch (err: any) {
       console.error("PDF generation error:", err);
-      alert("Failed to generate PDF. Please try again or use the browser print option.");
+      alert(`Could not generate PDF: ${err?.message || "Unknown error"}. Please try again.`);
     } finally {
       setIsGeneratingPdf(false);
       setPdfProgress(null);

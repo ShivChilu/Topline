@@ -74,7 +74,9 @@ export async function GET(request: Request) {
           headers: {
             "Content-Type": mimeType,
             "Content-Length": buffer.length.toString(),
-            "Cache-Control": "public, max-age=0, must-revalidate",
+            "Cache-Control": "public, max-age=86400, stale-while-revalidate=86400",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
           },
         });
       }
