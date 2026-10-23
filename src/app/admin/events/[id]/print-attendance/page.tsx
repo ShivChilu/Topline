@@ -89,6 +89,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
   // PDF Generation State
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfProgress, setPdfProgress] = useState<string | null>(null);
+  const [logoDataUrl, setLogoDataUrl] = useState<string>("/branding/logo.png");
 
   // View & Customization Controls
   const [layoutMode, setLayoutMode] = useState<"table" | "grid">("table");
@@ -101,6 +102,11 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
   const pagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Pre-fetch Topline logo as base64 for instant canvas capture
+    fetchPhotoAsDataUrl("/branding/logo.png").then((base64) => {
+      if (base64) setLogoDataUrl(base64);
+    });
+
     async function loadData() {
       try {
         setLoading(true);
@@ -369,6 +375,9 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
             </Link>
             <div>
               <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-white rounded p-0.5 flex items-center justify-center shrink-0">
+                  <img src={logoDataUrl} alt="Logo" className="w-full h-full object-contain" />
+                </div>
                 <span className="text-[10px] bg-red-600 font-black px-2 py-0.5 rounded text-white uppercase tracking-wider">
                   Attendance PDF
                 </span>
@@ -543,18 +552,40 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
               {isFirstPage ? (
                 /* Master Document Header on Page 1 */
                 <div className="border-b-2 border-black pb-3 mb-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-base sm:text-lg tracking-wider text-black uppercase">
-                        TOPLINE ODC
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {/* Topline Brand Logo */}
+                      <div className="w-12 h-12 bg-white rounded border border-slate-400 p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
+                        <img
+                          src={logoDataUrl}
+                          alt="Topline Logo"
+                          className="w-full h-full object-contain"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-base sm:text-lg tracking-wider text-black uppercase">
+                            TOPLINE ODC
+                          </span>
+                          <span className="text-xs font-bold text-slate-600 uppercase border-l border-slate-400 pl-2">
+                            Attendance Sheet
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-tight mt-0.5 leading-snug">
+                          {event.name}
+                        </h2>
+                      </div>
+                    </div>
+
+                    <div className="text-right hidden sm:block">
+                      <span className="text-[10px] font-mono font-bold text-slate-600 uppercase block">
+                        Official Physical Roster
                       </span>
-                      <span className="text-xs font-bold text-slate-600 uppercase border-l border-slate-400 pl-2">
-                        Attendance Sheet
+                      <span className="text-xs font-black text-black uppercase">
+                        Page {pageNum} of {totalPages}
                       </span>
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-tight mt-1 leading-snug">
-                      {event.name}
-                    </h2>
                   </div>
 
                   {/* Event Specs */}
@@ -589,7 +620,15 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
               ) : (
                 /* Compact Repeat Header on Page 2+ */
                 <div className="border-b-2 border-black pb-2 mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 bg-white rounded border border-slate-400 p-0.5 flex items-center justify-center shrink-0">
+                      <img
+                        src={logoDataUrl}
+                        alt="Topline Logo"
+                        className="w-full h-full object-contain"
+                        crossOrigin="anonymous"
+                      />
+                    </div>
                     <span className="font-black text-sm tracking-wider text-black uppercase">TOPLINE ODC</span>
                     <span className="text-xs text-slate-700 font-bold uppercase truncate max-w-md">
                       &bull; {event.name}
@@ -814,7 +853,15 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
 
               {/* SHEET FOOTER */}
               <div className="mt-2 pt-1 border-t border-slate-300 flex items-center justify-between text-[8.5px] text-slate-500 font-mono">
-                <span>TOPLINE ODC Operations &bull; Physical Attendance &bull; Confidential</span>
+                <div className="flex items-center gap-1.5">
+                  <img
+                    src={logoDataUrl}
+                    alt="Logo"
+                    className="w-3.5 h-3.5 object-contain"
+                    crossOrigin="anonymous"
+                  />
+                  <span>TOPLINE ODC Operations &bull; Physical Attendance &bull; Confidential</span>
+                </div>
                 <span className="font-bold text-black">
                   Page {pageNum} of {totalPages}
                 </span>

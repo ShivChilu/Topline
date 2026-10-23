@@ -221,22 +221,39 @@ export default function ClientShowcasePage(props: { params: Promise<{ token: str
       {/* ------------------------------------------------------------- */}
       {/* LUXURY TOP HEADER                                             */}
       {/* ------------------------------------------------------------- */}
-      <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                Verified Crew Showcase
-              </span>
-              <span className="text-xs text-slate-400">&bull;</span>
-              <span className="text-xs font-semibold text-slate-400 font-mono">
-                {candidates.length} Staff Selected
-              </span>
+      <header className="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            {/* Topline Brand Logo */}
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white p-1 border border-slate-700/80 shadow-lg flex items-center justify-center shrink-0">
+              <img
+                src="/branding/logo.png"
+                alt="TOPLINE ODC Logo"
+                className="w-full h-full object-contain rounded-xl"
+              />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase mt-1">
-              {event.title}
-            </h1>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-[11px] sm:text-xs tracking-widest text-amber-400 uppercase font-display">
+                  TOPLINE ODC
+                </span>
+                <span className="text-slate-600 hidden xs:inline">&bull;</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  Verified Crew Showcase
+                </span>
+                <span className="text-xs text-slate-500 hidden sm:inline">&bull;</span>
+                <span className="text-xs font-semibold text-slate-400 font-mono hidden sm:inline">
+                  {candidates.length} Staff Selected
+                </span>
+              </div>
+              <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight uppercase mt-0.5">
+                {event.title}
+              </h1>
+              <p className="text-[11px] text-slate-400 font-mono sm:hidden mt-0.5">
+                {candidates.length} Staff Selected
+              </p>
+            </div>
           </div>
 
           {/* Event Quick Specs */}
@@ -564,7 +581,17 @@ export default function ClientShowcasePage(props: { params: Promise<{ token: str
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 py-8 text-center text-xs text-slate-600 font-mono">
+      <footer className="border-t border-slate-900 py-8 text-center text-xs text-slate-500 font-mono">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded-md bg-white p-0.5 flex items-center justify-center">
+            <img
+              src="/branding/logo.png"
+              alt="TOPLINE Logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <span className="font-extrabold uppercase tracking-widest text-slate-300">TOPLINE ODC</span>
+        </div>
         <p>Verified Hospitality &amp; Event Staff Showcase &bull; Confidential</p>
       </footer>
     </div>
