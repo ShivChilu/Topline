@@ -516,32 +516,22 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
               {isFirstPage ? (
                 /* Master Document Header on Page 1 */
                 <div className="border-b-2 border-black pb-3 mb-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-base sm:text-lg tracking-wider text-black uppercase">
-                          TOPLINE ODC
-                        </span>
-                        <span className="text-xs font-bold text-slate-600 uppercase border-l border-slate-400 pl-2">
-                          Event Attendance &amp; Physical Signature Sheet
-                        </span>
-                      </div>
-                      <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-tight mt-1 leading-snug">
-                        {event.name}
-                      </h2>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="inline-block bg-black text-white text-[11px] font-black uppercase px-2.5 py-0.5 rounded">
-                        Official Roster
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-base sm:text-lg tracking-wider text-black uppercase">
+                        TOPLINE ODC
                       </span>
-                      <p className="text-[10px] text-slate-600 font-mono mt-1">
-                        Generated: {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                      </p>
+                      <span className="text-xs font-bold text-slate-600 uppercase border-l border-slate-400 pl-2">
+                        Attendance Sheet
+                      </span>
                     </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-tight mt-1 leading-snug">
+                      {event.name}
+                    </h2>
                   </div>
 
                   {/* Event Specs */}
-                  <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2 border-t border-slate-300 text-xs">
+                  <div className="grid grid-cols-3 gap-3 mt-2.5 pt-2 border-t border-slate-300 text-xs">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-700 shrink-0" />
                       <div>
@@ -564,19 +554,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                       <MapPin className="w-3.5 h-3.5 text-slate-700 shrink-0" />
                       <div>
                         <span className="text-[8.5px] text-slate-500 uppercase block font-bold">Venue / Location</span>
-                        <span className="font-bold text-black text-[11px] truncate block max-w-[140px]">
-                          {event.location}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-                      <div>
-                        <span className="text-[8.5px] text-slate-500 uppercase block font-bold">Confirmed Stewards</span>
-                        <span className="font-black text-black text-[11px]">
-                          {filteredCandidates.length} Total {event.workersRequired ? `(Req: ${event.workersRequired})` : ""}
-                        </span>
+                        <span className="font-bold text-black text-[11px] truncate block">{event.location}</span>
                       </div>
                     </div>
                   </div>
@@ -612,8 +590,8 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                         {showUniversity && (
                           <th className="p-1.5 border border-black font-black w-28">University / City</th>
                         )}
-                        <th className="p-1.5 border border-black text-center font-black w-44">
-                          Physical Signature (Pen)
+                        <th className="p-1.5 border border-black text-center font-black w-40">
+                          Signature
                         </th>
                         <th className="p-1.5 border border-black text-center font-black w-18">In-Time</th>
                       </tr>
@@ -676,11 +654,11 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                               </td>
                             )}
 
-                            {/* Physical Signature Box */}
+                            {/* Signature Box */}
                             <td className="p-1 border border-black text-center">
                               <div className="w-full h-9 border border-dashed border-slate-400 rounded flex items-end justify-center pb-0.5">
                                 <span className="text-[7.5px] uppercase tracking-wider text-slate-400 font-bold">
-                                  Signature Line
+                                  Signature
                                 </span>
                               </div>
                             </td>
@@ -760,11 +738,11 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
                               </div>
                             </div>
 
-                            {/* Physical Signature Box */}
+                            {/* Signature Box */}
                             <div className="mt-1 pt-1 border-t border-slate-300">
                               <div className="border border-black rounded px-1.5 py-0.5 bg-slate-50 h-8 flex flex-col justify-between">
                                 <span className="text-[7px] font-black uppercase tracking-wider text-slate-700 block">
-                                  Physical Signature
+                                  Signature
                                 </span>
                                 <div className="flex items-end justify-between text-[7.5px] text-slate-400 font-mono">
                                   <span>Sign above</span>
