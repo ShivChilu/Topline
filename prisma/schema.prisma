@@ -282,6 +282,14 @@ model Event {
   gracePeriod                 Int                  @default(15)
   attendanceDisplayFields     String[]             @default([])
 
+  // Client Showcase Sharing
+  clientShareToken            String?              @unique
+  clientShareEnabled          Boolean              @default(false)
+  clientShareTitle            String?
+  clientShareFields           String[]             @default(["name", "photos", "height", "gender"])
+  clientShareCandidateStatus  String[]             @default(["CONFIRMED"])
+  clientShareCustomNotes      String?
+
   createdAt                   DateTime             @default(now())
   updatedAt                   DateTime             @updatedAt
 
@@ -289,6 +297,7 @@ model Event {
   @@index([status])
   @@index([visibility])
   @@index([attendanceToken])
+  @@index([clientShareToken])
 }
 
 // Event Admin & Calling Admin assignment relationship

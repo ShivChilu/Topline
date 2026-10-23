@@ -64,6 +64,7 @@ import LiveAttendanceModal from "@/components/admin/LiveAttendanceModal";
 import AddStudentFromMasterModal from "@/components/admin/AddStudentFromMasterModal";
 import SelectionEmailReviewModal from "@/components/admin/SelectionEmailReviewModal";
 import CallLoggerModal from "@/components/admin/CallLoggerModal";
+import ClientShareModal from "@/components/admin/ClientShareModal";
 import {
   matchesGender,
   matchesHeight,
@@ -192,6 +193,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [isAddFromMasterModalOpen, setIsAddFromMasterModalOpen] = useState(false);
   const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [isLiveAttendanceModalOpen, setIsLiveAttendanceModalOpen] = useState(false);
+  const [isClientShareModalOpen, setIsClientShareModalOpen] = useState(false);
   const [addFormData, setAddFormData] = useState<Record<string, any>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [addModalError, setAddModalError] = useState<string | null>(null);
@@ -1635,6 +1637,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <span>Attendance PDF</span>
           </Link>
 
+          {/* Share Crew with Client Button */}
+          <button
+            type="button"
+            onClick={() => setIsClientShareModalOpen(true)}
+            className="bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+            title="Create an anonymous client link to share candidate photos, height & names"
+          >
+            <Share2 className="w-3.5 h-3.5 text-purple-600" />
+            <span>Share with Client</span>
+          </button>
+
           {/* + Actions Dropdown */}
           {currentAdminRole !== "calling" && (
             <div className="relative" ref={actionsDropdownRef}>
@@ -1796,6 +1809,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       <Download className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Download Attendance PDF</span>
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsActionsDropdownOpen(false);
+                        setIsClientShareModalOpen(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 flex items-center gap-2 transition cursor-pointer"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Share Crew with Client</span>
+                    </button>
                     <a
                       href={`/events/${eventId}`}
                       target="_blank"
@@ -5074,6 +5098,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             showToast("Event successfully reopened and slots added!");
             fetchEventData(true);
           }}
+        />
+      )}
+
+      {/* Client Showcase Share Modal */}
+      {isClientShareModalOpen && event && (
+        <ClientShareModal
+          eventId={eventId}
+          eventName={event.name}
+          isOpen={isClientShareModalOpen}
+          onClose={() => setIsClientShareModalOpen(false)}
         />
       )}
 
