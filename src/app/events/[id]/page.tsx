@@ -6,7 +6,7 @@ import EventApplicationForm from "@/components/EventApplicationForm";
 import EventAssistantChatbot from "@/components/events/EventAssistantChatbot";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import { Calendar, MapPin, Clock, ShieldCheck, Users, Banknote, Flame, CheckCircle, Gift, ArrowRight, Sparkles } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
@@ -67,8 +67,18 @@ export default async function EventDetailsPage(props: {
         isLoggedInStudent = true;
       }
     }
+    // Also allow logged-in admin preview
+    const adminToken = cookieStore.get("admin_token")?.value;
+    if (adminToken && verifyToken(adminToken)) {
+      isLoggedInStudent = true;
+    }
   } catch {
     // public visitor or crawler
+  }
+
+  // Only registered candidates can view event details & application
+  if (!isLoggedInStudent) {
+    redirect(`/login?redirect=/events/${params.id}`);
   }
 
   const customFormFields = event.eventFormFields.map((eff: any) => ({

@@ -26,6 +26,7 @@ import {
   GraduationCap,
   ShieldCheck,
   HelpCircle,
+  Lock,
 } from "lucide-react";
 
 export const revalidate = 0; // Dynamic rendering for latest opportunities
@@ -110,13 +111,19 @@ export default async function HomePage() {
   }
 
   // Check if a signed-in student has NOT created a referral code yet
+  let isLoggedInCandidate = false;
   let unactivatedReferralUser: { id: string; name: string } | null = null;
   try {
     const cookieStore = await cookies();
     const userToken = cookieStore.get("user_token")?.value;
+    const adminToken = cookieStore.get("admin_token")?.value;
+    if (adminToken && verifyToken(adminToken)) {
+      isLoggedInCandidate = true;
+    }
     if (userToken) {
       const decoded = verifyToken(userToken);
       if (decoded?.id) {
+        isLoggedInCandidate = true;
         const u = await prisma.user.findUnique({
           where: { id: decoded.id },
           select: { id: true, name: true, referralCode: true, role: true },
@@ -128,7 +135,7 @@ export default async function HomePage() {
       }
     }
   } catch (err) {
-    console.error("Home page referral auth check error:", err);
+    console.error("Home page auth check error:", err);
   }
 
   const defaultServices = [
@@ -147,7 +154,7 @@ export default async function HomePage() {
       <div className="absolute top-[60%] right-[-10%] w-[40vw] h-[40vw] bg-red-650/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
 
       {/* Top Urgent Recruitment Announcement Bar */}
-      {heroFeaturedEvent && (
+      {heroFeaturedEvent && isLoggedInCandidate && (
         <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-1.5 px-3 sm:py-2.5 sm:px-4 text-xs font-bold shadow-md relative z-40 border-b border-red-700">
           <div className="max-w-7xl mx-auto flex items-center justify-between sm:justify-center text-left sm:text-center gap-2 sm:gap-3 flex-nowrap w-full">
             <div className="flex items-center gap-1.5 min-w-0 flex-1 sm:flex-initial overflow-hidden">
@@ -175,30 +182,52 @@ export default async function HomePage() {
       {/* Hero Slideshow Section */}
       <HeroSlideshow headline={homeContent.headline} subheadline={homeContent.subheadline}>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 w-full max-w-[420px] sm:max-w-none mx-auto">
-          {heroFeaturedEvent ? (
-            <Link
-              href={`/events/${heroFeaturedEvent.id}`}
-              className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md shadow-red-600/30 hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
-              <span>Apply for {heroFeaturedEvent.name}</span>
-              <ArrowRight className="w-4 h-4 shrink-0" />
-            </Link>
+          {isLoggedInCandidate ? (
+            <>
+              {heroFeaturedEvent ? (
+                <Link
+                  href={`/events/${heroFeaturedEvent.id}`}
+                  className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md shadow-red-600/30 hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span>Apply for {heroFeaturedEvent.name}</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
+                </Link>
+              ) : (
+                <Link
+                  href="/opportunities"
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
+                >
+                  <span>Upcoming Events</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
+              <Link
+                href="/opportunities"
+                className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-bold border border-slate-200 shadow-xs transition-all duration-300 flex items-center justify-center box-border active:scale-95"
+              >
+                Browse All Events
+              </Link>
+            </>
           ) : (
-            <Link
-              href="/opportunities"
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
-            >
-              <span>Upcoming Events</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <>
+              <Link
+                href="/register?redirect=/opportunities"
+                className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-extrabold shadow-md shadow-red-600/30 hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 box-border active:scale-95"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                <span>Join Student Crew (Register)</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </Link>
+              <Link
+                href="/login?redirect=/opportunities"
+                className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-bold border border-slate-200 shadow-xs transition-all duration-300 flex items-center justify-center gap-2 box-border active:scale-95"
+              >
+                <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                <span>Candidate Sign In</span>
+              </Link>
+            </>
           )}
-          <Link
-            href="/opportunities"
-            className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 px-5 py-3 sm:px-8 sm:py-3.5 rounded-xl text-xs sm:text-base font-bold border border-slate-200 shadow-xs transition-all duration-300 flex items-center justify-center box-border active:scale-95"
-          >
-            Browse All Events
-          </Link>
         </div>
       </HeroSlideshow>
 
@@ -316,15 +345,46 @@ export default async function HomePage() {
               </h2>
             </div>
             <Link
-              href="/opportunities"
+              href={isLoggedInCandidate ? "/opportunities" : "/login?redirect=/opportunities"}
               className="text-red-600 hover:text-red-700 font-bold text-xs sm:text-sm flex items-center gap-1 transition"
             >
-              <span>View All</span>
+              <span>{isLoggedInCandidate ? "View All" : "Candidate Login"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {activeEvents.length === 0 ? (
+          {!isLoggedInCandidate ? (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-10 text-center max-w-2xl mx-auto">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100 shadow-xs">
+                <Lock className="w-7 h-7 sm:w-8 sm:h-8 text-red-600" />
+              </div>
+              <span className="bg-red-100 text-red-800 text-[10px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider inline-block mb-3">
+                Registered Candidates Only
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
+                Sign in to view upcoming and completed events
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mb-6 leading-relaxed">
+                Event schedules, banquet staffing opportunities, and completed shift records are visible exclusively to registered Topline candidates.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/login?redirect=/opportunities"
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-extrabold px-6 py-3 rounded-xl text-xs sm:text-sm transition shadow-md shadow-red-600/20 active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Candidate Sign In</span>
+                </Link>
+                <Link
+                  href="/register?redirect=/opportunities"
+                  className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold px-6 py-3 rounded-xl text-xs sm:text-sm transition active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <span>Register Free</span>
+                  <ArrowRight className="w-4 h-4 text-slate-500" />
+                </Link>
+              </div>
+            </div>
+          ) : activeEvents.length === 0 ? (
             <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 shadow-xs">
               <p className="text-slate-500 text-sm sm:text-base font-bold">No active recruitment forms open right now.</p>
               <p className="text-slate-400 text-xs mt-1">Check back soon or join our student WhatsApp group.</p>

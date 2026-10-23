@@ -49,6 +49,7 @@ export default async function OpportunitiesPage(props: {
 }) {
   const searchParams = await props.searchParams;
   let events: any[] = [];
+  let rawEvents: any[] = [];
   let user: any = null;
   let profileCompletion = { percentage: 0, isComplete: false, missingFields: [] as string[], missingPhotos: [] as string[] };
 
@@ -80,8 +81,106 @@ export default async function OpportunitiesPage(props: {
         }
       }
     }
+    // Also allow logged-in admin preview
+    if (!user) {
+      const adminToken = cookieStore.get("admin_token")?.value;
+      if (adminToken) {
+        const decodedAdmin = verifyToken(adminToken);
+        if (decodedAdmin && decodedAdmin.id) {
+          user = await prisma.user.findUnique({
+            where: { id: decodedAdmin.id },
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              registrationNumber: true,
+              referralCode: true,
+              applications: {
+                select: {
+                  eventId: true,
+                  status: true,
+                },
+              },
+            },
+          });
+        }
+      }
+    }
   } catch (err) {
     console.error("Auth session check error on opportunities page:", err);
+  }
+
+  // -------------------------------------------------------------
+  // GATING: Only registered candidates (and admins) can see events
+  // -------------------------------------------------------------
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-700 relative grid-bg overflow-hidden">
+        {/* Decorative Blur Blobs */}
+        <div className="absolute top-[10%] right-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+        <div className="absolute top-[50%] left-[-10%] w-[35vw] h-[35vw] bg-red-600/5 rounded-full floating-blob -z-10 pointer-events-none"></div>
+
+        <Navbar />
+
+        <main className="flex-grow max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 w-full flex flex-col items-center justify-center text-center">
+          <div className="bg-white border-2 border-slate-200/90 rounded-3xl p-8 sm:p-12 shadow-xl max-w-2xl w-full space-y-6 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Top Lock Badge */}
+            <div className="w-16 h-16 bg-red-50 text-red-600 border border-red-200 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+              <Lock className="w-8 h-8 text-red-600" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-black uppercase tracking-wider">
+                Registered Candidates Only
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Upcoming &amp; Completed Events Access
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
+                Event schedules, catering shifts, reporting venues, shift payouts, and completed assignment records are exclusive to registered Topline student crew.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Link
+                href="/login?redirect=/opportunities"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 active:scale-95 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shadow-red-600/20 text-center"
+              >
+                Sign In to My Account
+              </Link>
+              <Link
+                href="/register?redirect=/opportunities"
+                className="w-full sm:w-auto bg-slate-900 hover:bg-black active:scale-95 text-white font-extrabold px-8 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition shadow-sm text-center"
+              >
+                Register as Candidate
+              </Link>
+            </div>
+
+            {/* Candidate Benefits */}
+            <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span className="text-base block mb-1">💰</span>
+                <h4 className="text-xs font-bold text-slate-900">Verified Payouts</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">Direct UPI payout for every completed catering shift.</p>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span className="text-base block mb-1">🏨</span>
+                <h4 className="text-xs font-bold text-slate-900">5-Star Luxury Venues</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">Work premier banquets &amp; resort events across Punjab.</p>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span className="text-base block mb-1">⏰</span>
+                <h4 className="text-xs font-bold text-slate-900">Flexible Shifts</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">Choose weekend and evening shifts around college hours.</p>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
   }
 
   try {
@@ -110,7 +209,7 @@ export default async function OpportunitiesPage(props: {
       ];
     }
 
-    const rawEvents = await prisma.event.findMany({
+    rawEvents = await prisma.event.findMany({
       where: whereClause,
       orderBy: { date: "asc" },
     });
@@ -123,9 +222,19 @@ export default async function OpportunitiesPage(props: {
     }));
 
     // Filter by requested status if provided
+    const requestedStatus = (searchParams.status || "UPCOMING").toUpperCase();
     let filteredEvents = processedEvents;
-    if (searchParams.status) {
-      filteredEvents = filteredEvents.filter((e) => e.status === searchParams.status);
+
+    if (requestedStatus === "UPCOMING") {
+      filteredEvents = processedEvents.filter((e) => !e.isPast && ["OPEN", "SCHEDULED", "FULL"].includes(e.status));
+    } else if (requestedStatus === "COMPLETED") {
+      filteredEvents = processedEvents.filter((e) => e.isPast || e.status === "COMPLETED");
+    } else if (requestedStatus === "OPEN") {
+      filteredEvents = processedEvents.filter((e) => e.status === "OPEN");
+    } else if (requestedStatus === "FULL") {
+      filteredEvents = processedEvents.filter((e) => e.status === "FULL");
+    } else if (searchParams.status && requestedStatus !== "ALL") {
+      filteredEvents = processedEvents.filter((e) => e.status === searchParams.status);
     }
 
     // Smart Marketing-First Priority Sorting:
@@ -145,6 +254,11 @@ export default async function OpportunitiesPage(props: {
     };
 
     events = [...filteredEvents].sort((a, b) => {
+      if (requestedStatus === "COMPLETED") {
+        const dA = a.date ? new Date(a.date).getTime() : 0;
+        const dB = b.date ? new Date(b.date).getTime() : 0;
+        return dB - dA; // Most recently concluded events first
+      }
       const pA = statusPriority[a.status] || 99;
       const pB = statusPriority[b.status] || 99;
       if (pA !== pB) return pA - pB;
@@ -157,8 +271,14 @@ export default async function OpportunitiesPage(props: {
   }
 
   const allMissing = [...profileCompletion.missingFields, ...profileCompletion.missingPhotos];
-  const openEvents = events.filter((e: any) => e.status === "OPEN");
-  const fullEvents = events.filter((e: any) => e.status === "FULL");
+  const upcomingEvents = rawEvents.filter(
+    (e: any) => !isEventPast(e.date) && ["OPEN", "SCHEDULED", "FULL"].includes(getEffectiveEventStatus(e))
+  );
+  const completedEvents = rawEvents.filter(
+    (e: any) => isEventPast(e.date) || getEffectiveEventStatus(e) === "COMPLETED"
+  );
+  const openEvents = rawEvents.filter((e: any) => getEffectiveEventStatus(e) === "OPEN");
+  const fullEvents = rawEvents.filter((e: any) => getEffectiveEventStatus(e) === "FULL");
   const featuredOpenEvent = openEvents[0] || null;
 
   return (
@@ -400,14 +520,26 @@ export default async function OpportunitiesPage(props: {
 
           <div className="flex gap-2 flex-wrap">
             <Link
-              href="/opportunities"
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
-                !searchParams.status
+              href="/opportunities?status=UPCOMING"
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center gap-1.5 ${
+                (!searchParams.status || searchParams.status === "UPCOMING")
                   ? "bg-red-600 text-white shadow-sm"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              All Events ({events.length})
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Upcoming Events ({upcomingEvents.length})</span>
+            </Link>
+            <Link
+              href="/opportunities?status=COMPLETED"
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition flex items-center gap-1.5 ${
+                searchParams.status === "COMPLETED"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>Completed Events ({completedEvents.length})</span>
             </Link>
             <Link
               href="/opportunities?status=OPEN"
@@ -417,18 +549,17 @@ export default async function OpportunitiesPage(props: {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Open Only ({openEvents.length})</span>
+              <span>Open Shifts ({openEvents.length})</span>
             </Link>
             <Link
-              href="/opportunities?status=FULL"
+              href="/opportunities?status=ALL"
               className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
-                searchParams.status === "FULL"
-                  ? "bg-amber-600 text-white shadow-sm"
+                searchParams.status === "ALL"
+                  ? "bg-slate-900 text-white shadow-sm"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              Full ({fullEvents.length})
+              All Events ({rawEvents.length})
             </Link>
           </div>
         </div>
@@ -437,8 +568,16 @@ export default async function OpportunitiesPage(props: {
         {events.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
             <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-800">No events found matching your criteria</h3>
-            <p className="text-xs text-slate-500 mt-1">Please check back soon or try clear filters.</p>
+            <h3 className="text-lg font-bold text-slate-800">
+              {searchParams.status === "COMPLETED"
+                ? "No completed events found"
+                : "No upcoming events found matching your criteria"}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              {searchParams.status === "COMPLETED"
+                ? "Concluded events will appear here once shifts are completed."
+                : "Check back soon or join our student WhatsApp group."}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
