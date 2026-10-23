@@ -16,7 +16,7 @@
     "bcryptjs": "^3.0.3",
     "exceljs": "^4.4.0",
     "groq-sdk": "^1.6.0",
-    "html2canvas": "^1.4.1",
+    "html2canvas-pro": "^2.5.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",

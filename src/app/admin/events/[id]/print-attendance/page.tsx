@@ -231,7 +231,7 @@ export default function PrintAttendancePage(props: { params: Promise<{ id: strin
 
     try {
       const { jsPDF } = await import("jspdf");
-      const html2canvas = (await import("html2canvas")).default;
+      const html2canvas = (await import("html2canvas-pro")).default;
 
       const pageElements = document.querySelectorAll<HTMLElement>(".printable-a4-page");
       if (!pageElements.length) {
