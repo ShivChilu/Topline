@@ -451,7 +451,7 @@ export async function sendEventSelectionEmail({
       return res;
     };
 
-    let subject = `Action Required: Confirm Attendance & Join WhatsApp Group for ${eventName}`;
+    let subject = `Confirm your slot & Join New WhatsApp Group for ${eventName}`;
     if (customSubject && customSubject.trim()) {
       subject = replacePlaceholders(customSubject.trim());
     }
@@ -543,7 +543,7 @@ export async function sendEventSelectionEmail({
                 : ""
             }
             <div style="font-size: 19px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
-              Confirm Attendance &amp; Join Event WhatsApp Group
+              Confirm Attendance &amp; Join New WhatsApp Group
             </div>
             <p style="font-size: 13px; color: #d1fae5; margin: 0 0 18px 0; line-height: 1.5;">
               Click the button below to confirm your duty availability. Once clicked, your slot on the official duty roster is confirmed and you will be taken directly into the <strong>${eventName} WhatsApp Group</strong> for shift timings, uniform requirements, and reporting coordinators.
