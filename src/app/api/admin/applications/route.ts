@@ -568,44 +568,45 @@ export async function PATCH(request: Request) {
           },
         });
 
-        // Trigger email asynchronously only when status genuinely transitioned
-        if (sendEmail && app.user?.email) {
-          if (nextStatus === "SELECTED") {
-            sendEventSelectionEmail({
-              studentName: app.user.name || app.name,
-              email: app.user.email,
-              eventName: app.event.name,
-              eventDate: app.event.date,
-              eventLocation: app.event.location,
-              reportingTime: app.event.reportingTime,
-              instructions: customInstructions !== undefined ? customInstructions : app.event.instructions,
-              notes,
-              customSubject,
-              customMessage,
-              confirmationDeadline,
-              whatsappGroupLink: app.event.whatsappGroupLink || undefined,
-              applicationId: app.id,
-              userId: app.userId,
-              eventId: app.eventId,
-            }).catch((err) => console.error("Event selection email dispatch error:", err));
-          } else if (nextStatus === "NOT_SELECTED" || nextStatus === "REJECTED") {
-            sendEventDeselectionEmail({
-              studentName: app.user.name || app.name,
-              email: app.user.email,
-              eventName: app.event.name,
-              eventDate: app.event.date,
-              notes,
-              applicationId: app.id,
-              userId: app.userId,
-              eventId: app.eventId,
-            }).catch((err) => console.error("Event deselection email dispatch error:", err));
-          }
-        }
-
         if (nextStatus === "ATTENDED" && app.userId) {
           processReferralQualification(app.userId, app.eventId).catch((err) =>
             console.error("[Referral Error] Failed processing in applications bulk update:", err)
           );
+        }
+      }
+
+      // Trigger selection / deselection emails if sendEmail is true (handles both initial status transition and re-sending to already selected candidates)
+      if (sendEmail && app.user?.email) {
+        const targetStatus = nextStatus || oldStatus;
+        if (targetStatus === "SELECTED") {
+          sendEventSelectionEmail({
+            studentName: app.user.name || app.name,
+            email: app.user.email,
+            eventName: app.event.name,
+            eventDate: app.event.date,
+            eventLocation: app.event.location,
+            reportingTime: app.event.reportingTime,
+            instructions: customInstructions !== undefined ? customInstructions : app.event.instructions,
+            notes,
+            customSubject,
+            customMessage,
+            confirmationDeadline,
+            whatsappGroupLink: app.event.whatsappGroupLink || undefined,
+            applicationId: app.id,
+            userId: app.userId,
+            eventId: app.eventId,
+          }).catch((err) => console.error("Event selection email dispatch error:", err));
+        } else if (isStatusChanged && (targetStatus === "NOT_SELECTED" || targetStatus === "REJECTED")) {
+          sendEventDeselectionEmail({
+            studentName: app.user.name || app.name,
+            email: app.user.email,
+            eventName: app.event.name,
+            eventDate: app.event.date,
+            notes,
+            applicationId: app.id,
+            userId: app.userId,
+            eventId: app.eventId,
+          }).catch((err) => console.error("Event deselection email dispatch error:", err));
         }
       }
 

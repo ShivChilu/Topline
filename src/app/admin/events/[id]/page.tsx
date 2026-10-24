@@ -3409,6 +3409,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                                 <span className="font-bold text-slate-700 bg-slate-100 px-1 rounded">
                                   {getEventEmailLogs(app).length} Sent
                                 </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openSelectionModal([app]);
+                                  }}
+                                  className="text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 font-extrabold px-1.5 py-0.5 rounded text-[9.5px] transition flex items-center gap-0.5 cursor-pointer shadow-2xs active:scale-95"
+                                  title="Resend Official Selection Email & WhatsApp Invite"
+                                >
+                                  <RefreshCw className="w-2.5 h-2.5" />
+                                  <span>Resend</span>
+                                </button>
                                 {getEventEmailLogs(app).some((l) => l.openedAt || (l.openCount && l.openCount > 0)) && (
                                   <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded">
                                     Opened
@@ -3507,9 +3519,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
                         {/* Message / Email */}
                         <button
-                          onClick={() => openCustomEmailModal([app])}
-                          className="p-1.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 text-blue-700 hover:text-white rounded-lg transition flex items-center justify-center shrink-0 shadow-2xs"
-                          title="Send Custom Message / Email"
+                          onClick={() => {
+                            if (sStatus === "SELECTED") {
+                              openSelectionModal([app]);
+                            } else {
+                              openCustomEmailModal([app]);
+                            }
+                          }}
+                          className="p-1.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 text-blue-700 hover:text-white rounded-lg transition flex items-center justify-center shrink-0 shadow-2xs cursor-pointer"
+                          title={sStatus === "SELECTED" ? "Resend Official Selection Email & WhatsApp Link" : "Send Custom Message / Email"}
                         >
                           <Mail className="w-3.5 h-3.5" />
                         </button>
@@ -4434,6 +4452,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           </label>
                         </div>
 
+                        {inspectCandidate.status === "SELECTED" && (
+                          <div className="mb-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const target = inspectCandidate;
+                                setInspectCandidate(null);
+                                openSelectionModal([target]);
+                              }}
+                              className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-95"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Resend Official Selection Email &amp; WhatsApp Link</span>
+                            </button>
+                          </div>
+                        )}
                         {/* Decision Action Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {/* Approve & Select */}
@@ -4762,6 +4796,28 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
             {/* Scrollable Modal Content */}
             <div className="p-6 overflow-y-auto space-y-5 flex-1 text-slate-900">
+              {/* Quick Switch to Official Selection Email */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-emerald-950 block">Official Event Selection &amp; WhatsApp Group Email</span>
+                    <span className="text-[11px] text-emerald-700">Looking to send or resend the official 1-click confirmation &amp; WhatsApp invite?</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailModalOpen(false);
+                    openSelectionModal(emailTargetApps);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2 rounded-xl transition shrink-0 cursor-pointer shadow-xs active:scale-95"
+                >
+                  Open Selection Modal →
+                </button>
+              </div>
               {/* PLACEHOLDER TAGS TOOLBAR (Hidden for Event Admin) */}
               {currentAdminRole !== "event_admin" && (
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2.5">

@@ -30,7 +30,7 @@ const SELECTION_EMAIL_PRESETS: SelectionEmailPreset[] = [
     badge: "Recommended",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
     description: "Standard formal invitation asking the candidate to confirm attendance and join WhatsApp.",
-    subject: "Confirm your slot for {{eventName}}",
+    subject: "Action Required: Confirm Attendance & Join WhatsApp Group for {{eventName}}",
     body: "You are selected for {{eventName}}. Please confirm your availability immediately below to secure your slot on the duty roster.",
   },
   {
