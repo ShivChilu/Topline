@@ -3437,26 +3437,44 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
                       {/* Action Footer: Clean 1-Row Grid & Action Buttons */}
                       <div className="pt-2 border-t border-slate-100 flex items-center gap-1">
-                        {/* 1-Click Event Selection */}
-                        <button
-                          disabled={actionLoadingId === (app._id || app.id)}
-                          onClick={() => {
-                            if (sendEmailToggle && sStatus !== "SELECTED") {
-                              openSelectionModal([app]);
-                            } else {
-                              handleUpdateStatus(app._id || app.id, "SELECTED");
-                            }
-                          }}
-                          className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
-                            sStatus === "SELECTED"
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                              : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
-                          }`}
-                          title="Select Candidate"
-                        >
-                          <Check className="w-3 h-3" />
-                          <span>{sStatus === "SELECTED" ? "Selected" : "Select"}</span>
-                        </button>
+                        {/* Status Action: Select / Confirm */}
+                        {sStatus === "SELECTED" ? (
+                          <button
+                            disabled={actionLoadingId === (app._id || app.id)}
+                            onClick={() => handleUpdateStatus(app._id || app.id, "CONFIRMED")}
+                            className="flex-1 py-1.5 rounded-lg text-[11px] font-black bg-teal-600 hover:bg-teal-700 text-white shadow-xs transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                            title="Candidate is Selected. Click to Mark as Confirmed (Attending)!"
+                          >
+                            <CheckCircle className="w-3 h-3 text-teal-200" />
+                            <span>Confirm</span>
+                          </button>
+                        ) : sStatus === "CONFIRMED" ? (
+                          <button
+                            disabled={actionLoadingId === (app._id || app.id)}
+                            onClick={() => handleUpdateStatus(app._id || app.id, "SELECTED")}
+                            className="flex-1 py-1.5 rounded-lg text-[11px] font-black bg-teal-100 text-teal-900 border border-teal-300 transition flex items-center justify-center gap-1 cursor-pointer"
+                            title="Candidate is Confirmed Attending! Click to revert to Selected."
+                          >
+                            <CheckCircle className="w-3 h-3 text-teal-600" />
+                            <span>Confirmed</span>
+                          </button>
+                        ) : (
+                          <button
+                            disabled={actionLoadingId === (app._id || app.id)}
+                            onClick={() => {
+                              if (sendEmailToggle && sStatus !== "SELECTED") {
+                                openSelectionModal([app]);
+                              } else {
+                                handleUpdateStatus(app._id || app.id, "SELECTED");
+                              }
+                            }}
+                            className="flex-1 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition flex items-center justify-center gap-1 cursor-pointer"
+                            title="Select Candidate"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Select</span>
+                          </button>
+                        )}
 
                         {/* Hold */}
                         <button
