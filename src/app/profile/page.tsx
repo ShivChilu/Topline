@@ -146,9 +146,12 @@ export default function StudentProfilePage() {
         showFeedback(
           "success",
           action === "CONFIRM"
-            ? "🎉 Duty attendance confirmed! WhatsApp group and QR check-in unlocked."
+            ? "🎉 Duty attendance confirmed! Opening official WhatsApp group..."
             : "Duty declined and slot released."
         );
+        if (action === "CONFIRM" && json.whatsappGroupLink) {
+          window.open(json.whatsappGroupLink, "_blank");
+        }
         fetchProfile();
       } else {
         showFeedback("error", json.message || "Failed to update attendance.");
@@ -1054,7 +1057,7 @@ export default function StudentProfilePage() {
                             className="flex-1 md:flex-initial bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-50 cursor-pointer"
                           >
                             {rsvpLoadingId === app.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-3" />}
-                            <span>Confirm Available</span>
+                            <span>✓ Confirm &amp; Join WhatsApp</span>
                           </button>
 
                           <button
@@ -1573,7 +1576,7 @@ export default function StudentProfilePage() {
                               className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
                             >
                               {rsvpLoadingId === app.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                              <span>I Am Available</span>
+                              <span>✓ Confirm &amp; Join WhatsApp</span>
                             </button>
                             <button
                               onClick={() => handleRsvpAction(app.id, "DECLINE")}

@@ -50,6 +50,28 @@ export default function CandidateRSVPPage({
   const [data, setData] = useState<RSVPResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
+
+  // Auto-redirect to WhatsApp group once confirmed
+  useEffect(() => {
+    if (data?.status === "CONFIRMED" && data?.whatsappGroupLink && redirectSeconds === null) {
+      setRedirectSeconds(2);
+    }
+  }, [data?.status, data?.whatsappGroupLink, redirectSeconds]);
+
+  useEffect(() => {
+    if (redirectSeconds === null) return;
+    if (redirectSeconds <= 0) {
+      if (data?.whatsappGroupLink) {
+        window.location.href = data.whatsappGroupLink;
+      }
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRedirectSeconds((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [redirectSeconds, data?.whatsappGroupLink]);
 
   // Fetch or process initial RSVP
   useEffect(() => {
@@ -98,6 +120,9 @@ export default function CandidateRSVPPage({
         setError(json.message || "Failed to update attendance status.");
       } else {
         setData(json);
+        if (action === "CONFIRM" && json.whatsappGroupLink) {
+          window.location.href = json.whatsappGroupLink;
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -219,38 +244,33 @@ export default function CandidateRSVPPage({
                 {/* STATUS: CONFIRMED */}
                 {data.status === "CONFIRMED" && (
                   <div className="space-y-6">
-                    <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-6 text-center">
-                      <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400 mb-3">
-                        <CheckCircle2 className="w-8 h-8" />
+                    <div className="bg-[#0b271a] border-2 border-[#25D366] rounded-2xl p-6 text-center shadow-xl space-y-4">
+                      <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                        <CheckCircle2 className="w-10 h-10" />
                       </div>
-                      <h3 className="text-xl font-extrabold text-white">
-                        Attendance Confirmed
+                      <h3 className="text-2xl font-black text-white">
+                        Attendance Confirmed!
                       </h3>
-                      <p className="text-emerald-300 text-xs mt-1 leading-relaxed max-w-md mx-auto">
-                        Your duty confirmation is recorded. Please join the official event WhatsApp group below to receive shift briefings and reporting instructions.
+                      <p className="text-emerald-200 text-xs mt-1 leading-relaxed max-w-md mx-auto">
+                        Your duty confirmation is recorded on the official attendance roster.
+                        {data.whatsappGroupLink && (
+                          <span className="block mt-2 font-bold text-emerald-300 bg-emerald-950/80 py-2 px-3 rounded-lg border border-emerald-500/40">
+                            {redirectSeconds !== null && redirectSeconds > 0
+                              ? `Connecting you to official WhatsApp Group in ${redirectSeconds}s...`
+                              : "Redirecting you to WhatsApp Group now..."}
+                          </span>
+                        )}
                       </p>
-                    </div>
 
-                    {/* WhatsApp Group Joining Card */}
-                    {data.whatsappGroupLink ? (
-                      <div className="bg-[#0b271a] border-2 border-[#25D366]/40 rounded-2xl p-6 text-center space-y-4 shadow-xl">
-                        <div className="flex items-center justify-center gap-2 text-[#25D366] font-bold text-sm">
-                          <MessageCircle className="w-5 h-5 fill-current" />
-                          <span>Official Event WhatsApp Group</span>
-                        </div>
-                        <p className="text-emerald-100/80 text-xs leading-relaxed">
-                          Click below to join the candidate duty group. Live announcements, uniform guidelines, reporting coordinators, and gate entry will be coordinated here.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                      {/* Primary WhatsApp Button */}
+                      {data.whatsappGroupLink ? (
+                        <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
                           <a
                             href={data.whatsappGroupLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black px-6 py-3.5 rounded-xl text-sm transition shadow-lg shadow-[#25D366]/20 transform active:scale-95"
+                            className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black px-8 py-4 rounded-xl text-sm transition shadow-lg shadow-[#25D366]/30 transform active:scale-95"
                           >
-                            <MessageCircle className="w-4 h-4 fill-slate-950" />
-                            <span>Join WhatsApp Group</span>
+                            <MessageCircle className="w-5 h-5 fill-slate-950" />
+                            <span>Join WhatsApp Group Now</span>
                             <ExternalLink className="w-4 h-4" />
                           </a>
 
@@ -271,13 +291,13 @@ export default function CandidateRSVPPage({
                             )}
                           </button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-                        <MessageCircle className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>The Event Admin will share the official WhatsApp Group invite link prior to the event date. Check your student portal for updates.</span>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                          <MessageCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>The Event Admin will share the official WhatsApp Group invite link prior to the event date. Check your student portal for updates.</span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="flex items-center justify-center gap-3 pt-2">
                       <Link
@@ -334,39 +354,39 @@ export default function CandidateRSVPPage({
                         <Sparkles className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-extrabold text-white">
-                          Are you available for this duty?
+                        <h3 className="text-xl font-black text-white">
+                          Confirm Attendance &amp; Join WhatsApp Group
                         </h3>
                         <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto leading-relaxed">
-                          Please confirm whether you will be attending. Confirming will unlock the official WhatsApp Group invite and secure your assignment roster.
+                          Click below to confirm your duty availability. Once confirmed, you will automatically be directed into the official WhatsApp briefing group.
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <div className="flex flex-col gap-3 pt-2">
                         <button
                           onClick={() => handleAction("CONFIRM")}
                           disabled={submitting}
-                          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3.5 px-4 rounded-xl text-sm transition shadow-lg shadow-emerald-900/40 active:scale-95 disabled:opacity-50 cursor-pointer"
+                          className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-4 px-4 rounded-xl text-sm transition shadow-lg shadow-emerald-900/40 active:scale-95 disabled:opacity-50 cursor-pointer"
                         >
                           {submitting ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
                           ) : (
-                            <Check className="w-4 h-4 stroke-3" />
+                            <Check className="w-4 h-4 stroke-3 text-slate-950" />
                           )}
-                          <span>YES, I AM AVAILABLE</span>
+                          <span>✓ CONFIRM ATTENDANCE &amp; JOIN WHATSAPP GROUP</span>
                         </button>
 
                         <button
                           onClick={() => handleAction("DECLINE")}
                           disabled={submitting}
-                          className="w-full flex items-center justify-center gap-2 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 font-bold py-3.5 px-4 rounded-xl text-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                          className="w-full flex items-center justify-center gap-2 bg-slate-900/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900 font-semibold py-3 px-4 rounded-xl text-xs transition active:scale-95 disabled:opacity-50 cursor-pointer"
                         >
                           {submitting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             <XCircle className="w-4 h-4" />
                           )}
-                          <span>NO, NOT AVAILABLE</span>
+                          <span>Decline Slot (Cannot Attend)</span>
                         </button>
                       </div>
                     </div>

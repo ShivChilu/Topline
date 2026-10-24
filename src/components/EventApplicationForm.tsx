@@ -62,6 +62,31 @@ export default function EventApplicationForm({
   const [message, setMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
+  const [confirmingRsvp, setConfirmingRsvp] = useState(false);
+
+  const handleConfirmAndJoinWhatsApp = async (appId: string) => {
+    try {
+      setConfirmingRsvp(true);
+      const res = await fetch(`/api/rsvp?appId=${appId}&action=CONFIRM`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setLoggedInUser((prev: any) => ({
+          ...prev,
+          applications: (prev?.applications || []).map((a: any) =>
+            a.id === appId ? { ...a, status: "CONFIRMED" } : a
+          ),
+        }));
+        const targetWa = data.whatsappGroupLink || whatsappGroupLink;
+        if (targetWa) {
+          window.open(targetWa, "_blank");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to confirm attendance:", err);
+    } finally {
+      setConfirmingRsvp(false);
+    }
+  };
 
   const handleShareEventWhatsApp = () => {
     const code = loggedInUser?.referralCode || "";
@@ -164,22 +189,50 @@ export default function EventApplicationForm({
         </div>
 
         {appStatus === "SELECTED" && (
-          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/40 p-5 rounded-2xl space-y-3 text-center shadow-lg">
+          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border-2 border-[#25D366]/60 p-5 rounded-2xl space-y-3 text-center shadow-xl">
             <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-sm uppercase tracking-wide">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>🎉 Congratulations! You are Selected</span>
+              <span>🎉 You are Selected! Confirm to Join WhatsApp</span>
             </div>
             <p className="text-xs text-emerald-200/90 leading-relaxed">
-              Please join the official event WhatsApp group immediately to receive live briefings, shift timings, and reporting instructions:
+              To secure your slot on the duty roster and access the official WhatsApp briefing group, confirm your attendance below:
+            </p>
+            <button
+              type="button"
+              onClick={() => handleConfirmAndJoinWhatsApp(existingApplication.id)}
+              disabled={confirmingRsvp}
+              className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs px-6 py-3.5 rounded-xl shadow-lg transition cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              {confirmingRsvp ? (
+                <span>Confirming &amp; Opening WhatsApp...</span>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 stroke-3" />
+                  <span>✓ Confirm Attendance &amp; Join WhatsApp Group</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {appStatus === "CONFIRMED" && (
+          <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/40 p-5 rounded-2xl space-y-3 text-center shadow-lg">
+            <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-extrabold text-sm uppercase tracking-wide">
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <span>✓ Attendance Confirmed</span>
+            </div>
+            <p className="text-xs text-emerald-200/90 leading-relaxed">
+              Your duty attendance is confirmed! Join the official WhatsApp briefing group if you have not joined yet:
             </p>
             {whatsappGroupLink ? (
               <a
                 href={whatsappGroupLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-extrabold text-xs px-6 py-3 rounded-xl shadow-lg transition"
+                className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs px-6 py-3 rounded-xl shadow-lg transition"
               >
-                <span>📲 Join Official Event WhatsApp Group</span>
+                <MessageCircle className="w-4 h-4 fill-slate-950" />
+                <span>📲 Open Event WhatsApp Group</span>
               </a>
             ) : (
               <span className="text-slate-400 text-xs italic block">WhatsApp group link pending coordinator update</span>
@@ -542,6 +595,12 @@ export default function EventApplicationForm({
         <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
         <h3 className="text-2xl font-bold text-emerald-400">Application Submitted!</h3>
         <p className="text-slate-300 text-sm whitespace-pre-wrap">{message}</p>
+        <div className="bg-slate-900/80 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-300 max-w-md mx-auto space-y-1">
+          <div className="font-bold text-white text-sm">📧 Selection Notice &amp; WhatsApp Briefing</div>
+          <p className="text-slate-400">
+            Once selected, you will receive an email with a 1-click button to <strong>Confirm Attendance &amp; Join the WhatsApp Group</strong>.
+          </p>
+        </div>
 
         {/* Refer a Friend Promo on Application Success */}
         <div className="bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-950 border border-purple-500/40 p-5 rounded-2xl space-y-3 text-left shadow-xl">
