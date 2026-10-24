@@ -723,7 +723,7 @@ export async function executeCopilotTool(
               startTime: startTime || "4:00 PM",
               endTime: endTime || "11:00 PM",
               workersRequired: Number(workersRequired) || 20,
-              maxApplications: (Number(workersRequired) || 20) * 2,
+              maxApplications: Number(workersRequired) || 20,
               paymentPerStudent: Number(paymentPerStudent) || 800,
               description: description || "Topline ODC Event guidelines and briefing.",
               status: "OPEN",

@@ -182,8 +182,20 @@ export async function PATCH(
     if (body.instructions !== undefined) allowedData.instructions = body.instructions;
     if (body.dressCode !== undefined) allowedData.dressCode = body.dressCode;
     if (body.dosAndDonts !== undefined) allowedData.dosAndDonts = body.dosAndDonts;
-    if (body.workersRequired !== undefined) allowedData.workersRequired = Number(body.workersRequired);
-    if (body.maxApplications !== undefined) allowedData.maxApplications = Number(body.maxApplications);
+    if (body.requiredApplications !== undefined) {
+      const val = Number(body.requiredApplications);
+      allowedData.workersRequired = val;
+      allowedData.maxApplications = val;
+    } else {
+      if (body.workersRequired !== undefined) {
+        allowedData.workersRequired = Number(body.workersRequired);
+        if (body.maxApplications === undefined) allowedData.maxApplications = Number(body.workersRequired);
+      }
+      if (body.maxApplications !== undefined) {
+        allowedData.maxApplications = Number(body.maxApplications);
+        if (body.workersRequired === undefined) allowedData.workersRequired = Number(body.maxApplications);
+      }
+    }
     if (body.paymentPerStudent !== undefined) allowedData.paymentPerStudent = Number(body.paymentPerStudent);
     if (body.clientRevenue !== undefined) allowedData.clientRevenue = Number(body.clientRevenue);
     if (body.otherExpenses !== undefined) allowedData.otherExpenses = Number(body.otherExpenses);

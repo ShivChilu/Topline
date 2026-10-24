@@ -1928,14 +1928,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       {dashboardTab === "overview" && (
         <div className="space-y-3.5 animate-in fade-in duration-150">
           {/* Staffing Quota & Student Payout Card */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase block">Workers Required</span>
-              <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.workersRequired} Staff</span>
-            </div>
-            <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase block">Max Applications Cap</span>
-              <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">{event.maxApplications} Slots</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Required Applications</span>
+              <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">
+                {event.workersRequired || event.maxApplications} Candidates
+              </span>
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase block">Student Payout / Candidate</span>
@@ -1944,7 +1942,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Student Payout Budget</span>
               <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">
-                ₹{((event.workersRequired || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
+                ₹{(((event.workersRequired || event.maxApplications) || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
               </span>
             </div>
           </div>

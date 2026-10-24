@@ -45,8 +45,7 @@ function CreateEventForm() {
   const [dressCode, setDressCode] = useState("");
   const [dosAndDontsText, setDosAndDontsText] = useState("");
 
-  const [workersRequired, setWorkersRequired] = useState(15);
-  const [maxApplications, setMaxApplications] = useState(25);
+  const [requiredApplications, setRequiredApplications] = useState(25);
   const [paymentPerStudent, setPaymentPerStudent] = useState(800);
   const [clientId, setClientId] = useState("");
   const [visibility, setVisibility] = useState("VISIBLE");
@@ -137,8 +136,7 @@ function CreateEventForm() {
         setInstructions(ev.instructions || "");
         setDressCode(ev.dressCode || "");
         setDosAndDontsText(Array.isArray(ev.dosAndDonts) ? ev.dosAndDonts.join("\n") : "");
-        setWorkersRequired(ev.workersRequired || 15);
-        setMaxApplications(ev.maxApplications || 25);
+        setRequiredApplications(ev.workersRequired || ev.maxApplications || 25);
         setPaymentPerStudent(ev.paymentPerStudent || 800);
         setClientId(ev.clientId || "");
         setVisibility(ev.visibility || "VISIBLE");
@@ -287,8 +285,9 @@ function CreateEventForm() {
       instructions: instructions.trim() || "",
       dressCode: dressCode.trim() || "",
       dosAndDonts,
-      workersRequired: Number(workersRequired) || 15,
-      maxApplications: Number(maxApplications) || 25,
+      workersRequired: Number(requiredApplications) || 25,
+      maxApplications: Number(requiredApplications) || 25,
+      requiredApplications: Number(requiredApplications) || 25,
       paymentPerStudent: Number(paymentPerStudent) || 800,
       clientRevenue: 0,
       otherExpenses: 0,
@@ -821,25 +820,21 @@ function CreateEventForm() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Required Workers</label>
-                <input
-                  type="number"
-                  value={workersRequired}
-                  onChange={(e) => setWorkersRequired(Number(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Max Applications</label>
-                <input
-                  type="number"
-                  value={maxApplications}
-                  onChange={(e) => setMaxApplications(Number(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                Required Applications
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={requiredApplications}
+                onChange={(e) => setRequiredApplications(Number(e.target.value))}
+                placeholder="Total candidate applications needed"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-red-600 text-sm font-bold"
+              />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Total number of student applications required for this event
+              </span>
             </div>
 
             <div>

@@ -44,6 +44,7 @@ export async function POST(
     const {
       additionalSlots = 5,
       alsoIncreaseWorkers = true,
+      newRequiredApplications,
       newMaxApplications,
       newWorkersRequired,
     } = body;
@@ -64,25 +65,24 @@ export async function POST(
     }
 
     const currentApps = event.applicationsCount;
-    const currentMax = event.maxApplications;
+    const currentRequired = event.workersRequired || event.maxApplications || 0;
     const slotsToAdd = Math.max(1, Number(additionalSlots) || 5);
 
-    // If newMaxApplications explicitly passed, use it; otherwise compute based on current max + additional slots
-    let targetMax = newMaxApplications !== undefined && Number(newMaxApplications) > 0
-      ? Number(newMaxApplications)
-      : Math.max(currentMax + slotsToAdd, currentApps + slotsToAdd);
-
-    // Ensure targetMax is at least currentApps + 1 so applications can be accepted
-    if (targetMax <= currentApps) {
-      targetMax = currentApps + slotsToAdd;
+    // Unified target Required Applications
+    let targetRequired = 0;
+    if (newRequiredApplications !== undefined && Number(newRequiredApplications) > 0) {
+      targetRequired = Number(newRequiredApplications);
+    } else if (newMaxApplications !== undefined && Number(newMaxApplications) > 0) {
+      targetRequired = Number(newMaxApplications);
+    } else if (newWorkersRequired !== undefined && Number(newWorkersRequired) > 0) {
+      targetRequired = Number(newWorkersRequired);
+    } else {
+      targetRequired = Math.max(currentRequired + slotsToAdd, currentApps + slotsToAdd);
     }
 
-    // Determine target workers required
-    let targetWorkers = event.workersRequired;
-    if (newWorkersRequired !== undefined && Number(newWorkersRequired) > 0) {
-      targetWorkers = Number(newWorkersRequired);
-    } else if (alsoIncreaseWorkers) {
-      targetWorkers = event.workersRequired + slotsToAdd;
+    // Ensure targetRequired is at least currentApps + 1 so applications can be accepted
+    if (targetRequired <= currentApps) {
+      targetRequired = currentApps + slotsToAdd;
     }
 
     const updatedEvent = await prisma.event.update({
@@ -90,8 +90,8 @@ export async function POST(
       data: {
         status: EventStatus.OPEN,
         scheduledPublishAt: null,
-        maxApplications: targetMax,
-        workersRequired: targetWorkers,
+        maxApplications: targetRequired,
+        workersRequired: targetRequired,
       },
       include: {
         client: true,
@@ -121,10 +121,11 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Event "${event.name}" reopened successfully with ${slotsToAdd} added slots (New Max: ${targetMax})!`,
+      message: `Event "${event.name}" reopened successfully with ${slotsToAdd} added slots (New Required: ${targetRequired})!`,
       event: formattedEvent,
-      newMaxApplications: targetMax,
-      newWorkersRequired: targetWorkers,
+      newRequiredApplications: targetRequired,
+      newMaxApplications: targetRequired,
+      newWorkersRequired: targetRequired,
       addedSlots: slotsToAdd,
     });
   } catch (error: any) {

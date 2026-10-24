@@ -62,8 +62,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [dressCode, setDressCode] = useState("");
   const [dosAndDontsText, setDosAndDontsText] = useState("");
 
-  const [workersRequired, setWorkersRequired] = useState(15);
-  const [maxApplications, setMaxApplications] = useState(25);
+  const [requiredApplications, setRequiredApplications] = useState(25);
   const [paymentPerStudent, setPaymentPerStudent] = useState(800);
   const [clientId, setClientId] = useState("");
   const [visibility, setVisibility] = useState("VISIBLE");
@@ -134,8 +133,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           setInstructions(ev.instructions || "");
           setDressCode(ev.dressCode || "");
           setDosAndDontsText(Array.isArray(ev.dosAndDonts) ? ev.dosAndDonts.join("\n") : "");
-          setWorkersRequired(ev.workersRequired ?? 15);
-          setMaxApplications(ev.maxApplications ?? 25);
+          setRequiredApplications(ev.workersRequired ?? ev.maxApplications ?? 25);
           setPaymentPerStudent(ev.paymentPerStudent ?? 800);
           setClientId(ev.clientId || "");
           setVisibility(ev.visibility || "VISIBLE");
@@ -266,8 +264,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       instructions: instructions.trim() || null,
       dressCode: dressCode.trim() || null,
       dosAndDonts,
-      workersRequired: Number(workersRequired) || 1,
-      maxApplications: Number(maxApplications) || 1,
+      workersRequired: Number(requiredApplications) || 1,
+      maxApplications: Number(requiredApplications) || 1,
+      requiredApplications: Number(requiredApplications) || 1,
       paymentPerStudent: Number(paymentPerStudent) || 0,
       clientRevenue: 0,
       otherExpenses: 0,
@@ -609,32 +608,18 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 <span className="text-[10px] text-emerald-700 mt-1 block">Paid per candidate per shift</span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 md:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Staff Required
+                  Required Applications
                 </label>
                 <input
                   type="number"
                   min="1"
-                  value={workersRequired}
-                  onChange={(e) => setWorkersRequired(Number(e.target.value))}
+                  value={requiredApplications}
+                  onChange={(e) => setRequiredApplications(Number(e.target.value))}
                   className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-red-600 text-sm"
                 />
-                <span className="text-[10px] text-slate-500 mt-1 block">Target candidates to select</span>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Max Applications Cap
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={maxApplications}
-                  onChange={(e) => setMaxApplications(Number(e.target.value))}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-red-600 text-sm"
-                />
-                <span className="text-[10px] text-slate-500 mt-1 block">Form auto-closes when full</span>
+                <span className="text-[10px] text-slate-500 mt-1 block">Total candidate applications required for this event</span>
               </div>
             </div>
 

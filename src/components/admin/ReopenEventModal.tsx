@@ -17,14 +17,12 @@ export default function ReopenEventModal({
   onSuccess,
 }: ReopenEventModalProps) {
   const [additionalSlots, setAdditionalSlots] = useState<number>(5);
-  const [alsoIncreaseWorkers, setAlsoIncreaseWorkers] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setAdditionalSlots(5);
-      setAlsoIncreaseWorkers(true);
       setErrorMsg(null);
     }
   }, [isOpen, event]);
@@ -32,13 +30,11 @@ export default function ReopenEventModal({
   if (!isOpen || !event) return null;
 
   const currentApps = event.applicationsCount || 0;
-  const currentMax = event.maxApplications || 0;
-  const currentWorkers = event.workersRequired || 0;
+  const currentRequired = event.workersRequired || event.maxApplications || 0;
 
   const slotsToAdd = Math.max(1, Number(additionalSlots) || 1);
-  const newMaxApplications = Math.max(currentMax + slotsToAdd, currentApps + slotsToAdd);
-  const newWorkersRequired = alsoIncreaseWorkers ? currentWorkers + slotsToAdd : currentWorkers;
-  const newAvailableSlots = Math.max(0, newMaxApplications - currentApps);
+  const newRequiredApplications = Math.max(currentRequired + slotsToAdd, currentApps + slotsToAdd);
+  const newAvailableSlots = Math.max(0, newRequiredApplications - currentApps);
 
   const handleReopenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +50,15 @@ export default function ReopenEventModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           additionalSlots: slotsToAdd,
-          alsoIncreaseWorkers,
-          newMaxApplications,
-          newWorkersRequired,
+          newRequiredApplications,
+          newMaxApplications: newRequiredApplications,
+          newWorkersRequired: newRequiredApplications,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        onSuccess(data.event || { ...event, status: "OPEN", maxApplications: newMaxApplications, workersRequired: newWorkersRequired });
+        onSuccess(data.event || { ...event, status: "OPEN", maxApplications: newRequiredApplications, workersRequired: newRequiredApplications });
         onClose();
       } else {
         setErrorMsg(data.message || "Failed to reopen event.");
@@ -117,18 +113,14 @@ export default function ReopenEventModal({
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Applications</span>
-                <span className="text-base font-extrabold text-slate-900">{currentApps}</span>
+                <span className="text-lg font-extrabold text-slate-900">{currentApps}</span>
               </div>
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">Max Cap</span>
-                <span className="text-base font-extrabold text-slate-900">{currentMax}</span>
-              </div>
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">Workers Req</span>
-                <span className="text-base font-extrabold text-slate-900">{currentWorkers}</span>
+              <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Required Applications</span>
+                <span className="text-lg font-extrabold text-slate-900">{currentRequired}</span>
               </div>
             </div>
           </div>
@@ -171,16 +163,7 @@ export default function ReopenEventModal({
               <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 font-semibold">New Slots</span>
             </div>
 
-            {/* Also Increase Workers Option */}
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
-              <input
-                type="checkbox"
-                checked={alsoIncreaseWorkers}
-                onChange={(e) => setAlsoIncreaseWorkers(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-              />
-              <span>Also increase Required Workers by <strong className="text-emerald-700">+{slotsToAdd}</strong> (from {currentWorkers} to {newWorkersRequired})</span>
-            </label>
+
           </div>
 
           {/* Real-Time Impact Summary */}
@@ -192,8 +175,8 @@ export default function ReopenEventModal({
 
             <div className="text-xs text-emerald-900 space-y-1 font-medium">
               <div className="flex justify-between">
-                <span>New Max Applications:</span>
-                <span className="font-extrabold text-emerald-950">{currentMax} + {slotsToAdd} = {newMaxApplications}</span>
+                <span>New Required Applications:</span>
+                <span className="font-extrabold text-emerald-950">{currentRequired} + {slotsToAdd} = {newRequiredApplications}</span>
               </div>
               <div className="flex justify-between">
                 <span>Immediate Open Seats for Students:</span>
