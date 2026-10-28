@@ -59,12 +59,51 @@ export async function GET(
         : ["name", "photos", "height", "gender"]
     );
 
+    // Build flexible status query matching both Application.status and Attendance records
+    const whereConditions: any[] = [];
+    const hasAttended = allowedStatuses.includes("ATTENDED") || allowedStatuses.includes("PRESENT");
+    const hasAbsent = allowedStatuses.includes("ABSENT");
+    const hasConfirmed = allowedStatuses.includes("CONFIRMED");
+    const hasSelected = allowedStatuses.includes("SELECTED");
+
+    if (hasAttended) {
+      whereConditions.push(
+        { status: "ATTENDED" },
+        { attendance: { attendanceStatus: { in: ["PRESENT", "LATE"] } } }
+      );
+    }
+    if (hasAbsent) {
+      whereConditions.push(
+        { status: "ABSENT" },
+        { attendance: { attendanceStatus: "ABSENT" } }
+      );
+    }
+    if (hasConfirmed) {
+      whereConditions.push({ status: "CONFIRMED" });
+    }
+    if (hasSelected) {
+      whereConditions.push({ status: "SELECTED" });
+    }
+
+    const otherStatuses = allowedStatuses.filter(
+      (s: string) => !["ATTENDED", "PRESENT", "ABSENT", "CONFIRMED", "SELECTED"].includes(s)
+    );
+    if (otherStatuses.length > 0) {
+      whereConditions.push({ status: { in: otherStatuses } });
+    }
+
     const applications = await prisma.application.findMany({
       where: {
         eventId: event.id,
-        status: { in: allowedStatuses as any },
+        OR: whereConditions.length > 0 ? whereConditions : [{ status: "CONFIRMED" }],
       },
       include: {
+        attendance: {
+          select: {
+            attendanceStatus: true,
+            checkInTime: true,
+          },
+        },
         user: {
           select: {
             id: true,
@@ -182,6 +221,16 @@ export async function GET(
           photoList[0]?.url ||
           (u?.id ? `/api/photos/student?userId=${u.id}` : null);
       }
+
+      // Duty Attendance status
+      const attRecord = app.attendance;
+      const isPresent = app.status === "ATTENDED" || attRecord?.attendanceStatus === "PRESENT" || attRecord?.attendanceStatus === "LATE";
+      const isAbsent = app.status === "ABSENT" || attRecord?.attendanceStatus === "ABSENT";
+      const isLate = attRecord?.attendanceStatus === "LATE";
+
+      candidateObj.dutyStatus = isPresent ? "PRESENT" : isAbsent ? "ABSENT" : app.status;
+      candidateObj.attendanceStatusLabel = isLate ? "Late Check-in" : isPresent ? "Present" : isAbsent ? "Absent" : app.status === "CONFIRMED" ? "Confirmed" : "Selected";
+      candidateObj.showAttendanceStatus = allowedFields.has("attendanceStatus");
 
       return candidateObj;
     });

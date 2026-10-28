@@ -42,6 +42,9 @@ interface Candidate {
   phone?: string;
   primaryPhotoUrl?: string;
   photos?: CandidatePhoto[];
+  dutyStatus?: string;
+  attendanceStatusLabel?: string;
+  showAttendanceStatus?: boolean;
 }
 
 interface ShowcaseEvent {
@@ -68,6 +71,7 @@ export default function ClientShowcasePage(props: { params: Promise<{ token: str
   // Search & Filtering
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState<"ALL" | "MALE" | "FEMALE">("ALL");
+  const [attendanceFilter, setAttendanceFilter] = useState<"ALL" | "PRESENT" | "ABSENT" | "CONFIRMED">("ALL");
   const [sortBy, setSortBy] = useState<"name" | "height_desc" | "height_asc">("name");
 
   // Lightbox Modal
@@ -145,6 +149,13 @@ export default function ClientShowcasePage(props: { params: Promise<{ token: str
         const g = (c.gender || "").toUpperCase();
         if (genderFilter === "MALE" && !g.startsWith("M")) return false;
         if (genderFilter === "FEMALE" && !g.startsWith("F")) return false;
+      }
+
+      // Attendance / Duty filter
+      if (attendanceFilter !== "ALL") {
+        if (attendanceFilter === "PRESENT" && c.dutyStatus !== "PRESENT") return false;
+        if (attendanceFilter === "ABSENT" && c.dutyStatus !== "ABSENT") return false;
+        if (attendanceFilter === "CONFIRMED" && c.dutyStatus !== "CONFIRMED") return false;
       }
 
       return true;
@@ -334,6 +345,43 @@ export default function ClientShowcasePage(props: { params: Promise<{ token: str
               </div>
             )}
 
+            {/* Attendance Toggle if multiple duty statuses exist */}
+            {candidates.some((c) => c.dutyStatus === "PRESENT" || c.dutyStatus === "ABSENT") && (
+              <div className="bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 flex items-center text-xs">
+                <button
+                  type="button"
+                  onClick={() => setAttendanceFilter("ALL")}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                    attendanceFilter === "ALL" ? "bg-amber-500 text-black shadow" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  All Status
+                </button>
+                {candidates.some((c) => c.dutyStatus === "PRESENT") && (
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceFilter("PRESENT")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 ${
+                      attendanceFilter === "PRESENT" ? "bg-emerald-500 text-slate-950 shadow" : "text-emerald-400 hover:text-white"
+                    }`}
+                  >
+                    <span>✓ Present ({candidates.filter((c) => c.dutyStatus === "PRESENT").length})</span>
+                  </button>
+                )}
+                {candidates.some((c) => c.dutyStatus === "ABSENT") && (
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceFilter("ABSENT")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1 ${
+                      attendanceFilter === "ABSENT" ? "bg-rose-500 text-white shadow" : "text-rose-400 hover:text-white"
+                    }`}
+                  >
+                    <span>✕ Absent ({candidates.filter((c) => c.dutyStatus === "ABSENT").length})</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Sort Selector */}
             <select
               value={sortBy}
@@ -437,6 +485,21 @@ export default function ClientShowcasePage(props: { params: Promise<{ token: str
                         {visibleFieldsSet.has("age") && candidate.age && (
                           <span className="inline-flex items-center gap-1 bg-slate-800 text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-md">
                             Age: {candidate.age}
+                          </span>
+                        )}
+
+                        {visibleFieldsSet.has("attendanceStatus") && candidate.dutyStatus && (
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10.5px] font-black px-2 py-0.5 rounded-md ${
+                              candidate.dutyStatus === "PRESENT"
+                                ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-400"
+                                : candidate.dutyStatus === "ABSENT"
+                                ? "bg-rose-500/15 border border-rose-500/40 text-rose-400"
+                                : "bg-blue-500/15 border border-blue-500/40 text-blue-400"
+                            }`}
+                          >
+                            <span>{candidate.dutyStatus === "PRESENT" ? "✓" : candidate.dutyStatus === "ABSENT" ? "✕" : "•"}</span>
+                            <span>{candidate.attendanceStatusLabel || candidate.dutyStatus}</span>
                           </span>
                         )}
                       </div>

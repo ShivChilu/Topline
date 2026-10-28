@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
   Share2,
@@ -30,6 +30,7 @@ const AVAILABLE_FIELDS = [
   { id: "name", label: "Full Name", icon: "👤", default: true },
   { id: "height", label: "Height (cm / ft)", icon: "📏", default: true },
   { id: "gender", label: "Gender", icon: "⚧", default: true },
+  { id: "attendanceStatus", label: "Duty Attendance (Present / Absent / Confirmed Badge)", icon: "✅", default: false },
   { id: "university", label: "University / College", icon: "🎓", default: false },
   { id: "city", label: "City / Hometown", icon: "📍", default: false },
   { id: "age", label: "Age", icon: "🎂", default: false },
@@ -61,10 +62,48 @@ export default function ClientShareModal({
   const [candidateStatus, setCandidateStatus] = useState<string[]>(["CONFIRMED"]);
   const [customNotes, setCustomNotes] = useState<string>("");
   const [candidateCount, setCandidateCount] = useState<number>(0);
+  const [counts, setCounts] = useState<{
+    confirmed: number;
+    selected: number;
+    present: number;
+    absent: number;
+    confirmedAndSelected: number;
+    presentAndConfirmed: number;
+  }>({
+    confirmed: 0,
+    selected: 0,
+    present: 0,
+    absent: 0,
+    confirmedAndSelected: 0,
+    presentAndConfirmed: 0,
+  });
 
   // Copy Feedback
   const [copied, setCopied] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Compute live active count based on current selection
+  const activeCount = useMemo(() => {
+    if (candidateStatus.length === 1 && (candidateStatus[0] === "ATTENDED" || candidateStatus[0] === "PRESENT")) {
+      return counts.present;
+    }
+    if (candidateStatus.includes("ATTENDED") && candidateStatus.includes("CONFIRMED") && !candidateStatus.includes("SELECTED") && !candidateStatus.includes("ABSENT")) {
+      return counts.presentAndConfirmed;
+    }
+    if (candidateStatus.length === 1 && candidateStatus[0] === "CONFIRMED") {
+      return counts.confirmed;
+    }
+    if (candidateStatus.includes("CONFIRMED") && candidateStatus.includes("SELECTED") && !candidateStatus.includes("ATTENDED") && !candidateStatus.includes("ABSENT")) {
+      return counts.confirmedAndSelected;
+    }
+    if (candidateStatus.length === 1 && candidateStatus[0] === "ABSENT") {
+      return counts.absent;
+    }
+    if (candidateStatus.includes("SELECTED") && candidateStatus.includes("CONFIRMED") && candidateStatus.includes("ATTENDED")) {
+      return counts.selected + counts.confirmed + counts.present;
+    }
+    return candidateCount;
+  }, [candidateStatus, counts, candidateCount]);
 
   useEffect(() => {
     if (!isOpen || !eventId) return;
@@ -82,6 +121,9 @@ export default function ClientShareModal({
           setCandidateStatus(data.share.candidateStatus || ["CONFIRMED"]);
           setCustomNotes(data.share.customNotes || "");
           setCandidateCount(data.share.candidateCount || 0);
+          if (data.share.counts) {
+            setCounts(data.share.counts);
+          }
         }
       } catch (err) {
         console.error("Failed to load share settings:", err);
@@ -129,6 +171,12 @@ export default function ClientShareModal({
       const data = await res.json();
       if (data.success) {
         setSavedSuccess(true);
+        if (data.share?.candidateCount !== undefined) {
+          setCandidateCount(data.share.candidateCount);
+        }
+        if (data.share?.counts) {
+          setCounts(data.share.counts);
+        }
         setTimeout(() => setSavedSuccess(false), 3000);
       } else {
         alert(data.message || "Failed to save settings");
@@ -338,30 +386,208 @@ export default function ClientShareModal({
               </div>
 
               {/* 3. Candidate Status Filter */}
-              <div className="space-y-2">
-                <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">
-                  Which Candidates to Display
-                </h3>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Which Candidates to Display</span>
+                    <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                      {activeCount} Active
+                    </span>
+                  </h3>
+                </div>
+
+                {/* Filter Presets Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {/* 1. Present / Attended Only */}
+                  <label
+                    onClick={() => setCandidateStatus(["ATTENDED"])}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      candidateStatus.length === 1 && (candidateStatus[0] === "ATTENDED" || candidateStatus[0] === "PRESENT")
+                        ? "bg-emerald-50/80 border-emerald-500 shadow-xs ring-1 ring-emerald-500"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
                     <input
                       type="radio"
-                      name="candidateStatus"
+                      name="candidateStatusPreset"
+                      checked={candidateStatus.length === 1 && (candidateStatus[0] === "ATTENDED" || candidateStatus[0] === "PRESENT")}
+                      onChange={() => setCandidateStatus(["ATTENDED"])}
+                      className="mt-0.5 accent-emerald-600 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span>Present Students Only</span>
+                        </span>
+                        <span className="font-mono font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-1.5 py-0.2 rounded text-[10.5px]">
+                          {counts.present}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Show only verified candidates marked Present on duty
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* 2. Present + Confirmed */}
+                  <label
+                    onClick={() => setCandidateStatus(["ATTENDED", "CONFIRMED"])}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      candidateStatus.includes("ATTENDED") && candidateStatus.includes("CONFIRMED") && !candidateStatus.includes("SELECTED") && !candidateStatus.includes("ABSENT")
+                        ? "bg-teal-50/80 border-teal-500 shadow-xs ring-1 ring-teal-500"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="candidateStatusPreset"
+                      checked={candidateStatus.includes("ATTENDED") && candidateStatus.includes("CONFIRMED") && !candidateStatus.includes("SELECTED") && !candidateStatus.includes("ABSENT")}
+                      onChange={() => setCandidateStatus(["ATTENDED", "CONFIRMED"])}
+                      className="mt-0.5 accent-teal-600 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                          <span>Present + Confirmed</span>
+                        </span>
+                        <span className="font-mono font-black text-teal-800 bg-teal-100/90 border border-teal-300 px-1.5 py-0.2 rounded text-[10.5px]">
+                          {counts.presentAndConfirmed}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Students on duty plus accepted upcoming arrivals
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* 3. Confirmed Candidates Only */}
+                  <label
+                    onClick={() => setCandidateStatus(["CONFIRMED"])}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      candidateStatus.length === 1 && candidateStatus[0] === "CONFIRMED"
+                        ? "bg-purple-50/80 border-purple-500 shadow-xs ring-1 ring-purple-500"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="candidateStatusPreset"
                       checked={candidateStatus.length === 1 && candidateStatus[0] === "CONFIRMED"}
                       onChange={() => setCandidateStatus(["CONFIRMED"])}
-                      className="accent-purple-600"
+                      className="mt-0.5 accent-purple-600 cursor-pointer"
                     />
-                    <span>Confirmed Candidates Only ({candidateCount})</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          <span>Confirmed Only</span>
+                        </span>
+                        <span className="font-mono font-black text-blue-800 bg-blue-100/90 border border-blue-300 px-1.5 py-0.2 rounded text-[10.5px]">
+                          {counts.confirmed}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Candidates who confirmed duty availability
+                      </p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">
+
+                  {/* 4. Confirmed + Selected */}
+                  <label
+                    onClick={() => setCandidateStatus(["CONFIRMED", "SELECTED"])}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      candidateStatus.includes("CONFIRMED") && candidateStatus.includes("SELECTED") && !candidateStatus.includes("ATTENDED") && !candidateStatus.includes("ABSENT")
+                        ? "bg-purple-50/80 border-purple-500 shadow-xs ring-1 ring-purple-500"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
                     <input
                       type="radio"
-                      name="candidateStatus"
-                      checked={candidateStatus.includes("SELECTED")}
+                      name="candidateStatusPreset"
+                      checked={candidateStatus.includes("CONFIRMED") && candidateStatus.includes("SELECTED") && !candidateStatus.includes("ATTENDED") && !candidateStatus.includes("ABSENT")}
                       onChange={() => setCandidateStatus(["CONFIRMED", "SELECTED"])}
-                      className="accent-purple-600"
+                      className="mt-0.5 accent-purple-600 cursor-pointer"
                     />
-                    <span>Confirmed + Selected Candidates</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                          <span>Confirmed + Selected</span>
+                        </span>
+                        <span className="font-mono font-black text-purple-800 bg-purple-100/90 border border-purple-300 px-1.5 py-0.2 rounded text-[10.5px]">
+                          {counts.confirmedAndSelected}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        All shortlisted candidates including pending RSVPs
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* 5. Absent Students Only */}
+                  <label
+                    onClick={() => setCandidateStatus(["ABSENT"])}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      candidateStatus.length === 1 && candidateStatus[0] === "ABSENT"
+                        ? "bg-rose-50/80 border-rose-500 shadow-xs ring-1 ring-rose-500"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="candidateStatusPreset"
+                      checked={candidateStatus.length === 1 && candidateStatus[0] === "ABSENT"}
+                      onChange={() => setCandidateStatus(["ABSENT"])}
+                      className="mt-0.5 accent-rose-600 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                          <span>Absent Students Only</span>
+                        </span>
+                        <span className="font-mono font-black text-rose-800 bg-rose-100/90 border border-rose-300 px-1.5 py-0.2 rounded text-[10.5px]">
+                          {counts.absent}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Candidates who were marked absent / did not report
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* 6. All Active Candidates (Selected + Confirmed + Present) */}
+                  <label
+                    onClick={() => setCandidateStatus(["SELECTED", "CONFIRMED", "ATTENDED"])}
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                      candidateStatus.includes("SELECTED") && candidateStatus.includes("CONFIRMED") && candidateStatus.includes("ATTENDED") && !candidateStatus.includes("ABSENT")
+                        ? "bg-slate-100 border-slate-700 shadow-xs ring-1 ring-slate-700"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="candidateStatusPreset"
+                      checked={candidateStatus.includes("SELECTED") && candidateStatus.includes("CONFIRMED") && candidateStatus.includes("ATTENDED") && !candidateStatus.includes("ABSENT")}
+                      onChange={() => setCandidateStatus(["SELECTED", "CONFIRMED", "ATTENDED"])}
+                      className="mt-0.5 accent-slate-800 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black text-slate-900 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-slate-700"></span>
+                          <span>All Active Candidates</span>
+                        </span>
+                        <span className="font-mono font-black text-slate-800 bg-slate-200 px-1.5 py-0.2 rounded text-[10.5px]">
+                          {counts.selected + counts.confirmed + counts.present}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Selected, Confirmed, and Present on duty
+                      </p>
+                    </div>
                   </label>
                 </div>
               </div>

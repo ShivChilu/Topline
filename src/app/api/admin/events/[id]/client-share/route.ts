@@ -1,3 +1,31 @@
+
+function buildCandidateWhere(eventId: string, activeStatuses: string[]) {
+  const whereConditions: any[] = [];
+  if (activeStatuses.includes("ATTENDED") || activeStatuses.includes("PRESENT")) {
+    whereConditions.push(
+      { status: "ATTENDED" },
+      { attendance: { attendanceStatus: { in: ["PRESENT", "LATE"] } } }
+    );
+  }
+  if (activeStatuses.includes("ABSENT")) {
+    whereConditions.push(
+      { status: "ABSENT" },
+      { attendance: { attendanceStatus: "ABSENT" } }
+    );
+  }
+  const directStatuses = activeStatuses.filter(
+    (s: string) => !["ATTENDED", "PRESENT", "ABSENT"].includes(s)
+  );
+  if (directStatuses.length > 0) {
+    whereConditions.push({ status: { in: directStatuses } });
+  }
+
+  return {
+    eventId,
+    OR: whereConditions.length > 0 ? whereConditions : [{ status: "CONFIRMED" }],
+  };
+}
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
@@ -57,12 +85,33 @@ export async function GET(
       });
     }
 
-    // Get candidate count matching statuses
+    // Get breakdown counts for intuitive selection in admin modal
+    const [confirmedCount, selectedCount, attendedCount, absentCount] = await Promise.all([
+      prisma.application.count({ where: { eventId, status: "CONFIRMED" } }),
+      prisma.application.count({ where: { eventId, status: "SELECTED" } }),
+      prisma.application.count({
+        where: {
+          eventId,
+          OR: [
+            { status: "ATTENDED" },
+            { attendance: { attendanceStatus: { in: ["PRESENT", "LATE"] } } },
+          ],
+        },
+      }),
+      prisma.application.count({
+        where: {
+          eventId,
+          OR: [
+            { status: "ABSENT" },
+            { attendance: { attendanceStatus: "ABSENT" } },
+          ],
+        },
+      }),
+    ]);
+
+    const activeStatuses = (event.clientShareCandidateStatus as string[]) || ["CONFIRMED"];
     const candidateCount = await prisma.application.count({
-      where: {
-        eventId,
-        status: { in: (event.clientShareCandidateStatus as any) || ["CONFIRMED"] },
-      },
+      where: buildCandidateWhere(eventId, activeStatuses),
     });
 
     return NextResponse.json({
@@ -72,9 +121,18 @@ export async function GET(
         enabled: event.clientShareEnabled,
         title: event.clientShareTitle || "",
         fields: event.clientShareFields || ["name", "photos", "height", "gender"],
-        candidateStatus: event.clientShareCandidateStatus || ["CONFIRMED"],
+        candidateStatus: activeStatuses,
         customNotes: event.clientShareCustomNotes || "",
         candidateCount,
+        counts: {
+          confirmed: confirmedCount,
+          selected: selectedCount,
+          present: attendedCount,
+          attended: attendedCount,
+          absent: absentCount,
+          confirmedAndSelected: confirmedCount + selectedCount,
+          presentAndConfirmed: attendedCount + confirmedCount,
+        },
       },
     });
   } catch (error: any) {
@@ -113,11 +171,32 @@ export async function PATCH(
       },
     });
 
+    const [confirmedCount, selectedCount, attendedCount, absentCount] = await Promise.all([
+      prisma.application.count({ where: { eventId, status: "CONFIRMED" } }),
+      prisma.application.count({ where: { eventId, status: "SELECTED" } }),
+      prisma.application.count({
+        where: {
+          eventId,
+          OR: [
+            { status: "ATTENDED" },
+            { attendance: { attendanceStatus: { in: ["PRESENT", "LATE"] } } },
+          ],
+        },
+      }),
+      prisma.application.count({
+        where: {
+          eventId,
+          OR: [
+            { status: "ABSENT" },
+            { attendance: { attendanceStatus: "ABSENT" } },
+          ],
+        },
+      }),
+    ]);
+
+    const activeStatuses = (updated.clientShareCandidateStatus as string[]) || ["CONFIRMED"];
     const candidateCount = await prisma.application.count({
-      where: {
-        eventId,
-        status: { in: (updated.clientShareCandidateStatus as any) || ["CONFIRMED"] },
-      },
+      where: buildCandidateWhere(eventId, activeStatuses),
     });
 
     return NextResponse.json({
@@ -128,9 +207,18 @@ export async function PATCH(
         enabled: updated.clientShareEnabled,
         title: updated.clientShareTitle || "",
         fields: updated.clientShareFields,
-        candidateStatus: updated.clientShareCandidateStatus,
+        candidateStatus: activeStatuses,
         customNotes: updated.clientShareCustomNotes || "",
         candidateCount,
+        counts: {
+          confirmed: confirmedCount,
+          selected: selectedCount,
+          present: attendedCount,
+          attended: attendedCount,
+          absent: absentCount,
+          confirmedAndSelected: confirmedCount + selectedCount,
+          presentAndConfirmed: attendedCount + confirmedCount,
+        },
       },
     });
   } catch (error: any) {
