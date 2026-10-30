@@ -139,6 +139,11 @@ model User {
   bio                 String?
   adminRemarks        String?
 
+  // Account Blocking & Enforcement
+  isBlocked           Boolean              @default(false)
+  blockedReason       String?
+  blockedAt           DateTime?
+
   // Referral System
   referralCode        String?              @unique
   referredById        String?
@@ -663,5 +668,25 @@ model Referral {
   @@index([refereeId])
   @@index([status])
   @@index([codeUsed])
+}
+
+// -------------------------------------------------------------
+// BLOCKED ACCOUNTS & IDENTIFIERS
+// Prevents banned candidates from re-applying with same reg no, phone or email
+// -------------------------------------------------------------
+model BlockedIdentifier {
+  id                 String         @id @default(uuid())
+  registrationNumber String?
+  phone              String?
+  email              String?
+  name               String?
+  reason             String?
+  userId             String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([registrationNumber])
+  @@index([phone])
+  @@index([email])
 }
 

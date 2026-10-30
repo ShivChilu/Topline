@@ -11,6 +11,16 @@ export interface StudentEmailPayload {
   templateName?: string | null;
 }
 
+export interface StudentBlockedEmailPayload {
+  studentName: string;
+  email: string;
+  registrationNumber?: string | null;
+  phone?: string | null;
+  reason: string;
+  userId?: string | null;
+  templateName?: string | null;
+}
+
 export interface EventEmailPayload {
   studentName: string;
   email: string;
@@ -398,6 +408,123 @@ export async function sendStudentDeselectionEmail({
     return { success: false, message: error.message };
   }
 }
+
+/**
+ * Official Account Block Notification Email
+ * Informs student that their account has been blocked with reason/remarks,
+ * restrictions on future event applications, and WhatsApp contact button for inquiries (7986955634).
+ */
+export async function sendStudentBlockedEmail({
+  studentName,
+  email,
+  registrationNumber,
+  phone,
+  reason,
+  userId,
+  templateName = "Student Account Blocked Notice",
+}: StudentBlockedEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email address provided for student." };
+    }
+
+    const subject = "Notice: Your Topline Account Has Been Blocked";
+    const waText = encodeURIComponent(
+      `Hello Topline Support, my account (${registrationNumber || studentName || phone || "Student"}) has been blocked with remarks: "${reason}". I would like to discuss this.`
+    );
+    const rawWhatsappUrl = `https://wa.me/917986955634?text=${waText}`;
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId,
+      templateName,
+      subject,
+      bodyPreview: `Account Blocked: ${reason.substring(0, 150)}`,
+    });
+
+    const trackedWhatsappUrl = getTrackedUrl("WHATSAPP_APPEAL", rawWhatsappUrl);
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>${subject}</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header { background: #991b1b; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 32px 24px; }
+        .badge { display: inline-block; background: #dc2626; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 20px; }
+        .reason-box { background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin: 20px 0; color: #fca5a5; }
+        .warning-card { background: #1f2937; border: 1px solid #374151; border-radius: 10px; padding: 16px; margin: 20px 0; font-size: 13px; color: #d1d5db; line-height: 1.6; }
+        .contact-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 22px; text-align: center; margin-top: 28px; }
+        .btn-whatsapp { display: inline-block; background: #25D366; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 9999px; font-weight: 800; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); margin-top: 12px; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>TOPLINE HOSPITALITY & ODC</h1>
+          <p style="margin: 4px 0 0 0; color: #fecaca; font-size: 12px; font-weight: 600;">ACCOUNT ADMINISTRATION NOTICE</p>
+        </div>
+        <div class="content">
+          <div class="badge">🚫 Account Blocked / Access Restricted</div>
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 20px;">Dear ${studentName},</h2>
+          <p style="color: #d1d5db; line-height: 1.6; font-size: 14px;">
+            This is an official notification that your Topline student account has been <strong>blocked and restricted from further event applications</strong> by administrators.
+          </p>
+
+          <div class="reason-box">
+            <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #f87171; margin-bottom: 6px;">Reason for Block / Violation Remarks:</span>
+            <div style="font-size: 15px; font-weight: 600; color: #ffffff; white-space: pre-wrap;">${reason}</div>
+          </div>
+
+          <div class="warning-card">
+            <strong style="color: #f87171; display: block; margin-bottom: 6px; font-size: 13px;">⚠️ Important Restrictions:</strong>
+            <ul style="margin: 0; padding-left: 20px; color: #e5e7eb;">
+              <li>You <strong>cannot apply for any further events</strong>, banquet shifts, or catering opportunities on Topline.</li>
+              <li>Future application attempts matching your <strong>Registration Number (${registrationNumber || "N/A"})</strong>, <strong>Mobile Number (${phone || "N/A"})</strong>, or <strong>Email Address</strong> will be automatically blocked.</li>
+            </ul>
+          </div>
+
+          <div class="contact-box">
+            <h3 style="margin: 0 0 6px 0; color: #ffffff; font-size: 16px;">Have anything to discuss or appeal?</h3>
+            <p style="margin: 0 0 14px 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
+              If you have any questions regarding this action or wish to appeal to the coordination team, please reach out directly on WhatsApp.
+            </p>
+            <a href="${trackedWhatsappUrl}" class="btn-whatsapp">
+              💬 Contact on WhatsApp (7986955634)
+            </a>
+            <p style="margin: 14px 0 0 0; color: #64748b; font-size: 12px;">
+              Helpline: <strong>+91 79869 55634</strong> &bull; Topline Event Services
+            </p>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline Hospitality & Event Management Services. All rights reserved.
+        </div>
+      </div>
+      ${getTrackingPixelHtml()}
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: email,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send account blocked email:", error);
+    return { success: false, message: error.message };
+  }
+}
+
 
 /**
  * Event-Specific Candidate Selection Email Template with 1-Click RSVP & WhatsApp Group Unlock

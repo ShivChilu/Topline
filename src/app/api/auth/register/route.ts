@@ -133,7 +133,47 @@ export async function POST(request: Request) {
       }
     }
 
-    // 8. Check for Duplicate Records in Database
+    // 8. Check if Identifiers are Blocked
+    const [blockedIdentifier, blockedAccount] = await Promise.all([
+      prisma.blockedIdentifier.findFirst({
+        where: {
+          OR: [
+            { registrationNumber: { equals: cleanReg, mode: "insensitive" } },
+            { phone: cleanPhone },
+            { email: { equals: cleanEmail, mode: "insensitive" } },
+          ],
+        },
+      }),
+      prisma.user.findFirst({
+        where: {
+          OR: [{ isBlocked: true }, { isActive: false }],
+          AND: [
+            {
+              OR: [
+                { registrationNumber: { equals: cleanReg, mode: "insensitive" } },
+                { phone: cleanPhone },
+                { email: { equals: cleanEmail, mode: "insensitive" } },
+              ],
+            },
+          ],
+        },
+        select: { blockedReason: true, adminRemarks: true },
+      }),
+    ]);
+
+    if (blockedIdentifier || blockedAccount) {
+      const reason = blockedIdentifier?.reason || blockedAccount?.blockedReason || blockedAccount?.adminRemarks || "Policy violation";
+      return NextResponse.json(
+        {
+          success: false,
+          error: "BLOCKED_ACCOUNT",
+          message: `Registration blocked: This Registration Number (${cleanReg}), Mobile Number (${cleanPhone}), or Email is blocked from Topline services (${reason}). To appeal, contact WhatsApp: 7986955634.`,
+        },
+        { status: 403 }
+      );
+    }
+
+    // 9. Check for Duplicate Records in Database
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [

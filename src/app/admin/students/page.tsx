@@ -134,6 +134,9 @@ interface Student {
   upiId: string;
   bio: string;
   adminRemarks?: string | null;
+  isBlocked?: boolean;
+  blockedReason?: string | null;
+  blockedAt?: string | null;
   profilePhotoUrl: string | null;
   selectionStatus: "UNDER_REVIEW" | "SELECTED" | "NOT_SELECTED" | "ON_HOLD";
   selectedAt: string | null;
@@ -293,6 +296,12 @@ export default function AdminStudentsPage() {
   const [customNote, setCustomNote] = useState("");
   const [savingRemarks, setSavingRemarks] = useState(false);
   const [sendEmailToggle, setSendEmailToggle] = useState(true);
+
+  // Block Student Modal state
+  const [blockingStudent, setBlockingStudent] = useState<Student | null>(null);
+  const [blockReasonInput, setBlockReasonInput] = useState("");
+  const [sendBlockEmailCheckbox, setSendBlockEmailCheckbox] = useState(true);
+  const [isBlockingSubmitting, setIsBlockingSubmitting] = useState(false);
 
   // Custom Email Broadcast & Single Message Modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -801,27 +810,116 @@ export default function AdminStudentsPage() {
   };
 
 
-  // Toggle active/blocked status
-  const handleToggleBlock = async (studentId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === "active" ? "blocked" : "active";
-    if (!confirm(`Are you sure you want to ${nextStatus === "active" ? "unblock" : "block"} this student?`)) return;
+  // Open block modal for student
+  const handleOpenBlockModal = (student: Student) => {
+    setBlockingStudent(student);
+    setBlockReasonInput(student.blockedReason || student.adminRemarks || "");
+    setSendBlockEmailCheckbox(true);
+  };
+
+  // Unblock student account
+  const handleUnblockStudent = async (student: Student) => {
+    if (!confirm(`Are you sure you want to unblock "${student.name}"? This will restore their account and lift application restrictions on their Roll No (${student.registrationNumber || "N/A"}), Phone (${student.phone || "N/A"}), and Email.`)) return;
 
     try {
+      setActionLoading(student.id);
       const res = await fetch("/api/admin/students", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, status: nextStatus }),
+        body: JSON.stringify({ studentId: student.id, status: "active" }),
       });
       const data = await res.json();
       if (data.success) {
-        showToast(data.message);
+        showToast(data.message || "Student unblocked successfully.");
         setStudents((prev) =>
-          prev.map((s) => (s.id === studentId ? { ...s, status: nextStatus as any, isActive: nextStatus === "active" } : s))
+          prev.map((s) => (s.id === student.id ? { ...s, status: "active", isBlocked: false, isActive: true, blockedReason: null } : s))
         );
+        if (inspectStudent && inspectStudent.id === student.id) {
+          setInspectStudent((prev) => (prev ? { ...prev, status: "active", isBlocked: false, isActive: true, blockedReason: null } : null));
+        }
+      } else {
+        showToast(data.message || "Failed to unblock student.");
       }
     } catch (err) {
       console.error(err);
-      showToast("Failed to toggle block status.");
+      showToast("Error unblocking student.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Confirm block student account with remarks and email dispatch
+  const handleConfirmBlock = async () => {
+    if (!blockingStudent) return;
+    const reason = blockReasonInput.trim();
+    if (!reason) {
+      alert("Please enter the reason / remarks for blocking this student.");
+      return;
+    }
+
+    try {
+      setIsBlockingSubmitting(true);
+      const res = await fetch("/api/admin/students", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: blockingStudent.id,
+          status: "blocked",
+          reason: reason,
+          adminRemarks: reason,
+          sendEmail: sendBlockEmailCheckbox,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || "Student account blocked.");
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.id === blockingStudent.id
+              ? {
+                  ...s,
+                  status: "blocked",
+                  isBlocked: true,
+                  isActive: false,
+                  blockedReason: reason,
+                  adminRemarks: reason,
+                }
+              : s
+          )
+        );
+        if (inspectStudent && inspectStudent.id === blockingStudent.id) {
+          setInspectStudent((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "blocked",
+                  isBlocked: true,
+                  isActive: false,
+                  blockedReason: reason,
+                  adminRemarks: reason,
+                }
+              : null
+          );
+        }
+        setBlockingStudent(null);
+      } else {
+        showToast(data.message || "Failed to block student.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error blocking student account.");
+    } finally {
+      setIsBlockingSubmitting(false);
+    }
+  };
+
+  // Toggle active/blocked status
+  const handleToggleBlock = (student: Student) => {
+    const isCurrentlyBlocked = student.status === "blocked" || student.isBlocked;
+    if (isCurrentlyBlocked) {
+      handleUnblockStudent(student);
+    } else {
+      handleOpenBlockModal(student);
     }
   };
 
@@ -3122,7 +3220,15 @@ export default function AdminStudentsPage() {
                             )}
                           </div>
                           <div className="text-xs text-slate-400 font-semibold">{student.registrationNumber}</div>
-                          {student.adminRemarks && (
+                          {student.blockedReason ? (
+                            <div
+                              onClick={() => openInspectStudent(student)}
+                              className="mt-1 text-[11px] text-rose-800 bg-rose-50 border border-rose-300 px-2 py-0.5 rounded cursor-pointer max-w-[220px] truncate hover:bg-rose-100 transition font-medium"
+                              title={`Block Reason: ${student.blockedReason}`}
+                            >
+                              🚫 {student.blockedReason}
+                            </div>
+                          ) : student.adminRemarks ? (
                             <div
                               onClick={() => openInspectStudent(student)}
                               className="mt-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded cursor-pointer max-w-[220px] truncate hover:bg-amber-100 transition"
@@ -3130,36 +3236,51 @@ export default function AdminStudentsPage() {
                             >
                               📝 {student.adminRemarks}
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
-                      {student.selectionStatus === "SELECTED" && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          ✓ Selected
-                        </span>
-                      )}
-                      {student.selectionStatus === "ON_HOLD" && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                          ⏸ On Hold / Waitlist
-                        </span>
-                      )}
-                      {student.selectionStatus === "UNDER_REVIEW" && (
-                        student.completenessScore >= 100 ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit">
-                            <Sparkles className="w-3 h-3 text-amber-600" /> 100% Ready
+                      {student.status === "blocked" || student.isBlocked ? (
+                        <div className="space-y-1">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-600 text-white flex items-center gap-1 w-fit shadow-xs">
+                            <Ban className="w-3 h-3" /> Blocked
                           </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                            ⏳ Under Review
-                          </span>
-                        )
-                      )}
-                      {student.selectionStatus === "NOT_SELECTED" && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                          ✗ Not Selected
-                        </span>
+                          {student.blockedReason && (
+                            <div className="text-[10px] text-rose-700 font-medium max-w-[130px] truncate" title={student.blockedReason}>
+                              {student.blockedReason}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          {student.selectionStatus === "SELECTED" && (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ Selected
+                            </span>
+                          )}
+                          {student.selectionStatus === "ON_HOLD" && (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              ⏸ On Hold / Waitlist
+                            </span>
+                          )}
+                          {student.selectionStatus === "UNDER_REVIEW" && (
+                            student.completenessScore >= 100 ? (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit">
+                                <Sparkles className="w-3 h-3 text-amber-600" /> 100% Ready
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                ⏳ Under Review
+                              </span>
+                            )
+                          )}
+                          {student.selectionStatus === "NOT_SELECTED" && (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                              ✗ Not Selected
+                            </span>
+                          )}
+                        </>
                       )}
                     </td>
                     <td className="p-4 text-xs text-slate-600">
@@ -3275,15 +3396,15 @@ export default function AdminStudentsPage() {
                           {student.selectionStatus === "SELECTED" ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </button>
                         <button
-                          onClick={() => handleToggleBlock(student.id, student.status)}
+                          onClick={() => handleToggleBlock(student)}
                           className={`p-1.5 rounded-lg ${
-                            student.status === "active"
+                            student.status === "active" && !student.isBlocked
                               ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
                               : "bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white"
                           }`}
-                          title={student.status === "active" ? "Block" : "Unblock"}
+                          title={student.status === "active" && !student.isBlocked ? "Block Account (with Remarks & Email)" : "Unblock Account"}
                         >
-                          {student.status === "active" ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                          {student.status === "active" && !student.isBlocked ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                         </button>
                         <button
                           disabled={actionLoading === student.id}
@@ -4045,6 +4166,39 @@ export default function AdminStudentsPage() {
                   </div>
                 </div>
 
+                {/* Blocked Notification Banner */}
+                {(inspectStudent.status === "blocked" || inspectStudent.isBlocked) && (
+                  <div className="bg-rose-950/80 border border-rose-500/60 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-200">
+                    <div className="flex items-start gap-2.5">
+                      <Ban className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-extrabold text-white text-sm flex items-center gap-2">
+                          <span>ACCOUNT BLOCKED</span>
+                          {inspectStudent.blockedAt && (
+                            <span className="text-[11px] font-normal text-rose-300">
+                              ({new Date(inspectStudent.blockedAt).toLocaleDateString()})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-rose-200 mt-1">
+                          <strong>Reason / Remarks:</strong> {inspectStudent.blockedReason || inspectStudent.adminRemarks || "Policy violation"}
+                        </div>
+                        <div className="text-[11px] text-rose-400 mt-0.5">
+                          Restricted from applying to all events. Identifiers (Roll No, Phone, Email) are barred.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUnblockStudent(inspectStudent)}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shrink-0 transition flex items-center justify-center gap-1.5 shadow cursor-pointer"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Unblock Account</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* On Hold Notification Banner */}
                 {inspectStudent.selectionStatus === "ON_HOLD" && (
                   <div className="bg-amber-950/60 border border-amber-500/50 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
@@ -4145,6 +4299,25 @@ export default function AdminStudentsPage() {
                   >
                     Under Review
                   </button>
+                  {inspectStudent.status === "blocked" || inspectStudent.isBlocked ? (
+                    <button
+                      onClick={() => handleUnblockStudent(inspectStudent)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                      title="Unblock this student and lift all application bans"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Unblock Account
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenBlockModal(inspectStudent)}
+                      className="bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow flex items-center gap-1.5"
+                      title="Block student account with remarks and notification email"
+                    >
+                      <Ban className="w-4 h-4" />
+                      Block Account
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteStudent(inspectStudent.id, inspectStudent.name)}
                     className="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
@@ -4995,6 +5168,131 @@ export default function AdminStudentsPage() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: BLOCK STUDENT ACCOUNT WITH REMARKS & EMAIL */}
+      {/* ---------------------------------------------------- */}
+      {blockingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col">
+            {/* Header */}
+            <div className="p-5 bg-rose-950/40 border-b border-rose-900/40 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center text-rose-500 shadow-inner">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base leading-tight">Block Student Account</h3>
+                  <p className="text-xs text-rose-300/80 mt-0.5">
+                    Write violation remarks and dispatch block notice email
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBlockingStudent(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4 text-xs text-slate-300">
+              {/* Student Summary Card */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-sm overflow-hidden shrink-0">
+                    {blockingStudent.profilePhotoUrl ? (
+                      <img src={blockingStudent.profilePhotoUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      blockingStudent.name.charAt(0)
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-white text-sm truncate">{blockingStudent.name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono truncate">
+                      {blockingStudent.registrationNumber || "No Roll No"} &bull; {blockingStudent.phone || "No Phone"}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">{blockingStudent.email || "No Email"}</div>
+                  </div>
+                </div>
+                <span className="bg-rose-500/10 border border-rose-500/30 text-rose-400 px-2 py-1 rounded-lg text-[10px] font-extrabold shrink-0">
+                  Target for Ban
+                </span>
+              </div>
+
+              {/* Reason / Remarks Textarea */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-200 flex items-center justify-between">
+                  <span>
+                    Reason / Remarks for Blocking <span className="text-rose-500">*</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-normal">Included in student email</span>
+                </label>
+                <textarea
+                  value={blockReasonInput}
+                  onChange={(e) => setBlockReasonInput(e.target.value)}
+                  placeholder="e.g. Violation of attendance rules, unexcused absence, misconduct..."
+                  rows={3}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition shadow-inner"
+                />
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  This explanation will be permanently recorded in the candidate&apos;s admin remarks and emailed directly to them.
+                </p>
+              </div>
+
+              {/* Email Notification Option */}
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                <input
+                  type="checkbox"
+                  checked={sendBlockEmailCheckbox}
+                  onChange={(e) => setSendBlockEmailCheckbox(e.target.checked)}
+                  className="mt-0.5 accent-rose-600 rounded cursor-pointer"
+                />
+                <div className="flex-1">
+                  <span className="text-xs font-bold text-slate-200 block">
+                    Dispatch official notification email to candidate
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    Candidate receives an official notice stating their account has been blocked with the remarks above, notice that they cannot apply for further events, and a direct WhatsApp button to contact <strong>7986955634</strong>.
+                  </p>
+                </div>
+              </label>
+
+              {/* Strict Multi-Identifier Ban Notice */}
+              <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-[11px] text-rose-300 flex items-start gap-2.5 leading-relaxed">
+                <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-white block font-bold mb-0.5">Strict Application Ban Enforced:</strong>
+                  This candidate and ANY new event applications or registrations matching their Roll No (<strong>{blockingStudent.registrationNumber || "N/A"}</strong>), Phone (<strong>{blockingStudent.phone || "N/A"}</strong>), or Email (<strong>{blockingStudent.email || "N/A"}</strong>) will be strictly rejected.
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isBlockingSubmitting}
+                onClick={() => setBlockingStudent(null)}
+                className="px-4 py-2 border border-slate-700 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isBlockingSubmitting || !blockReasonInput.trim()}
+                onClick={handleConfirmBlock}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <Ban className="w-4 h-4" />
+                <span>{isBlockingSubmitting ? "Blocking Account..." : "Confirm & Block Account"}</span>
+              </button>
             </div>
           </div>
         </div>

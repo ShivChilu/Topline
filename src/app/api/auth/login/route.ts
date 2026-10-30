@@ -38,9 +38,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || user.isBlocked) {
+      const reason = user.blockedReason || user.adminRemarks || "Violation of policies or event attendance rules";
       return NextResponse.json(
-        { success: false, message: "Your account is inactive. Please contact support." },
+        {
+          success: false,
+          error: "ACCOUNT_BLOCKED",
+          message: `Your account has been blocked: ${reason}. You cannot apply for events. For inquiries or appeal, contact WhatsApp: 7986955634.`,
+        },
         { status: 403 }
       );
     }

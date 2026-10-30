@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Role, StudentSelectionStatus } from "@prisma/client";
-import { sendStudentSelectionEmail, sendStudentDeselectionEmail } from "@/lib/email";
+import { sendStudentSelectionEmail, sendStudentDeselectionEmail, sendStudentBlockedEmail } from "@/lib/email";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
@@ -58,9 +58,11 @@ export async function GET(request: Request) {
     ];
 
     if (status === "active") {
-      andConditions.push({ isActive: true });
+      andConditions.push({ isActive: true, isBlocked: false });
     } else if (status === "blocked") {
-      andConditions.push({ isActive: false });
+      andConditions.push({
+        OR: [{ isActive: false }, { isBlocked: true }],
+      });
     }
 
     if (selectionStatus && selectionStatus !== "ALL") {
@@ -138,6 +140,9 @@ export async function GET(request: Request) {
         upiId: true,
         bio: true,
         adminRemarks: true,
+        isBlocked: true,
+        blockedReason: true,
+        blockedAt: true,
         selectionStatus: true,
         selectedAt: true,
         selectionEmailSentAt: true,
@@ -365,8 +370,11 @@ export async function GET(request: Request) {
         selectionStatus: s.selectionStatus || "UNDER_REVIEW",
         selectedAt: s.selectedAt,
         selectionEmailSentAt: s.selectionEmailSentAt,
-        status: s.isActive ? "active" : "blocked",
-        isActive: s.isActive,
+        status: (s.isBlocked || !s.isActive) ? "blocked" : "active",
+        isActive: s.isActive && !s.isBlocked,
+        isBlocked: Boolean(s.isBlocked || !s.isActive),
+        blockedReason: s.blockedReason || s.adminRemarks || "",
+        blockedAt: s.blockedAt,
         appliedCount,
         selectedCount,
         confirmedCount,
@@ -441,7 +449,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes, adminRemarks } = body;
+    const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes, adminRemarks, remarks, reason } = body;
 
     const validStatuses: StudentSelectionStatus[] = ["UNDER_REVIEW", "SELECTED", "NOT_SELECTED", "ON_HOLD"];
 
@@ -563,16 +571,147 @@ export async function PATCH(request: Request) {
 
     // Single active/blocked update
     if (studentId && status) {
-      const student = await prisma.user.update({
+      const isBlocking = status === "blocked";
+      const blockReason = (reason || remarks || notes || adminRemarks || "Policy violation / disciplinary restriction").trim();
+
+      const student = await prisma.user.findUnique({
         where: { id: studentId },
-        data: { isActive: status === "active" },
       });
 
-      return NextResponse.json({
-        success: true,
-        message: `Student account ${status === "active" ? "unblocked" : "blocked"}.`,
-        student: { ...student, _id: student.id, status },
-      });
+      if (!student) {
+        return NextResponse.json({ success: false, message: "Student account not found." }, { status: 404 });
+      }
+
+      if (isBlocking) {
+        const updated = await prisma.user.update({
+          where: { id: studentId },
+          data: {
+            isActive: false,
+            isBlocked: true,
+            blockedReason: blockReason,
+            blockedAt: new Date(),
+            adminRemarks: blockReason,
+          },
+        });
+
+        // Register identifier bans to prevent re-registration or applications
+        const cleanReg = updated.registrationNumber?.trim().toUpperCase();
+        const cleanPhone = updated.phone?.trim();
+        const cleanEmail = updated.email?.trim().toLowerCase();
+
+        await prisma.blockedIdentifier.deleteMany({
+          where: {
+            OR: [
+              { userId: updated.id },
+              ...(cleanReg ? [{ registrationNumber: cleanReg }] : []),
+              ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+              ...(cleanEmail ? [{ email: cleanEmail }] : []),
+            ],
+          },
+        });
+
+        await prisma.blockedIdentifier.create({
+          data: {
+            userId: updated.id,
+            name: updated.name,
+            registrationNumber: cleanReg || null,
+            phone: cleanPhone || null,
+            email: cleanEmail || null,
+            reason: blockReason,
+          },
+        });
+
+        // Dispatch email notification to student
+        let emailDispatched = false;
+        if (sendEmail !== false && updated.email) {
+          sendStudentBlockedEmail({
+            studentName: updated.name,
+            email: updated.email,
+            registrationNumber: updated.registrationNumber,
+            phone: updated.phone,
+            reason: blockReason,
+            userId: updated.id,
+          }).catch((err) => console.error("Error sending account blocked email:", err));
+          emailDispatched = true;
+        }
+
+        await prisma.auditLog.create({
+          data: {
+            action: "BLOCK_STUDENT_ACCOUNT",
+            metadata: {
+              studentId: updated.id,
+              studentName: updated.name,
+              reason: blockReason,
+              emailDispatched,
+              adminEmail: admin.email,
+            },
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: `Student account blocked successfully${emailDispatched ? " and notification email dispatched" : ""}.`,
+          student: {
+            ...updated,
+            _id: updated.id,
+            status: "blocked",
+            isBlocked: true,
+            isActive: false,
+            blockedReason: blockReason,
+            adminRemarks: blockReason,
+          },
+        });
+      } else {
+        // Unblocking student
+        const updated = await prisma.user.update({
+          where: { id: studentId },
+          data: {
+            isActive: true,
+            isBlocked: false,
+            blockedReason: null,
+            blockedAt: null,
+          },
+        });
+
+        const cleanReg = updated.registrationNumber?.trim().toUpperCase();
+        const cleanPhone = updated.phone?.trim();
+        const cleanEmail = updated.email?.trim().toLowerCase();
+
+        await prisma.blockedIdentifier.deleteMany({
+          where: {
+            OR: [
+              { userId: updated.id },
+              ...(cleanReg ? [{ registrationNumber: cleanReg }] : []),
+              ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+              ...(cleanEmail ? [{ email: cleanEmail }] : []),
+            ],
+          },
+        });
+
+        await prisma.auditLog.create({
+          data: {
+            action: "UNBLOCK_STUDENT_ACCOUNT",
+            metadata: {
+              studentId: updated.id,
+              studentName: updated.name,
+              adminEmail: admin.email,
+            },
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Student account unblocked successfully. Restrictions removed.",
+          student: {
+            ...updated,
+            _id: updated.id,
+            status: "active",
+            isBlocked: false,
+            isActive: true,
+            blockedReason: null,
+          },
+        });
+      }
     }
 
     return NextResponse.json({ success: false, message: "Invalid request parameters." }, { status: 400 });

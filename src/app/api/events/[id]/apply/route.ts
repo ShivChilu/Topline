@@ -40,11 +40,68 @@ export async function POST(
       where: { id: decoded.id },
     });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       return NextResponse.json(
-        { success: false, message: "Your student profile is inactive or restricted by administrators." },
+        { success: false, message: "User account not found." },
+        { status: 404 }
+      );
+    }
+
+    // Direct account block check
+    if (!user.isActive || user.isBlocked) {
+      const reason = user.blockedReason || user.adminRemarks || "Violation of policies or event attendance rules";
+      return NextResponse.json(
+        {
+          success: false,
+          error: "ACCOUNT_BLOCKED",
+          message: `Your account has been blocked: ${reason}. You cannot apply for further events. To contact administration, message WhatsApp: 7986955634.`,
+        },
         { status: 403 }
       );
+    }
+
+    // Strict Identifier Ban Check (Registration No, Phone No, Email)
+    // Prevents blocked students from applying even via alternate accounts
+    const userReg = user.registrationNumber?.trim().toUpperCase();
+    const userPhone = user.phone?.trim();
+    const userEmail = user.email?.trim().toLowerCase();
+
+    const identifierConditions: any[] = [];
+    if (userReg) identifierConditions.push({ registrationNumber: { equals: userReg, mode: "insensitive" } });
+    if (userPhone) identifierConditions.push({ phone: userPhone });
+    if (userEmail) identifierConditions.push({ email: { equals: userEmail, mode: "insensitive" } });
+
+    if (identifierConditions.length > 0) {
+      const [blockedRecord, blockedUserRecord] = await Promise.all([
+        prisma.blockedIdentifier.findFirst({
+          where: { OR: identifierConditions },
+        }),
+        prisma.user.findFirst({
+          where: {
+            id: { not: user.id },
+            OR: [{ isBlocked: true }, { isActive: false }],
+            AND: [{ OR: identifierConditions }],
+          },
+          select: { id: true, blockedReason: true, adminRemarks: true },
+        }),
+      ]);
+
+      if (blockedRecord || blockedUserRecord) {
+        const reason =
+          blockedRecord?.reason ||
+          blockedUserRecord?.blockedReason ||
+          blockedUserRecord?.adminRemarks ||
+          "Violation of event policies";
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: "IDENTIFIER_BLOCKED",
+            message: `Applications associated with your Registration Number (${user.registrationNumber || "N/A"}), Mobile Number (${user.phone || "N/A"}), or Email are blocked (${reason}). You cannot apply for events. For inquiries, contact WhatsApp: 7986955634.`,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if student profile is currently ON HOLD

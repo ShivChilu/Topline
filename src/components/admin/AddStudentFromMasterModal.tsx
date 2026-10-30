@@ -287,22 +287,25 @@ export default function AddStudentFromMasterModal({
                 const regNo = (s.registrationNumber || s.universityId || "").toLowerCase().trim();
                 const existingStatus = enrolledStudentMap.get(sId) || (regNo ? enrolledStudentMap.get(regNo) : null);
                 const isAlreadyEnrolled = !!existingStatus;
+                const isBlocked = s.status === "blocked" || s.isBlocked;
                 const isSelectedForAdd = selectedStudent?.id === sId || selectedStudent?._id === sId;
 
                 return (
                   <div
                     key={sId}
                     onClick={() => {
-                      if (!isAlreadyEnrolled) {
+                      if (!isAlreadyEnrolled && !isBlocked) {
                         setSelectedStudent(s);
                       }
                     }}
-                    className={`p-3.5 rounded-2xl border transition relative flex items-start gap-3 cursor-pointer ${
-                      isAlreadyEnrolled
+                    className={`p-3.5 rounded-2xl border transition relative flex items-start gap-3 ${
+                      isBlocked
+                        ? "bg-rose-50/60 border-rose-200 opacity-60 cursor-not-allowed"
+                        : isAlreadyEnrolled
                         ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
                         : isSelectedForAdd
-                        ? "bg-red-50/50 border-red-500 ring-2 ring-red-500/20 shadow-md"
-                        : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                        ? "bg-red-50/50 border-red-500 ring-2 ring-red-500/20 shadow-md cursor-pointer"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm cursor-pointer"
                     }`}
                   >
                     {/* Photo / Avatar */}
@@ -337,7 +340,11 @@ export default function AddStudentFromMasterModal({
                         <h4 className="text-xs font-bold text-slate-900 truncate">
                           {s.name || "Student"}
                         </h4>
-                        {isAlreadyEnrolled ? (
+                        {isBlocked ? (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-rose-600 text-white whitespace-nowrap shadow-2xs">
+                            🚫 Blocked
+                          </span>
+                        ) : isAlreadyEnrolled ? (
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 whitespace-nowrap">
                             Enrolled ({existingStatus})
                           </span>

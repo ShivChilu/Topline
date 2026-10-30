@@ -87,6 +87,16 @@ export async function POST(
       return NextResponse.json({ success: false, message: "Registered student account not found." }, { status: 404 });
     }
 
+    if (!student.isActive || student.isBlocked) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Cannot enroll student: This account has been blocked (${student.blockedReason || student.adminRemarks || "Policy violation"}). Please unblock the student from the Master List first if you wish to enroll them.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Check for duplicate application
     const existingApp = await prisma.application.findFirst({
       where: {
