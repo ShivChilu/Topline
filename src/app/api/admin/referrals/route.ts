@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { ReferralStatus } from "@prisma/client";
-import { getActiveReferralRewardAmount } from "@/lib/referral";
+import { getActiveReferralRewardAmount, isReferralProgramEnabled } from "@/lib/referral";
 import { sendReferralPayoutPaidEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -112,7 +112,10 @@ export async function GET(request: Request) {
     });
 
     // 3. Referrers aggregation map & email history query
-    const activeReward = await getActiveReferralRewardAmount();
+    const [activeReward, referralsEnabled] = await Promise.all([
+      getActiveReferralRewardAmount(),
+      isReferralProgramEnabled(),
+    ]);
     const referrersMap = new Map<string, any>();
 
     // Fetch all referral-related email logs and audit logs
@@ -389,6 +392,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+      referralsEnabled,
       metrics: {
         totalCodesCreated,
         totalReferrals,
@@ -399,6 +403,7 @@ export async function GET(request: Request) {
         settledPayoutAmount,
         totalEarningsGenerated,
         rewardPerReferral: activeReward,
+        referralsEnabled,
         lastBroadcastSentAt,
         lastBroadcastCount,
       },
@@ -646,16 +651,14 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const rawAmount = Number(body.rewardAmount);
+    const { rewardAmount, referralsEnabled } = body;
 
-    if (isNaN(rawAmount) || rawAmount < 20) {
+    if (rewardAmount === undefined && referralsEnabled === undefined) {
       return NextResponse.json(
-        { success: false, message: "Referral reward amount must be a minimum of ₹20." },
+        { success: false, message: "Nothing to update. Provide rewardAmount or referralsEnabled." },
         { status: 400 }
       );
     }
-
-    const cleanAmount = Math.max(20, Math.min(150, Math.round(rawAmount)));
 
     const existingConfig = await prisma.setting.findUnique({
       where: { key: "homepage_content" },
@@ -666,38 +669,71 @@ export async function PATCH(request: Request) {
         ? (existingConfig.value as Record<string, any>)
         : {};
 
+    const updatedValues: Record<string, any> = { ...currentValues };
+    const auditActions: string[] = [];
+    let message = "";
+
+    // 1. Toggle Referrals Enabled / Disabled
+    if (referralsEnabled !== undefined) {
+      const isEnabled = Boolean(referralsEnabled);
+      updatedValues.referralsEnabled = isEnabled;
+      auditActions.push(isEnabled ? "ENABLE_REFERRALS_PROGRAM" : "DISABLE_REFERRALS_PROGRAM");
+      message = isEnabled
+        ? "Referral program turned ON. New referrals and invitation links are now active."
+        : "Referral program turned OFF. New referrals cannot be created or registered until turned back on.";
+    }
+
+    // 2. Update Reward Rate
+    if (rewardAmount !== undefined) {
+      const rawAmount = Number(rewardAmount);
+      if (isNaN(rawAmount) || rawAmount < 20) {
+        return NextResponse.json(
+          { success: false, message: "Referral reward amount must be a minimum of ₹20." },
+          { status: 400 }
+        );
+      }
+      const cleanAmount = Math.max(20, Math.min(150, Math.round(rawAmount)));
+      updatedValues.referralRewardAmount = cleanAmount;
+      auditActions.push(`UPDATE_REFERRAL_REWARD_RATE_${cleanAmount}`);
+      message = message
+        ? `${message} Reward rate updated to ₹${cleanAmount}.`
+        : `Referral reward payout rate successfully updated to ₹${cleanAmount} per completed 1st event.`;
+    }
+
     const updatedConfig = await prisma.setting.upsert({
       where: { key: "homepage_content" },
       update: {
-        value: {
-          ...currentValues,
-          referralRewardAmount: cleanAmount,
-        },
+        value: updatedValues,
       },
       create: {
         key: "homepage_content",
-        value: {
-          referralRewardAmount: cleanAmount,
-        },
+        value: updatedValues,
       },
     });
 
     await prisma.auditLog.create({
       data: {
         adminId: admin.id,
-        action: "UPDATE_REFERRAL_REWARD_RATE",
+        action: auditActions.join(" | ") || "UPDATE_REFERRAL_SETTINGS",
         target: "SETTING_HOMEPAGE_CONTENT",
         metadata: {
-          previousAmount: currentValues.referralRewardAmount ?? 25,
-          newRewardAmount: cleanAmount,
+          previousValues: {
+            referralsEnabled: currentValues.referralsEnabled ?? true,
+            referralRewardAmount: currentValues.referralRewardAmount ?? 50,
+          },
+          newValues: {
+            referralsEnabled: updatedValues.referralsEnabled !== false,
+            referralRewardAmount: updatedValues.referralRewardAmount ?? 50,
+          },
         },
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: `Referral reward payout rate successfully updated to ₹${cleanAmount} per completed 1st event.`,
-      rewardAmount: cleanAmount,
+      message,
+      referralsEnabled: updatedValues.referralsEnabled !== false,
+      rewardAmount: updatedValues.referralRewardAmount ?? 50,
       settings: updatedConfig.value,
     });
   } catch (error: any) {

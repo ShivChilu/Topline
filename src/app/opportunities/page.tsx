@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { isReferralProgramEnabled } from "@/lib/referral";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
 import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
 import EventAssistantChatbot from "@/components/events/EventAssistantChatbot";
@@ -52,6 +53,7 @@ export default async function OpportunitiesPage(props: {
   let rawEvents: any[] = [];
   let user: any = null;
   let profileCompletion = { percentage: 0, isComplete: false, missingFields: [] as string[], missingPhotos: [] as string[] };
+  const referralsEnabled = await isReferralProgramEnabled();
 
   // Check student authentication session
   try {
@@ -407,7 +409,7 @@ export default async function OpportunitiesPage(props: {
         )}
 
         {/* Dynamic Referral Promotion (Only shown to signed-in students who have NOT created a referral code yet) */}
-        {user && !user.referralCode && ["STUDENT", "USER"].includes(user.role) && (
+        {referralsEnabled && user && !user.referralCode && ["STUDENT", "USER"].includes(user.role) && (
           <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-purple-500/40 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full box-border">
             <div className="space-y-1.5 max-w-2xl relative z-10 w-full min-w-0">
               <div className="flex items-center gap-2 flex-wrap">

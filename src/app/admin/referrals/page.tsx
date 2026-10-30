@@ -49,6 +49,10 @@ export default function AdminReferralsPage() {
   const [selectedReward, setSelectedReward] = useState<number>(50);
   const [updatingReward, setUpdatingReward] = useState(false);
 
+  // Program Enable / Disable State (Toggle Referral Program)
+  const [referralsEnabled, setReferralsEnabled] = useState<boolean>(true);
+  const [togglingProgram, setTogglingProgram] = useState<boolean>(false);
+
   // Payout Settlement Modal & Dynamic Per-Item Amounts
   const [settlingReferrer, setSettlingReferrer] = useState<any>(null);
   const [settlingReferralItem, setSettlingReferralItem] = useState<any>(null);
@@ -126,6 +130,11 @@ export default function AdminReferralsPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setData(json);
+        if (json.referralsEnabled !== undefined) {
+          setReferralsEnabled(json.referralsEnabled);
+        } else if (json.metrics?.referralsEnabled !== undefined) {
+          setReferralsEnabled(json.metrics.referralsEnabled);
+        }
         if (json.metrics?.rewardPerReferral) {
           setSelectedReward(json.metrics.rewardPerReferral);
         }
@@ -167,6 +176,45 @@ export default function AdminReferralsPage() {
       setFeedback({ type: "error", message: "Network error updating reward rate." });
     } finally {
       setUpdatingReward(false);
+    }
+  };
+
+  const handleToggleReferrals = async () => {
+    const nextState = !referralsEnabled;
+    const confirmPrompt = nextState
+      ? "Turn ON the referral program? Students will once again be able to share referral codes and register friends."
+      : "Turn OFF the referral program? New registrations using referral codes will be blocked until turned back on.";
+
+    if (!confirm(confirmPrompt)) return;
+
+    setTogglingProgram(true);
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referralsEnabled: nextState }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setReferralsEnabled(nextState);
+        setFeedback({
+          type: "success",
+          message: nextState
+            ? "🟢 Referral program turned ON successfully. New referrals are now active."
+            : "🔴 Referral program turned OFF. New referrals cannot be registered until turned back on.",
+        });
+        fetchReferrals();
+      } else {
+        setFeedback({
+          type: "error",
+          message: json.message || "Failed to update referral program status.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Toggle referrals error:", err);
+      setFeedback({ type: "error", message: "Network error updating referral program status." });
+    } finally {
+      setTogglingProgram(false);
     }
   };
 
@@ -584,15 +632,26 @@ export default function AdminReferralsPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-wider text-red-600 uppercase font-sans">
               Referrals & Offline Payouts
             </h1>
-            <button
-              onClick={() => setShowRewardModal(true)}
-              className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95"
-              title="Click to change active referral payout reward"
-            >
-              <Gift className="w-3.5 h-3.5 text-red-600" />
-              <span>₹{metrics.rewardPerReferral || 50} / Active Payout</span>
-              <Settings className="w-3 h-3 text-red-500" />
-            </button>
+            {referralsEnabled ? (
+              <button
+                onClick={() => setShowRewardModal(true)}
+                className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                title="Click to change active referral payout reward"
+              >
+                <Gift className="w-3.5 h-3.5 text-red-600" />
+                <span>₹{metrics.rewardPerReferral || 50} / Active Payout</span>
+                <Settings className="w-3 h-3 text-red-500" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowRewardModal(true)}
+                className="bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+                title="Referral program is currently turned OFF"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                <span>Referrals Turned OFF</span>
+              </button>
+            )}
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
             Track student invitation codes, verify referred student event applications, and record offline UPI payout settlements.
@@ -600,6 +659,50 @@ export default function AdminReferralsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Referral Program ON / OFF Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleReferrals}
+            disabled={togglingProgram}
+            className={`px-3.5 py-2.5 rounded-xl text-xs font-black transition flex items-center gap-2.5 border shadow-xs cursor-pointer active:scale-95 ${
+              referralsEnabled
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                : "bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100 ring-2 ring-rose-400/40"
+            }`}
+            title={referralsEnabled ? "Click to turn OFF referrals" : "Click to turn ON referrals"}
+          >
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  referralsEnabled ? "bg-emerald-400" : "bg-rose-400"
+                }`}
+              ></span>
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  referralsEnabled ? "bg-emerald-600" : "bg-rose-600"
+                }`}
+              ></span>
+            </span>
+            <span className="whitespace-nowrap">
+              {togglingProgram
+                ? "Updating..."
+                : referralsEnabled
+                ? "Referrals: ON"
+                : "Referrals: OFF"}
+            </span>
+            <div
+              className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                referralsEnabled ? "bg-emerald-600" : "bg-slate-400"
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white transition-transform shadow-xs ${
+                  referralsEnabled ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </div>
+          </button>
+
           <button
             onClick={() => setShowRewardModal(true)}
             className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
@@ -627,6 +730,37 @@ export default function AdminReferralsPage() {
         </div>
       </div>
 
+      {/* Alert banner when referrals are turned OFF */}
+      {!referralsEnabled && (
+        <div className="bg-rose-50 border-2 border-rose-400 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-rose-950 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-200 border border-rose-300 flex items-center justify-center shrink-0 text-rose-700">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-sm sm:text-base text-rose-900 flex items-center gap-2">
+                <span>Referral Program is Turned OFF</span>
+                <span className="bg-rose-600 text-white text-[10px] uppercase font-black px-2 py-0.5 rounded-full">
+                  Paused
+                </span>
+              </div>
+              <p className="text-xs text-rose-700 mt-1 leading-relaxed">
+                New student referrals cannot be allowed while turned off. Any prospective candidate attempting to register with a referral code will be notified that the program is paused. Existing qualified rewards can still be settled offline.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleReferrals}
+            disabled={togglingProgram}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Turn Referrals Back ON</span>
+          </button>
+        </div>
+      )}
+
       {/* STRATEGY & CAMPAIGN SPOTLIGHT BANNER */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-red-950 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5 max-w-2xl">
@@ -635,8 +769,14 @@ export default function AdminReferralsPage() {
               <Sparkles className="w-3 h-3 text-red-400" />
               Referral Campaign Strategy
             </span>
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
-              Promotion: Up to ₹150 / Friend
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                referralsEnabled
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                  : "bg-rose-500/20 text-rose-300 border-rose-500/30"
+              }`}
+            >
+              {referralsEnabled ? "Promotion: Up to ₹150 / Friend" : "Program Status: ⏸️ Turned OFF"}
             </span>
           </div>
           <h2 className="text-base sm:text-lg font-black tracking-tight text-white !text-white">
@@ -2068,6 +2208,28 @@ export default function AdminReferralsPage() {
               <p className="text-xs text-slate-700 leading-relaxed">
                 The public marketing slogan shown to students is <strong>"Earn Up to ₹150"</strong>. You can dynamically adjust the actual base reward given per referral between <strong>₹20</strong> and <strong>₹150</strong> at any time.
               </p>
+            </div>
+
+            {/* Program ON / OFF Toggle in Modal */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">Referral Program Status</span>
+                <span className="text-[11px] text-slate-500">
+                  {referralsEnabled ? "Active & accepting new referrals" : "Turned OFF — new referrals blocked"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleReferrals}
+                disabled={togglingProgram}
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 border cursor-pointer active:scale-95 ${
+                  referralsEnabled
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                    : "bg-rose-600 text-white border-rose-600 shadow-xs"
+                }`}
+              >
+                <span>{referralsEnabled ? "ACTIVE (ON)" : "PAUSED (OFF)"}</span>
+              </button>
             </div>
 
             {/* Presets */}

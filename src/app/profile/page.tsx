@@ -1654,6 +1654,18 @@ export default function StudentProfilePage() {
               </div>
             </div>
 
+            {referralData && referralData.referralsEnabled === false && (
+              <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-xs text-amber-900 flex items-start gap-3 shadow-xs">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">Referral Program is Temporarily Paused</strong>
+                  <p className="text-amber-800 mt-0.5">
+                    Topline administrators have paused the referral program. New student invitations cannot be registered at this time. Existing qualified earnings will be paid out as usual.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {loadingReferral ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto" />

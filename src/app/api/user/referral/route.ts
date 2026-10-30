@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
-import { generateUniqueReferralCode, getUserReferralStats } from "@/lib/referral";
+import { generateUniqueReferralCode, getUserReferralStats, isReferralProgramEnabled } from "@/lib/referral";
 import { isValidUPI } from "@/lib/validation";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
 
@@ -47,10 +47,12 @@ export async function GET(request: Request) {
 
     const stats = await getUserReferralStats(user.id);
     const completeness = await getStudentProfileCompletion(user.id);
+    const referralsEnabled = await isReferralProgramEnabled();
     const inviteUrl = user.referralCode ? `${baseUrl}/register?ref=${user.referralCode}` : "";
 
     return NextResponse.json({
       success: true,
+      referralsEnabled,
       user: {
         id: user.id,
         name: user.name,
@@ -81,6 +83,17 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ success: false, message: "User account not found." }, { status: 404 });
+    }
+
+    const referralsEnabled = await isReferralProgramEnabled();
+    if (!referralsEnabled) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The student referral program is currently turned off by administration. New referral codes cannot be generated at this time.",
+        },
+        { status: 403 }
+      );
     }
 
     // PROFILE COMPLETENESS GATE: Must have 100% completed profile to activate/create referral code

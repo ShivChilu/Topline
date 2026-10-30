@@ -17,6 +17,24 @@ export const MIN_REFERRAL_REWARD = 20.0;
 export const DEFAULT_REFERRAL_REWARD = 150.0;
 
 /**
+ * Checks whether the referral program is currently enabled (active) or turned off by admin.
+ * Defaults to true if not explicitly set to false.
+ */
+export async function isReferralProgramEnabled(): Promise<boolean> {
+  try {
+    const config = await prisma.setting.findUnique({
+      where: { key: "homepage_content" },
+    });
+    if (config?.value && typeof config.value === "object" && "referralsEnabled" in (config.value as any)) {
+      return (config.value as any).referralsEnabled !== false;
+    }
+  } catch (err) {
+    console.error("Error fetching referral enabled status:", err);
+  }
+  return true;
+}
+
+/**
  * Dynamically fetches the active referral reward amount configured by the Admin in Settings.
  * Enforces a minimum of ₹20 and maximum of ₹150. Falls back to DEFAULT_REFERRAL_REWARD (₹150) if not configured.
  */

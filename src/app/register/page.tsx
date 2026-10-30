@@ -370,6 +370,9 @@ function RegisterForm() {
                 placeholder="e.g. SHIV25"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 uppercase font-mono tracking-wider focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 transition"
               />
+              {fieldErrors.referralCode && (
+                <p className="text-[11px] text-rose-600 font-semibold mt-1">{fieldErrors.referralCode}</p>
+              )}
             </div>
           )}
         </div>

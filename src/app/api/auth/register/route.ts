@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signToken } from "@/lib/auth";
-import { getActiveReferralRewardAmount } from "@/lib/referral";
+import { getActiveReferralRewardAmount, isReferralProgramEnabled } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -118,9 +118,21 @@ export async function POST(request: Request) {
     }
 
     // 7. Validate Referral Code if provided (Optional)
+    const referralsEnabled = await isReferralProgramEnabled();
     let referrerUser: any = null;
     let cleanRefCode: string | null = null;
     if (referralCode && typeof referralCode === "string" && referralCode.trim()) {
+      if (!referralsEnabled) {
+        return NextResponse.json(
+          {
+            success: false,
+            field: "referralCode",
+            message: "The referral program is currently turned off by administration. Please remove the referral code to proceed with registration.",
+          },
+          { status: 400 }
+        );
+      }
+
       cleanRefCode = referralCode.trim().toUpperCase();
       referrerUser = await prisma.user.findUnique({
         where: { referralCode: cleanRefCode },
@@ -222,12 +234,12 @@ export async function POST(request: Request) {
           role: "USER",
           isActive: true,
           selectionStatus: "UNDER_REVIEW",
-          referredById: referrerUser ? referrerUser.id : null,
+          referredById: referralsEnabled && referrerUser ? referrerUser.id : null,
         },
       });
 
-      // If registered with a valid referral code, create the Referral record in PENDING state
-      if (referrerUser && cleanRefCode) {
+      // If registered with a valid referral code and program is enabled, create the Referral record in PENDING state
+      if (referralsEnabled && referrerUser && cleanRefCode) {
         const activeReward = await getActiveReferralRewardAmount();
         await tx.referral.create({
           data: {

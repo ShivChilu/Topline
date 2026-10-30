@@ -129,7 +129,7 @@ export default async function HomePage() {
           select: { id: true, name: true, referralCode: true, role: true },
         });
         // Only show if user is signed in, is a student, and has NOT created a referral code yet
-        if (u && !u.referralCode && ["STUDENT", "USER"].includes(u.role)) {
+        if (homeContent?.referralsEnabled !== false && u && !u.referralCode && ["STUDENT", "USER"].includes(u.role)) {
           unactivatedReferralUser = { id: u.id, name: u.name || "Student" };
         }
       }
