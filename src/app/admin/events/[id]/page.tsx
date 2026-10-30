@@ -154,6 +154,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [sendEmailToggle, setSendEmailToggle] = useState(true);
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   // Sorting & Queue workflow
   const [pendingFirstQueue, setPendingFirstQueue] = useState(true);
@@ -385,6 +386,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       return;
     }
 
+    setTogglingStatus(true);
     try {
       const res = await fetch(`/api/admin/events/${eventId}`, {
         method: "PATCH",
@@ -393,6 +395,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       });
       const data = await res.json();
       if (data.success) {
+        setEvent((prev: any) => (prev ? { ...prev, status: newStatus } : prev));
         showToast(
           newStatus === "CLOSED"
             ? "Event registration form is now CLOSED for students."
@@ -404,6 +407,8 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       }
     } catch (err: any) {
       showToast(err.message || "Network error updating event status.");
+    } finally {
+      setTogglingStatus(false);
     }
   };
 
@@ -1413,6 +1418,35 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     return { total, applied, underReview, selected, notSelected, confirmed, attended, absent, cancelled, paid, unpaid, calls0, calls1, calls2 };
   }, [applications]);
 
+  // Capacity & Fill Statistics (Required, Filled, Slots Remaining, Form Status)
+  const capacityStats = useMemo(() => {
+    const required = Number(event?.workersRequired || event?.maxApplications || 0);
+    const confirmed = stats.confirmed || 0;
+    const attended = stats.attended || 0;
+    const filled = confirmed + attended;
+    const selected = stats.selected || 0;
+    const slotsLeft = Math.max(0, required - filled);
+    const isFull = required > 0 && filled >= required;
+    const isOverbooked = required > 0 && filled > required;
+    const excess = isOverbooked ? filled - required : 0;
+    const percentage = required > 0 ? Math.round((filled / required) * 100) : filled > 0 ? 100 : 0;
+    const isFormOpen = event?.status === "OPEN";
+
+    return {
+      required,
+      confirmed,
+      attended,
+      filled,
+      selected,
+      slotsLeft,
+      isFull,
+      isOverbooked,
+      excess,
+      percentage,
+      isFormOpen,
+    };
+  }, [event, stats]);
+
 
 
   // Email Engagement & Click Tracking Analytics (Scoped to this Event only)
@@ -1539,19 +1573,37 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">{event.name}</h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase border ${
-                event.status === "OPEN"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : event.status === "SCHEDULED"
-                  ? "bg-purple-50 text-purple-700 border-purple-200"
-                  : event.status === "FULL"
-                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                  : "bg-slate-100 text-slate-700 border-slate-200"
-              }`}>
-                {event.status === "SCHEDULED" ? "Scheduled" : event.status}
-              </span>
+              <button
+                type="button"
+                disabled={!can("events:close_resume") || togglingStatus}
+                onClick={() => handleToggleEventFormStatus(capacityStats.isFormOpen ? "CLOSED" : "OPEN")}
+                className={`px-3 py-1 rounded-full text-xs font-black uppercase border transition cursor-pointer active:scale-95 flex items-center gap-1.5 shadow-2xs ${
+                  event.status === "OPEN"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                    : event.status === "CLOSED"
+                    ? "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
+                    : event.status === "SCHEDULED"
+                    ? "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                    : event.status === "FULL"
+                    ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                }`}
+                title={
+                  can("events:close_resume")
+                    ? capacityStats.isFormOpen
+                      ? "Form is OPEN. Click to Close registration form."
+                      : "Form is CLOSED. Click to Open registration form."
+                    : `Status: ${event.status}`
+                }
+              >
+                <span className={`w-2 h-2 rounded-full ${capacityStats.isFormOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+                <span>{event.status === "SCHEDULED" ? "Scheduled" : event.status}</span>
+                {can("events:close_resume") && (
+                  <span className="text-[10px] lowercase text-slate-400 font-semibold">(toggle)</span>
+                )}
+              </button>
             </div>
             <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
               <span>{new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
@@ -1573,6 +1625,39 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
         {/* Quick Operations & Create Dropdown for All Admins */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Direct Form Toggle Button */}
+          {can("events:close_resume") && (
+            <button
+              type="button"
+              disabled={togglingStatus}
+              onClick={() => handleToggleEventFormStatus(capacityStats.isFormOpen ? "CLOSED" : "OPEN")}
+              className={`font-black px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer active:scale-95 border ${
+                capacityStats.isFormOpen
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                  : "bg-rose-600 hover:bg-rose-700 text-white border-rose-600 animate-pulse"
+              }`}
+              title={
+                capacityStats.isFormOpen
+                  ? "Registration form is currently OPEN. Click to Close Form."
+                  : "Registration form is currently CLOSED. Click to Open Form."
+              }
+            >
+              {capacityStats.isFormOpen ? (
+                <>
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Form: OPEN</span>
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Form: CLOSED</span>
+                  <span className="w-2 h-2 rounded-full bg-white" />
+                </>
+              )}
+            </button>
+          )}
+
           {/* Refresh Data Button */}
           <button
             type="button"
@@ -1848,6 +1933,267 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         </div>
       </div>
 
+      {/* ALERT BANNER WHEN REGISTRATION FORM IS CLOSED */}
+      {event.status === "CLOSED" && (
+        <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-rose-950 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-200 border border-rose-300 flex items-center justify-center shrink-0 text-rose-700">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-sm sm:text-base text-rose-900 flex items-center gap-2">
+                <span>Registration Form is Currently CLOSED</span>
+                <span className="bg-rose-600 text-white text-[10px] uppercase font-black px-2 py-0.5 rounded-full">
+                  Applications Paused
+                </span>
+              </div>
+              <p className="text-xs text-rose-700 mt-1 leading-relaxed">
+                Students visiting the public application page see <em>&quot;Applications Closed by Administrator&quot;</em>. New registrations cannot be submitted until you resume the form.
+              </p>
+            </div>
+          </div>
+          {can("events:close_resume") && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={togglingStatus}
+                onClick={() => handleToggleEventFormStatus("OPEN")}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow transition shrink-0 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Unlock className="w-4 h-4" />
+                <span>Resume Form (Open)</span>
+              </button>
+              {can("events:reopen_slots") && (
+                <button
+                  type="button"
+                  onClick={() => setIsReopenModalOpen(true)}
+                  className="px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer"
+                >
+                  <span>+ Add Slots</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CAPACITY & SLOTS TRACKER CARD */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Main Metrics Group */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 flex-1">
+            {/* Metric 1: Filled vs Required */}
+            <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                Filled / Required
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-1 flex-wrap">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  {capacityStats.filled}
+                </span>
+                <span className="text-sm sm:text-base font-extrabold text-slate-400">
+                  / {capacityStats.required > 0 ? capacityStats.required : "∞"}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                  capacityStats.percentage >= 100
+                    ? "bg-emerald-100 text-emerald-800"
+                    : capacityStats.percentage >= 75
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}>
+                  {capacityStats.percentage}% filled
+                </span>
+              </div>
+            </div>
+
+            {/* Metric 2: Slots Left */}
+            <div className={`p-3 sm:p-3.5 rounded-xl border ${
+              capacityStats.slotsLeft > 0
+                ? "bg-amber-50/60 border-amber-200"
+                : capacityStats.isOverbooked
+                ? "bg-purple-50/60 border-purple-200"
+                : "bg-emerald-50/60 border-emerald-200"
+            }`}>
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider block text-slate-500">
+                Slots Remaining
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                {capacityStats.isOverbooked ? (
+                  <span className="text-2xl sm:text-3xl font-black text-purple-700 tracking-tight">
+                    0 Left
+                  </span>
+                ) : capacityStats.isFull ? (
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-700 tracking-tight">
+                    0 Left
+                  </span>
+                ) : (
+                  <span className="text-2xl sm:text-3xl font-black text-amber-700 tracking-tight">
+                    {capacityStats.slotsLeft} Left
+                  </span>
+                )}
+              </div>
+              <div className="mt-1">
+                {capacityStats.isOverbooked ? (
+                  <span className="text-[10px] font-black text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded-md">
+                    +{capacityStats.excess} over quota
+                  </span>
+                ) : capacityStats.isFull ? (
+                  <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-md">
+                    Goal reached (Full)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-amber-800">
+                    Needs {capacityStats.slotsLeft} more staff
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Metric 3: Selected (Pipeline) */}
+            <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                Selected (Awaiting RSVP)
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-2xl sm:text-3xl font-black text-indigo-700 tracking-tight">
+                  {capacityStats.selected}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">candidates</span>
+              </div>
+              <div className="mt-1">
+                <span className="text-[10px] font-medium text-slate-500">
+                  Potential to fill {capacityStats.selected} slots
+                </span>
+              </div>
+            </div>
+
+            {/* Metric 4: Total Applicants */}
+            <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                Total Applicants
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
+                  {stats.total}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">received</span>
+              </div>
+              <div className="mt-1">
+                <span className="text-[10px] font-medium text-slate-500">
+                  {stats.applied} pending review
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Status Toggle Control */}
+          {can("events:close_resume") && (
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex sm:flex-col justify-between items-center sm:items-end gap-3 shrink-0 lg:w-56">
+              <div className="text-left sm:text-right">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Registration Form
+                </span>
+                <span className={`text-xs font-black flex items-center gap-1.5 mt-0.5 ${
+                  capacityStats.isFormOpen ? "text-emerald-700" : "text-rose-700"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${capacityStats.isFormOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+                  {capacityStats.isFormOpen ? "OPEN (Accepting)" : "CLOSED (Paused)"}
+                </span>
+              </div>
+
+              {/* Direct Clickable Toggle Switch Button */}
+              <button
+                type="button"
+                disabled={togglingStatus}
+                onClick={() => handleToggleEventFormStatus(capacityStats.isFormOpen ? "CLOSED" : "OPEN")}
+                className={`w-full py-2 px-3 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition shadow-2xs cursor-pointer active:scale-95 border ${
+                  capacityStats.isFormOpen
+                    ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm"
+                }`}
+                title={capacityStats.isFormOpen ? "Click to Close Registration Form" : "Click to Open Registration Form"}
+              >
+                {capacityStats.isFormOpen ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Close Form</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-3.5 h-3.5 text-white" />
+                    <span>Open Form Now</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Visual Multi-Segment Capacity Progress Bar */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+                <span>Confirmed: <strong>{capacityStats.confirmed}</strong></span>
+              </span>
+              {capacityStats.attended > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500" />
+                  <span>Attended: <strong>{capacityStats.attended}</strong></span>
+                </span>
+              )}
+              {capacityStats.selected > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-indigo-400" />
+                  <span>Selected (Awaiting RSVP): <strong>{capacityStats.selected}</strong></span>
+                </span>
+              )}
+            </div>
+            <span className="font-black text-slate-900 shrink-0">
+              {capacityStats.percentage}% of Quota
+            </span>
+          </div>
+
+          {/* Progress Bar Track */}
+          <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden flex border border-slate-200 shadow-inner">
+            {/* Confirmed Segment */}
+            <div
+              style={{
+                width: `${Math.min(100, capacityStats.required > 0 ? (capacityStats.confirmed / capacityStats.required) * 100 : 0)}%`,
+              }}
+              className="bg-emerald-500 transition-all duration-300"
+              title={`Confirmed: ${capacityStats.confirmed}`}
+            />
+            {/* Attended Segment */}
+            {capacityStats.attended > 0 && (
+              <div
+                style={{
+                  width: `${Math.min(100, capacityStats.required > 0 ? (capacityStats.attended / capacityStats.required) * 100 : 0)}%`,
+                }}
+                className="bg-blue-500 transition-all duration-300"
+                title={`Attended: ${capacityStats.attended}`}
+              />
+            )}
+            {/* Selected (Pipeline) Segment */}
+            {capacityStats.selected > 0 && (
+              <div
+                style={{
+                  width: `${Math.min(
+                    Math.max(0, 100 - (capacityStats.filled / (capacityStats.required || 1)) * 100),
+                    capacityStats.required > 0 ? (capacityStats.selected / capacityStats.required) * 100 : 0
+                  )}%`,
+                }}
+                className="bg-indigo-300 transition-all duration-300"
+                title={`Selected: ${capacityStats.selected}`}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* DASHBOARD TABBED NAVIGATION */}
       <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-2xl border border-slate-300/80 overflow-x-auto scrollbar-none shadow-2xs">
         <button
@@ -1928,21 +2274,40 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       {dashboardTab === "overview" && (
         <div className="space-y-3.5 animate-in fade-in duration-150">
           {/* Staffing Quota & Student Payout Card */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase block">Required Applications</span>
               <span className="text-xl font-extrabold text-slate-900 mt-0.5 block">
-                {event.workersRequired || event.maxApplications} Candidates
+                {capacityStats.required} Candidates
               </span>
             </div>
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase block">Student Payout / Candidate</span>
-              <span className="text-xl font-extrabold text-red-600 font-mono mt-0.5 block">₹{event.paymentPerStudent}</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Currently Filled</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-xl font-extrabold text-emerald-700 block">
+                  {capacityStats.filled} / {capacityStats.required || "∞"}
+                </span>
+                <span className="text-xs font-bold text-slate-500">
+                  ({capacityStats.percentage}%)
+                </span>
+              </div>
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase block">Slots Remaining</span>
+              <span className={`text-xl font-extrabold mt-0.5 block ${
+                capacityStats.slotsLeft > 0 ? "text-amber-600" : "text-emerald-700"
+              }`}>
+                {capacityStats.isOverbooked
+                  ? `0 Left (+${capacityStats.excess} Extra)`
+                  : capacityStats.isFull
+                  ? "0 Left (Goal Reached)"
+                  : `${capacityStats.slotsLeft} Slots Left`}
+              </span>
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase block">Total Student Payout Budget</span>
               <span className="text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">
-                ₹{(((event.workersRequired || event.maxApplications) || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
+                ₹{(((capacityStats.required) || 0) * (event.paymentPerStudent || 0)).toLocaleString()}
               </span>
             </div>
           </div>

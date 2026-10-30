@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, RefreshCw, AlertCircle, Check } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, Lock, RefreshCw, AlertCircle, Check } from "lucide-react";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 
 export default function AdminEventsPage() {
@@ -356,7 +356,18 @@ export default function AdminEventsPage() {
                   </div>
                   {currentAdminRole !== "calling" && (
                     <div className="flex gap-2 items-center flex-wrap">
-                      {/* Resume Form or Reopen Event with Additional Slots Button */}
+                      {/* Resume Form or Close Form Button */}
+                      {event.status === "OPEN" && canForEvent(event._id, "events:close_resume") && (
+                        <button
+                          onClick={() => handleUpdateStatus(event._id, "CLOSED")}
+                          className="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-600 hover:text-white px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                          title="Close registration form for this event"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Close Form</span>
+                        </button>
+                      )}
+
                       {event.status === "CLOSED" && canForEvent(event._id, "events:close_resume") && (
                         <button
                           onClick={() => handleUpdateStatus(event._id, "OPEN")}
