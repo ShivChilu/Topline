@@ -57,6 +57,18 @@ export default async function EventDetailsPage(props: {
   const effectiveStatus = getEffectiveEventStatus(event);
   const isPast = isEventPast(event.date);
 
+  let confirmedCount = 0;
+  try {
+    confirmedCount = await prisma.application.count({
+      where: {
+        eventId: params.id,
+        status: { in: ["CONFIRMED", "ATTENDED"] },
+      },
+    });
+  } catch (err) {
+    console.error("Error counting confirmed applications:", err);
+  }
+
   let isLoggedInStudent = false;
   try {
     const cookieStore = await cookies();
@@ -178,10 +190,14 @@ export default async function EventDetailsPage(props: {
                   if (isPast || effectiveStatus === "COMPLETED") {
                     return <span className="font-extrabold text-slate-500 uppercase text-xs tracking-wider">Event Concluded</span>;
                   }
-                  const remainingSlots = event.workersRequired - event.applicationsCount;
-                  if (remainingSlots <= 0 || effectiveStatus === "FULL" || effectiveStatus === "CLOSED") {
+                  if (effectiveStatus === "CLOSED") {
+                    return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">CLOSED</span>;
+                  }
+                  if (effectiveStatus === "FULL") {
                     return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">FULL</span>;
                   }
+                  const requiredSlots = Number(event.workersRequired || event.maxApplications || 0);
+                  const remainingSlots = Math.max(0, requiredSlots - confirmedCount);
                   if (remainingSlots >= 1 && remainingSlots <= 5) {
                     return (
                       <span className="font-extrabold text-[#ED0000] text-xs uppercase tracking-wider flex items-center space-x-1">
@@ -193,7 +209,7 @@ export default async function EventDetailsPage(props: {
                   return (
                     <span className="font-bold text-emerald-600 text-xs uppercase tracking-wider flex items-center gap-1">
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Slots Open / Hiring Active</span>
+                      <span>{remainingSlots > 0 ? `${remainingSlots} Slots Left • Hiring Active` : "Slots Open / Hiring Active"}</span>
                     </span>
                   );
                 })()}
@@ -301,10 +317,11 @@ export default async function EventDetailsPage(props: {
         <div id="apply-section" className="space-y-6 scroll-mt-24">
           <div className="sticky top-24">
             {(() => {
-              const remainingSlots = event.workersRequired - event.applicationsCount;
               const formStatus = (isPast || effectiveStatus === "COMPLETED")
                 ? "COMPLETED"
-                : (remainingSlots <= 0 || effectiveStatus === "FULL" || effectiveStatus === "CLOSED")
+                : effectiveStatus === "CLOSED"
+                ? "CLOSED"
+                : effectiveStatus === "FULL"
                 ? "FULL"
                 : effectiveStatus;
               return (

@@ -668,17 +668,8 @@ export default async function OpportunitiesPage(props: {
                               </span>
                             );
                           }
-                          const remainingSlots = Math.max(0, (event.workersRequired || event.maxApplications) - event.applicationsCount);
-                          if (remainingSlots <= 0 || event.status === "FULL") {
+                          if (isFull) {
                             return <span className="font-extrabold text-red-600 uppercase">Applications Full</span>;
-                          }
-                          if (remainingSlots <= 5) {
-                            return (
-                              <span className="font-extrabold text-amber-600 flex items-center gap-1">
-                                <Flame className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Only {remainingSlots} {remainingSlots === 1 ? "slot" : "slots"} left</span>
-                              </span>
-                            );
                           }
                           return (
                             <span className="font-semibold text-emerald-600 flex items-center gap-1.5">

@@ -170,13 +170,6 @@ export async function POST(
       );
     }
 
-    if (event.applicationsCount >= event.maxApplications) {
-      return NextResponse.json(
-        { success: false, message: "Applications are full for this event." },
-        { status: 400 }
-      );
-    }
-
     // 4. Gender Eligibility Gate
     if (event.allowedGender === "FEMALE_ONLY") {
       if (!user.gender || user.gender.toLowerCase() !== "female") {
@@ -231,10 +224,10 @@ export async function POST(
       },
     });
 
-    if (updatedEvent.applicationsCount >= updatedEvent.maxApplications && updatedEvent.status === EventStatus.OPEN) {
+    if (updatedEvent.applicationsCount >= updatedEvent.maxApplications) {
       await prisma.event.update({
         where: { id: eventId },
-        data: { status: EventStatus.FULL },
+        data: { maxApplications: updatedEvent.applicationsCount + 10 },
       });
     }
 

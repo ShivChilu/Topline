@@ -203,6 +203,13 @@ export async function PATCH(
       allowedData.status = body.status;
       if (body.status === "OPEN") {
         allowedData.scheduledPublishAt = null;
+        const currentEvent = await prisma.event.findUnique({
+          where: { id: eventId },
+          select: { applicationsCount: true, maxApplications: true },
+        });
+        if (currentEvent && currentEvent.applicationsCount >= currentEvent.maxApplications) {
+          allowedData.maxApplications = currentEvent.applicationsCount + 25;
+        }
       }
     }
     if (body.scheduledPublishAt !== undefined) {
