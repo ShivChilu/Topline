@@ -737,6 +737,190 @@ export async function sendEventSelectionEmail({
 }
 
 /**
+ * Event-Specific Candidate Duty Confirmed Email Template
+ */
+export async function sendEventConfirmedEmail({
+  studentName,
+  email,
+  eventName,
+  eventDate,
+  eventLocation,
+  reportingTime,
+  instructions,
+  notes,
+  whatsappGroupLink,
+  applicationId,
+  userId,
+  eventId,
+  templateName = "Duty Confirmed & Reporting Instructions",
+  customSubject,
+  customMessage,
+}: EventEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email address provided for candidate." };
+    }
+
+    const formattedDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+      : "";
+
+    // Replacement dictionary
+    const placeholderData: Record<string, string> = {
+      name: studentName,
+      studentName: studentName,
+      eventName: eventName,
+      eventDate: formattedDate,
+      eventLocation: eventLocation || "To be communicated",
+      reportingTime: reportingTime || "As scheduled",
+      instructions: instructions || "",
+      notes: notes || "",
+    };
+
+    const replacePlaceholders = (text: string) => {
+      let res = text;
+      for (const [key, val] of Object.entries(placeholderData)) {
+        const regexDouble = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi");
+        const regexSingle = new RegExp(`\\{\\s*${key}\\s*\\}`, "gi");
+        res = res.replace(regexDouble, val).replace(regexSingle, val);
+      }
+      return res;
+    };
+
+    let subject = `🎉 Duty Confirmed: You are Confirmed for ${eventName}!`;
+    if (customSubject && customSubject.trim()) {
+      subject = replacePlaceholders(customSubject.trim());
+    }
+
+    let renderedIntroHtml = `
+      <p style="color: #d1d5db; line-height: 1.5; margin: 8px 0 16px 0; font-size: 14px;">
+        Great news! Your attendance has been officially verified and your duty slot for <strong>${eventName}</strong> is now <strong>CONFIRMED</strong> on the master roster.
+      </p>
+    `;
+
+    if (customMessage && customMessage.trim()) {
+      const interpolatedMsg = replacePlaceholders(customMessage.trim());
+      const paragraphs = interpolatedMsg
+        .split(/\n\n+/)
+        .map((p) => `<p style="color: #d1d5db; line-height: 1.6; margin: 12px 0;">${p.replace(/\n/g, "<br />")}</p>`)
+        .join("");
+      renderedIntroHtml = paragraphs;
+    }
+
+    const rawPortalUrl = `${getAppBaseUrl()}/profile`;
+    const targetWhatsAppUrl = whatsappGroupLink || (await getMainWhatsAppGroupLink());
+
+    const { getTrackedUrl, getTrackingPixelHtml } = await createTrackedEmailSession({
+      to: email,
+      recipientName: studentName,
+      userId,
+      applicationId,
+      eventId,
+      templateName,
+      subject,
+      bodyPreview: `Duty confirmed for ${eventName} (${formattedDate || "Upcoming"}). Please join the official WhatsApp group for reporting briefing.`,
+    });
+
+    const trackedWhatsAppUrl = getTrackedUrl("JOIN_WHATSAPP_CONFIRMED", targetWhatsAppUrl);
+    const portalUrl = getTrackedUrl("OPEN_PORTAL_CONFIRMED", rawPortalUrl);
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f17; color: #f3f4f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; }
+        .header { background: #111827; padding: 26px 20px; text-align: center; border-bottom: 3px solid #059669; }
+        .content { padding: 32px 24px; }
+        .card { background: #1f2937; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #059669; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .label { color: #9ca3af; font-weight: 500; }
+        .value { color: #ffffff; font-weight: 600; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+        .btn-whatsapp { display: block; background: #25D366; color: #022c22 !important; text-decoration: none; padding: 18px 22px; border-radius: 12px; font-weight: 900; font-size: 16px; box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4); text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-portal { display: inline-block; background: #374151; color: #ffffff !important; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; margin-top: 14px; border: 1px solid #4b5563; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 900; letter-spacing: 1px;">TOPLINE ODC</h1>
+          <div style="font-size: 13px; color: #34d399; font-weight: 800; margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase;">
+            ✓ Official Duty Roster Confirmed
+          </div>
+        </div>
+        <div class="content">
+          <div style="display: inline-block; background: #059669; color: #ffffff; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 16px;">
+            ✓ DUTY ATTENDANCE CONFIRMED
+          </div>
+          <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 12px; font-size: 22px;">You're Confirmed, ${studentName}!</h2>
+          
+          ${renderedIntroHtml}
+
+          <!-- WHATSAPP BRIEFING GROUP ACCESS -->
+          <div style="background: linear-gradient(180deg, #1e293b 0%, #064e3b 100%); border: 2.5px solid #25D366; border-radius: 14px; padding: 24px 20px; text-align: center; margin: 24px 0; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.25);">
+            <div style="font-size: 19px; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
+              Join the Official Duty WhatsApp Group
+            </div>
+            <p style="font-size: 13px; color: #d1fae5; margin: 0 0 18px 0; line-height: 1.5;">
+              All live event coordination, spot reporting locations, coordinator phone numbers, and transport details will be shared in the official <strong>${eventName} WhatsApp Group</strong>.
+            </p>
+            <div style="margin: 18px 0 10px 0;">
+              <a href="${trackedWhatsAppUrl}" class="btn-whatsapp" target="_blank">
+                👉 JOIN NEW WHATSAPP GROUP NOW 👈
+              </a>
+            </div>
+            <div style="font-size: 11px; color: #a7f3d0; margin-bottom: 6px; font-weight: 600;">
+              ✓ Required: All confirmed crew members must join this group
+            </div>
+          </div>
+
+          <!-- EVENT DETAILS CARD -->
+          <div class="card">
+            <div style="font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: bold; text-transform: uppercase;">Confirmed Duty Details</div>
+            <div class="row"><span class="label">Event:</span> <span class="value">${eventName}</span></div>
+            ${formattedDate ? `<div class="row"><span class="label">Date:</span> <span class="value">${formattedDate}</span></div>` : ""}
+            ${eventLocation ? `<div class="row"><span class="label">Location / Venue:</span> <span class="value">${eventLocation}</span></div>` : ""}
+            ${reportingTime ? `<div class="row"><span class="label">Reporting Time:</span> <span class="value">${reportingTime}</span></div>` : ""}
+            <div class="row"><span class="label">Status:</span> <span class="value" style="color: #10b981;">✓ Confirmed (Attending)</span></div>
+          </div>
+
+          ${instructions ? `<div style="background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 8px; font-size: 13px; color: #cbd5e1; margin: 16px 0;"><strong>Instructions:</strong> ${instructions}</div>` : ""}
+
+          ${notes ? `<div style="background: #374151; padding: 12px 16px; border-radius: 6px; font-size: 14px; color: #e5e7eb; margin-bottom: 20px;"><strong>Admin / Coordinator Note:</strong> ${notes}</div>` : ""}
+
+          <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin-top: 20px;">
+            Please report on time in formal grooming (pressed black formal trousers, clean white shirt, polished black shoes) with your valid ID card.
+          </p>
+
+          <div style="text-align: center; margin-top: 14px;">
+            <a href="${portalUrl}" class="btn-portal">View Attendance Pass &amp; Profile</a>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC &amp; Catering Management. All rights reserved.<br />
+          This is an automated duty confirmation notification.
+        </div>
+      </div>
+      ${getTrackingPixelHtml()}
+    </body>
+    </html>
+    `;
+
+    return await sendEmail({
+      to: email,
+      subject,
+      html: htmlContent,
+    });
+  } catch (error: any) {
+    console.error("Failed to send event confirmed email:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
  * Event-Specific Candidate Deselection / Not Selected Email Template
  */
 export async function sendEventDeselectionEmail({

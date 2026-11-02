@@ -723,6 +723,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
     try {
       setActionLoadingId("bulk");
+
+      // Optimistic update
+      if (updatePayload.status) {
+        const nextStatus = updatePayload.status.toUpperCase();
+        setApplications((prev) =>
+          prev.map((app) =>
+            selectedIds.includes(app.id) || selectedIds.includes(app._id)
+              ? { ...app, status: nextStatus }
+              : app
+          )
+        );
+      }
+
       const res = await fetch(`/api/admin/applications`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -3649,15 +3662,26 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </label>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 disabled={actionLoadingId === "bulk"}
                 onClick={() => openCustomEmailModal(applications.filter((a) => selectedIds.includes(a.id || a._id)))}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer active:scale-95"
                 title="Send personalized custom email to selected candidates"
               >
                 <Mail className="w-3.5 h-3.5" />
                 Send Custom Message ({selectedIds.length})
+              </button>
+
+              {/* Confirm Candidates at once (Matches individual card confirm action) */}
+              <button
+                disabled={actionLoadingId === "bulk"}
+                onClick={() => handleBulkUpdate({ status: "CONFIRMED" })}
+                className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-black px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer active:scale-95 border border-teal-500/60"
+                title="Confirm attendance for all selected candidates at once (dispatches official confirmation email if toggle is on)"
+              >
+                <CheckCircle className="w-3.5 h-3.5 text-teal-200" />
+                <span>Confirm ({selectedIds.length})</span>
               </button>
 
               <button
@@ -3670,7 +3694,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     handleBulkUpdate({ status: "SELECTED" });
                   }
                 }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer active:scale-95"
                 title="Review selection email template and approve candidates"
               >
                 <UserCheck className="w-3.5 h-3.5" />

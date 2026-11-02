@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { ApplicationStatus, PaymentStatus, MessageStatus } from "@prisma/client";
-import { sendEventSelectionEmail, sendEventDeselectionEmail } from "@/lib/email";
+import { sendEventSelectionEmail, sendEventDeselectionEmail, sendEventConfirmedEmail } from "@/lib/email";
 import { processReferralQualification } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
@@ -514,7 +514,10 @@ export async function PATCH(request: Request) {
           if (sendEmail) updateData.eventDeselectionEmailSentAt = now;
           updateData.callPriority = -1;
         } else if (["CONFIRMED", "ATTENDED", "ABSENT", "CANCELLED"].includes(nextStatus)) {
-          if (nextStatus === "CONFIRMED") updateData.confirmedAt = now;
+          if (nextStatus === "CONFIRMED") {
+            updateData.confirmedAt = now;
+            if (sendEmail) updateData.eventSelectionEmailSentAt = now;
+          }
           updateData.callPriority = -1;
         } else if (nextStatus === "APPLIED" || nextStatus === "UNDER_REVIEW") {
           updateData.callPriority = 0; // Keep pending near top
@@ -631,6 +634,23 @@ export async function PATCH(request: Request) {
             userId: app.userId,
             eventId: app.eventId,
           }).catch((err) => console.error("Event selection email dispatch error:", err));
+        } else if (targetStatus === "CONFIRMED") {
+          sendEventConfirmedEmail({
+            studentName: app.user.name || app.name,
+            email: app.user.email,
+            eventName: app.event.name,
+            eventDate: app.event.date,
+            eventLocation: app.event.location,
+            reportingTime: app.event.reportingTime,
+            instructions: customInstructions !== undefined ? customInstructions : app.event.instructions,
+            notes,
+            customSubject,
+            customMessage,
+            whatsappGroupLink: app.event.whatsappGroupLink || undefined,
+            applicationId: app.id,
+            userId: app.userId,
+            eventId: app.eventId,
+          }).catch((err) => console.error("Event confirmed email dispatch error:", err));
         } else if (isStatusChanged && (targetStatus === "NOT_SELECTED" || targetStatus === "REJECTED")) {
           sendEventDeselectionEmail({
             studentName: app.user.name || app.name,
