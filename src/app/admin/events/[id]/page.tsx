@@ -57,6 +57,9 @@ import {
   Lock,
   PhoneCall,
   RefreshCw,
+  Star,
+  UserPlus,
+  CheckCircle2,
 } from "lucide-react";
 import EmailTemplateManagerModal, { CustomEmailTemplate } from "@/components/admin/EmailTemplateManagerModal";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
@@ -1658,6 +1661,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             </button>
           )}
 
+          {/* + Add Student Quick Button */}
+          {can("students:add_from_master") && (
+            <button
+              type="button"
+              onClick={() => setIsAddFromMasterModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+              title="Add Student from Master Directory to this Event"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>+ Add Student</span>
+            </button>
+          )}
+
           {/* Refresh Data Button */}
           <button
             type="button"
@@ -1747,7 +1763,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </button>
 
               {isActionsDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-64 max-w-[90vw] bg-white border border-slate-200 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="py-1">
                     {can("events:close_resume") && (
                       event.status === "CLOSED" ? (
@@ -1936,29 +1952,29 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       {/* ALERT BANNER WHEN REGISTRATION FORM IS CLOSED */}
       {event.status === "CLOSED" && (
         <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-rose-950 shadow-sm animate-in fade-in">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-rose-200 border border-rose-300 flex items-center justify-center shrink-0 text-rose-700">
               <Lock className="w-5 h-5" />
             </div>
-            <div>
-              <div className="font-extrabold text-sm sm:text-base text-rose-900 flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="font-extrabold text-sm sm:text-base text-rose-900 flex items-center gap-2 flex-wrap">
                 <span>Registration Form is Currently CLOSED</span>
-                <span className="bg-rose-600 text-white text-[10px] uppercase font-black px-2 py-0.5 rounded-full">
+                <span className="bg-rose-600 text-white text-[10px] uppercase font-black px-2 py-0.5 rounded-full shrink-0">
                   Applications Paused
                 </span>
               </div>
-              <p className="text-xs text-rose-700 mt-1 leading-relaxed">
+              <p className="text-xs text-rose-700 mt-1 leading-relaxed break-words">
                 Students visiting the public application page see <em>&quot;Applications Closed by Administrator&quot;</em>. New registrations cannot be submitted until you resume the form.
               </p>
             </div>
           </div>
           {can("events:close_resume") && (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
               <button
                 type="button"
                 disabled={togglingStatus}
                 onClick={() => handleToggleEventFormStatus("OPEN")}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow transition shrink-0 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow transition shrink-0 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
               >
                 <Unlock className="w-4 h-4" />
                 <span>Resume Form (Open)</span>
@@ -1967,7 +1983,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 <button
                   type="button"
                   onClick={() => setIsReopenModalOpen(true)}
-                  className="px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer"
+                  className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer text-center"
                 >
                   <span>+ Add Slots</span>
                 </button>
@@ -3723,6 +3739,31 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           )}
                         </div>
 
+                        {/* Topline Events Attended History Badge */}
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                          {Number(app.eventsAttendedCount ?? student.eventsAttendedCount ?? 0) > 0 ? (
+                            <span
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[10.5px] px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs"
+                              title={`Attended ${app.eventsAttendedCount ?? student.eventsAttendedCount} Topline events in total`}
+                            >
+                              <Star className="w-3 h-3 text-emerald-600 fill-emerald-600" />
+                              <span>{app.eventsAttendedCount ?? student.eventsAttendedCount} Events Attended</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="bg-slate-100 text-slate-600 border border-slate-200 font-semibold text-[10px] px-1.5 py-0.5 rounded-md"
+                              title="First time applicant - has not attended any Topline events yet"
+                            >
+                              0 Events Attended (New)
+                            </span>
+                          )}
+                          {Number(app.totalEventsApplied ?? student.totalEventsApplied ?? 0) > 1 && (
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              ({app.totalEventsApplied ?? student.totalEventsApplied} applied)
+                            </span>
+                          )}
+                        </div>
+
                         {/* Interactive Calling Status Pill & Filled Timestamp */}
                         <div className="mt-2 flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
                           <button
@@ -3990,8 +4031,20 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             >
                               {app.name || student.name}
                             </div>
-                            <div className="text-xs text-slate-400 font-mono font-semibold">
-                              {app.registrationNumber || student.registrationNumber}
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-xs text-slate-400 font-mono font-semibold">
+                                {app.registrationNumber || student.registrationNumber}
+                              </span>
+                              {Number(app.eventsAttendedCount ?? student.eventsAttendedCount ?? 0) > 0 ? (
+                                <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 shadow-2xs" title="Total events attended in Topline">
+                                  <Star className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600" />
+                                  <span>{app.eventsAttendedCount ?? student.eventsAttendedCount} Attended</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                                  0 Attended
+                                </span>
+                              )}
                             </div>
                             {(app.callingRemarks || app.user?.adminRemarks || student.adminRemarks) && (
                               <div
@@ -4244,11 +4297,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
                     <span className="font-mono font-bold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">
                       {inspectCandidate.registrationNumber || inspectCandidate.studentId?.registrationNumber}
                     </span>
                     <span>• {inspectCandidate.studentId?.university || "University Unspecified"}</span>
+                    <span>•</span>
+                    <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                      <Star className="w-3 h-3 text-emerald-600 fill-emerald-600" />
+                      <span>{inspectCandidate.eventsAttendedCount ?? inspectCandidate.studentId?.eventsAttendedCount ?? 0} Events Attended in Topline</span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -5556,6 +5614,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
           eventName={event?.name || "Event Attendance"}
           eventDate={event?.date}
           reportingTime={event?.reportingTime}
+          onOpenAddStudent={can("students:add_from_master") ? () => setIsAddFromMasterModalOpen(true) : undefined}
           onClose={() => setIsLiveAttendanceModalOpen(false)}
           onAttendanceChanged={(updatedApp) => {
             if (updatedApp) {

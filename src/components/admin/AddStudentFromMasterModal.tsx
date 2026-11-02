@@ -19,6 +19,7 @@ import {
   Check,
   Filter,
   Users,
+  Star,
 } from "lucide-react";
 
 interface AddStudentFromMasterModalProps {
@@ -381,6 +382,16 @@ export default function AddStudentFromMasterModal({
                         {s.city && (
                           <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-medium truncate">
                             {s.city}
+                          </span>
+                        )}
+                        {Number(s.attendedCount || 0) > 0 ? (
+                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded font-extrabold flex items-center gap-0.5">
+                            <Star className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600" />
+                            <span>{s.attendedCount} Attended</span>
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">
+                            0 Attended
                           </span>
                         )}
                       </div>

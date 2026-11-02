@@ -78,6 +78,22 @@ export async function GET(request: Request) {
             upiId: true,
             bio: true,
             selectionStatus: true,
+            attendanceRecords: {
+              where: {
+                attendanceStatus: { in: ["PRESENT", "LATE"] },
+              },
+              select: {
+                id: true,
+                eventId: true,
+              },
+            },
+            applications: {
+              select: {
+                id: true,
+                eventId: true,
+                status: true,
+              },
+            },
             studentPhotos: {
               select: {
                 id: true,
@@ -265,9 +281,24 @@ export async function GET(request: Request) {
         (a: any, b: any) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
       );
 
+      // Total events attended across Topline history
+      const userAttendedEventIds = new Set<string>();
+      (app.user?.attendanceRecords || []).forEach((att: any) => {
+        if (att.eventId) userAttendedEventIds.add(att.eventId);
+      });
+      (app.user?.applications || []).forEach((otherApp: any) => {
+        if (otherApp.status === "ATTENDED" && otherApp.eventId) {
+          userAttendedEventIds.add(otherApp.eventId);
+        }
+      });
+      const eventsAttendedCount = userAttendedEventIds.size;
+      const totalEventsApplied = (app.user?.applications || []).length;
+
       return {
         id: app.id,
         _id: app.id,
+        eventsAttendedCount,
+        totalEventsApplied,
         eventId: app.event
           ? {
               ...app.event,
@@ -326,6 +357,8 @@ export async function GET(request: Request) {
               city: app.user.city || "N/A",
               gender: app.user.gender || "N/A",
               selectionStatus: app.user.selectionStatus || "UNDER_REVIEW",
+              eventsAttendedCount,
+              totalEventsApplied,
               emailLogs: eventEmailLogs,
             }
           : null,
@@ -338,6 +371,8 @@ export async function GET(request: Request) {
               email: app.user.email || "N/A",
               universityId: app.user.registrationNumber || app.registrationNumber,
               registrationNumber: app.user.registrationNumber || app.registrationNumber,
+              eventsAttendedCount,
+              totalEventsApplied,
               university: app.user.university || "N/A",
               city: app.user.city || "N/A",
               gender: app.user.gender || "N/A",

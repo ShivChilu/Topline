@@ -78,6 +78,13 @@ export async function GET(
               name: true,
               phone: true,
               registrationNumber: true,
+              attendanceRecords: {
+                where: { attendanceStatus: { in: ["PRESENT", "LATE"] } },
+                select: { id: true, eventId: true },
+              },
+              applications: {
+                select: { id: true, eventId: true, status: true },
+              },
             },
           },
           attendance: {
@@ -139,6 +146,15 @@ export async function GET(
 
       const targetUserId = app.userId || app.user?.id;
 
+      const userAttendedEventIds = new Set<string>();
+      (app.user?.attendanceRecords || []).forEach((a: any) => {
+        if (a.eventId) userAttendedEventIds.add(a.eventId);
+      });
+      (app.user?.applications || []).forEach((a: any) => {
+        if (a.status === "ATTENDED" && a.eventId) userAttendedEventIds.add(a.eventId);
+      });
+      const eventsAttendedCount = userAttendedEventIds.size;
+
       return {
         applicationId: app.id,
         studentId: targetUserId || null,
@@ -149,6 +165,7 @@ export async function GET(
         applicationStatus: app.status,
         isCheckedIn: isAttended,
         attendanceStatus: attStatus || "ABSENT",
+        eventsAttendedCount,
         checkInTime: app.attendance?.checkInTime || null,
         manualRemarks: app.attendance?.manualRemarks || "",
       };

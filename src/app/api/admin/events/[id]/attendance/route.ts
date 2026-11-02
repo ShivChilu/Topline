@@ -66,6 +66,13 @@ export async function GET(
             name: true,
             phone: true,
             registrationNumber: true,
+            attendanceRecords: {
+              where: { attendanceStatus: { in: ["PRESENT", "LATE"] } },
+              select: { id: true, eventId: true },
+            },
+            applications: {
+              select: { id: true, eventId: true, status: true },
+            },
           },
         },
         fieldResponses: {
@@ -120,6 +127,16 @@ export async function GET(
         }
       }
 
+      // Calculate events attended across Topline history
+      const userAttendedEventIds = new Set<string>();
+      (student?.attendanceRecords || []).forEach((a: any) => {
+        if (a.eventId) userAttendedEventIds.add(a.eventId);
+      });
+      (student?.applications || []).forEach((a: any) => {
+        if (a.status === "ATTENDED" && a.eventId) userAttendedEventIds.add(a.eventId);
+      });
+      const eventsAttendedCount = userAttendedEventIds.size;
+
       return {
         _id: app.id,
         applicationId: app.id,
@@ -127,6 +144,7 @@ export async function GET(
         studentName: resolvedName,
         phone: resolvedMobile,
         registrationNumber: app.registrationNumber || student?.registrationNumber || "N/A",
+        eventsAttendedCount,
         status: att ? att.attendanceStatus : "ABSENT",
         checkInTime: att ? att.checkInTime : null,
         manualRemarks: att ? att.manualRemarks : "",

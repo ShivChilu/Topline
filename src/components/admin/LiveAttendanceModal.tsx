@@ -28,6 +28,8 @@ import {
   Send,
   FileSpreadsheet,
   Download,
+  Star,
+  UserPlus,
 } from "lucide-react";
 
 interface LiveAttendanceModalProps {
@@ -38,6 +40,7 @@ interface LiveAttendanceModalProps {
   eventDate?: string;
   reportingTime?: string;
   onAttendanceChanged?: (updated?: { applicationId: string; studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }) => void;
+  onOpenAddStudent?: () => void;
 }
 
 export default function LiveAttendanceModal({
@@ -48,6 +51,7 @@ export default function LiveAttendanceModal({
   eventDate,
   reportingTime,
   onAttendanceChanged,
+  onOpenAddStudent,
 }: LiveAttendanceModalProps) {
   const [loading, setLoading] = useState(true);
   const [isLiveActive, setIsLiveActive] = useState(true);
@@ -380,25 +384,52 @@ export default function LiveAttendanceModal({
       >
         {/* Header */}
         <div className="p-3.5 sm:p-5 md:p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white shrink-0">
-          <div className="flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0 shadow-inner">
-                <QrCode className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <h2 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate max-w-[200px] xs:max-w-[260px] sm:max-w-md">
-                    {eventName}
-                  </h2>
-                  <span className="bg-red-500/20 text-red-300 border border-red-500/40 text-[9px] sm:text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
-                    Live Hub
-                  </span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            {/* Title Row */}
+            <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3.5 min-w-0">
+              <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0 shadow-inner">
+                  <QrCode className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <h2 className="text-sm sm:text-lg md:text-xl font-black tracking-tight text-white truncate max-w-[200px] xs:max-w-[260px] sm:max-w-md">
+                      {eventName}
+                    </h2>
+                    <span className="bg-red-500/20 text-red-300 border border-red-500/40 text-[9px] sm:text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
+                      Live Hub
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Close Button on Mobile (visible only on xs/mobile header top row) */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="sm:hidden p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer shrink-0"
+                title="Close Modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Action Buttons Toolbar */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
+              {/* + Add Student Button */}
+              {onOpenAddStudent && (
+                <button
+                  type="button"
+                  onClick={onOpenAddStudent}
+                  className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs transition shadow-sm flex items-center gap-1 cursor-pointer"
+                  title="Add student from master directory to this event"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ Add Student</span>
+                </button>
+              )}
+
               {/* Close Attendance Button (Restricted to Superadmin / Authorized IAM) */}
               {canCloseAttendance && (
                 <button
@@ -450,11 +481,11 @@ export default function LiveAttendanceModal({
                 {fullscreenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
 
-              {/* Close */}
+              {/* Close Button on Desktop */}
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer"
+                className="hidden sm:flex p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition cursor-pointer"
                 title="Close Modal"
               >
                 <X className="w-5 h-5" />
@@ -471,32 +502,32 @@ export default function LiveAttendanceModal({
         </div>
 
         {/* Real-time Metric Cards Banner (Ultra-Compact Single-Row on Mobile & Desktop) */}
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-3 p-2 sm:p-3 bg-slate-50 border-b border-slate-200 shrink-0">
-          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-slate-200 shadow-2xs text-center sm:text-left">
-            <span className="text-[8px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block truncate">Confirmed</span>
-            <div className="text-sm sm:text-lg font-black text-slate-900 mt-0.5 leading-none">{stats.totalConfirmed}</div>
-            <span className="hidden sm:block text-[9px] text-slate-400 font-medium truncate mt-0.5">Accepted</span>
+        <div className="grid grid-cols-2 xs:grid-cols-4 gap-2 sm:gap-3 p-2.5 sm:p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+          <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200 shadow-2xs text-center sm:text-left">
+            <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Confirmed</span>
+            <div className="text-base sm:text-lg font-black text-slate-900 mt-0.5 leading-none">{stats.totalConfirmed}</div>
+            <span className="hidden xs:block text-[9px] text-slate-400 font-medium truncate mt-0.5">Accepted</span>
           </div>
 
-          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-2xs text-center sm:text-left">
-            <span className="text-[8px] sm:text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block truncate">Present</span>
-            <div className="text-sm sm:text-lg font-black text-emerald-600 mt-0.5 leading-none flex items-baseline justify-center sm:justify-start gap-0.5">
+          <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-2xs text-center sm:text-left">
+            <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Present</span>
+            <div className="text-base sm:text-lg font-black text-emerald-600 mt-0.5 leading-none flex items-baseline justify-center sm:justify-start gap-1">
               <span>{stats.markedPresent}</span>
-              {stats.markedLate > 0 && <span className="text-[9px] text-amber-600 font-bold">({stats.markedLate}L)</span>}
+              {stats.markedLate > 0 && <span className="text-[10px] text-amber-600 font-bold">({stats.markedLate}L)</span>}
             </div>
-            <span className="hidden sm:block text-[9px] text-emerald-600 font-medium truncate mt-0.5">Checked-in</span>
+            <span className="hidden xs:block text-[9px] text-emerald-600 font-medium truncate mt-0.5">Checked-in</span>
           </div>
 
-          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-amber-200 bg-amber-50/30 shadow-2xs text-center sm:text-left">
-            <span className="text-[8px] sm:text-[10px] font-extrabold text-amber-700 uppercase tracking-wider block truncate">Pending</span>
-            <div className="text-sm sm:text-lg font-black text-amber-600 mt-0.5 leading-none">{stats.pendingCheckIn}</div>
-            <span className="hidden sm:block text-[9px] text-amber-600 font-medium truncate mt-0.5">Yet to Scan</span>
+          <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-amber-200 bg-amber-50/30 shadow-2xs text-center sm:text-left">
+            <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-700 uppercase tracking-wider block">Pending</span>
+            <div className="text-base sm:text-lg font-black text-amber-600 mt-0.5 leading-none">{stats.pendingCheckIn}</div>
+            <span className="hidden xs:block text-[9px] text-amber-600 font-medium truncate mt-0.5">Yet to Scan</span>
           </div>
 
-          <div className="bg-white p-1.5 sm:p-2.5 rounded-xl border border-blue-200 bg-blue-50/30 shadow-2xs text-center sm:text-left">
-            <span className="text-[8px] sm:text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block truncate">Turnout</span>
-            <div className="text-sm sm:text-lg font-black text-blue-600 mt-0.5 leading-none">{stats.turnoutRate}%</div>
-            <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden hidden sm:block">
+          <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-blue-200 bg-blue-50/30 shadow-2xs text-center sm:text-left">
+            <span className="text-[9px] sm:text-[10px] font-extrabold text-blue-700 uppercase tracking-wider block">Turnout</span>
+            <div className="text-base sm:text-lg font-black text-blue-600 mt-0.5 leading-none">{stats.turnoutRate}%</div>
+            <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
               <div
                 className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(100, stats.turnoutRate)}%` }}
@@ -732,6 +763,19 @@ export default function LiveAttendanceModal({
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+                    {/* Add Student Button in Roster Header */}
+                    {onOpenAddStudent && (
+                      <button
+                        type="button"
+                        onClick={onOpenAddStudent}
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-extrabold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                        title="Add student from master directory to this event"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>+ Add Student</span>
+                      </button>
+                    )}
+
                     {/* Quick Email Absentees Button */}
                     <button
                       type="button"
@@ -782,14 +826,14 @@ export default function LiveAttendanceModal({
                       return (
                         <div
                           key={candidate.applicationId}
-                          className={`p-2.5 sm:p-3 rounded-2xl border transition flex items-center justify-between gap-2.5 sm:gap-3 text-xs ${
+                          className={`p-3 sm:p-3.5 rounded-2xl border transition flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs ${
                             isPresent
                               ? "bg-slate-50/70 border-slate-200/80"
                               : "bg-white border-slate-200 shadow-2xs hover:border-slate-300"
                           }`}
                         >
-                          <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300 mt-0.5 sm:mt-0">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
                               {candidate.photoUrl ? (
                                 <img src={candidate.photoUrl} alt={candidate.name} className="w-full h-full object-cover" />
                               ) : (
@@ -800,15 +844,25 @@ export default function LiveAttendanceModal({
                             </div>
                             <div className="min-w-0 flex-1 space-y-1">
                               {/* Full Candidate Name - Never Truncated, Wraps Gracefully */}
-                              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug break-words">
+                              <h4 className="font-extrabold text-slate-900 text-sm leading-snug break-words">
                                 {candidate.name}
                               </h4>
                               
-                              {/* Registration Number & Phone Badges */}
+                              {/* Registration Number, Events Attended & Phone Badges */}
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-mono font-bold text-[10px] sm:text-[11px] text-slate-800 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md shrink-0">
+                                <span className="font-mono font-bold text-[10.5px] text-slate-800 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md shrink-0">
                                   {candidate.registrationNumber}
                                 </span>
+                                {Number(candidate.eventsAttendedCount || 0) > 0 ? (
+                                  <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shrink-0" title={`Attended ${candidate.eventsAttendedCount} Topline events in total`}>
+                                    <Star className="w-2.5 h-2.5 text-emerald-600 fill-emerald-600" />
+                                    <span>{candidate.eventsAttendedCount} Attended</span>
+                                  </span>
+                                ) : (
+                                  <span className="bg-slate-100 text-slate-600 border border-slate-200 font-medium text-[10px] px-1.5 py-0.5 rounded-md shrink-0">
+                                    0 Attended
+                                  </span>
+                                )}
                                 {cleanPhone && (
                                   <a
                                     href={`tel:${cleanPhone}`}
@@ -824,7 +878,8 @@ export default function LiveAttendanceModal({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                          {/* Action Buttons: Full-width on mobile, right-aligned on desktop */}
+                          <div className="flex items-center justify-between md:justify-end gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                             {/* 1-Tap Call Shortcut */}
                             {cleanPhone && (
                               <a
@@ -838,14 +893,14 @@ export default function LiveAttendanceModal({
                             )}
 
                             {isPresent ? (
-                              <div className="flex items-center gap-1 sm:gap-1.5">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
                                 <div className="text-right">
-                                  <span className="px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span className="px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                     {candidate.attendanceStatus}
                                   </span>
                                   {candidate.checkInTime && (
-                                    <span className="block text-[8px] sm:text-[9px] text-slate-400 font-mono">
+                                    <span className="block text-[8px] sm:text-[9px] text-slate-400 font-mono mt-0.5">
                                       {new Date(candidate.checkInTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true })}
                                     </span>
                                   )}
@@ -853,22 +908,22 @@ export default function LiveAttendanceModal({
                                 <button
                                   type="button"
                                   onClick={() => handleManualSpotMark(candidate.applicationId, candidate.studentId, "ABSENT")}
-                                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl text-[10px] sm:text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 hover:border-rose-300 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
                                   title="Marked by mistake? Click to revert to Absent"
                                 >
                                   <RotateCcw className="w-3 h-3 text-rose-600" />
-                                  <span>Absent</span>
+                                  <span>Revert</span>
                                 </button>
                               </div>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => handleManualSpotMark(candidate.applicationId, candidate.studentId, "PRESENT")}
-                                className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                                className="flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
                                 title="Mark candidate present immediately"
                               >
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>Present</span>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Mark Present</span>
                               </button>
                             )}
                           </div>
