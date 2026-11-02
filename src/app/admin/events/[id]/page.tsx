@@ -1554,7 +1554,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   if (!event) return null;
 
   return (
-    <div className="space-y-6 text-slate-900 pb-20">
+    <div className="space-y-6 text-slate-900 pb-20 max-w-full overflow-x-hidden sm:overflow-x-visible">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
@@ -1763,176 +1763,426 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </button>
 
               {isActionsDropdownOpen && (
-                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="py-1">
-                    {can("events:close_resume") && (
-                      event.status === "CLOSED" ? (
+                <>
+                  {/* Mobile Bottom Action Sheet (sm:hidden) */}
+                  <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex sm:hidden flex-col justify-end animate-in fade-in duration-200">
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0"
+                      onClick={() => setIsActionsDropdownOpen(false)}
+                    />
+
+                    {/* Sheet Content */}
+                    <div className="relative z-10 bg-white rounded-t-3xl border-t border-slate-200 max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
+                      {/* Pull Handle */}
+                      <div className="pt-3 pb-1 flex justify-center">
+                        <div className="w-10 h-1.5 rounded-full bg-slate-300" />
+                      </div>
+
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-5 pb-3 border-b border-slate-100 shrink-0">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                            ⚡
+                          </div>
+                          <div>
+                            <h3 className="font-extrabold text-sm text-slate-900">Event Actions</h3>
+                            <p className="text-[11px] font-medium text-slate-500 truncate max-w-[220px]">
+                              {event.name}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsActionsDropdownOpen(false)}
+                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+                          aria-label="Close Actions Sheet"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Actions List */}
+                      <div className="p-4 overflow-y-auto space-y-3 pb-8">
+                        {/* Group 1: Registration & Crew */}
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-2">
+                            Registration &amp; Crew Management
+                          </p>
+                          {can("events:close_resume") && (
+                            event.status === "CLOSED" ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsActionsDropdownOpen(false);
+                                  handleToggleEventFormStatus("OPEN");
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 text-xs font-bold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer border border-emerald-200"
+                              >
+                                <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold">Resume Form (Open)</div>
+                                  <div className="text-[11px] font-normal text-emerald-700">Allow registrations to resume</div>
+                                </div>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsActionsDropdownOpen(false);
+                                  handleToggleEventFormStatus("CLOSED");
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 text-xs font-bold text-rose-900 bg-rose-50 hover:bg-rose-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer border border-rose-200"
+                              >
+                                <Lock className="w-4 h-4 text-rose-600 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold">Close Form (Stop Applications)</div>
+                                  <div className="text-[11px] font-normal text-rose-700">Pause public candidate applications</div>
+                                </div>
+                              </button>
+                            )
+                          )}
+                          {can("students:add_from_master") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsActionsDropdownOpen(false);
+                                setIsAddFromMasterModalOpen(true);
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer border border-blue-200"
+                            >
+                              <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold">+ Add Candidate from Directory</div>
+                                <div className="text-[11px] font-normal text-blue-700">Enlist candidate from Master database</div>
+                              </div>
+                            </button>
+                          )}
+                          {can("events:reopen_slots") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsActionsDropdownOpen(false);
+                                setIsReopenModalOpen(true);
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 text-xs font-bold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer border border-emerald-200"
+                            >
+                              <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold">Reopen Event (+Add Slots)</div>
+                                <div className="text-[11px] font-normal text-emerald-700">Increase capacity and open form</div>
+                              </div>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Group 2: Event Configuration */}
+                        <div className="space-y-1 pt-2 border-t border-slate-100">
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-2">
+                            Event Settings &amp; Templates
+                          </p>
+                          {can("events:edit") && (
+                            <Link
+                              href={`/admin/events/${eventId}/edit`}
+                              onClick={() => setIsActionsDropdownOpen(false)}
+                              className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 rounded-xl flex items-center gap-2.5 transition"
+                            >
+                              <Edit2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <span>Edit Event Specifications</span>
+                            </Link>
+                          )}
+                          {can("events:duplicate") && (
+                            <Link
+                              href={`/admin/events/create?cloneFrom=${eventId}`}
+                              onClick={() => setIsActionsDropdownOpen(false)}
+                              className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 rounded-xl flex items-center gap-2.5 transition"
+                            >
+                              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>Duplicate &amp; Edit as New</span>
+                            </Link>
+                          )}
+                          {can("events:manage_templates") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsActionsDropdownOpen(false);
+                                setTemplateModalOpen(true);
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                            >
+                              <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span>Create / Manage Templates</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Group 3: Communications */}
+                        <div className="space-y-1 pt-2 border-t border-slate-100">
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-2">
+                            Email Notifications
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              handleSendAttendanceEmailNotice("ABSENT");
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-rose-800 bg-rose-50/60 hover:bg-rose-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                          >
+                            <Mail className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>Email Absentees (Hold Notice)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              handleSendAttendanceEmailNotice("PRESENT");
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-emerald-800 bg-emerald-50/60 hover:bg-emerald-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                          >
+                            <Mail className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Email Presentees (Duty Verified)</span>
+                          </button>
+                        </div>
+
+                        {/* Group 4: Exports & Sharing */}
+                        <div className="space-y-1 pt-2 border-t border-slate-100">
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-2">
+                            Exports &amp; Public Access
+                          </p>
+                          {can("events:export_data") && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsActionsDropdownOpen(false);
+                                  handleExportVcf();
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                              >
+                                <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>Export Contacts (.vcf)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsActionsDropdownOpen(false);
+                                  handleCopyAllPhones();
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                              >
+                                <Copy className="w-4 h-4 text-teal-600 shrink-0" />
+                                <span>Copy Phone Numbers</span>
+                              </button>
+                            </>
+                          )}
+                          <Link
+                            href={`/admin/events/${eventId}/print-attendance`}
+                            target="_blank"
+                            onClick={() => setIsActionsDropdownOpen(false)}
+                            className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 transition"
+                          >
+                            <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Download Attendance PDF</span>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              setIsClientShareModalOpen(true);
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 rounded-xl flex items-center gap-2.5 transition cursor-pointer"
+                          >
+                            <Share2 className="w-4 h-4 text-purple-600 shrink-0" />
+                            <span>Share Crew with Client</span>
+                          </button>
+                          <a
+                            href={`/events/${eventId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => setIsActionsDropdownOpen(false)}
+                            className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 transition"
+                          >
+                            <ExternalLink className="w-4 h-4 text-slate-500 shrink-0" />
+                            <span>View Public Page</span>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop Dropdown (hidden sm:block) */}
+                  <div className="hidden sm:block absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="py-1">
+                      {can("events:close_resume") && (
+                        event.status === "CLOSED" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              handleToggleEventFormStatus("OPEN");
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                          >
+                            <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Resume Form (Open)</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              handleToggleEventFormStatus("CLOSED");
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-900 bg-rose-50/70 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                          >
+                            <Lock className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Close Form (Stop Applications)</span>
+                          </button>
+                        )
+                      )}
+                      {can("students:add_from_master") && (
                         <button
                           type="button"
                           onClick={() => {
                             setIsActionsDropdownOpen(false);
-                            handleToggleEventFormStatus("OPEN");
+                            setIsAddFromMasterModalOpen(true);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100 flex items-center gap-2 transition cursor-pointer"
+                        >
+                          <Users className="w-3.5 h-3.5 text-blue-600" />
+                          <span>+ Add Candidate from Directory</span>
+                        </button>
+                      )}
+                      {can("events:reopen_slots") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsActionsDropdownOpen(false);
+                            setIsReopenModalOpen(true);
                           }}
                           className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
                         >
                           <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Resume Form (Open)</span>
+                          <span>Reopen Event (+Add Slots)</span>
                         </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsActionsDropdownOpen(false);
-                            handleToggleEventFormStatus("CLOSED");
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-900 bg-rose-50/70 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                      )}
+                      {can("events:edit") && (
+                        <Link
+                          href={`/admin/events/${eventId}/edit`}
+                          onClick={() => setIsActionsDropdownOpen(false)}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 flex items-center gap-2 transition"
                         >
-                          <Lock className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Close Form (Stop Applications)</span>
-                        </button>
-                      )
-                    )}
-                    {can("students:add_from_master") && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsActionsDropdownOpen(false);
-                          setIsAddFromMasterModalOpen(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-blue-900 bg-blue-50/70 hover:bg-blue-100 flex items-center gap-2 transition cursor-pointer"
-                      >
-                        <Users className="w-3.5 h-3.5 text-blue-600" />
-                        <span>+ Add Candidate from Directory</span>
-                      </button>
-                    )}
-                    {can("events:reopen_slots") && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsActionsDropdownOpen(false);
-                          setIsReopenModalOpen(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
-                      >
-                        <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Reopen Event (+Add Slots)</span>
-                      </button>
-                    )}
-                    {can("events:edit") && (
-                      <Link
-                        href={`/admin/events/${eventId}/edit`}
-                        onClick={() => setIsActionsDropdownOpen(false)}
-                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100 flex items-center gap-2 transition"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Edit Event Specifications</span>
-                      </Link>
-                    )}
-                    {can("events:duplicate") && (
-                      <Link
-                        href={`/admin/events/create?cloneFrom=${eventId}`}
-                        onClick={() => setIsActionsDropdownOpen(false)}
-                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Duplicate &amp; Edit as New</span>
-                      </Link>
-                    )}
-                    {can("events:manage_templates") && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsActionsDropdownOpen(false);
-                          setTemplateModalOpen(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Create / Manage Templates</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsActionsDropdownOpen(false);
-                        handleSendAttendanceEmailNotice("ABSENT");
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-800 bg-rose-50/50 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Mail className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Email Absentees (Hold Notice)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsActionsDropdownOpen(false);
-                        handleSendAttendanceEmailNotice("PRESENT");
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Mail className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Email Presentees (Duty Verified)</span>
-                    </button>
-                  </div>
-                  <div className="py-1">
-                    {can("events:export_data") && (
-                      <>
+                          <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Edit Event Specifications</span>
+                        </Link>
+                      )}
+                      {can("events:duplicate") && (
+                        <Link
+                          href={`/admin/events/create?cloneFrom=${eventId}`}
+                          onClick={() => setIsActionsDropdownOpen(false)}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-100 flex items-center gap-2 transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Duplicate &amp; Edit as New</span>
+                        </Link>
+                      )}
+                      {can("events:manage_templates") && (
                         <button
                           type="button"
                           onClick={() => {
                             setIsActionsDropdownOpen(false);
-                            handleExportVcf();
+                            setTemplateModalOpen(true);
                           }}
                           className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
                         >
-                          <Download className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Export Contacts (.vcf)</span>
+                          <FileText className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Create / Manage Templates</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsActionsDropdownOpen(false);
-                            handleCopyAllPhones();
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
-                        >
-                          <Copy className="w-3.5 h-3.5 text-teal-600" />
-                          <span>Copy Phone Numbers</span>
-                        </button>
-                      </>
-                    )}
-                    <Link
-                      href={`/admin/events/${eventId}/print-attendance`}
-                      target="_blank"
-                      onClick={() => setIsActionsDropdownOpen(false)}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 flex items-center gap-2 transition"
-                    >
-                      <Download className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Download Attendance PDF</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsActionsDropdownOpen(false);
-                        setIsClientShareModalOpen(true);
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <Share2 className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Share Crew with Client</span>
-                    </button>
-                    <a
-                      href={`/events/${eventId}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setIsActionsDropdownOpen(false)}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                      <span>View Public Page</span>
-                    </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsDropdownOpen(false);
+                          handleSendAttendanceEmailNotice("ABSENT");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-rose-800 bg-rose-50/50 hover:bg-rose-100 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Email Absentees (Hold Notice)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsDropdownOpen(false);
+                          handleSendAttendanceEmailNotice("PRESENT");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Email Presentees (Duty Verified)</span>
+                      </button>
+                    </div>
+                    <div className="py-1">
+                      {can("events:export_data") && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              handleExportVcf();
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Export Contacts (.vcf)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsActionsDropdownOpen(false);
+                              handleCopyAllPhones();
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5 text-teal-600" />
+                            <span>Copy Phone Numbers</span>
+                          </button>
+                        </>
+                      )}
+                      <Link
+                        href={`/admin/events/${eventId}/print-attendance`}
+                        target="_blank"
+                        onClick={() => setIsActionsDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 flex items-center gap-2 transition"
+                      >
+                        <Download className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Download Attendance PDF</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsActionsDropdownOpen(false);
+                          setIsClientShareModalOpen(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 flex items-center gap-2 transition cursor-pointer"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Share Crew with Client</span>
+                      </button>
+                      <a
+                        href={`/events/${eventId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => setIsActionsDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                        <span>View Public Page</span>
+                      </a>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}
