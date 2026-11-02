@@ -388,6 +388,7 @@ model Application {
   callPriority         Int                      @default(0) // Higher = top
   manualOrder          Int                      @default(0)
   callingRemarks       String?
+  enrollmentSource     String                   @default("FORM")
   
   // 2-Call Tracking & Verification Metrics
   callCount            Int                      @default(0)

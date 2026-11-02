@@ -329,6 +329,7 @@ export async function GET(request: Request) {
         call2At: app.call2At,
         call2Remarks: app.call2Remarks || null,
         manualOrder: app.manualOrder,
+        enrollmentSource: app.enrollmentSource || "FORM",
         createdAt: app.createdAt,
         updatedAt: app.updatedAt,
         emailLogs: eventEmailLogs,

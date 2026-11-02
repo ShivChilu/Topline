@@ -140,6 +140,37 @@ function formatAppliedDateTime(dateStr?: string | Date | null) {
   return `${datePart}, ${timePart}`;
 }
 
+function isApplicationAddedByAdmin(app: any): boolean {
+  if (!app) return false;
+  if (app.enrollmentSource === "ADMIN_MANUAL") return true;
+  if (app.enrollmentSource === "FORM") return false;
+
+  const remarks = (app.callingRemarks || "").toLowerCase();
+  if (
+    remarks.includes("added manually") ||
+    remarks.includes("master database") ||
+    remarks.includes("added directly")
+  ) {
+    return true;
+  }
+
+  const history = app.statusHistory || [];
+  if (
+    history.some((sh: any) => {
+      const note = (sh.notes || "").toLowerCase();
+      return (
+        note.includes("manually added") ||
+        note.includes("added directly") ||
+        note.includes("master database")
+      );
+    })
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export default function AdminEventDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const eventId = params.id;
@@ -177,6 +208,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [weightFilter, setWeightFilter] = useState("ALL");
   const [cityFilter, setCityFilter] = useState("ALL");
   const [universityFilter, setUniversityFilter] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState<"ALL" | "FORM" | "ADMIN_MANUAL">("ALL");
   const [emailTrackingFilter, setEmailTrackingFilter] = useState<"ALL" | "SENT" | "OPENED" | "UNOPENED" | "ACTION_CLICKED" | "CONFIRMED" | "DECLINED" | "WHATSAPP">("ALL");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<"candidates" | "overview" | "email_tracker" | "controls">("candidates");
@@ -1174,6 +1206,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       list = list.filter((a) => (a.studentId?.university || a.university || "").toLowerCase() === universityFilter.toLowerCase());
     }
 
+    // Source filter (Form Filled vs Added by Admin)
+    if (sourceFilter === "FORM") {
+      list = list.filter((a) => !isApplicationAddedByAdmin(a));
+    } else if (sourceFilter === "ADMIN_MANUAL") {
+      list = list.filter((a) => isApplicationAddedByAdmin(a));
+    }
+
     // Priority sorting:
     // NOT_SELECTED & REJECTED -> Priority 1 (Top)
     // APPLIED & UNDER_REVIEW -> Priority 2 & 3
@@ -1225,7 +1264,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     });
 
     return list;
-  }, [applications, search, statusFilter, emailTrackingFilter, getEventEmailLogs, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
+  }, [applications, search, statusFilter, sourceFilter, emailTrackingFilter, getEventEmailLogs, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, pendingFirstQueue, sortBy]);
 
   const availableCities = useMemo(() => {
     const set = new Set<string>();
@@ -1249,6 +1288,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     let count = 0;
     if (search.trim()) count++;
     if (statusFilter !== "ALL") count++;
+    if (sourceFilter !== "ALL") count++;
     if (emailTrackingFilter !== "ALL") count++;
     if (callFilter !== "ALL") count++;
     if (photoFilter !== "ALL") count++;
@@ -1262,11 +1302,12 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     if (cityFilter !== "ALL") count++;
     if (universityFilter !== "ALL") count++;
     return count;
-  }, [search, statusFilter, emailTrackingFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [search, statusFilter, sourceFilter, emailTrackingFilter, callFilter, photoFilter, profileFilter, whatsappFilter, paymentFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
 
   const handleResetFilters = () => {
     setSearch("");
     setStatusFilter("ALL");
+    setSourceFilter("ALL");
     setEmailTrackingFilter("ALL");
     setCallFilter("ALL");
     setPhotoFilter("ALL");
@@ -1462,6 +1503,22 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       isFormOpen,
     };
   }, [event, stats]);
+
+  // Applicant Source Statistics: Form Filled vs Added by Admin
+  const applicantSourceStats = useMemo(() => {
+    let manualCount = 0;
+    let formCount = 0;
+
+    applications.forEach((app) => {
+      if (isApplicationAddedByAdmin(app)) {
+        manualCount++;
+      } else {
+        formCount++;
+      }
+    });
+
+    return { manualCount, formCount, total: applications.length };
+  }, [applications]);
 
 
 
@@ -2348,21 +2405,48 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
               </div>
             </div>
 
-            {/* Metric 4: Total Applicants */}
-            <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80">
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Total Applicants
-              </span>
-              <div className="flex items-baseline gap-1.5 mt-1">
-                <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
-                  {stats.total}
+            {/* Metric 4: Total Applicants & Source Breakdown */}
+            <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Total Applicants
                 </span>
-                <span className="text-xs text-slate-500 font-medium">received</span>
+                <div className="flex items-baseline gap-1.5 mt-1">
+                  <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
+                    {stats.total}
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">candidates</span>
+                </div>
               </div>
-              <div className="mt-1">
-                <span className="text-[10px] font-medium text-slate-500">
-                  {stats.applied} pending review
-                </span>
+
+              {/* Source Breakdown: Form Filled vs Added by Admin */}
+              <div className="mt-2 pt-1.5 border-t border-slate-200/70 flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter((prev) => (prev === "FORM" ? "ALL" : "FORM"))}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-black transition cursor-pointer border ${
+                    sourceFilter === "FORM"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                      : "bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100"
+                  }`}
+                  title="Filter: Candidates who filled the public registration form"
+                >
+                  <FileText className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span>Form: <strong>{applicantSourceStats.formCount}</strong></span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter((prev) => (prev === "ADMIN_MANUAL" ? "ALL" : "ADMIN_MANUAL"))}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-black transition cursor-pointer border ${
+                    sourceFilter === "ADMIN_MANUAL"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                      : "bg-blue-50 text-blue-800 border-blue-200/80 hover:bg-blue-100"
+                  }`}
+                  title="Filter: Candidates manually added by Admin from Master Database"
+                >
+                  <UserPlus className="w-3 h-3 text-blue-600 shrink-0" />
+                  <span>Added: <strong>{applicantSourceStats.manualCount}</strong></span>
+                </button>
               </div>
             </div>
           </div>
@@ -2430,6 +2514,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <span>Selected (Awaiting RSVP): <strong>{capacityStats.selected}</strong></span>
                 </span>
               )}
+              <span className="text-slate-300 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded-md font-bold">
+                <FileText className="w-3 h-3 text-emerald-600" />
+                <span>Form: <strong>{applicantSourceStats.formCount}</strong></span>
+              </span>
+              <span className="flex items-center gap-1 text-[11px] text-blue-800 bg-blue-50 border border-blue-200/90 px-2 py-0.5 rounded-md font-bold">
+                <UserPlus className="w-3 h-3 text-blue-600" />
+                <span>Added: <strong>{applicantSourceStats.manualCount}</strong></span>
+              </span>
             </div>
             <span className="font-black text-slate-900 shrink-0">
               {capacityStats.percentage}% of Quota
@@ -3144,6 +3237,57 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                 </button>
               );
             })}
+          </div>
+
+          {/* Source Quick Filter Strip: All Sources / Form / Added by Admin */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider shrink-0 mr-1 flex items-center gap-1">
+              <span>Source:</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSourceFilter("ALL")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 border cursor-pointer ${
+                sourceFilter === "ALL"
+                  ? "bg-slate-900 text-white border-slate-900 shadow-2xs font-extrabold"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              <span>All Sources</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${sourceFilter === "ALL" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                {stats.total}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceFilter(sourceFilter === "FORM" ? "ALL" : "FORM")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 border cursor-pointer ${
+                sourceFilter === "FORM"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs font-extrabold"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Form Filled</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${sourceFilter === "FORM" ? "bg-white/20 text-white" : "bg-emerald-200/80 text-emerald-900"}`}>
+                {applicantSourceStats.formCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceFilter(sourceFilter === "ADMIN_MANUAL" ? "ALL" : "ADMIN_MANUAL")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 border cursor-pointer ${
+                sourceFilter === "ADMIN_MANUAL"
+                  ? "bg-blue-600 text-white border-blue-600 shadow-2xs font-extrabold"
+                  : "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100"
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>Added by Admin</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${sourceFilter === "ADMIN_MANUAL" ? "bg-white/20 text-white" : "bg-blue-200/80 text-blue-900"}`}>
+                {applicantSourceStats.manualCount}
+              </span>
+            </button>
           </div>
 
           {/* Active Email Tracking Filter Banner (if applied) */}
@@ -4036,6 +4180,24 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               ({app.totalEventsApplied ?? student.totalEventsApplied} applied)
                             </span>
                           )}
+                          {/* Enrollment Source Badge */}
+                          {isApplicationAddedByAdmin(app) ? (
+                            <span
+                              className="bg-blue-50 text-blue-800 border border-blue-200/90 font-bold text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs"
+                              title="Enrolled directly by Admin from Master Database"
+                            >
+                              <UserPlus className="w-2.5 h-2.5 text-blue-600" />
+                              <span>Added by Admin</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="bg-emerald-50 text-emerald-800 border border-emerald-200/90 font-bold text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs"
+                              title="Applied via public registration form"
+                            >
+                              <FileText className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>Form Applicant</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Interactive Calling Status Pill & Filled Timestamp */}
@@ -4360,6 +4522,19 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           <span>{formatAppliedDateTime(app.createdAt)}</span>
                         </div>
+                        <div className="mt-1">
+                          {isApplicationAddedByAdmin(app) ? (
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                              <UserPlus className="w-2.5 h-2.5 text-blue-600" />
+                              Added by Admin
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                              <FileText className="w-2.5 h-2.5 text-emerald-600" />
+                              Form Applicant
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase border inline-flex items-center gap-1 ${
@@ -4576,6 +4751,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       {inspectCandidate.registrationNumber || inspectCandidate.studentId?.registrationNumber}
                     </span>
                     <span>• {inspectCandidate.studentId?.university || "University Unspecified"}</span>
+                    <span>•</span>
+                    {isApplicationAddedByAdmin(inspectCandidate) ? (
+                      <span className="bg-blue-50 text-blue-800 border border-blue-200/90 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                        <UserPlus className="w-3 h-3 text-blue-600" />
+                        <span>Added by Admin</span>
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-50 text-emerald-800 border border-emerald-200/90 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                        <FileText className="w-3 h-3 text-emerald-600" />
+                        <span>Form Applicant</span>
+                      </span>
+                    )}
                     <span>•</span>
                     <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
                       <Star className="w-3 h-3 text-emerald-600 fill-emerald-600" />

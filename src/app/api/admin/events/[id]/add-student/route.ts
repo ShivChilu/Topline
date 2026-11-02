@@ -136,6 +136,7 @@ export async function POST(
         selectedAt: validStatus === "SELECTED" ? now : null,
         confirmedAt: validStatus === "CONFIRMED" ? now : null,
         callingRemarks: remarks.trim() || `Added manually from Master Database by ${admin.name || admin.role}`,
+        enrollmentSource: "ADMIN_MANUAL",
         statusHistory: {
           create: {
             oldStatus: null,
