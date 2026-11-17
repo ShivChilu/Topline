@@ -290,6 +290,8 @@ export async function POST(
       success: true,
       message: confirmationMessage,
       applicationId: application.id,
+      autoSendSelectionEmail: event.autoSendSelectionEmail !== false,
+      whatsappGroupLink: event.whatsappGroupLink || null,
     });
   } catch (error: any) {
     console.error("Application submission error:", error);

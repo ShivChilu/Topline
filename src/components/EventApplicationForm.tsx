@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle,
+  CheckCircle2,
   Sparkles,
   LogIn,
   UserPlus,
@@ -19,6 +20,9 @@ import {
   Copy,
   Check,
   Share2,
+  X,
+  ExternalLink,
+  Mail,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
@@ -40,12 +44,14 @@ export default function EventApplicationForm({
   status,
   allowedGender = "ALL",
   whatsappGroupLink,
+  autoSendSelectionEmail,
 }: {
   eventId: string;
   customFields: FormField[];
   status: string;
   allowedGender?: string;
   whatsappGroupLink?: string | null;
+  autoSendSelectionEmail?: boolean;
 }) {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
@@ -61,6 +67,11 @@ export default function EventApplicationForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showSubmittedModal, setShowSubmittedModal] = useState(false);
+  const [submissionMeta, setSubmissionMeta] = useState<{
+    autoSendSelectionEmail?: boolean;
+    whatsappGroupLink?: string | null;
+  }>({});
   const [copiedRef, setCopiedRef] = useState(false);
   const [confirmingRsvp, setConfirmingRsvp] = useState(false);
 
@@ -579,6 +590,11 @@ export default function EventApplicationForm({
       if (response.ok && result.success) {
         setIsSuccess(true);
         setMessage(result.message);
+        setSubmissionMeta({
+          autoSendSelectionEmail: result.autoSendSelectionEmail !== undefined ? result.autoSendSelectionEmail : autoSendSelectionEmail,
+          whatsappGroupLink: result.whatsappGroupLink || whatsappGroupLink,
+        });
+        setShowSubmittedModal(true);
       } else {
         setMessage(result.message || "Failed to submit application.");
       }
@@ -590,17 +606,138 @@ export default function EventApplicationForm({
   };
 
   if (isSuccess) {
+    const rawWhatsapp = submissionMeta.whatsappGroupLink || whatsappGroupLink;
+    const sanitizedWhatsappLink = rawWhatsapp
+      ? rawWhatsapp.trim().startsWith("http")
+        ? rawWhatsapp.trim()
+        : `https://${rawWhatsapp.trim()}`
+      : null;
+
+    const isAutoEmailEnabled =
+      submissionMeta.autoSendSelectionEmail !== undefined
+        ? submissionMeta.autoSendSelectionEmail
+        : autoSendSelectionEmail !== false;
+
     return (
-      <div className="bg-emerald-950/30 border border-emerald-900/50 p-8 rounded-2xl text-center space-y-4">
-        <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
-        <h3 className="text-2xl font-bold text-emerald-400">Application Submitted!</h3>
-        <p className="text-slate-300 text-sm whitespace-pre-wrap">{message}</p>
-        <div className="bg-slate-900/80 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-300 max-w-md mx-auto space-y-1">
-          <div className="font-bold text-white text-sm">📧 Selection Notice &amp; WhatsApp Briefing</div>
-          <p className="text-slate-400">
-            Once selected, you will receive an email with a 1-click button to <strong>Confirm Attendance &amp; Join the WhatsApp Group</strong>.
-          </p>
-        </div>
+      <div className="relative">
+        {/* Post-submission Pop-up Modal */}
+        {showSubmittedModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-lg bg-[#0e121a] border border-emerald-500/40 rounded-2xl shadow-2xl p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-200">
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setShowSubmittedModal(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800/70 hover:bg-slate-700 p-2 rounded-xl transition cursor-pointer"
+                aria-label="Close dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Status Header */}
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+                <CheckCircle2 className="w-9 h-9" />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="inline-block px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                  Submitted
+                </div>
+                <h3 className="text-2xl font-black text-white">Application Submitted!</h3>
+              </div>
+
+              {/* Selection Notification Box */}
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 text-left space-y-1.5">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <span>Selection Mail Notification</span>
+                </div>
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                  {isAutoEmailEnabled
+                    ? "Your application has been received. Please monitor your email for selection confirmation and status updates."
+                    : "You will get a selection mail soon! Once your application is reviewed and shortlisted by the organizers, an official selection email will be sent to your registered address."}
+                </p>
+              </div>
+
+              {/* WhatsApp Group Box */}
+              {sanitizedWhatsappLink ? (
+                <div className="bg-gradient-to-br from-emerald-950/70 to-slate-900/90 border border-emerald-500/40 rounded-xl p-4 text-left space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                    <MessageCircle className="w-4 h-4 fill-emerald-400 shrink-0" />
+                    <span>Official Event WhatsApp Group</span>
+                  </div>
+                  <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
+                    Please join the WhatsApp group with the link below to receive immediate announcements, shift timings, uniform requirements, and coordination updates.
+                  </p>
+                  <a
+                    href={sanitizedWhatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-3.5 px-4 rounded-xl text-xs sm:text-sm uppercase tracking-wider transition shadow-lg shadow-emerald-950/40 cursor-pointer active:scale-98"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-slate-950" />
+                    <span>Join WhatsApp Group</span>
+                    <ExternalLink className="w-4 h-4 ml-0.5" />
+                  </a>
+                </div>
+              ) : (
+                <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-3 text-xs text-slate-400">
+                  Stay tuned to your email for direct updates regarding your selection and onboarding instructions.
+                </div>
+              )}
+
+              {/* Dismiss Action */}
+              <button
+                type="button"
+                onClick={() => setShowSubmittedModal(false)}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700 cursor-pointer"
+              >
+                Okay, Got It
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* In-page Confirmation Card */}
+        <div className="bg-emerald-950/30 border border-emerald-900/50 p-8 rounded-2xl text-center space-y-5">
+          <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto" />
+          <div className="space-y-1">
+            <div className="inline-block px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              Submitted
+            </div>
+            <h3 className="text-2xl font-bold text-emerald-400">Application Submitted!</h3>
+          </div>
+          <p className="text-slate-300 text-sm whitespace-pre-wrap">{message}</p>
+
+          <div className="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-4 text-xs sm:text-sm text-slate-300 max-w-lg mx-auto space-y-3 text-left">
+            <div className="font-bold text-amber-400 text-sm flex items-center gap-2">
+              <Mail className="w-4 h-4 shrink-0" />
+              <span>Selection Mail Notice</span>
+            </div>
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              {isAutoEmailEnabled
+                ? "Your application is recorded. Check your email inbox for selection status."
+                : "You will get a selection mail soon! Once your application is reviewed and approved, an official selection email will be sent to your registered email address."}
+            </p>
+
+            {sanitizedWhatsappLink && (
+              <div className="pt-3 border-t border-slate-800 space-y-2">
+                <p className="text-slate-300 text-xs">
+                  Please join the event WhatsApp group to receive timely updates, shift assignments, and coordinator briefings:
+                </p>
+                <a
+                  href={sanitizedWhatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow cursor-pointer active:scale-98"
+                >
+                  <MessageCircle className="w-4 h-4 fill-slate-950" />
+                  <span>Join Event WhatsApp Group</span>
+                  <ExternalLink className="w-3.5 h-3.5 ml-0.5" />
+                </a>
+              </div>
+            )}
+          </div>
 
         {/* Refer a Friend Promo on Application Success */}
         <div className="bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-950 border border-purple-500/40 p-5 rounded-2xl space-y-3 text-left shadow-xl">
@@ -692,6 +829,7 @@ export default function EventApplicationForm({
             Browse More Events
           </Link>
         </div>
+      </div>
       </div>
     );
   }

@@ -337,6 +337,7 @@ export default async function EventDetailsPage(props: {
                   status={formStatus}
                   allowedGender={event.allowedGender || "ALL"}
                   whatsappGroupLink={event.whatsappGroupLink}
+                  autoSendSelectionEmail={event.autoSendSelectionEmail !== false}
                 />
               );
             })()}
