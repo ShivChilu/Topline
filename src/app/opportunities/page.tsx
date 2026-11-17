@@ -684,7 +684,7 @@ export default async function OpportunitiesPage(props: {
                           return (
                             <span className="font-semibold text-emerald-600 flex items-center gap-1.5">
                               <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{remainingSlots > 0 ? `${remainingSlots} Slots Open` : "Hiring Active • Slots Open"}</span>
+                              <span>Few Slots Left • Hiring Active</span>
                             </span>
                           );
                         })()}

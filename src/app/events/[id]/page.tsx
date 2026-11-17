@@ -204,14 +204,14 @@ export default async function EventDetailsPage(props: {
                     return (
                       <span className="font-extrabold text-[#ED0000] text-xs uppercase tracking-wider flex items-center space-x-1">
                         <Flame className="w-3.5 h-3.5 text-red-600" />
-                        <span>{remainingSlots} {remainingSlots === 1 ? "Slot" : "Slots"} Left — Hurry!</span>
+                        <span>Only {remainingSlots} {remainingSlots === 1 ? "Slot" : "Slots"} Left — Hurry!</span>
                       </span>
                     );
                   }
                   return (
                     <span className="font-bold text-emerald-600 text-xs uppercase tracking-wider flex items-center gap-1">
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{remainingSlots > 0 ? `${remainingSlots} Slots Left • Hiring Active` : "Slots Open / Hiring Active"}</span>
+                      <span>Few Slots Left • Hiring Active</span>
                     </span>
                   );
                 })()}
