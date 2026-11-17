@@ -2318,10 +2318,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Main Metrics Group */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 flex-1">
-            {/* Metric 1: Filled vs Required */}
+            {/* Metric 1: Confirmed vs Required */}
             <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80">
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Filled / Required
+                Confirmed / Required
               </span>
               <div className="flex items-baseline gap-1.5 mt-1 flex-wrap">
                 <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -2339,7 +2339,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     ? "bg-blue-100 text-blue-800"
                     : "bg-amber-100 text-amber-800"
                 }`}>
-                  {capacityStats.percentage}% filled
+                  {capacityStats.percentage}% confirmed
                 </span>
               </div>
             </div>
@@ -2380,9 +2380,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     Goal reached (Full)
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-amber-800">
-                    Needs {capacityStats.slotsLeft} more staff
-                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-amber-800">
+                      Needs {capacityStats.slotsLeft} confirmed crew
+                    </span>
+                    {stats.applied > 0 && (
+                      <span className="text-[9.5px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5 inline-block w-fit">
+                        {stats.applied} applicants in review
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
