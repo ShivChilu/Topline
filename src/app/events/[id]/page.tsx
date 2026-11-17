@@ -193,11 +193,13 @@ export default async function EventDetailsPage(props: {
                   if (effectiveStatus === "CLOSED") {
                     return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">CLOSED</span>;
                   }
-                  if (effectiveStatus === "FULL") {
+                  const requiredSlots = Number(event.workersRequired || event.maxApplications || 0);
+                  const totalApplicants = event.applicationsCount || 0;
+                  const remainingSlots = Math.max(0, requiredSlots - totalApplicants);
+
+                  if (effectiveStatus === "FULL" || (requiredSlots > 0 && remainingSlots <= 0)) {
                     return <span className="font-extrabold text-[#ED0000] uppercase text-xs tracking-wider">FULL</span>;
                   }
-                  const requiredSlots = Number(event.workersRequired || event.maxApplications || 0);
-                  const remainingSlots = Math.max(0, requiredSlots - confirmedCount);
                   if (remainingSlots >= 1 && remainingSlots <= 5) {
                     return (
                       <span className="font-extrabold text-[#ED0000] text-xs uppercase tracking-wider flex items-center space-x-1">
@@ -317,11 +319,15 @@ export default async function EventDetailsPage(props: {
         <div id="apply-section" className="space-y-6 scroll-mt-24">
           <div className="sticky top-24">
             {(() => {
+              const requiredSlots = Number(event.workersRequired || event.maxApplications || 0);
+              const totalApplicants = event.applicationsCount || 0;
+              const isFullByQuota = requiredSlots > 0 && totalApplicants >= requiredSlots;
+
               const formStatus = (isPast || effectiveStatus === "COMPLETED")
                 ? "COMPLETED"
                 : effectiveStatus === "CLOSED"
                 ? "CLOSED"
-                : effectiveStatus === "FULL"
+                : (effectiveStatus === "FULL" || isFullByQuota)
                 ? "FULL"
                 : effectiveStatus;
               return (

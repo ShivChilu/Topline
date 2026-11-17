@@ -170,6 +170,15 @@ export async function POST(
       );
     }
 
+    // Stop accepting registrations once application quota is reached
+    const targetQuota = currentEvent.workersRequired || currentEvent.maxApplications || 0;
+    if (targetQuota > 0 && currentEvent.applicationsCount >= targetQuota) {
+      return NextResponse.json(
+        { success: false, message: "Applications are full for this event. Application quota has been reached." },
+        { status: 400 }
+      );
+    }
+
     // 4. Gender Eligibility Gate
     if (event.allowedGender === "FEMALE_ONLY") {
       if (!user.gender || user.gender.toLowerCase() !== "female") {
@@ -224,10 +233,11 @@ export async function POST(
       },
     });
 
-    if (updatedEvent.applicationsCount >= updatedEvent.maxApplications) {
+    const targetCapacity = updatedEvent.workersRequired || updatedEvent.maxApplications || 0;
+    if (targetCapacity > 0 && updatedEvent.applicationsCount >= targetCapacity) {
       await prisma.event.update({
         where: { id: eventId },
-        data: { maxApplications: updatedEvent.applicationsCount + 10 },
+        data: { status: EventStatus.FULL },
       });
     }
 

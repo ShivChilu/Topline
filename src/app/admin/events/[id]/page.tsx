@@ -1480,14 +1480,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     const required = Number(event?.workersRequired || event?.maxApplications || 0);
     const confirmed = stats.confirmed || 0;
     const attended = stats.attended || 0;
-    const filled = confirmed + attended;
     const selected = stats.selected || 0;
+    // When required quota is set, filled count is the total candidates who applied:
+    const filled = applications.length;
     const slotsLeft = Math.max(0, required - filled);
     const isFull = required > 0 && filled >= required;
     const isOverbooked = required > 0 && filled > required;
     const excess = isOverbooked ? filled - required : 0;
     const percentage = required > 0 ? Math.round((filled / required) * 100) : filled > 0 ? 100 : 0;
-    const isFormOpen = event?.status === "OPEN";
+    const isFormOpen = event?.status === "OPEN" && !isFull;
 
     return {
       required,
@@ -1502,7 +1503,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       percentage,
       isFormOpen,
     };
-  }, [event, stats]);
+  }, [event, stats, applications]);
 
   // Applicant Source Statistics: Form Filled vs Added by Admin
   const applicantSourceStats = useMemo(() => {
@@ -2318,10 +2319,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Main Metrics Group */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 flex-1">
-            {/* Metric 1: Confirmed vs Required */}
+            {/* Metric 1: Filled vs Required */}
             <div className="bg-slate-50/80 p-3 sm:p-3.5 rounded-xl border border-slate-200/80">
               <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Confirmed / Required
+                Filled / Required
               </span>
               <div className="flex items-baseline gap-1.5 mt-1 flex-wrap">
                 <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -2339,7 +2340,7 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     ? "bg-blue-100 text-blue-800"
                     : "bg-amber-100 text-amber-800"
                 }`}>
-                  {capacityStats.percentage}% confirmed
+                  {capacityStats.percentage}% filled
                 </span>
               </div>
             </div>
@@ -2380,16 +2381,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                     Goal reached (Full)
                   </span>
                 ) : (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold text-amber-800">
-                      Needs {capacityStats.slotsLeft} confirmed crew
-                    </span>
-                    {stats.applied > 0 && (
-                      <span className="text-[9.5px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5 inline-block w-fit">
-                        {stats.applied} applicants in review
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-[10px] font-bold text-amber-800">
+                    Needs {capacityStats.slotsLeft} more staff
+                  </span>
                 )}
               </div>
             </div>
@@ -2466,10 +2460,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   Registration Form
                 </span>
                 <span className={`text-xs font-black flex items-center gap-1.5 mt-0.5 ${
-                  capacityStats.isFormOpen ? "text-emerald-700" : "text-rose-700"
+                  capacityStats.isFull
+                    ? "text-amber-700"
+                    : capacityStats.isFormOpen ? "text-emerald-700" : "text-rose-700"
                 }`}>
-                  <span className={`w-2 h-2 rounded-full ${capacityStats.isFormOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
-                  {capacityStats.isFormOpen ? "OPEN (Accepting)" : "CLOSED (Paused)"}
+                  <span className={`w-2 h-2 rounded-full ${
+                    capacityStats.isFull
+                      ? "bg-amber-500"
+                      : capacityStats.isFormOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+                  }`} />
+                  {capacityStats.isFull
+                    ? "FULL (Quota Reached)"
+                    : capacityStats.isFormOpen ? "OPEN (Accepting)" : "CLOSED (Paused)"}
                 </span>
               </div>
 
