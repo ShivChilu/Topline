@@ -25,3 +25,59 @@ export function getEffectiveEventStatus(event: {
   }
   return event.status;
 }
+
+/**
+ * Returns a standardized YYYY-MM-DD date key in Indian Standard Time (Asia/Kolkata).
+ */
+export function getEventDateKey(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  try {
+    const istFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return istFormatter.format(d);
+  } catch {
+    return d.toISOString().split("T")[0];
+  }
+}
+
+/**
+ * Checks if two event dates fall on the same calendar day (in IST or UTC).
+ */
+export function isSameEventDate(
+  dateA: Date | string | null | undefined,
+  dateB: Date | string | null | undefined
+): boolean {
+  if (!dateA || !dateB) return false;
+  const keyA = getEventDateKey(dateA);
+  const keyB = getEventDateKey(dateB);
+  if (keyA && keyB && keyA === keyB) return true;
+
+  try {
+    const utcA = new Date(dateA).toISOString().split("T")[0];
+    const utcB = new Date(dateB).toISOString().split("T")[0];
+    return utcA === utcB;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns formatted readable date string, e.g. "21 November 2026"
+ */
+export function formatEventDate(date: Date | string | null | undefined): string {
+  if (!date) return "Event Date";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "Event Date";
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
+}

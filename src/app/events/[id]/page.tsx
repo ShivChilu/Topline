@@ -333,6 +333,9 @@ export default async function EventDetailsPage(props: {
               return (
                 <EventApplicationForm
                   eventId={event.id}
+                  eventDate={event.date}
+                  eventName={event.name}
+                  eventLocation={event.location}
                   customFields={customFormFields}
                   status={formStatus}
                   allowedGender={event.allowedGender || "ALL"}

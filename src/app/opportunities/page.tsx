@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { isReferralProgramEnabled } from "@/lib/referral";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
-import { isEventPast, getEffectiveEventStatus } from "@/lib/event-utils";
+import { isEventPast, getEffectiveEventStatus, isSameEventDate } from "@/lib/event-utils";
 import EventAssistantChatbot from "@/components/events/EventAssistantChatbot";
 import {
   Calendar,
@@ -74,6 +74,14 @@ export default async function OpportunitiesPage(props: {
               select: {
                 eventId: true,
                 status: true,
+                event: {
+                  select: {
+                    id: true,
+                    name: true,
+                    date: true,
+                    location: true,
+                  },
+                },
               },
             },
           },
@@ -101,6 +109,14 @@ export default async function OpportunitiesPage(props: {
                 select: {
                   eventId: true,
                   status: true,
+                  event: {
+                    select: {
+                      id: true,
+                      name: true,
+                      date: true,
+                      location: true,
+                    },
+                  },
                 },
               },
             },
@@ -737,6 +753,27 @@ export default async function OpportunitiesPage(props: {
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>✓ {label}</span>
+                          </Link>
+                        );
+                      }
+
+                      // Check if already registered for another event on this exact date
+                      const sameDateApp = user?.applications?.find(
+                        (app: any) =>
+                          app.eventId !== event.id &&
+                          !["CANCELLED", "REJECTED"].includes((app.status || "").toUpperCase()) &&
+                          isSameEventDate(app.event?.date, event.date)
+                      );
+
+                      if (sameDateApp) {
+                        return (
+                          <Link
+                            href={`/events/${event.id}`}
+                            className="text-xs font-bold px-3.5 py-2.5 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center space-x-1.5"
+                            title={`Already registered for ${sameDateApp.event?.name || "another event"} on this date`}
+                          >
+                            <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Date Booked</span>
                           </Link>
                         );
                       }

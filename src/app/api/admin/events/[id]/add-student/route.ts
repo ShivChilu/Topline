@@ -4,6 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { ApplicationStatus } from "@prisma/client";
 import { sendEventSelectionEmail } from "@/lib/email";
+import { isSameEventDate, formatEventDate } from "@/lib/event-utils";
 
 import { hasEventPermission } from "@/lib/permissions";
 
@@ -113,6 +114,46 @@ export async function POST(
         {
           success: false,
           message: `Student "${student.name || "Candidate"}" is already enrolled in this event (Status: ${existingApp.status}).`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Check for same-date conflict across other events
+    const otherAppsOnSameDate = await prisma.application.findMany({
+      where: {
+        eventId: { not: eventId },
+        OR: [
+          { userId: student.id },
+          ...(student.registrationNumber ? [{ registrationNumber: student.registrationNumber }] : []),
+        ],
+        status: {
+          notIn: [ApplicationStatus.CANCELLED, ApplicationStatus.REJECTED],
+        },
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+            location: true,
+          },
+        },
+      },
+    });
+
+    const conflictingOtherApp = otherAppsOnSameDate.find((app) =>
+      isSameEventDate(app.event.date, event.date)
+    );
+
+    if (conflictingOtherApp) {
+      const formattedDate = formatEventDate(event.date);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "SAME_DATE_CONFLICT",
+          message: `Cannot enroll candidate: "${student.name || "Candidate"}" is already enrolled in "${conflictingOtherApp.event.name}" (${conflictingOtherApp.event.location}) on ${formattedDate} (Status: ${conflictingOtherApp.status}). Students are restricted to one event per date.`,
         },
         { status: 409 }
       );

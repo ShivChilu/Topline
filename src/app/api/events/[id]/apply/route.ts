@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStudentProfileCompletion } from "@/lib/profile-completion";
-import { isEventPast } from "@/lib/event-utils";
+import { isEventPast, isSameEventDate, formatEventDate } from "@/lib/event-utils";
 import { ApplicationStatus, EventStatus } from "@prisma/client";
 import { checkAndNotifyAdminPendingReview } from "@/lib/pending-review-notifier";
 import { processPendingAutoSelectionEmails } from "@/lib/auto-selection-processor";
@@ -219,7 +219,56 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+          error: "ALREADY_APPLIED",
           message: "You have already applied for this event.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // 5b. Same-Date Restriction Check: A student is only allowed to register for ONE event per date across all locations
+    const userApplications = await prisma.application.findMany({
+      where: {
+        eventId: { not: eventId },
+        OR: [
+          { userId: user.id },
+          ...(user.registrationNumber ? [{ registrationNumber: user.registrationNumber }] : []),
+        ],
+        status: {
+          notIn: [ApplicationStatus.CANCELLED, ApplicationStatus.REJECTED],
+        },
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+            location: true,
+            reportingTime: true,
+          },
+        },
+      },
+    });
+
+    const conflictingSameDateApp = userApplications.find((app) =>
+      isSameEventDate(app.event.date, event.date)
+    );
+
+    if (conflictingSameDateApp) {
+      const formattedDate = formatEventDate(event.date);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "SAME_DATE_CONFLICT",
+          message: `You have already registered for "${conflictingSameDateApp.event.name}" in ${conflictingSameDateApp.event.location} on ${formattedDate}. Topline policy allows students to register for only ONE event per date across all locations.`,
+          conflictingEvent: {
+            id: conflictingSameDateApp.event.id,
+            name: conflictingSameDateApp.event.name,
+            location: conflictingSameDateApp.event.location,
+            date: conflictingSameDateApp.event.date,
+            status: conflictingSameDateApp.status,
+          },
         },
         { status: 409 }
       );

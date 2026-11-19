@@ -23,8 +23,11 @@ import {
   X,
   ExternalLink,
   Mail,
+  Calendar,
+  CalendarX,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
+import { isSameEventDate, formatEventDate } from "@/lib/event-utils";
 
 interface FormField {
   id: string;
@@ -40,6 +43,9 @@ interface FormField {
 
 export default function EventApplicationForm({
   eventId,
+  eventDate,
+  eventName,
+  eventLocation,
   customFields,
   status,
   allowedGender = "ALL",
@@ -47,6 +53,9 @@ export default function EventApplicationForm({
   autoSendSelectionEmail,
 }: {
   eventId: string;
+  eventDate?: Date | string | null;
+  eventName?: string;
+  eventLocation?: string;
   customFields: FormField[];
   status: string;
   allowedGender?: string;
@@ -339,6 +348,79 @@ export default function EventApplicationForm({
             className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2"
           >
             Browse Other Events
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // SAME-DATE RESTRICTION GATE: Student registered for another event on this exact date
+  const sameDateApplication = loggedInUser?.applications?.find((app: any) => {
+    if (app.eventId === eventId) return false;
+    const s = (app.status || "").toLowerCase();
+    if (["cancelled", "rejected"].includes(s)) return false;
+    return isSameEventDate(app.eventDate, eventDate);
+  });
+
+  if (sameDateApplication) {
+    const conflictingStatus = (sameDateApplication.status || "APPLIED").toUpperCase();
+    return (
+      <div className="bg-[#0c0d12] p-8 rounded-2xl border border-amber-500/40 shadow-xl space-y-6 text-center">
+        <div className="w-16 h-16 bg-amber-500/10 rounded-2xl border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+          <CalendarX className="w-8 h-8" />
+        </div>
+
+        <div className="space-y-2 max-w-md mx-auto">
+          <div className="inline-block bg-amber-500/20 text-amber-300 text-[10px] font-extrabold px-3 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+            One Event Per Date Policy
+          </div>
+          <h3 className="text-xl font-extrabold text-white">Already Registered on This Date</h3>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            You are already registered for an event on <strong className="text-white">{formatEventDate(eventDate)}</strong>. Topline allows students to register for only <strong>ONE event per date</strong> across all locations.
+          </p>
+        </div>
+
+        <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 text-xs text-left space-y-2.5 max-w-md mx-auto">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Your Existing Booking Details</span>
+          </div>
+          <div className="space-y-1.5 text-slate-200">
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-slate-400">Event:</span>
+              <span className="font-bold text-white text-right">{sameDateApplication.eventName}</span>
+            </div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-slate-400">Location:</span>
+              <span className="font-semibold text-slate-200">{sameDateApplication.eventLocation}</span>
+            </div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-slate-400">Date:</span>
+              <span className="font-semibold text-slate-200">{formatEventDate(sameDateApplication.eventDate)}</span>
+            </div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-slate-400">Status:</span>
+              <span className="font-bold text-emerald-400 uppercase">{conflictingStatus}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-400 max-w-md mx-auto">
+          To register for a different location on this date, your existing registration would need to be cancelled or modified by an admin coordinator.
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href={`/events/${sameDateApplication.eventId}`}
+            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow cursor-pointer text-center"
+          >
+            View Your Registered Event
+          </Link>
+          <Link
+            href="/profile"
+            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700 text-center"
+          >
+            My Applications
           </Link>
         </div>
       </div>
