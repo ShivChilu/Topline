@@ -110,7 +110,8 @@ export async function POST(
         {
           success: false,
           error: "ACCOUNT_ON_HOLD",
-          message: "Your account is currently ON HOLD due to an unexcused event absence. Please contact admin on WhatsApp (7986955634) to appeal and reactivate your profile.",
+          message:
+            "Your account is currently ON HOLD according to Topline policy. You cannot apply for events until administration removes the hold. Please contact admin on WhatsApp (7986955634) to state your reason and request reactivation.",
         },
         { status: 403 }
       );

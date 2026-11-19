@@ -33,6 +33,8 @@ interface RSVPResponse {
   eventLocation?: string;
   reportingTime?: string;
   whatsappGroupLink?: string | null;
+  whatsappAdminUrl?: string | null;
+  onHold?: boolean;
 }
 
 export default function CandidateRSVPPage({
@@ -314,23 +316,52 @@ export default function CandidateRSVPPage({
                 {/* STATUS: CANCELLED / DECLINED */}
                 {data.status === "CANCELLED" && (
                   <div className="space-y-6">
-                    <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-6 text-center">
-                      <div className="w-14 h-14 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto text-rose-400 mb-3">
+                    <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-6 text-center space-y-3">
+                      <div className="w-14 h-14 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto text-rose-400">
                         <XCircle className="w-8 h-8" />
                       </div>
-                      <h3 className="text-xl font-extrabold text-white">Duty Declined</h3>
-                      <p className="text-rose-300 text-xs mt-1 leading-relaxed max-w-md mx-auto">
-                        You have declined this duty assignment. Your slot has been released to standby candidates.
+                      <div className="inline-block bg-rose-500/20 text-rose-300 text-[10px] font-extrabold px-3 py-1 rounded-full border border-rose-500/30 uppercase tracking-wider">
+                        ⛔ Account Status: ON HOLD
+                      </div>
+                      <h3 className="text-xl font-extrabold text-white">Duty Declined — Account Placed On Hold</h3>
+                      <p className="text-rose-200 text-xs mt-1 leading-relaxed max-w-md mx-auto">
+                        As per Topline policy, declining a selected assignment automatically places your student account <strong>ON HOLD</strong>. You are restricted from registering for upcoming events until an administrator reviews your reason and removes the hold.
                       </p>
                     </div>
 
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center space-y-3">
+                    {/* WhatsApp Button to Connect with Admin */}
+                    <div className="bg-gradient-to-br from-emerald-950/60 to-slate-900/90 border border-emerald-500/40 rounded-2xl p-5 text-left space-y-3 shadow-lg">
+                      <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                        <MessageCircle className="w-4 h-4 fill-emerald-400 shrink-0" />
+                        <span>State Reason to Admin on WhatsApp</span>
+                      </div>
+                      <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
+                        To appeal your hold, click the button below to message Founder Chiluveru Shiva Prasad directly on WhatsApp (<strong>7986955634</strong>) with your reason for declining. Once reviewed and verified, the administrator will remove the hold from your account.
+                      </p>
+                      <a
+                        href={
+                          data.whatsappAdminUrl ||
+                          `https://wa.me/917986955634?text=${encodeURIComponent(
+                            `Hi Admin, my name is ${data.candidateName || "Student"}. My Topline account was placed ON HOLD after declining the selected slot for "${data.eventName || "Event"}". Here is my reason for declining:\n\n[Please explain your reason here]`
+                          )}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black py-3.5 px-4 rounded-xl text-xs sm:text-sm uppercase tracking-wider transition shadow-lg shadow-emerald-950/40 cursor-pointer active:scale-98"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-slate-950" />
+                        <span>Connect with Admin on WhatsApp to State Reason</span>
+                        <ExternalLink className="w-4 h-4 ml-0.5" />
+                      </a>
+                    </div>
+
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
                       <div className="text-xs text-slate-400 leading-relaxed flex items-center justify-center gap-1.5">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span><strong className="text-slate-300">Permanent Status:</strong> Once declined, duty slots cannot be reclaimed or re-confirmed online.</span>
+                        <span><strong className="text-slate-300">Permanent Slot Release:</strong> Once declined, this event slot is released to standby candidates.</span>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        If you believe this was submitted by mistake, please contact your event coordinator directly.
+                        Topline Operations Helpline &amp; Appeals: <strong>7986955634</strong>.
                       </p>
                     </div>
 
@@ -388,6 +419,13 @@ export default function CandidateRSVPPage({
                           )}
                           <span>Decline Slot (Cannot Attend)</span>
                         </button>
+
+                        {/* Topline Policy Notice below Decline Button */}
+                        <div className="bg-rose-950/40 border border-rose-500/40 rounded-xl p-3 text-left">
+                          <p className="text-[11px] text-rose-200 leading-relaxed m-0">
+                            ⚠️ <strong>Topline Policy Notice:</strong> If you decline this selected slot, your student account will automatically be placed <strong>ON HOLD</strong> according to Topline policy until an administrator reviews your reason and removes the hold. You will not be able to apply for further events while on hold.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -684,10 +684,15 @@ export async function sendEventSelectionEmail({
             <div style="font-size: 11px; color: #a7f3d0; margin-bottom: 12px; font-weight: 600;">
               ✓ 1-Click Action: Records your attendance &amp; connects you to WhatsApp
             </div>
-            <div style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 10px;">
-              <a href="${declineUrl}" target="_blank" style="display: inline-block; color: #fca5a5 !important; text-decoration: underline; font-size: 12px; font-weight: 600;">
-                Cannot attend? Decline &amp; release your slot to standby candidates
+            <div style="margin-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 14px;">
+              <a href="${declineUrl}" target="_blank" style="display: inline-block; background: #1f2937; color: #f87171 !important; text-decoration: none; padding: 11px 22px; border-radius: 8px; font-weight: 800; font-size: 13px; border: 1.5px solid #ef4444; letter-spacing: 0.5px; text-transform: uppercase;">
+                ✕ DECLINE / NOT AVAILABLE
               </a>
+              <div style="margin-top: 10px; background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.45); border-radius: 8px; padding: 10px 14px; text-align: left;">
+                <p style="margin: 0; font-size: 11.5px; color: #fecaca; line-height: 1.5;">
+                  ⚠️ <strong>Topline Policy Notice:</strong> If you decline this selected slot, your student account will automatically be placed <strong>ON HOLD</strong> according to Topline policy until an administrator reviews your reason and removes the hold. You will not be able to apply for further events while on hold.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -2739,6 +2744,330 @@ export async function sendAttendanceAbsentHoldEmail({
     return res;
   } catch (error: any) {
     console.error("sendAttendanceAbsentHoldEmail error:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Student Decline & Account On-Hold Notice Email with WhatsApp Admin Appeal
+ */
+export interface StudentDeclineHoldEmailPayload {
+  studentName: string;
+  email: string;
+  phone?: string | null;
+  registrationNumber?: string | null;
+  eventName: string;
+  eventDate?: string | Date | null;
+  eventLocation?: string | null;
+  applicationId?: string | null;
+  userId?: string | null;
+  eventId?: string | null;
+}
+
+export async function sendStudentDeclineHoldEmail({
+  studentName,
+  email,
+  phone,
+  registrationNumber,
+  eventName,
+  eventDate,
+  eventLocation,
+  applicationId,
+  userId,
+  eventId,
+}: StudentDeclineHoldEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    if (!email) {
+      return { success: false, message: "No email provided." };
+    }
+
+    const subject = `Topline ODC — Account On Hold Notice (Declined Selection for ${eventName})`;
+    const formattedDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "Upcoming Event";
+
+    const whatsappAppealMessage = encodeURIComponent(
+      `Hi Admin, my name is ${studentName} (Reg No: ${registrationNumber || "N/A"}, Phone: ${phone || "N/A"}). My Topline profile was placed ON HOLD after declining the selected slot for "${eventName}" on ${formattedDate}. Here is my reason for declining:\n\n[Please explain your reason here]`
+    );
+    const whatsappAdminUrl = `https://wa.me/917986955634?text=${whatsappAppealMessage}`;
+    const dashboardUrl = `${getAppBaseUrl()}/profile`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 24px; color: #f3f4f6; }
+        .container { max-width: 580px; margin: 0 auto; background: #111827; border: 1px solid #374151; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 32px 24px; text-align: center; }
+        .header-tag { display: inline-block; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); color: #fecaca; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 9999px; margin-bottom: 12px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+        .body { padding: 32px 24px; }
+        .greeting { font-size: 17px; font-weight: 700; color: #ffffff; margin-top: 0; margin-bottom: 12px; }
+        .p-text { font-size: 14px; line-height: 1.6; color: #9ca3af; margin-bottom: 18px; }
+        .hold-box { background: rgba(220, 38, 38, 0.12); border: 1.5px solid rgba(220, 38, 38, 0.4); border-radius: 16px; padding: 20px; margin: 20px 0; text-align: center; }
+        .hold-badge { display: inline-flex; align-items: center; background: #dc2626; color: #ffffff; font-size: 12px; font-weight: 900; padding: 6px 14px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+        .hold-desc { font-size: 13px; color: #fecaca; font-weight: 600; line-height: 1.5; }
+        .event-details { background: #1f2937; border-radius: 14px; padding: 18px; margin: 20px 0; font-size: 13px; border-left: 4px solid #ef4444; }
+        .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #9ca3af; font-weight: 600; }
+        .detail-val { color: #ffffff; font-weight: 700; }
+        .btn-whatsapp { display: block; background: #25D366; color: #022c22 !important; font-size: 14px; font-weight: 900; text-align: center; text-decoration: none; padding: 16px 24px; border-radius: 14px; margin: 22px 0 12px 0; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-secondary { display: block; background: #1f2937; color: #d1d5db !important; font-size: 13px; font-weight: 700; text-align: center; text-decoration: none; padding: 12px 20px; border-radius: 12px; border: 1px solid #374151; }
+        .footer { background: #0b0f19; padding: 20px 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; line-height: 1.5; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-tag">⚠️ Policy Notification</div>
+          <h1>Account Placed On Hold</h1>
+        </div>
+        <div class="body">
+          <div class="greeting">Hi ${studentName},</div>
+          <p class="p-text">
+            You recently declined your selected duty slot for <strong>${eventName}</strong> (${formattedDate}${eventLocation ? ` • ${eventLocation}` : ""}).
+          </p>
+
+          <div class="hold-box">
+            <div class="hold-badge">⛔ Account Status: ON HOLD</div>
+            <div class="hold-desc">
+              As per Topline Operations Policy, declining a selected assignment automatically places your student account on hold. You are restricted from applying for further events until an administrator reviews your reason and removes the hold.
+            </div>
+          </div>
+
+          <div class="event-details">
+            <div class="detail-row"><span class="detail-label">Event Name:</span> <span class="detail-val">${eventName}</span></div>
+            <div class="detail-row"><span class="detail-label">Event Date:</span> <span class="detail-val">${formattedDate}</span></div>
+            ${eventLocation ? `<div class="detail-row"><span class="detail-label">Location:</span> <span class="detail-val">${eventLocation}</span></div>` : ""}
+            <div class="detail-row"><span class="detail-label">Registration No:</span> <span class="detail-val">${registrationNumber || "N/A"}</span></div>
+            <div class="detail-row"><span class="detail-label">Duty Assignment:</span> <span class="detail-val" style="color: #ef4444;">DECLINED</span></div>
+          </div>
+
+          <p class="p-text" style="color: #cbd5e1; font-size: 13px;">
+            To appeal your hold, click the WhatsApp button below to connect directly with the administrator (<strong>7986955634</strong>) and provide the reason for your decline. Once approved by the administrator, your profile will be reactivated.
+          </p>
+
+          <a href="${whatsappAdminUrl}" target="_blank" class="btn-whatsapp">
+            💬 Connect with Admin on WhatsApp to Explain Reason
+          </a>
+
+          <a href="${dashboardUrl}" target="_blank" class="btn-secondary">
+            📊 View Student Dashboard
+          </a>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC & Hospitality Operations.<br>
+          Admin Helpline & Appeals: <strong>7986955634</strong>.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const res = await sendEmail({ to: email, subject, html });
+
+    if (res.success && (userId || applicationId)) {
+      await prisma.emailLog.create({
+        data: {
+          userId: userId || null,
+          applicationId: applicationId || null,
+          eventId: eventId || null,
+          recipientEmail: email,
+          recipientName: studentName,
+          templateName: "Event Selection Declined (Account On Hold Notice)",
+          subject,
+          bodyPreview: `Declined selection for ${eventName}. Account placed ON HOLD per policy. WhatsApp appeal: 7986955634`,
+          sentAt: new Date(),
+        },
+      }).catch((err) => console.error("Error logging decline hold email:", err));
+    }
+
+    return res;
+  } catch (error: any) {
+    console.error("sendStudentDeclineHoldEmail error:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Admin Notification Email when a candidate declines their selected duty assignment
+ */
+export interface AdminCandidateDeclinedAlertEmailPayload {
+  studentName: string;
+  studentEmail?: string | null;
+  studentPhone?: string | null;
+  registrationNumber?: string | null;
+  university?: string | null;
+  eventName: string;
+  eventDate?: string | Date | null;
+  eventLocation?: string | null;
+  reportingTime?: string | null;
+  eventId?: string | null;
+  applicationId?: string | null;
+  userId?: string | null;
+}
+
+export async function sendAdminCandidateDeclinedAlertEmail({
+  studentName,
+  studentEmail,
+  studentPhone,
+  registrationNumber,
+  university,
+  eventName,
+  eventDate,
+  eventLocation,
+  reportingTime,
+  eventId,
+  applicationId,
+  userId,
+}: AdminCandidateDeclinedAlertEmailPayload): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
+  try {
+    // 1. Resolve Admin Recipient list
+    const adminEmails = new Set<string>();
+    adminEmails.add("chiluverushivaprasad02@gmail.com");
+    if (process.env.ADMIN_ALERT_EMAIL) {
+      adminEmails.add(process.env.ADMIN_ALERT_EMAIL.trim());
+    }
+
+    try {
+      const dbAdmins = await prisma.user.findMany({
+        where: {
+          role: { in: ["SUPERADMIN", "ADMIN"] },
+          isActive: true,
+          email: { not: null },
+        },
+        select: { email: true },
+      });
+      for (const a of dbAdmins) {
+        if (a.email?.trim()) adminEmails.add(a.email.trim());
+      }
+    } catch (e) {
+      console.warn("Could not query DB admins:", e);
+    }
+
+    const recipients = Array.from(adminEmails);
+    const subject = `🚨 Candidate Declined: ${studentName} declined selection for ${eventName}`;
+    const formattedDate = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "Upcoming Event";
+
+    // Clean phone number for WhatsApp URL
+    const rawDigits = (studentPhone || "").replace(/\D/g, "");
+    const cleanPhone = rawDigits.length === 10 ? `91${rawDigits}` : rawDigits.startsWith("91") ? rawDigits : `91${rawDigits}`;
+    const waText = encodeURIComponent(
+      `Hi ${studentName}, we received your decline for "${eventName}" (${formattedDate}). As per Topline policy, your profile has been placed ON HOLD. Please let us know the reason so we can review your account.`
+    );
+    const candidateWhatsAppUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${waText}` : null;
+    const adminStudentUrl = `${getAppBaseUrl()}/admin/students?search=${encodeURIComponent(studentName)}`;
+    const adminEventUrl = eventId ? `${getAppBaseUrl()}/admin/events/${eventId}` : `${getAppBaseUrl()}/admin/events`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; margin: 0; padding: 24px; color: #f3f4f6; }
+        .container { max-width: 600px; margin: 0 auto; background: #111827; border: 1px solid #374151; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .header { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); padding: 30px 24px; text-align: center; }
+        .header-tag { display: inline-block; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.25); color: #fee2e2; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 9999px; margin-bottom: 10px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+        .body { padding: 30px 24px; }
+        .alert-card { background: rgba(239, 68, 68, 0.12); border: 1.5px solid rgba(239, 68, 68, 0.4); border-radius: 14px; padding: 18px; margin-bottom: 22px; }
+        .card { background: #1f2937; border-radius: 14px; padding: 20px; margin: 20px 0; border-left: 4px solid #ef4444; }
+        .row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #374151; font-size: 13.5px; }
+        .row:last-child { border-bottom: none; }
+        .label { color: #9ca3af; font-weight: 600; }
+        .value { color: #ffffff; font-weight: 700; text-align: right; }
+        .btn-wa { display: block; background: #25D366; color: #022c22 !important; font-size: 14px; font-weight: 900; text-align: center; text-decoration: none; padding: 15px 22px; border-radius: 12px; margin: 20px 0 10px 0; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-link { display: inline-block; background: #374151; color: #e5e7eb !important; font-size: 12.5px; font-weight: 700; text-align: center; text-decoration: none; padding: 10px 18px; border-radius: 10px; border: 1px solid #4b5563; margin: 4px; }
+        .footer { background: #0b0f19; padding: 18px 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #1f2937; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-tag">🚨 ACTION REQUIRED • CANDIDATE DECLINED</div>
+          <h1>Candidate Declined Selected Assignment</h1>
+        </div>
+        <div class="body">
+          <div class="alert-card">
+            <div style="font-size: 14px; font-weight: 800; color: #fecaca; margin-bottom: 6px;">
+              ⛔ Candidate has released their slot and their account is now ON HOLD.
+            </div>
+            <div style="font-size: 12.5px; color: #fca5a5; line-height: 1.5;">
+              <strong>${studentName}</strong> declined their selected slot for <strong>${eventName}</strong>. As per Topline policy, the candidate has automatically been placed <strong>ON HOLD</strong> and cannot register for future events until you review and remove the hold.
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="font-size: 12px; color: #9ca3af; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Candidate Information</div>
+            <div class="row"><span class="label">Candidate Name:</span> <span class="value">${studentName}</span></div>
+            <div class="row"><span class="label">Mobile Number:</span> <span class="value">${studentPhone || "N/A"}</span></div>
+            <div class="row"><span class="label">Email Address:</span> <span class="value">${studentEmail || "N/A"}</span></div>
+            <div class="row"><span class="label">Roll / Reg Number:</span> <span class="value">${registrationNumber || "N/A"}</span></div>
+            ${university ? `<div class="row"><span class="label">College / University:</span> <span class="value">${university}</span></div>` : ""}
+          </div>
+
+          <div class="card" style="border-left-color: #3b82f6;">
+            <div style="font-size: 12px; color: #9ca3af; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Event Details</div>
+            <div class="row"><span class="label">Event Name:</span> <span class="value">${eventName}</span></div>
+            <div class="row"><span class="label">Event Date:</span> <span class="value">${formattedDate}</span></div>
+            ${eventLocation ? `<div class="row"><span class="label">Location:</span> <span class="value">${eventLocation}</span></div>` : ""}
+            ${reportingTime ? `<div class="row"><span class="label">Reporting Time:</span> <span class="value">${reportingTime}</span></div>` : ""}
+            <div class="row"><span class="label">Status:</span> <span class="value" style="color: #ef4444;">DECLINED / RELEASED</span></div>
+          </div>
+
+          ${
+            candidateWhatsAppUrl
+              ? `
+          <a href="${candidateWhatsAppUrl}" target="_blank" class="btn-wa">
+            💬 Message Candidate on WhatsApp (${studentPhone})
+          </a>
+          `
+              : ""
+          }
+
+          <div style="text-align: center; margin-top: 14px;">
+            <a href="${adminStudentUrl}" target="_blank" class="btn-link">
+              👤 Open Candidate in Students Portal
+            </a>
+            <a href="${adminEventUrl}" target="_blank" class="btn-link">
+              📋 Manage Event Standby Roster
+            </a>
+          </div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Topline ODC Automated Operations System.<br>
+          Super Admin Dispatcher.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    // Send to each admin recipient
+    let lastResult: { success: boolean; simulated?: boolean; message?: string } = { success: false, message: "No recipients" };
+    for (const adminTo of recipients) {
+      lastResult = await sendEmail({ to: adminTo, subject, html });
+    }
+
+    return lastResult;
+  } catch (error: any) {
+    console.error("sendAdminCandidateDeclinedAlertEmail error:", error);
     return { success: false, message: error.message };
   }
 }

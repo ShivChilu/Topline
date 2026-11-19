@@ -471,6 +471,11 @@ export default function SelectionEmailReviewModal({
                       <div className="w-full bg-slate-800 text-rose-400 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 cursor-default">
                         <span>NO, NOT AVAILABLE (Decline & Release Slot)</span>
                       </div>
+                      <div className="bg-rose-950/40 border border-rose-500/40 rounded-xl p-3 text-left">
+                        <p className="text-[11px] text-rose-200 leading-relaxed m-0">
+                          ⚠️ <strong>Topline Policy Notice:</strong> If a candidate declines this selected slot, their account will automatically be placed <strong>ON HOLD</strong> according to Topline policy until an administrator reviews their reason and removes the hold. They will not be able to apply for further events while on hold.
+                        </p>
+                      </div>
                     </div>
                   </div>
 

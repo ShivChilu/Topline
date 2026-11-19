@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApplicationStatus } from "@prisma/client";
+import { sendStudentDeclineHoldEmail, sendAdminCandidateDeclinedAlertEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
             email: true,
             phone: true,
             registrationNumber: true,
+            university: true,
           },
         },
       },
@@ -114,22 +116,86 @@ export async function GET(request: Request) {
         },
       });
 
+      // Update student user to ON_HOLD per Topline policy
+      if (application.userId) {
+        await prisma.user.update({
+          where: { id: application.userId },
+          data: {
+            selectionStatus: "ON_HOLD",
+            adminRemarks: `Placed ON HOLD: Declined selected event "${application.event.name}" on ${now.toLocaleDateString("en-GB")}. Reason pending review.`,
+          },
+        }).catch((err) => console.error("Error updating user to ON_HOLD:", err));
+      }
+
       await prisma.applicationStatusHistory.create({
         data: {
           applicationId: appId,
           oldStatus,
           newStatus: ApplicationStatus.CANCELLED,
-          notes: "Candidate declined availability via email/portal RSVP (NO)",
+          notes: "Candidate declined availability via email/portal RSVP (NO). Account automatically placed ON HOLD per Topline policy.",
         },
       });
+
+      const studentName = application.name || application.user?.name || "Student";
+      const studentEmail = application.user?.email || null;
+      const studentPhone = application.mobileNumber || application.user?.phone || null;
+      const regNo = application.registrationNumber || application.user?.registrationNumber || null;
+      const university = (application.user as any)?.university || null;
+
+      const formattedDate = application.event.date
+        ? new Date(application.event.date).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : "Upcoming Event";
+
+      const whatsappAppealMessage = encodeURIComponent(
+        `Hi Admin, my name is ${studentName} (Reg No: ${regNo || "N/A"}, Phone: ${studentPhone || "N/A"}). My Topline profile was placed ON HOLD after declining the selected slot for "${application.event.name}" on ${formattedDate}. Here is my reason for declining:\n\n[Please explain your reason here]`
+      );
+      const whatsappAdminUrl = `https://wa.me/917986955634?text=${whatsappAppealMessage}`;
+
+      // Automatically dispatch Hold Email to Candidate
+      if (studentEmail) {
+        sendStudentDeclineHoldEmail({
+          studentName,
+          email: studentEmail,
+          phone: studentPhone,
+          registrationNumber: regNo,
+          eventName: application.event.name,
+          eventDate: application.event.date,
+          eventLocation: application.event.location,
+          applicationId: application.id,
+          userId: application.userId,
+          eventId: application.eventId,
+        }).catch((err) => console.error("Failed to send student decline hold email:", err));
+      }
+
+      // Automatically dispatch Alert Email to Admin / Super Admin
+      sendAdminCandidateDeclinedAlertEmail({
+        studentName,
+        studentEmail,
+        studentPhone,
+        registrationNumber: regNo,
+        university,
+        eventName: application.event.name,
+        eventDate: application.event.date,
+        eventLocation: application.event.location,
+        reportingTime: application.event.reportingTime,
+        eventId: application.eventId,
+        applicationId: application.id,
+        userId: application.userId,
+      }).catch((err) => console.error("Failed to send admin decline alert email:", err));
 
       return NextResponse.json({
         success: true,
         status: "CANCELLED",
-        message: "You have declined this duty assignment. Your slot has been released.",
-        candidateName: application.name || application.user?.name,
+        onHold: true,
+        message: "You have declined this duty assignment. As per Topline policy, your account has been placed ON HOLD. Please message the admin on WhatsApp to explain your reason.",
+        candidateName: studentName,
         eventName: application.event.name,
         eventDate: application.event.date,
+        whatsappAdminUrl,
         updatedApp,
       });
     }
@@ -199,13 +265,77 @@ export async function POST(request: Request) {
       },
     });
 
+    const studentName = application.name || application.user?.name || "Student";
+    const studentEmail = application.user?.email || null;
+    const studentPhone = application.mobileNumber || application.user?.phone || null;
+    const regNo = application.registrationNumber || application.user?.registrationNumber || null;
+    const university = (application.user as any)?.university || null;
+
+    const formattedDate = application.event.date
+      ? new Date(application.event.date).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "Upcoming Event";
+
+    const whatsappAppealMessage = encodeURIComponent(
+      `Hi Admin, my name is ${studentName} (Reg No: ${regNo || "N/A"}, Phone: ${studentPhone || "N/A"}). My Topline profile was placed ON HOLD after declining the selected slot for "${application.event.name}" on ${formattedDate}. Here is my reason for declining:\n\n[Please explain your reason here]`
+    );
+    const whatsappAdminUrl = `https://wa.me/917986955634?text=${whatsappAppealMessage}`;
+
+    if (!isConfirm) {
+      // Mark student as ON_HOLD
+      if (application.userId) {
+        await prisma.user.update({
+          where: { id: application.userId },
+          data: {
+            selectionStatus: "ON_HOLD",
+            adminRemarks: `Placed ON HOLD: Declined selected event "${application.event.name}" on ${now.toLocaleDateString("en-GB")}. Reason pending review.`,
+          },
+        }).catch((err) => console.error("Error updating user to ON_HOLD:", err));
+      }
+
+      // Automatically dispatch Hold Email to Candidate
+      if (studentEmail) {
+        sendStudentDeclineHoldEmail({
+          studentName,
+          email: studentEmail,
+          phone: studentPhone,
+          registrationNumber: regNo,
+          eventName: application.event.name,
+          eventDate: application.event.date,
+          eventLocation: application.event.location,
+          applicationId: application.id,
+          userId: application.userId,
+          eventId: application.eventId,
+        }).catch((err) => console.error("Failed to send student decline hold email:", err));
+      }
+
+      // Automatically dispatch Alert Email to Admin / Super Admin
+      sendAdminCandidateDeclinedAlertEmail({
+        studentName,
+        studentEmail,
+        studentPhone,
+        registrationNumber: regNo,
+        university,
+        eventName: application.event.name,
+        eventDate: application.event.date,
+        eventLocation: application.event.location,
+        reportingTime: application.event.reportingTime,
+        eventId: application.eventId,
+        applicationId: application.id,
+        userId: application.userId,
+      }).catch((err) => console.error("Failed to send admin decline alert email:", err));
+    }
+
     if (oldStatus !== newStatus) {
       await prisma.applicationStatusHistory.create({
         data: {
           applicationId: appId,
           oldStatus,
           newStatus,
-          notes: notes || (isConfirm ? "Confirmed availability via portal (YES)" : "Declined availability via portal (NO)"),
+          notes: notes || (isConfirm ? "Confirmed availability via portal (YES)" : "Declined availability via portal (NO). Account placed ON HOLD per policy."),
         },
       });
     }
@@ -213,10 +343,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       status: newStatus,
+      onHold: !isConfirm,
       message: isConfirm
         ? "Your attendance has been confirmed!"
-        : "You have cancelled this assignment.",
+        : "You have declined this assignment. As per Topline policy, your account has been placed ON HOLD. Please contact admin on WhatsApp to explain your reason.",
       whatsappGroupLink: isConfirm ? application.event.whatsappGroupLink : null,
+      whatsappAdminUrl: !isConfirm ? whatsappAdminUrl : null,
       updatedApp,
     });
   } catch (error: any) {

@@ -25,6 +25,7 @@ import {
   Mail,
   Calendar,
   CalendarX,
+  ShieldAlert,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import { isSameEventDate, formatEventDate } from "@/lib/event-utils";
@@ -180,11 +181,73 @@ export default function EventApplicationForm({
     );
   }
 
-  // DUPLICATE APPLICATION GATE: Candidate already applied for this event
+  // ON-HOLD PROFILE GATE: Student profile is on hold (e.g., declined duty or unexcused absence)
+  const isOnHold = loggedInUser?.selectionStatus === "ON_HOLD";
   const existingApplication = loggedInUser?.applications?.find(
     (app: any) => app.eventId === eventId
   );
 
+  if (isOnHold && (!existingApplication || (existingApplication.status || "").toLowerCase() === "cancelled")) {
+    const studentName = loggedInUser?.name || "Student";
+    const regNo = loggedInUser?.registrationNumber || "";
+    const appealMsg = `Hello Admin, my Topline account is currently on hold (Name: ${studentName}${regNo ? `, Roll No: ${regNo}` : ""}). I would like to state the reason for declining duty and request reactivation of my account.`;
+    const waAppealUrl = `https://wa.me/917986955634?text=${encodeURIComponent(appealMsg)}`;
+
+    return (
+      <div className="bg-[#0c0d12] p-8 rounded-2xl border border-rose-500/40 shadow-2xl space-y-6 text-center">
+        <div className="w-16 h-16 bg-rose-500/10 rounded-2xl border border-rose-500/30 flex items-center justify-center mx-auto text-rose-400">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+
+        <div className="space-y-2 max-w-md mx-auto">
+          <div className="inline-block bg-rose-500/20 text-rose-300 text-[10px] font-extrabold px-3 py-1 rounded-full border border-rose-500/30 uppercase tracking-wider">
+            Account Under Hold
+          </div>
+          <h3 className="text-xl font-extrabold text-white">Application Blocked — Account On Hold</h3>
+          <p className="text-xs text-rose-200/90 leading-relaxed">
+            According to Topline policy, your profile is currently on hold because an assigned duty was declined or missed. You cannot apply for events until the administration reviews and removes the hold.
+          </p>
+        </div>
+
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 flex items-center justify-between max-w-md mx-auto">
+          <span className="font-semibold text-slate-400">Registered Student:</span>
+          <span className="font-bold text-white">{loggedInUser?.name} ({loggedInUser?.registrationNumber || "N/A"})</span>
+        </div>
+
+        <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30 p-5 rounded-2xl space-y-3 text-center max-w-md mx-auto shadow-lg">
+          <p className="text-xs text-emerald-200/90 leading-relaxed">
+            Please connect with administration on WhatsApp to state your reason for declining and request profile reactivation:
+          </p>
+          <a
+            href={waAppealUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs px-6 py-3.5 rounded-xl shadow-lg transition active:scale-95 cursor-pointer"
+          >
+            <MessageCircle className="w-4 h-4 fill-slate-950" />
+            <span>Connect with Admin on WhatsApp (7986955634)</span>
+          </a>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/profile"
+            className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition border border-slate-700 flex items-center justify-center gap-2"
+          >
+            View My Profile
+          </Link>
+          <Link
+            href="/events"
+            className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition border border-slate-800 flex items-center justify-center gap-2"
+          >
+            Browse Other Events
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // DUPLICATE APPLICATION GATE: Candidate already applied for this event
   if (existingApplication) {
     const appStatus = (existingApplication.status || "APPLIED").toUpperCase();
     return (
