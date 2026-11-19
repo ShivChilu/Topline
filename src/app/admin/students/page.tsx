@@ -253,6 +253,17 @@ export default function AdminStudentsPage() {
   const [eventPickerSearch, setEventPickerSearch] = useState("");
   const eventPickerRef = useRef<HTMLDivElement | null>(null);
 
+  // Current Logged-in Admin & Super Admin Permissions
+  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+  const isSuperAdmin = (currentAdmin?.role || "").toLowerCase() === "superadmin";
+
+  // Super Admin Contact Details Editing
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [editPhoneValue, setEditPhoneValue] = useState("");
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editEmailValue, setEditEmailValue] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+
   // Close event picker on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -418,6 +429,14 @@ export default function AdminStudentsPage() {
   useEffect(() => {
     fetchEmailTemplates();
     fetchEvents();
+    fetch("/api/admin/users/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success) {
+          setCurrentAdmin(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching current admin:", err));
   }, []);
 
   useEffect(() => {
@@ -446,6 +465,98 @@ export default function AdminStudentsPage() {
     setInspectStudent(student);
     setCustomNote(student.adminRemarks || "");
     setInspectEventFilter("ALL");
+    setIsEditingPhone(false);
+    setIsEditingEmail(false);
+    setEditPhoneValue(student.phone || "");
+    setEditEmailValue(student.email || "");
+  };
+
+  const handleSaveStudentPhone = async () => {
+    if (!inspectStudent) return;
+    const clean = editPhoneValue.trim();
+    if (!clean) {
+      showToast("Phone number cannot be blank.");
+      return;
+    }
+    const digits = clean.replace(/\D/g, "");
+    if (digits.length < 10) {
+      showToast("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    try {
+      setSavingContact(true);
+      const res = await fetch("/api/admin/students", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: inspectStudent.id,
+          phone: clean,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || "Failed to update phone number.");
+        return;
+      }
+
+      const updatedPhone = data.student?.phone || clean;
+      setInspectStudent((prev: any) => (prev ? { ...prev, phone: updatedPhone } : null));
+      setStudents((prev) =>
+        prev.map((s) => (s.id === inspectStudent.id ? { ...s, phone: updatedPhone } : s))
+      );
+      setIsEditingPhone(false);
+      showToast("Mobile number updated successfully by Super Admin!");
+    } catch (err: any) {
+      console.error("Save phone error:", err);
+      showToast(err.message || "Failed to update phone number.");
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const handleSaveStudentEmail = async () => {
+    if (!inspectStudent) return;
+    const clean = editEmailValue.trim().toLowerCase();
+    if (!clean) {
+      showToast("Email address cannot be blank.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(clean)) {
+      showToast("Please enter a valid email address.");
+      return;
+    }
+
+    try {
+      setSavingContact(true);
+      const res = await fetch("/api/admin/students", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: inspectStudent.id,
+          email: clean,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || "Failed to update email address.");
+        return;
+      }
+
+      const updatedEmail = data.student?.email || clean;
+      setInspectStudent((prev: any) => (prev ? { ...prev, email: updatedEmail } : null));
+      setStudents((prev) =>
+        prev.map((s) => (s.id === inspectStudent.id ? { ...s, email: updatedEmail } : s))
+      );
+      setIsEditingEmail(false);
+      showToast("Email address updated successfully by Super Admin!");
+    } catch (err: any) {
+      console.error("Save email error:", err);
+      showToast(err.message || "Failed to update email address.");
+    } finally {
+      setSavingContact(false);
+    }
   };
 
   // Handle single candidate selection change with optimistic update
@@ -3716,10 +3827,59 @@ export default function AdminStudentsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
                   <div>
-                    <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
-                    <span className="text-sm font-semibold text-slate-900 mt-0.5 block font-mono">{inspectStudent.phone || "N/A"}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block">Phone</span>
+                      {isSuperAdmin && !isEditingPhone && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditPhoneValue(inspectStudent.phone || "");
+                            setIsEditingPhone(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 transition cursor-pointer"
+                          title="Super Admin Only: Edit mobile number"
+                        >
+                          <Edit2 className="w-2.5 h-2.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditingPhone ? (
+                      <div className="mt-1.5 space-y-1.5">
+                        <input
+                          type="tel"
+                          value={editPhoneValue}
+                          onChange={(e) => setEditPhoneValue(e.target.value)}
+                          placeholder="10-digit mobile number"
+                          className="w-full bg-white border border-blue-400 rounded-lg px-2 py-1 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={handleSaveStudentPhone}
+                            disabled={savingContact}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] py-1 rounded transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>{savingContact ? "Saving..." : "Save"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingPhone(false)}
+                            disabled={savingContact}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[10px] py-1 px-2 rounded transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-900 mt-0.5 block font-mono">{inspectStudent.phone || "N/A"}</span>
+                    )}
                   </div>
-                  {inspectStudent.phone && (
+                  {!isEditingPhone && inspectStudent.phone && (
                     <div className="mt-2 flex items-center gap-1.5">
                       <a
                         href={`tel:${inspectStudent.phone}`}
@@ -3742,15 +3902,64 @@ export default function AdminStudentsPage() {
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
                   <div>
-                    <span className="text-[11px] font-bold text-slate-400 uppercase block">Email</span>
-                    <span
-                      className="text-xs sm:text-[13px] font-semibold text-slate-900 mt-0.5 block break-all font-mono select-all leading-snug"
-                      title={inspectStudent.email || "N/A"}
-                    >
-                      {inspectStudent.email || "N/A"}
-                    </span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase block">Email</span>
+                      {isSuperAdmin && !isEditingEmail && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditEmailValue(inspectStudent.email || "");
+                            setIsEditingEmail(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 transition cursor-pointer"
+                          title="Super Admin Only: Edit email address"
+                        >
+                          <Edit2 className="w-2.5 h-2.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditingEmail ? (
+                      <div className="mt-1.5 space-y-1.5">
+                        <input
+                          type="email"
+                          value={editEmailValue}
+                          onChange={(e) => setEditEmailValue(e.target.value)}
+                          placeholder="candidate@example.com"
+                          className="w-full bg-white border border-blue-400 rounded-lg px-2 py-1 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={handleSaveStudentEmail}
+                            disabled={savingContact}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] py-1 rounded transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>{savingContact ? "Saving..." : "Save"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingEmail(false)}
+                            disabled={savingContact}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[10px] py-1 px-2 rounded transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span
+                        className="text-xs sm:text-[13px] font-semibold text-slate-900 mt-0.5 block break-all font-mono select-all leading-snug"
+                        title={inspectStudent.email || "N/A"}
+                      >
+                        {inspectStudent.email || "N/A"}
+                      </span>
+                    )}
                   </div>
-                  {inspectStudent.email && (
+                  {!isEditingEmail && inspectStudent.email && (
                     <div className="mt-2 flex items-center gap-1.5">
                       <a
                         href={`mailto:${inspectStudent.email}`}

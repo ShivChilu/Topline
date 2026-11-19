@@ -449,7 +449,122 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes, adminRemarks, remarks, reason } = body;
+    const { studentId, studentIds, status, selectionStatus, sendEmail = true, notes, adminRemarks, remarks, reason, phone, email } = body;
+
+    // Super Admin: Edit Student Phone Number or Email Address
+    if (phone !== undefined || email !== undefined) {
+      if (admin.role !== "SUPERADMIN") {
+        return NextResponse.json(
+          { success: false, message: "Forbidden. Only Super Admins are authorized to edit student contact details (Phone/Email)." },
+          { status: 403 }
+        );
+      }
+
+      if (!studentId) {
+        return NextResponse.json({ success: false, message: "Student ID is required." }, { status: 400 });
+      }
+
+      const existingStudent = await prisma.user.findUnique({
+        where: { id: studentId },
+      });
+
+      if (!existingStudent) {
+        return NextResponse.json({ success: false, message: "Student account not found." }, { status: 404 });
+      }
+
+      const updateData: any = {};
+
+      if (phone !== undefined) {
+        const cleanPhone = String(phone).trim();
+        if (cleanPhone) {
+          const digits = cleanPhone.replace(/\D/g, "");
+          if (digits.length < 10) {
+            return NextResponse.json(
+              { success: false, message: "Please enter a valid 10-digit mobile number." },
+              { status: 400 }
+            );
+          }
+
+          const duplicatePhone = await prisma.user.findFirst({
+            where: {
+              phone: cleanPhone,
+              id: { not: studentId },
+            },
+            select: { id: true, name: true, registrationNumber: true },
+          });
+
+          if (duplicatePhone) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: `Phone number ${cleanPhone} is already in use by ${duplicatePhone.name} (${duplicatePhone.registrationNumber || "N/A"}).`,
+              },
+              { status: 400 }
+            );
+          }
+          updateData.phone = cleanPhone;
+        } else {
+          return NextResponse.json({ success: false, message: "Phone number cannot be blank." }, { status: 400 });
+        }
+      }
+
+      if (email !== undefined) {
+        const cleanEmail = String(email).trim().toLowerCase();
+        if (cleanEmail) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(cleanEmail)) {
+            return NextResponse.json({ success: false, message: "Please enter a valid email address." }, { status: 400 });
+          }
+
+          const duplicateEmail = await prisma.user.findFirst({
+            where: {
+              email: { equals: cleanEmail, mode: "insensitive" },
+              id: { not: studentId },
+            },
+            select: { id: true, name: true, registrationNumber: true },
+          });
+
+          if (duplicateEmail) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: `Email ${cleanEmail} is already in use by ${duplicateEmail.name} (${duplicateEmail.registrationNumber || "N/A"}).`,
+              },
+              { status: 400 }
+            );
+          }
+          updateData.email = cleanEmail;
+        } else {
+          return NextResponse.json({ success: false, message: "Email address cannot be blank." }, { status: 400 });
+        }
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: studentId },
+        data: updateData,
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          action: "SUPERADMIN_EDIT_STUDENT_CONTACT",
+          metadata: {
+            studentId,
+            studentName: existingStudent.name,
+            oldPhone: existingStudent.phone,
+            newPhone: updateData.phone ?? existingStudent.phone,
+            oldEmail: existingStudent.email,
+            newEmail: updateData.email ?? existingStudent.email,
+            superAdminEmail: admin.email,
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Student contact details successfully updated.",
+        student: { ...updated, _id: updated.id },
+      });
+    }
 
     const validStatuses: StudentSelectionStatus[] = ["UNDER_REVIEW", "SELECTED", "NOT_SELECTED", "ON_HOLD"];
 
