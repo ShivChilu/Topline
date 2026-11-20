@@ -210,6 +210,12 @@ export async function GET(request: Request) {
       where: whereClause,
       include: {
         client: true,
+        applications: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
         eventFormFields: {
           include: { formField: true },
           orderBy: { displayOrder: "asc" },
@@ -225,12 +231,24 @@ export async function GET(request: Request) {
         ? "COMPLETED"
         : e.status;
 
+      const apps = e.applications || [];
+      const requiredCount = Number(e.workersRequired || e.maxApplications || 0);
+      const appliedCount = apps.length;
+      const selectedCount = apps.filter((a) => a.status === "SELECTED").length;
+      const confirmedCount = apps.filter((a) => ["CONFIRMED", "ATTENDED", "PAID"].includes(a.status)).length;
+
+      const { applications: _omittedApps, ...restEvent } = e;
+
       return {
-        ...e,
+        ...restEvent,
         _id: e.id,
         status: effectiveStatus,
         rawStatus: e.status,
         isPast,
+        appliedCount,
+        selectedCount,
+        confirmedCount,
+        requiredCount,
         customFormFields: e.eventFormFields.map((ef) => ({
           id: ef.formField.id,
           key: ef.formField.key,

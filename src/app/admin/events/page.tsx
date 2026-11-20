@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, Lock, RefreshCw, AlertCircle, Check } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, Lock, RefreshCw, AlertCircle, Check, Users, CheckCircle2 } from "lucide-react";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 
 export default function AdminEventsPage() {
@@ -262,11 +262,40 @@ export default function AdminEventsPage() {
             if (event.status === "COMPLETED") statusBadgeColor = "bg-purple-50 text-purple-800 border-purple-300 font-bold";
             if (event.status === "DRAFT") statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-300";
 
+            const required = event.requiredCount || event.workersRequired || event.maxApplications || 0;
+            const applied = event.appliedCount ?? 0;
+            const confirmed = event.confirmedCount ?? 0;
+            const selected = event.selectedCount ?? 0;
+            const isFull = required > 0 && applied >= required;
+
             return (
               <div
                 key={event._id}
                 className="bg-white rounded-xl border border-slate-200 flex flex-col justify-between overflow-hidden group hover:border-red-600/30 transition duration-300 shadow-sm"
               >
+                {/* Top Mini Stats Bar: Applied / Required, Confirmed, Selected */}
+                <div className="bg-slate-50/90 border-b border-slate-100 px-5 py-2 flex items-center justify-between text-[11px] text-slate-600 flex-wrap gap-1.5">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>
+                      Applied: <strong className={`font-bold ${isFull ? "text-amber-700" : "text-slate-900"}`}>{applied}</strong>
+                      {required > 0 && (
+                        <span className="text-slate-500 font-medium"> / <strong className="text-slate-800 font-bold">{required}</strong> required</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 font-bold" title="Confirmed candidates">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>{confirmed} Confirmed</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60 font-bold" title="Selected candidates awaiting RSVP">
+                      <Sparkles className="w-3 h-3 text-blue-600" />
+                      <span>{selected} Selected</span>
+                    </span>
+                  </div>
+                </div>
+
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-450 font-semibold uppercase">{event.workType}</span>
