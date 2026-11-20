@@ -25,6 +25,8 @@ import {
   Trash2,
   Edit2,
   Check,
+  CheckSquare,
+  Square,
   X,
   Sparkles,
   Camera,
@@ -243,6 +245,7 @@ export default function AdminStudentsPage() {
   const [eventFilterMode, setEventFilterMode] = useState<"NOT_APPLIED" | "APPLIED">("NOT_APPLIED");
   const [eventsList, setEventsList] = useState<any[]>([]);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [tickFilter, setTickFilter] = useState<"ALL" | "TICKED" | "NON_TICKED">("ALL");
 
   // Dynamic Multi-Event Selection & Common Student Comparison
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
@@ -1504,6 +1507,7 @@ export default function AdminStudentsPage() {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (search.trim()) count++;
+    if (tickFilter !== "ALL") count++;
     if (selectionFilter !== "ALL") count++;
     if (photoFilter !== "ALL") count++;
     if (profileFilter !== "ALL") count++;
@@ -1519,10 +1523,11 @@ export default function AdminStudentsPage() {
     if (selectedCampaignKey !== "ALL") count++;
     if (selectedEmailStatusFilter !== "ALL") count++;
     return count;
-  }, [search, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, selectedEventIds, eventFilterId, selectedCampaignKey, selectedEmailStatusFilter]);
+  }, [search, tickFilter, selectionFilter, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter, selectedEventIds, eventFilterId, selectedCampaignKey, selectedEmailStatusFilter]);
 
   const handleResetFilters = () => {
     setSearch("");
+    setTickFilter("ALL");
     setSelectionFilter("ALL");
     setPhotoFilter("ALL");
     setProfileFilter("ALL");
@@ -1738,6 +1743,14 @@ export default function AdminStudentsPage() {
         return false;
       }
 
+      // Tick / Checkbox filter
+      if (tickFilter === "TICKED" && !selectedStudentIds.includes(s.id)) {
+        return false;
+      }
+      if (tickFilter === "NON_TICKED" && selectedStudentIds.includes(s.id)) {
+        return false;
+      }
+
       return true;
     }).sort((a, b) => {
       // Tier 1: 100% completed profile pending review (UNDER_REVIEW) -> Top Priority
@@ -1773,7 +1786,16 @@ export default function AdminStudentsPage() {
 
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
-  }, [students, search, selectionFilter, selectedEventIds, multiEventMatchMode, eventFilterId, eventFilterMode, selectedCampaignKey, selectedEmailStatusFilter, activeCampaign, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+  }, [students, selectedStudentIds, tickFilter, search, selectionFilter, selectedEventIds, multiEventMatchMode, eventFilterId, eventFilterMode, selectedCampaignKey, selectedEmailStatusFilter, activeCampaign, photoFilter, profileFilter, statusFilter, genderFilter, heightFilter, ageFilter, weightFilter, cityFilter, universityFilter]);
+
+  const tickedCount = useMemo(() => {
+    const set = new Set(selectedStudentIds);
+    return students.filter((s) => set.has(s.id)).length;
+  }, [students, selectedStudentIds]);
+
+  const nonTickedCount = useMemo(() => {
+    return Math.max(0, students.length - tickedCount);
+  }, [students.length, tickedCount]);
 
   const toggleSelectAll = () => {
     if (selectedStudentIds.length === filteredStudents.length) {
@@ -2920,6 +2942,86 @@ export default function AdminStudentsPage() {
       {/* ---------------------------------------------------- */}
       {activeTab === "gallery" && (
         <>
+          {/* Tick Quick Filter Strip */}
+          <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5 shrink-0 mr-1">
+                <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Tick Filter:</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setTickFilter("ALL")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 border ${
+                  tickFilter === "ALL"
+                    ? "bg-slate-900 text-white border-slate-900 shadow-sm font-extrabold"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <span>All Students</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  tickFilter === "ALL" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {students.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTickFilter("TICKED")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 border ${
+                  tickFilter === "TICKED"
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-sm font-extrabold"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                }`}
+                title="Show only students marked with tick"
+              >
+                <Check className={`w-3.5 h-3.5 stroke-[3.5] ${tickFilter === "TICKED" ? "text-white" : "text-emerald-600"}`} />
+                <span>Ticked Members</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  tickFilter === "TICKED" ? "bg-white/20 text-white" : "bg-emerald-200 text-emerald-900"
+                }`}>
+                  {tickedCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTickFilter("NON_TICKED")}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 border ${
+                  tickFilter === "NON_TICKED"
+                    ? "bg-slate-800 text-white border-slate-800 shadow-sm font-extrabold"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                }`}
+                title="Show only students who are not ticked yet"
+              >
+                <Square className={`w-3 h-3 ${tickFilter === "NON_TICKED" ? "text-white" : "text-slate-400"}`} />
+                <span>Non-Ticked Members</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  tickFilter === "NON_TICKED" ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {nonTickedCount}
+                </span>
+              </button>
+
+              {selectedStudentIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentIds([])}
+                  className="text-[11px] font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg border border-red-200 transition cursor-pointer flex items-center gap-1 active:scale-95 shrink-0"
+                  title="Clear all ticked marks"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Clear Ticks ({selectedStudentIds.length})</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 text-xs text-slate-500 font-semibold self-end sm:self-auto">
+              <span>Showing <strong className="text-slate-900 font-bold">{filteredStudents.length}</strong> of {students.length} students</span>
+            </div>
+          </div>
           {loading ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-red-600 border-t-transparent mb-3"></div>
@@ -2948,7 +3050,7 @@ export default function AdminStudentsPage() {
                     key={student.id}
                     className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md ${
                       isSelected
-                        ? "border-red-500 ring-2 ring-red-500/20"
+                        ? "border-emerald-500 ring-2 ring-emerald-500/25 bg-emerald-50/10 shadow-sm"
                         : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
@@ -2995,15 +3097,26 @@ export default function AdminStudentsPage() {
                         </div>
                       )}
 
-                      {/* Checkbox Overlay */}
+                      {/* Checkbox Overlay for Marking Tick */}
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleSelectOne(student.id);
                         }}
-                        className="absolute top-3 left-3 z-10 w-6 h-6 rounded-md bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:bg-black/70 transition"
+                        aria-label={isSelected ? "Untick candidate" : "Tick candidate"}
+                        title={isSelected ? "Ticked (Click to untick)" : "Click to mark tick"}
+                        className={`absolute top-3 left-3 z-10 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer shadow-md active:scale-90 touch-manipulation group/chk ${
+                          isSelected
+                            ? "bg-emerald-600 text-white border-2 border-emerald-400 ring-2 ring-emerald-500/40"
+                            : "bg-white/95 hover:bg-white text-slate-400 border-2 border-slate-300 hover:border-emerald-500 backdrop-blur-xs"
+                        }`}
                       >
-                        {isSelected && <Check className="w-4 h-4 text-red-400 stroke-3" />}
+                        {isSelected ? (
+                          <Check className="w-4 h-4 text-white stroke-[3.5] animate-in zoom-in-75 duration-100" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-slate-300 group-hover/chk:text-emerald-500 opacity-0 group-hover/chk:opacity-100 transition-opacity stroke-[3]" />
+                        )}
                       </button>
 
                       {/* Selection Status Badge */}
