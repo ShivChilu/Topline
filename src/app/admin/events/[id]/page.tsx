@@ -1809,6 +1809,17 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
             <span>Attendance PDF</span>
           </Link>
 
+          {/* Download Members List Excel Button */}
+          <a
+            href={`/api/admin/events/${eventId}/export-members`}
+            download
+            className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-extrabold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer active:scale-95"
+            title="Download Excel details of all members (Name, Phone Number, Confirmation Status)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Download Details</span>
+          </a>
+
           {/* Share Crew with Client Button */}
           <button
             type="button"
@@ -2056,6 +2067,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                             <Download className="w-4 h-4 text-emerald-600 shrink-0" />
                             <span>Download Attendance PDF</span>
                           </Link>
+                          <a
+                            href={`/api/admin/events/${eventId}/export-members`}
+                            download
+                            onClick={() => setIsActionsDropdownOpen(false)}
+                            className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 transition"
+                          >
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <span>Download Details (Excel)</span>
+                          </a>
                           <button
                             type="button"
                             onClick={() => {
@@ -2230,6 +2250,15 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                         <Download className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Download Attendance PDF</span>
                       </Link>
+                      <a
+                        href={`/api/admin/events/${eventId}/export-members`}
+                        download
+                        onClick={() => setIsActionsDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 flex items-center gap-2 transition"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Download Details (Excel)</span>
+                      </a>
                       <button
                         type="button"
                         onClick={() => {

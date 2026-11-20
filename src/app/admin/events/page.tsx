@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, Lock, RefreshCw, AlertCircle, Check, Users, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Eye, Edit, Edit2, ExternalLink, Trash2, QrCode, Copy, Archive, X, Sparkles, Clock, CalendarClock, Unlock, Lock, RefreshCw, AlertCircle, Check, Users, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import ReopenEventModal from "@/components/admin/ReopenEventModal";
 
 export default function AdminEventsPage() {
@@ -354,6 +354,14 @@ export default function AdminEventsPage() {
                     >
                       <QrCode className="w-4 h-4 text-red-600" />
                     </Link>
+                    <a
+                      href={`/api/admin/events/${event._id}/export-members`}
+                      download
+                      className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded text-emerald-800 transition"
+                      title="Download Members List (Excel): Name, Phone & Confirmation Status"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                    </a>
                     {canForEvent(event._id, "events:edit") && (
                       <Link
                         href={`/admin/events/${event._id}/edit`}
