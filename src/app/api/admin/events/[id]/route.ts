@@ -6,6 +6,7 @@ import { Role, PaymentStatus } from "@prisma/client";
 
 import { hasEventPermission } from "@/lib/permissions";
 import { processPendingAutoSelectionEmails } from "@/lib/auto-selection-processor";
+import { isSameEventDate } from "@/lib/event-utils";
 
 async function getLoggedInAdmin() {
   const cookieStore = await cookies();
@@ -76,6 +77,34 @@ export async function GET(
       })),
     };
 
+    let sameDateEvents: any[] = [];
+    if (event.date) {
+      const allOtherEvents = await prisma.event.findMany({
+        where: {
+          id: { not: eventId },
+          status: { notIn: ["ARCHIVED", "DRAFT"] },
+        },
+        select: {
+          id: true,
+          name: true,
+          location: true,
+          date: true,
+          reportingTime: true,
+          workType: true,
+          status: true,
+          workersRequired: true,
+          maxApplications: true,
+          applicationsCount: true,
+          whatsappGroupLink: true,
+        },
+        orderBy: { name: "asc" },
+      });
+
+      sameDateEvents = allOtherEvents
+        .filter((e) => isSameEventDate(e.date, event.date))
+        .map((e) => ({ ...e, _id: e.id }));
+    }
+
     if (getStats) {
       const applicationsCount = await prisma.application.count({
         where: {
@@ -102,6 +131,7 @@ export async function GET(
       return NextResponse.json({
         success: true,
         event: formattedEvent,
+        sameDateEvents,
         stats: {
           applicationsCount,
           attendanceCount,
@@ -110,7 +140,7 @@ export async function GET(
       });
     }
 
-    return NextResponse.json({ success: true, event: formattedEvent });
+    return NextResponse.json({ success: true, event: formattedEvent, sameDateEvents });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

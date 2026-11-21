@@ -24,6 +24,7 @@ import {
   Phone,
   Mail,
   Trash2,
+  ArrowRightLeft,
   Check,
   CheckSquare,
   Square,
@@ -268,6 +269,13 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [addFormData, setAddFormData] = useState<Record<string, any>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [addModalError, setAddModalError] = useState<string | null>(null);
+
+  // Same-Day Event Transfer Modal
+  const [sameDateEvents, setSameDateEvents] = useState<any[]>([]);
+  const [transferCandidate, setTransferCandidate] = useState<any>(null);
+  const [targetTransferEventId, setTargetTransferEventId] = useState<string>("");
+  const [transferCustomRemarks, setTransferCustomRemarks] = useState<string>("");
+  const [isTransferring, setIsTransferring] = useState(false);
 
   // Custom Email Broadcast & Single Message Modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -695,6 +703,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       }
 
       setEvent(eventData.event);
+      if (eventData.sameDateEvents) {
+        setSameDateEvents(eventData.sameDateEvents);
+      }
       if (eventData.event?.whatsappGroupLink) {
         setWhatsappGroupLinkInput(eventData.event.whatsappGroupLink);
       }
@@ -873,6 +884,57 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       showToast("Bulk delete error.");
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  // Open Same-Day Event Transfer Modal
+  const openTransferModal = (candidate: any) => {
+    setTransferCandidate(candidate);
+    setTransferCustomRemarks("");
+    if (sameDateEvents && sameDateEvents.length > 0) {
+      setTargetTransferEventId(sameDateEvents[0].id || sameDateEvents[0]._id);
+    } else {
+      setTargetTransferEventId("");
+    }
+  };
+
+  // Submit Same-Day Event Transfer
+  const handleTransferSubmit = async () => {
+    if (!transferCandidate || !targetTransferEventId) return;
+    try {
+      setIsTransferring(true);
+      const res = await fetch(`/api/admin/events/${eventId}/transfer-candidate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationId: transferCandidate._id || transferCandidate.id,
+          targetEventId: targetTransferEventId,
+          customRemarks: transferCustomRemarks,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        showToast(data.message || "Failed to transfer candidate.");
+        return;
+      }
+
+      showToast(data.message || "Candidate transferred successfully!");
+
+      // Optimistically remove transferred candidate from current applications list
+      const candidateAppId = transferCandidate._id || transferCandidate.id;
+      setApplications((prev) =>
+        prev.filter((a) => (a._id || a.id) !== candidateAppId)
+      );
+      setSelectedIds((prev) => prev.filter((id) => id !== candidateAppId));
+
+      setTransferCandidate(null);
+      // Refresh event data in background
+      fetchEventData(true);
+    } catch (err: any) {
+      console.error("Transfer error:", err);
+      showToast("Failed to transfer candidate. Please try again.");
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -4594,6 +4656,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           <Mail className="w-3.5 h-3.5" />
                         </button>
 
+                        {/* Forward / Transfer Candidate to Same-Day Other Event (Visible ONLY if 2 or more events exist on this date) */}
+                        {sameDateEvents && sameDateEvents.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openTransferModal(app)}
+                            className="p-1.5 bg-indigo-50 hover:bg-indigo-600 border border-indigo-200 text-indigo-700 hover:text-white rounded-lg transition flex items-center justify-center shrink-0 shadow-2xs cursor-pointer active:scale-95"
+                            title={`Forward / Transfer to another event on this date (${sameDateEvents.length} other event${sameDateEvents.length > 1 ? "s" : ""} on same date)`}
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
                         {/* Delete Candidate */}
                         <button
                           onClick={() => setDeleteCandidate(app)}
@@ -4888,6 +4962,16 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                           >
                             <Mail className="w-4 h-4" />
                           </button>
+                          {sameDateEvents && sameDateEvents.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => openTransferModal(app)}
+                              className="p-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-lg transition"
+                              title={`Forward / Transfer to another event on this date (${sameDateEvents.length} other event${sameDateEvents.length > 1 ? "s" : ""} on same date)`}
+                            >
+                              <ArrowRightLeft className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => openInspectCandidate(app)}
                             className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
@@ -6506,6 +6590,193 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <>
                     <Save className="w-3.5 h-3.5" />
                     <span>Save WhatsApp Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* SAME-DAY EVENT FORWARD / TRANSFER CANDIDATE MODAL */}
+      {/* ---------------------------------------------------- */}
+      {transferCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 backdrop-blur-md flex items-center justify-center border border-indigo-400/30">
+                  <ArrowRightLeft className="w-5 h-5 text-indigo-300" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base leading-tight">Forward Candidate to Other Event</h3>
+                  <p className="text-xs text-indigo-200/80 mt-0.5">
+                    Same-Date Events • {event?.date ? new Date(event.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTransferCandidate(null)}
+                className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              {/* Candidate Info Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                  {transferCandidate.photoUrl ? (
+                    <img
+                      src={transferCandidate.photoUrl}
+                      alt={transferCandidate.name}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                      {(transferCandidate.name || "C")[0]}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-extrabold text-slate-900 text-sm truncate">
+                    {transferCandidate.name || transferCandidate.user?.name || "Candidate"}
+                  </h4>
+                  <div className="text-xs text-slate-500 font-mono flex items-center gap-2 mt-0.5">
+                    <span>{transferCandidate.registrationNumber || transferCandidate.user?.registrationNumber || "NO REG"}</span>
+                    <span>•</span>
+                    <span>{transferCandidate.mobileNumber || transferCandidate.user?.phone || "No phone"}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                    Currently in: <strong className="text-slate-800">{event?.name || "This Event"}</strong> ({event?.location || "N/A"})
+                  </div>
+                </div>
+              </div>
+
+              {/* Target Event Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Select Target Event (Same Date)
+                </label>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {sameDateEvents.map((ev) => {
+                    const isSelected = (ev.id || ev._id) === targetTransferEventId;
+                    return (
+                      <div
+                        key={ev.id || ev._id}
+                        onClick={() => setTargetTransferEventId(ev.id || ev._id)}
+                        className={`p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? "border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20"
+                            : "border-slate-200 hover:border-slate-300 bg-white"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-slate-900 text-xs truncate">{ev.name}</span>
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase">
+                              {ev.status || "OPEN"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
+                            <span className="flex items-center gap-1 truncate">
+                              <MapPin className="w-3 h-3 text-red-500 shrink-0" />
+                              <span className="truncate">{ev.location || "Location N/A"}</span>
+                            </span>
+                            {ev.reportingTime && (
+                              <span className="flex items-center gap-1 shrink-0">
+                                <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+                                <span>{ev.reportingTime}</span>
+                              </span>
+                            )}
+                          </div>
+                          {ev.whatsappGroupLink ? (
+                            <div className="mt-1 text-[10.5px] text-emerald-600 font-semibold flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>WhatsApp group link ready</span>
+                            </div>
+                          ) : (
+                            <div className="mt-1 text-[10.5px] text-amber-600 font-medium">
+                              ⚠ No WhatsApp group link configured yet
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="shrink-0 flex items-center justify-center">
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              isSelected ? "border-indigo-600 bg-indigo-600" : "border-slate-300 bg-white"
+                            }`}
+                          >
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Optional Transfer Remarks */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Internal Remarks (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={transferCustomRemarks}
+                  onChange={(e) => setTransferCustomRemarks(e.target.value)}
+                  placeholder="e.g. Forwarded from Ludhiana to Amritsar as per requirement"
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                />
+              </div>
+
+              {/* Transfer Actions Summary Notice */}
+              <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 space-y-1.5 text-xs text-emerald-950">
+                <div className="font-extrabold text-emerald-900 flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Immediate Automated Pipeline:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11.5px] text-emerald-900/90 pl-1 font-medium">
+                  <li>Candidate is removed from <strong>{event?.name}</strong> roster.</li>
+                  <li>Moved to selected event with status <span className="font-bold text-emerald-800 bg-emerald-100 px-1 rounded">SELECTED</span>.</li>
+                  <li>
+                    <strong>Auto Selection Email</strong> sent immediately with the target event&apos;s venue, reporting time, WhatsApp group link, and RSVP confirm/decline buttons.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setTransferCandidate(null)}
+                disabled={isTransferring}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleTransferSubmit}
+                disabled={isTransferring || !targetTransferEventId}
+                className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {isTransferring ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Transferring & Dispatching Mail...</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                    <span>Confirm Forward & Send Mail</span>
                   </>
                 )}
               </button>
