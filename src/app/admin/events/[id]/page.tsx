@@ -498,6 +498,50 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
     setCallingNote(initialRemarks);
   };
 
+  // Helper to construct pre-filled WhatsApp direct chat link with contextual message
+  const getCandidateWhatsAppUrl = (candidate: any) => {
+    if (!candidate) return "#";
+    const rawPhone = (
+      candidate.mobileNumber ||
+      candidate.phone ||
+      candidate.studentId?.phone ||
+      candidate.user?.phone ||
+      ""
+    ).replace(/\D/g, "");
+    if (!rawPhone) return "#";
+
+    let cleanPhone = rawPhone;
+    if (cleanPhone.length === 10) {
+      cleanPhone = `91${cleanPhone}`;
+    } else if (cleanPhone.length === 11 && cleanPhone.startsWith("0")) {
+      cleanPhone = `91${cleanPhone.slice(1)}`;
+    } else if (!cleanPhone.startsWith("91") && cleanPhone.length < 12) {
+      cleanPhone = `91${cleanPhone}`;
+    }
+
+    const candName = (
+      candidate.name ||
+      candidate.studentId?.name ||
+      candidate.user?.name ||
+      ""
+    ).trim() || "there";
+
+    const eventTitle = (event?.name || "").trim();
+    const eventSuffix = eventTitle ? `for the event ${eventTitle}` : "for the event";
+    const status = (candidate.status || "").toUpperCase();
+
+    let message = "";
+    if (status === "SELECTED") {
+      message = `Hi ${candName}, you have applied ${eventSuffix}. You got a confirmation mail, but you have not accepted it and you are not in the WhatsApp group. What is the reason for that?`;
+    } else if (status === "CONFIRMED") {
+      message = `Hi ${candName}, regarding your confirmed participation ${eventSuffix} with Topline ODC.`;
+    } else {
+      message = `Hi ${candName}, regarding your application ${eventSuffix} with Topline ODC.`;
+    }
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  };
+
   const handleSaveRemarks = async (appId: string, remarks: string) => {
     try {
       setSavingCandidateRemarks(true);
@@ -4360,11 +4404,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               <span>Call</span>
                             </a>
                             <a
-                              href={`https://wa.me/91${(app.mobileNumber || student.phone).replace(/\D/g, "")}`}
+                              href={getCandidateWhatsAppUrl(app)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="bg-black/75 hover:bg-[#25D366] active:bg-emerald-600 backdrop-blur-md text-white p-2 sm:p-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center justify-center shadow-md active:scale-95 touch-manipulation"
-                              title="Open WhatsApp Chat"
+                              className="bg-black/75 hover:bg-[#25D366] active:bg-emerald-600 backdrop-blur-md text-white p-2 sm:p-1 rounded-lg sm:rounded-md border border-white/30 transition flex items-center justify-center shadow-md active:scale-95 touch-manipulation cursor-pointer"
+                              title={sStatus === "SELECTED" ? "Chat with selected candidate on WhatsApp" : "Open WhatsApp Chat"}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <MessageSquare className="w-4 h-4 sm:w-3 sm:h-3 text-[#25D366]" />
@@ -4907,14 +4951,26 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                       </td>
                       <td className="p-4 font-semibold text-xs text-slate-800 font-mono">
                         {app.mobileNumber || student.phone ? (
-                          <a
-                            href={`tel:${app.mobileNumber || student.phone}`}
-                            className="text-emerald-700 hover:text-emerald-800 hover:underline font-bold inline-flex items-center gap-1"
-                            title="Click to dial"
-                          >
-                            <Phone className="w-3 h-3 text-emerald-600" />
-                            <span>{app.mobileNumber || student.phone}</span>
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`tel:${app.mobileNumber || student.phone}`}
+                              className="text-emerald-700 hover:text-emerald-800 hover:underline font-bold inline-flex items-center gap-1"
+                              title="Click to dial"
+                            >
+                              <Phone className="w-3 h-3 text-emerald-600" />
+                              <span>{app.mobileNumber || student.phone}</span>
+                            </a>
+                            <a
+                              href={getCandidateWhatsAppUrl(app)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 rounded hover:bg-emerald-50 text-slate-400 hover:text-[#25D366] transition inline-flex items-center"
+                              title={sStatus === "SELECTED" ? "Chat with selected candidate on WhatsApp" : "Open WhatsApp Chat"}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
                         ) : (
                           <span className="text-slate-400 font-normal">N/A</span>
                         )}
@@ -5799,10 +5855,11 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
 
                           {/* Direct WhatsApp Chat */}
                           <a
-                            href={`https://wa.me/91${(inspectCandidate.phone || inspectCandidate.user?.phone || inspectCandidate.studentId?.phone || "").replace(/\D/g, "")}`}
+                            href={getCandidateWhatsAppUrl(inspectCandidate)}
                             target="_blank"
                             rel="noreferrer"
                             className="p-3 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/60 hover:border-emerald-500 text-left rounded-xl transition group shadow-sm block"
+                            title={inspectCandidate?.status === "SELECTED" ? "Chat with selected candidate on WhatsApp" : "Open WhatsApp Chat"}
                           >
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
