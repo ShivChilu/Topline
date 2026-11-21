@@ -4772,7 +4772,10 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               ({app.totalEventsApplied ?? student.totalEventsApplied} applied)
                             </span>
                           )}
-                          {/* Enrollment Source Badge */}
+                        </div>
+
+                        {/* Enrollment Source Badge & Mobile Number Beside Form Applicant */}
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                           {isApplicationAddedByAdmin(app) ? (
                             <span
                               className="bg-blue-50 text-blue-800 border border-blue-200/90 font-bold text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs"
@@ -4789,6 +4792,18 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                               <FileText className="w-2.5 h-2.5 text-emerald-600" />
                               <span>Form Applicant</span>
                             </span>
+                          )}
+
+                          {(app.mobileNumber || student.phone) && (
+                            <a
+                              href={`tel:${app.mobileNumber || student.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 transition shadow-2xs cursor-pointer font-mono"
+                              title={`Call ${app.mobileNumber || student.phone}`}
+                            >
+                              <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>{app.mobileNumber || student.phone}</span>
+                            </a>
                           )}
                         </div>
 
