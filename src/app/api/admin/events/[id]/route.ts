@@ -105,6 +105,40 @@ export async function GET(
         .map((e) => ({ ...e, _id: e.id }));
     }
 
+    // Query recent active events for quick switcher dropdown (scoped by admin role)
+    const recentEventsWhere: any = {
+      status: { notIn: ["ARCHIVED"] },
+    };
+    if (admin.role === "CALLING_ADMIN" || admin.role === "EVENT_ADMIN") {
+      const assignedIds = admin.assignedEvents.map((a) => a.eventId);
+      recentEventsWhere.id = { in: assignedIds };
+    }
+
+    const recentEventsList = await prisma.event.findMany({
+      where: recentEventsWhere,
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        date: true,
+        reportingTime: true,
+        workType: true,
+        status: true,
+        workersRequired: true,
+        applicationsCount: true,
+      },
+      orderBy: [
+        { date: "desc" },
+        { createdAt: "desc" },
+      ],
+      take: 25,
+    });
+
+    const recentEvents = recentEventsList.map((e) => ({
+      ...e,
+      _id: e.id,
+    }));
+
     if (getStats) {
       const applicationsCount = await prisma.application.count({
         where: {
@@ -132,6 +166,7 @@ export async function GET(
         success: true,
         event: formattedEvent,
         sameDateEvents,
+        recentEvents,
         stats: {
           applicationsCount,
           attendanceCount,
@@ -140,7 +175,7 @@ export async function GET(
       });
     }
 
-    return NextResponse.json({ success: true, event: formattedEvent, sameDateEvents });
+    return NextResponse.json({ success: true, event: formattedEvent, sameDateEvents, recentEvents });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

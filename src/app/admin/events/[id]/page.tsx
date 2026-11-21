@@ -304,6 +304,57 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
   const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
   const actionsDropdownRef = useRef<HTMLDivElement | null>(null);
 
+  // Quick Event Switcher Dropdown State
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
+  const [isEventSwitcherOpen, setIsEventSwitcherOpen] = useState(false);
+  const [eventSwitcherSearch, setEventSwitcherSearch] = useState("");
+  const eventSwitcherRef = useRef<HTMLDivElement | null>(null);
+
+  // Close event switcher dropdown on outside click or ESC key
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (eventSwitcherRef.current && !eventSwitcherRef.current.contains(e.target as Node)) {
+        setIsEventSwitcherOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsEventSwitcherOpen(false);
+      }
+    };
+    if (isEventSwitcherOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+      document.addEventListener("touchstart", handleOutsideClick);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isEventSwitcherOpen]);
+
+  const filteredRecentEvents = useMemo(() => {
+    if (!eventSwitcherSearch.trim()) return recentEvents;
+    const q = eventSwitcherSearch.toLowerCase();
+    return recentEvents.filter(
+      (ev) =>
+        (ev.name && ev.name.toLowerCase().includes(q)) ||
+        (ev.location && ev.location.toLowerCase().includes(q)) ||
+        (ev.status && ev.status.toLowerCase().includes(q))
+    );
+  }, [recentEvents, eventSwitcherSearch]);
+
+  const currentEventIndex = useMemo(() => {
+    return recentEvents.findIndex((ev) => (ev.id || ev._id) === eventId);
+  }, [recentEvents, eventId]);
+
+  const prevEvent = currentEventIndex > 0 ? recentEvents[currentEventIndex - 1] : null;
+  const nextEvent =
+    currentEventIndex >= 0 && currentEventIndex < recentEvents.length - 1
+      ? recentEvents[currentEventIndex + 1]
+      : null;
+
   // Admin Role & IAM Feature Permissions
   const [currentAdminRole, setCurrentAdminRole] = useState<string | null>(null);
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
@@ -749,6 +800,9 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
       setEvent(eventData.event);
       if (eventData.sameDateEvents) {
         setSameDateEvents(eventData.sameDateEvents);
+      }
+      if (eventData.recentEvents) {
+        setRecentEvents(eventData.recentEvents);
       }
       if (eventData.event?.whatsappGroupLink) {
         setWhatsappGroupLinkInput(eventData.event.whatsappGroupLink);
@@ -1839,6 +1893,218 @@ export default function AdminEventDetailPage(props: { params: Promise<{ id: stri
                   <span className="text-[10px] lowercase text-slate-400 font-semibold">(toggle)</span>
                 )}
               </button>
+
+              {/* Quick Event Switcher Pill & Sequential Arrows */}
+              <div className="relative inline-flex items-center" ref={eventSwitcherRef}>
+                <div className="inline-flex items-center bg-white border border-slate-200 rounded-full shadow-2xs p-0.5">
+                  {/* Prev (Newer) Event Quick Jump */}
+                  {prevEvent ? (
+                    <Link
+                      href={`/admin/events/${prevEvent.id || prevEvent._id}`}
+                      className="p-1 rounded-full text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition active:scale-90"
+                      title={`Go to newer event: ${prevEvent.name}`}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : (
+                    <span className="p-1 text-slate-300 cursor-not-allowed">
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+
+                  {/* Dropdown Toggle Pill */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEventSwitcherOpen((prev) => !prev);
+                      setEventSwitcherSearch("");
+                    }}
+                    className={`px-2 py-0.5 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer rounded-full ${
+                      isEventSwitcherOpen
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-slate-700 hover:text-indigo-600 hover:bg-slate-50"
+                    }`}
+                    title="Click to switch to another active or recent event"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span className="text-[11px] font-semibold hidden md:inline">Switch Event</span>
+                    {recentEvents.length > 0 && (
+                      <span className="text-[10px] bg-slate-100 text-slate-600 font-mono px-1 rounded-full font-bold">
+                        {recentEvents.length}
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
+                        isEventSwitcherOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Next (Earlier) Event Quick Jump */}
+                  {nextEvent ? (
+                    <Link
+                      href={`/admin/events/${nextEvent.id || nextEvent._id}`}
+                      className="p-1 rounded-full text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition active:scale-90"
+                      title={`Go to earlier event: ${nextEvent.name}`}
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : (
+                    <span className="p-1 text-slate-300 cursor-not-allowed">
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                </div>
+
+                {/* Dropdown Popover */}
+                {isEventSwitcherOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-[320px] sm:w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {/* Header & Search */}
+                    <div className="px-3 pb-2 border-b border-slate-100">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                          Recent Active Events
+                        </span>
+                        <span className="text-[10.5px] font-bold text-slate-400">
+                          {recentEvents.length} total
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={eventSwitcherSearch}
+                          onChange={(e) => setEventSwitcherSearch(e.target.value)}
+                          placeholder="Search by event name, city or status..."
+                          className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                          autoFocus
+                        />
+                        {eventSwitcherSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setEventSwitcherSearch("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Event Items List */}
+                    <div className="max-h-[340px] overflow-y-auto px-1.5 py-1 space-y-1 divide-y divide-slate-50">
+                      {filteredRecentEvents.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-slate-400">
+                          No matching events found.
+                        </div>
+                      ) : (
+                        filteredRecentEvents.map((ev) => {
+                          const isCurrent = (ev.id || ev._id) === eventId;
+                          const evDate = ev.date
+                            ? new Date(ev.date).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "No date";
+
+                          return (
+                            <Link
+                              key={ev.id || ev._id}
+                              href={`/admin/events/${ev.id || ev._id}`}
+                              onClick={() => setIsEventSwitcherOpen(false)}
+                              className={`p-2.5 rounded-xl transition block group cursor-pointer ${
+                                isCurrent
+                                  ? "bg-indigo-50/80 border border-indigo-200 ring-1 ring-indigo-500/20"
+                                  : "hover:bg-slate-50 border border-transparent"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                      className={`text-xs font-bold truncate ${
+                                        isCurrent
+                                          ? "text-indigo-950 font-black"
+                                          : "text-slate-800 group-hover:text-indigo-600"
+                                      }`}
+                                    >
+                                      {ev.name}
+                                    </span>
+                                    {isCurrent && (
+                                      <span className="text-[9.5px] font-black bg-indigo-600 text-white px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                        Current
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1 flex-wrap">
+                                    <span className="flex items-center gap-1 font-medium">
+                                      <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                      {evDate}
+                                    </span>
+                                    {ev.location && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1 font-medium truncate max-w-[120px]">
+                                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                          {ev.location}
+                                        </span>
+                                      </>
+                                    )}
+                                    {ev.reportingTime && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1 font-mono text-[10px]">
+                                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                                          {formatTime12(ev.reportingTime)}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Right Badges */}
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase border ${
+                                      ev.status === "OPEN"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : ev.status === "SCHEDULED"
+                                        ? "bg-purple-50 text-purple-700 border-purple-200"
+                                        : ev.status === "FULL"
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-slate-100 text-slate-600 border-slate-200"
+                                    }`}
+                                  >
+                                    {ev.status}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    {ev.applicationsCount ?? 0} applied
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Footer Link: View All Events */}
+                    <div className="pt-2 px-3 border-t border-slate-100 flex items-center justify-between">
+                      <Link
+                        href="/admin/events"
+                        onClick={() => setIsEventSwitcherOpen(false)}
+                        className="text-xs font-bold text-slate-600 hover:text-indigo-600 transition flex items-center gap-1"
+                      >
+                        <span>View all events catalogue</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </Link>
+                      <span className="text-[10px] text-slate-400">ESC to close</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
               <span>{new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
